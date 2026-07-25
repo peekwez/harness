@@ -1,0 +1,112 @@
+{
+ "exports": [
+  "test_backlog_add_appends_a_valid_row",
+  "test_backlog_add_fails_loud_on_duplicates_and_unknown_deps",
+  "test_backlog_estimate_still_works_without_subcommand",
+  "test_cli_joins_the_live_hook_session_when_env_is_absent",
+  "test_cli_sessions_never_become_the_live_hook_session",
+  "test_close_rejects_a_commit_missing_the_touched_files",
+  "test_merge_slice_finishes_the_mechanical_tail",
+  "test_merge_slice_refuses_an_unclosed_slice"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report6",
+ "source_hash": "sha256:1bc3bdde2058a7bdc50ab0dedc544bc0f03b2a71ce5f5fd7e436b627bea0c2a8",
+ "source_path": "tests/engine/test_field_report6.py",
+ "symbols": [
+  {
+   "doc": "`git add -N` produced a commit WITHOUT the slice's sources and the\n    provenance note landed on the wrong commit \u2014 close must check the\n    named commit's tree actually contains the touched files.",
+   "kind": "function",
+   "name": "test_close_rejects_a_commit_missing_the_touched_files",
+   "signature": "def test_close_rejects_a_commit_missing_the_touched_files(toy)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Builder shells often lack $CLAUDE_SESSION_ID; the hook events carry\n    the real UUID \u2014 the CLI must join that session, not fall back to a\n    'cli' session the gates never saw.",
+   "kind": "function",
+   "name": "test_cli_joins_the_live_hook_session_when_env_is_absent",
+   "signature": "def test_cli_joins_the_live_hook_session_when_env_is_absent(toy)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "CLI-originated events (session 'cli') must not clobber the recorded\n    live hook session.",
+   "kind": "function",
+   "name": "test_cli_sessions_never_become_the_live_hook_session",
+   "signature": "def test_cli_sessions_never_become_the_live_hook_session(toy)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_add_appends_a_valid_row",
+   "signature": "def test_backlog_add_appends_a_valid_row(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_add_fails_loud_on_duplicates_and_unknown_deps",
+   "signature": "def test_backlog_add_fails_loud_on_duplicates_and_unknown_deps(toy)",
+   "span": [
+    89,
+    90
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_estimate_still_works_without_subcommand",
+   "signature": "def test_backlog_estimate_still_works_without_subcommand(toy)",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The whole post-close ceremony in one command: merge the branch,\n    regenerate+commit shadows, run the G4 safety net, remove worktree and\n    branch.",
+   "kind": "function",
+   "name": "test_merge_slice_finishes_the_mechanical_tail",
+   "signature": "def test_merge_slice_finishes_the_mechanical_tail(toy)",
+   "span": [
+    106,
+    107
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_slice_refuses_an_unclosed_slice",
+   "signature": "def test_merge_slice_refuses_an_unclosed_slice(toy)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  }
+ ]
+}

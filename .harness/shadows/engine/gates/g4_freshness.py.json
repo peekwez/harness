@@ -1,0 +1,28 @@
+{
+ "exports": [
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "json",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g4_freshness",
+ "source_hash": "sha256:cab305cfd57124608db2c297451f072ab54e14fd7e7865ff5e51fee796c422eb",
+ "source_path": "engine/gates/g4_freshness.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  }
+ ]
+}

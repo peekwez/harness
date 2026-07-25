@@ -1,0 +1,80 @@
+# harness verify — CI enforcement, no plugin required.
+# House style: reusable workflow with workflow_call, typed inputs, secrets block.
+#
+# The engine is NOT part of consumer repos: this workflow fetches it. Three
+# ways to point at it, checked in order:
+#   1. a vendored ./bin/harness in the repo itself (self-hosted harness),
+#   2. the `harness-repo` workflow_call input,
+#   3. the HARNESS_REPO repository variable (Settings > Variables) — the one
+#      that covers plain pull_request runs.
+# None of the three -> the job fails with that exact instruction, not a
+# file-not-found crash (field report X5).
+name: harness-verify
+
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      harness-repo:
+        description: git URL of the harness engine repo (overrides the HARNESS_REPO variable)
+        required: false
+        type: string
+        default: ""
+      harness-ref:
+        description: git ref of the harness engine to use
+        required: false
+        type: string
+        default: main
+      built-artifact-path:
+        description: >-
+          path to the built/installed artifact; manifests are validated
+          against it, not just the source tree (the md-file-bug killer)
+        required: false
+        type: string
+        default: ""
+    secrets: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      HARNESS_REPO_INPUT: ${{ inputs.harness-repo }}
+      HARNESS_REPO_VAR: ${{ vars.HARNESS_REPO }}
+      HARNESS_REF: ${{ inputs.harness-ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # notes + reachability need history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install engine dependencies
+        run: pip install pyyaml tree-sitter tree-sitter-language-pack
+
+      - name: Fetch git notes (provenance)
+        run: git fetch origin 'refs/notes/*:refs/notes/*' || true
+
+      - name: Locate or fetch the harness engine
+        run: |
+          if [ -x ./bin/harness ]; then
+            # vendored / self-hosted: the repo carries its own engine
+            echo "HARNESS_BIN=./bin/harness" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          REPO="${HARNESS_REPO_INPUT:-$HARNESS_REPO_VAR}"
+          if [ -z "$REPO" ]; then
+            echo "::error::harness engine not found. Either vendor bin/harness+engine/ into this repo, pass the harness-repo workflow input, or set the HARNESS_REPO repository variable (Settings > Secrets and variables > Actions > Variables) to the harness plugin's git URL."
+            exit 1
+          fi
+          git clone --depth 1 --branch "${HARNESS_REF:-main}" "$REPO" .harness-engine
+          echo "HARNESS_BIN=.harness-engine/bin/harness" >> "$GITHUB_ENV"
+
+      - name: harness verify
+        run: |
+          if [ -n "${{ inputs.built-artifact-path }}" ]; then
+            python3 "$HARNESS_BIN" verify --built-artifact "${{ inputs.built-artifact-path }}"
+          else
+            python3 "$HARNESS_BIN" verify
+          fi

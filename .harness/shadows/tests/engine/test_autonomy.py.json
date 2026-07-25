@@ -1,0 +1,100 @@
+{
+ "exports": [
+  "test_autonomy_profile_uses_prefix_rule_syntax",
+  "test_close_slice_resolves_symbolic_commit_refs",
+  "test_common_adapter_routes_events_by_file_path",
+  "test_extract_all_never_walks_into_worktrees",
+  "test_init_autonomy_refreshes_its_own_stale_profile",
+  "test_init_gitignores_the_worktrees_dir"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "importlib",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_autonomy",
+ "source_hash": "sha256:d9374f1e3227ebbe5fd59d30414c90fca2aeff968418cb69110b0901135a591f",
+ "source_path": "tests/engine/test_autonomy.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_load_adapters_common",
+   "signature": "def _load_adapters_common()",
+   "span": [
+    12,
+    13
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": ".worktrees/ holds full checkouts \u2014 walking into them would shadow\n    every file twice (once per tree) in the MAIN substrate.",
+   "kind": "function",
+   "name": "test_extract_all_never_walks_into_worktrees",
+   "signature": "def test_extract_all_never_walks_into_worktrees(toy)",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_gitignores_the_worktrees_dir",
+   "signature": "def test_init_gitignores_the_worktrees_dir(tmp_path)",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`--commit $(git rev-parse HEAD)` can never be auto-approved (command\n    substitution defeats permission prefix-matching) \u2014 the ceremony must\n    accept `--commit HEAD` and resolve the ref itself.",
+   "kind": "function",
+   "name": "test_close_slice_resolves_symbolic_commit_refs",
+   "signature": "def test_close_slice_resolves_symbolic_commit_refs(toy)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Claude Code Bash rules prefix-match with `:*`; the space-glob form\n    matches nothing and leaves every builder command prompting.",
+   "kind": "function",
+   "name": "test_autonomy_profile_uses_prefix_rule_syntax",
+   "signature": "def test_autonomy_profile_uses_prefix_rule_syntax(tmp_path)",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A previously-written harness profile (broken rule syntax) must be\n    refreshed on re-run \u2014 only hand-authored settings are left alone.",
+   "kind": "function",
+   "name": "test_init_autonomy_refreshes_its_own_stale_profile",
+   "signature": "def test_init_autonomy_refreshes_its_own_stale_profile(tmp_path)",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Non-Claude adapters (Codex/Gemini/Cursor) share call_engine: an edit\n    inside a worktree must reach the WORKTREE's substrate even though the\n    hook process runs in the main tree (W2 parity).",
+   "kind": "function",
+   "name": "test_common_adapter_routes_events_by_file_path",
+   "signature": "def test_common_adapter_routes_events_by_file_path(toy, tmp_path, monkeypatch)",
+   "span": [
+    121,
+    122
+   ],
+   "visibility": "public"
+  }
+ ]
+}

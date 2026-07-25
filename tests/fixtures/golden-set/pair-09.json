@@ -1,0 +1,37 @@
+{
+ "adjudicated": "seeded during M4 per spec \u00a711",
+ "facts": {
+  "decisions_in_scope": [],
+  "diff_files": [],
+  "duplicate_candidates": [],
+  "gate_findings": [],
+  "imported_shadows": {},
+  "slice": "g-09",
+  "uses_declares": {
+   "declares": [
+    "module:config"
+   ],
+   "overridden": [],
+   "undeclared": [],
+   "unresolved": [],
+   "unused": [
+    "module:config"
+   ],
+   "uses": []
+  }
+ },
+ "model_outputs": {
+  "Does the diff conform to every decision row in scope? Answer pass/fail with the violated row id as evidence.": {
+   "answer": "pass",
+   "confidence": 0.95,
+   "evidence": "conforms"
+  },
+  "Holistic pass: anything worth a new decision row, ADR, or gate? Proposals only.": {
+   "answer": "pass",
+   "confidence": 0.95,
+   "evidence": "conforms"
+  }
+ },
+ "slice": "g-09",
+ "verdict": "allow"
+}

@@ -1,0 +1,159 @@
+{
+ "exports": [
+  "GateContext",
+  "__init__",
+  "all_gates",
+  "boundaries",
+  "context_loaded",
+  "decisions",
+  "gates_for_event",
+  "registry",
+  "rel",
+  "run_gates",
+  "slice",
+  "touched_files"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "pathlib",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.__init__",
+ "source_hash": "sha256:58739fc5bcbdbd11125d27196b7ac2351ced9b5918eb939f5ef78f4ca13c7a3d",
+ "source_path": "engine/gates/__init__.py",
+ "symbols": [
+  {
+   "doc": "Lazy substrate access shared by all gates in one event dispatch.",
+   "kind": "class",
+   "name": "GateContext",
+   "signature": "class GateContext",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, root, event: dict, config: dict, sidecar)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "registry",
+   "signature": "def registry(self)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "slice",
+   "signature": "def slice(self)",
+   "span": [
+    39,
+    40
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "decisions",
+   "signature": "def decisions(self)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "boundaries",
+   "signature": "def boundaries(self)",
+   "span": [
+    51,
+    52
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "context_loaded",
+   "signature": "def context_loaded(self) -> set",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "touched_files",
+   "signature": "def touched_files(self) -> list",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "rel",
+   "signature": "def rel(self, path: str) -> str",
+   "span": [
+    66,
+    67
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "all_gates",
+   "signature": "def all_gates()",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "gates_for_event",
+   "signature": "def gates_for_event(event: str, degraded: bool = False)",
+   "span": [
+    83,
+    84
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_gates",
+   "signature": "def run_gates(root, event: dict, config: dict, sidecar) -> list",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  }
+ ]
+}

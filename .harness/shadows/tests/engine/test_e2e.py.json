@@ -1,0 +1,112 @@
+{
+ "exports": [
+  "test_backlog_splits_oversized_slice",
+  "test_close_blocked_on_red_acceptance",
+  "test_close_blocked_on_undeclared_use",
+  "test_close_blocked_on_unreconciled_g3_touch",
+  "test_full_close_ceremony",
+  "test_init_scaffolds_and_refuses_overwrite",
+  "test_session_cycling_resumes_from_substrate_alone",
+  "test_toy_repo_end_to_end_block_then_pass"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_e2e",
+ "source_hash": "sha256:72616f9c871ac64e0172a2e590e5000693cb3632e32228ebb507751349079c14",
+ "source_path": "tests/engine/test_e2e.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_toy_repo_end_to_end_block_then_pass",
+   "signature": "def test_toy_repo_end_to_end_block_then_pass(toy): # 1. An agent editing a file without context is blocked with a pointer.",
+   "span": [
+    10,
+    12
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Kill the session mid-slice, resume with a fresh session, complete.",
+   "kind": "function",
+   "name": "test_session_cycling_resumes_from_substrate_alone",
+   "signature": "def test_session_cycling_resumes_from_substrate_alone(toy)",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_full_close_ceremony",
+   "signature": "def test_full_close_ceremony(toy)",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_blocked_on_undeclared_use",
+   "signature": "def test_close_blocked_on_undeclared_use(toy)",
+   "span": [
+    106,
+    107
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "\u00a77.5 'acceptance green' is engine-enforced, not skill prose (\u00a71.4).",
+   "kind": "function",
+   "name": "test_close_blocked_on_red_acceptance",
+   "signature": "def test_close_blocked_on_red_acceptance(toy)",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "T2: the unit cannot close until touched-file declarations reconcile.",
+   "kind": "function",
+   "name": "test_close_blocked_on_unreconciled_g3_touch",
+   "signature": "def test_close_blocked_on_unreconciled_g3_touch(toy)",
+   "span": [
+    131,
+    132
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_splits_oversized_slice",
+   "signature": "def test_backlog_splits_oversized_slice(tmp_path)",
+   "span": [
+    157,
+    158
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_scaffolds_and_refuses_overwrite",
+   "signature": "def test_init_scaffolds_and_refuses_overwrite(tmp_path)",
+   "span": [
+    172,
+    173
+   ],
+   "visibility": "public"
+  }
+ ]
+}

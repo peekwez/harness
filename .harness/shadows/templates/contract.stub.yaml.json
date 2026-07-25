@@ -1,0 +1,48 @@
+{
+ "exports": [
+  "info",
+  "openapi",
+  "paths"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "yaml",
+ "module_id": "templates.contract.stub",
+ "source_hash": "sha256:5eb582954bf13251f79f22c92a5a214999c63d80ca2c831b8924cfb776b65971",
+ "source_path": "templates/contract.stub.yaml",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "openapi",
+   "signature": "openapi",
+   "span": [
+    4,
+    4
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "info",
+   "signature": "info",
+   "span": [
+    5,
+    5
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "paths",
+   "signature": "paths",
+   "span": [
+    8,
+    8
+   ],
+   "visibility": "public"
+  }
+ ]
+}

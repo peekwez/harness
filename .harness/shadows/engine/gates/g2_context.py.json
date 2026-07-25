@@ -1,0 +1,41 @@
+{
+ "exports": [
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "g3_scope",
+  "json",
+  "pathlib",
+  "resolver"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g2_context",
+ "source_hash": "sha256:0391780a6004602db57fbf7b344d4a1af9e7f6175eeb1e8d2b2724c5bc382c17",
+ "source_path": "engine/gates/g2_context.py",
+ "symbols": [
+  {
+   "doc": "Pointer-sized correction: shadow path + exported signature summary.",
+   "kind": "function",
+   "name": "_pointer",
+   "signature": "def _pointer(root, entry) -> str",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  }
+ ]
+}

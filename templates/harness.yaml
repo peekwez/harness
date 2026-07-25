@@ -1,0 +1,17 @@
+# harness per-repo engine config (authored — edit freely, then commit)
+schema: 1
+resolver:
+  budget_tokens: 8000
+  ranking: [direct_deps, one_hop_types, durable_memories]
+  degrade: drop_docstrings_before_modules
+gates:
+  g3_mode: allow_with_findings      # or: block | radius
+  g5_override: recorded_justification  # or: advisory | park
+  g5_similarity_threshold: 0.6
+ensemble:
+  trigger_confidence_below: 0.7
+  samples: 3
+languages:
+{{languages}}
+telemetry:
+  compaction_is_defect: true

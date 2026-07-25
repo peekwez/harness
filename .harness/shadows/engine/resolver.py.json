@@ -1,0 +1,131 @@
+{
+ "exports": [
+  "context_cost_estimate",
+  "render_shadow",
+  "resolve"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "compiler",
+  "json",
+  "pathlib",
+  "re",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.resolver",
+ "source_hash": "sha256:b37728f7650dfc70e4667718dbd3b6db0b163fb2c7c7f9c6992424f2ba174a75",
+ "source_path": "engine/resolver.py",
+ "symbols": [
+  {
+   "doc": "'adr/007-telemetry.md#s2' -> 'adr:007'.",
+   "kind": "function",
+   "name": "_adr_id",
+   "signature": "def _adr_id(ref: str) -> str",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Fail closed: a built entry whose shadow is missing is the md-file-bug\n    class \u2014 never a silent omission from Phase-1 context.",
+   "kind": "function",
+   "name": "_load_shadow",
+   "signature": "def _load_shadow(root, entry)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "render_shadow",
+   "signature": "def render_shadow(shadow: dict, with_docs: bool = True) -> str",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "ADR ids that are out of force: status superseded, or listed in another\n    ADR's `supersedes`. Injecting them alongside their replacement hands the\n    builder contradictory guidance (field report #15).",
+   "kind": "function",
+   "name": "_adr_superseded_ids",
+   "signature": "def _adr_superseded_ids(root) -> set",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Guidance refs for planned entries; for built entries only the sections\n    NOT listed in supersedes_guidance survive (the shadow replaces the rest).\n    Refs into superseded ADRs are skipped and reported in `dropped`.\n    `loaded_adr_files` collects the ADR file paths that made it in \u2014 decision\n    rows authored by those ADRs join the curated decisions block.",
+   "kind": "function",
+   "name": "_render_guidance",
+   "signature": "def _render_guidance(root, entry, superseded: set, dropped=None, loaded_adr_files=None) -> list",
+   "span": [
+    90,
+    92
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_ref_superseded",
+   "signature": "def _ref_superseded(ref: str, superseded: set) -> bool",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Sections marked '<!-- #s2 -->' or headers '## s2 ...'.",
+   "kind": "function",
+   "name": "_extract_section",
+   "signature": "def _extract_section(text: str, anchor: str)",
+   "span": [
+    140,
+    141
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_durable_memories",
+   "signature": "def _durable_memories(root, module_ids: set) -> list",
+   "span": [
+    149,
+    150
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Assemble injection blocks + the context_loaded manifest they represent.",
+   "kind": "function",
+   "name": "resolve",
+   "signature": "def resolve(root, slice_id: str, config: dict) -> dict",
+   "span": [
+    161,
+    162
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backlog-time cost: declared deps -> shadow/guidance sizes through the\n    resolver's own budget logic (spec \u00a75.6).",
+   "kind": "function",
+   "name": "context_cost_estimate",
+   "signature": "def context_cost_estimate(root, declares_dep: list, config: dict) -> int",
+   "span": [
+    277,
+    278
+   ],
+   "visibility": "public"
+  }
+ ]
+}

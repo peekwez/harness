@@ -1,0 +1,4 @@
+{"id": "config", "kind": "config", "status": "planned", "module_id": null, "source": null, "source_hash": null, "shadow": null, "guidance_refs": [], "supersedes_guidance": [], "manifest": [], "signature_digest": null}
+{"id": "logging", "kind": "logging", "status": "planned", "module_id": null, "source": null, "source_hash": null, "shadow": null, "guidance_refs": [], "supersedes_guidance": [], "manifest": [], "signature_digest": null}
+{"id": "errors", "kind": "errors", "status": "planned", "module_id": null, "source": null, "source_hash": null, "shadow": null, "guidance_refs": [], "supersedes_guidance": [], "manifest": [], "signature_digest": null}
+{"id": "telemetry", "kind": "telemetry", "status": "planned", "module_id": null, "source": null, "source_hash": null, "shadow": null, "guidance_refs": [], "supersedes_guidance": [], "manifest": [], "signature_digest": null}

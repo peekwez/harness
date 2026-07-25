@@ -1,0 +1,28 @@
+{
+ "exports": [
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "fnmatch",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g1_manifest",
+ "source_hash": "sha256:8b3db336b81751a02c2c7ec52e3e47d9c1cb33e88c799e296d9170c6dc40e020",
+ "source_path": "engine/gates/g1_manifest.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    16,
+    17
+   ],
+   "visibility": "public"
+  }
+ ]
+}

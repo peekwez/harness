@@ -1,0 +1,24 @@
+{
+ "exports": [
+  "run_ensemble"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "python",
+ "module_id": "engine.review.ensemble",
+ "source_hash": "sha256:3f002616f6f00220d000c2a69d6c3320d5d4627c5b0e2683644a76f0a555567e",
+ "source_path": "engine/review/ensemble.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_ensemble",
+   "signature": "def run_ensemble(model, question: str, context: dict, samples: int, validate=None) -> dict",
+   "span": [
+    8,
+    10
+   ],
+   "visibility": "public"
+  }
+ ]
+}

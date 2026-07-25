@@ -1,0 +1,11 @@
+{
+ "exports": "unknown",
+ "extractor_version": 2,
+ "imports": [],
+ "language": "unknown",
+ "module_id": "adapters.pi.harness",
+ "raw_head": "/**\n * harness \u00d7 pi (earendil-works/pi) \u2014 extension adapter.\n *\n * Install: copy to `.pi/extensions/harness.ts` (project) or\n * `~/.pi/agent/extensions/harness.ts` (global); reload with `/reload`.\n * Set HARNESS_BIN to the absolute path of `<harness-checkout>/bin/harness`,\n * and HARNESS_SLICE (or run `harness slice`) to bind the active slice.\n *\n * Bindings:\n *   session_start      -> session_start   (engine side effects)\n *   before_agent_start -> pre_context     (context injection each turn;\n *                                          the engine dedupes re-injection)\n *   tool_call          -> pre_change      ({ block: true, reason } denies)\n *   tool_result        -> post_change     (records touches, regen at turn end)\n *   turn_end           -> unit_complete   (findings surface next turn via\n *                                          before_agent_start injection)\n *\n * Repos without a .harness/ substrate are inert. Engine errors in an\n * initialised repo fail closed (tool_call blocked).\n */\nimport { spawnSync } from \"node:child_process\";\nimport * as path from \"node:path\";\n\nconst HARNESS =\n  process.env.HARNESS_BIN ??\n  path.join(path.dirname(new URL(import.meta.url).pathname), \"..\", \"..\", \"bin\", \"harness\");\n\nconst EDIT_TOOLS = new Set([\"edit\", \"write\", \"create\", \"apply_patch\", \"multi_edit\"]);\n\ntype Verdict = {\n  verdict: \"allow\" | \"allow_with_findings\" | \"block\";\n  findings: Array<{ code: string; rule_ref: string; message: string; inject?: string[] }>;\n  injections: string[];\n  inert?: boolean;\n  engine_error?: string;\n};\n\nfunction callEngine(\n  event: string,\n  session: string,",
+ "source_hash": "sha256:a3d4cde564cbae46298872c7c55831f3e6a8d8de685da43f7470bfa7ec9d7988",
+ "source_path": "adapters/pi/harness.ts",
+ "symbols": []
+}

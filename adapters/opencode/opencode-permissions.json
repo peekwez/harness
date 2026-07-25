@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "_comment": "harness autonomy profile for OpenCode — merge the 'permission' block into opencode.json. Last matching rule wins, so '*' allow comes first and the push/remote denies stay in force even under `opencode --auto`. Safe because the harness plugin's tool.execute.before deny is the guardrail, not the prompt.",
+  "permission": {
+    "*": "allow",
+    "edit": "allow",
+    "bash": {
+      "*": "allow",
+      "git push *": "deny",
+      "git push": "deny",
+      "git remote *": "deny"
+    }
+  }
+}

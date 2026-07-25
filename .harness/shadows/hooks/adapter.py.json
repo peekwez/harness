@@ -1,0 +1,90 @@
+{
+ "exports": [
+  "call_engine",
+  "clip",
+  "files_from_tool_input",
+  "main",
+  "permit",
+  "resolve_root"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "hooks.adapter",
+ "source_hash": "sha256:c547a48801757c12247c6df5b9b6d085598d2d6f61dcf2a599a710dc7d224752",
+ "source_path": "hooks/adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "clip",
+   "signature": "def clip(text, slice_id=None)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "files_from_tool_input",
+   "signature": "def files_from_tool_input(tool_input)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The substrate the event belongs to: walk up from the edited file\n    first, then the hook's cwd. The hook process runs in the MAIN tree even\n    when the builder edits inside a slice worktree \u2014 without this, worktree\n    edits normalize to out-of-root paths and shadows never regenerate there\n    (parallel-worktree field report W2). Every file is a candidate \u2014 the\n    first that resolves wins, so a stray first file (scratchpad, /tmp) does\n    not blind the routing. None -> engine default (cwd).",
+   "kind": "function",
+   "name": "resolve_root",
+   "signature": "def resolve_root(files, hook_cwd)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Ask the engine whether the bound slice's gates approve this tool call.\n    A separate question from the enforcement verdict (which never grows\n    fields): policy lives in engine/permits.py, the adapter only translates.",
+   "kind": "function",
+   "name": "permit",
+   "signature": "def permit(session, root=None, command=None, paths=None)",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "call_engine",
+   "signature": "def call_engine(event, root=None)",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "def main()",
+   "span": [
+    123,
+    124
+   ],
+   "visibility": "public"
+  }
+ ]
+}

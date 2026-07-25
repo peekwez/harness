@@ -1,0 +1,305 @@
+{
+ "exports": [
+  "build_shadow",
+  "deps_available",
+  "extract_all",
+  "extract_path",
+  "in_root",
+  "is_exported",
+  "load_shadow_file",
+  "module_id_for",
+  "one",
+  "rel_to_root",
+  "shadow_path_for",
+  "write_shadow"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "json",
+  "pathlib",
+  "tree_sitter",
+  "tree_sitter_language_pack"
+ ],
+ "language": "python",
+ "module_id": "engine.extractor.engine",
+ "source_hash": "sha256:0a0a2cef70c3b72098e97f482ee295f0bc680661906f72d6a1c500f1788f9b41",
+ "source_path": "engine/extractor/engine.py",
+ "symbols": [
+  {
+   "doc": "Whether the tree-sitter extraction stack is importable. When it is\n    not, extraction degrades to degenerate shadows with a loud advisory \u2014\n    a missing optional dep must never hard-block the session.",
+   "kind": "function",
+   "name": "deps_available",
+   "signature": "def deps_available() -> bool",
+   "span": [
+    36,
+    37
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_get_parser",
+   "signature": "def _get_parser(lang: str)",
+   "span": [
+    51,
+    52
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_get_query",
+   "signature": "def _get_query(lang: str, name: str)",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Normalize captures across py-tree-sitter versions -> {name: [nodes]}.",
+   "kind": "function",
+   "name": "_captures",
+   "signature": "def _captures(query, node) -> dict",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_text",
+   "signature": "def _text(node, src: bytes) -> str",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_py_visibility",
+   "signature": "def _py_visibility(name: str) -> str",
+   "span": [
+    98,
+    99
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_python_symbols",
+   "signature": "def _python_symbols(tree, src)",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_python_imports",
+   "signature": "def _python_imports(tree, src)",
+   "span": [
+    168,
+    169
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_python_exports",
+   "signature": "def _python_exports(tree, src, symbols)",
+   "span": [
+    187,
+    188
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_ts_symbols",
+   "signature": "def _ts_symbols(tree, src)",
+   "span": [
+    200,
+    201
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "is_exported",
+   "signature": "def is_exported(node)",
+   "span": [
+    208,
+    209
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_ts_imports",
+   "signature": "def _ts_imports(tree, src)",
+   "span": [
+    242,
+    243
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_yaml_symbols",
+   "signature": "def _yaml_symbols(tree, src)",
+   "span": [
+    251,
+    252
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_hcl_symbols",
+   "signature": "def _hcl_symbols(tree, src)",
+   "span": [
+    271,
+    272
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Root-relative path or a loud, contextual error \u2014 never a bare\n    ValueError that takes down a Stop hook (field report #19).",
+   "kind": "function",
+   "name": "rel_to_root",
+   "signature": "def rel_to_root(root, path)",
+   "span": [
+    291,
+    292
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "in_root",
+   "signature": "def in_root(root, path) -> bool",
+   "span": [
+    302,
+    303
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "module_id_for",
+   "signature": "def module_id_for(root, path: Path) -> str",
+   "span": [
+    310,
+    311
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "shadow_path_for",
+   "signature": "def shadow_path_for(root, path: Path) -> Path",
+   "span": [
+    315,
+    316
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_degenerate_shadow",
+   "signature": "def _degenerate_shadow(root, path: Path, source: bytes) -> dict",
+   "span": [
+    320,
+    321
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "build_shadow",
+   "signature": "def build_shadow(root, path: Path, source: bytes, lang: str) -> dict",
+   "span": [
+    335,
+    336
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "write_shadow",
+   "signature": "def write_shadow(root, path: Path, shadow: dict) -> Path",
+   "span": [
+    368,
+    369
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_shadow_file",
+   "signature": "def load_shadow_file(sp: Path) -> dict",
+   "span": [
+    375,
+    376
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Extract one file. Returns (shadow_dict | None, findings).\n\n    Cache: unchanged source AND same extractor version -> no work. A format\n    change is a cache miss by construction (W7) \u2014 otherwise stale-format\n    shadows are served forever while G7's uncached rebuild mismatches\n    forever. `force` bypasses the cache entirely (the escape hatch).\n    Unknown language -> degenerate shadow + G8 UNKNOWN_LANGUAGE finding.\n    Ignored extensions -> (None, []) \u2014 docs/substrate are not modules.",
+   "kind": "function",
+   "name": "extract_path",
+   "signature": "def extract_path(root, path, config=None, force=False) -> tuple",
+   "span": [
+    379,
+    380
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Walk repo, extract every candidate source file, and refresh every\n    EXISTING shadow whose source still exists \u2014 including extensionless\n    sources (Makefile, LICENSE\u2026) the discovery walk skips. G7 checks all\n    stored shadows, so --all must be able to fix all of them.",
+   "kind": "function",
+   "name": "extract_all",
+   "signature": "def extract_all(root, config=None, force=False) -> dict",
+   "span": [
+    443,
+    444
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "one",
+   "signature": "def one(p)",
+   "span": [
+    452,
+    453
+   ],
+   "visibility": "public"
+  }
+ ]
+}

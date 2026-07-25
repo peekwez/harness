@@ -1,0 +1,45 @@
+{
+ "exports": [
+  "assemble",
+  "diff_files"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "extractor",
+  "gates",
+  "graph",
+  "json",
+  "pathlib",
+  "re",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.review.layer0",
+ "source_hash": "sha256:46dc45558ecf89007ef000b8f7c37d2590882cf7ac9bffb04ac38c2054905d2b",
+ "source_path": "engine/review/layer0.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "diff_files",
+   "signature": "def diff_files(diff_text: str) -> list",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Substrate + diff only. The reviewer never receives builder session\n    memory \u2014 independent derivation from the same ground truth is the point.",
+   "kind": "function",
+   "name": "assemble",
+   "signature": "def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict",
+   "span": [
+    28,
+    29
+   ],
+   "visibility": "public"
+  }
+ ]
+}

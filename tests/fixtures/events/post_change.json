@@ -1,0 +1,11 @@
+{
+  "phase1_first": true,
+  "event": {
+    "event": "post_change",
+    "session_id": "PLACEHOLDER",
+    "work_unit_id": "slice-042",
+    "payload": {"files": [{"path": "orders.py", "proposed_content_hash": null}],
+                "context_loaded": [], "diff": null, "prompt": null}
+  },
+  "expect": {"verdict": "allow", "codes_subset": []}
+}

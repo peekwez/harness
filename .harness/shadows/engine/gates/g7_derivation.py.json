@@ -1,0 +1,42 @@
+{
+ "exports": [
+  "check",
+  "derivation_findings"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "extractor",
+  "json",
+  "pathlib",
+  "time"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g7_derivation",
+ "source_hash": "sha256:ebb2b71e0808358dc69370180eab5fb9df9e04e2c8375f988c069fdb329b712c",
+ "source_path": "engine/gates/g7_derivation.py",
+ "symbols": [
+  {
+   "doc": "Shared with C9 verify. Regenerate shadows in memory, byte-compare.\n\n    `since_ns` skips shadows untouched since a previous verified sweep \u2014 a\n    pure cache (absence = do the work), so the guarantee is unchanged while\n    the Stop hook stops being O(repo) tree-sitter parses (review R4). CI\n    verify passes nothing and always sweeps everything.",
+   "kind": "function",
+   "name": "derivation_findings",
+   "signature": "def derivation_findings(root, config, paths=None, since_ns=None) -> list",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Every shadow still gets verified \u2014 but a shadow proven identical in\n    an earlier sweep and untouched since is skipped, so the Stop hook costs\n    O(changed) parses instead of O(repo) (review R4). The sweep timestamp is\n    taken BEFORE the work, so anything modified mid-sweep is re-checked.",
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    100,
+    101
+   ],
+   "visibility": "public"
+  }
+ ]
+}

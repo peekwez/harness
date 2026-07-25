@@ -1,0 +1,117 @@
+{
+ "exports": [
+  "build_toy_repo",
+  "git",
+  "loaded_context",
+  "make_config",
+  "make_event",
+  "plugin_root",
+  "run_cli",
+  "toy"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "os",
+  "pathlib",
+  "pytest",
+  "subprocess",
+  "sys",
+  "textwrap"
+ ],
+ "language": "python",
+ "module_id": "tests.conftest",
+ "source_hash": "sha256:9ed61c8e676d5bf2bbba33211caf5b01278c5a9046626375fcdabcd714d713c4",
+ "source_path": "tests/conftest.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_cli",
+   "signature": "def run_cli(*args, root=None, stdin=None, env=None)",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "git",
+   "signature": "def git(root, *args)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "make_config",
+   "signature": "def make_config(budget=8000, g3_mode=\"allow_with_findings\", g5_override=\"recorded_justification\")",
+   "span": [
+    119,
+    121
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Substrate + two modules (telemetry built, config planned) + slice-042.",
+   "kind": "function",
+   "name": "build_toy_repo",
+   "signature": "def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path",
+   "span": [
+    144,
+    145
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "toy",
+   "signature": "def toy(tmp_path)",
+   "span": [
+    223,
+    224
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "plugin_root",
+   "signature": "def plugin_root()",
+   "span": [
+    228,
+    229
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "make_event",
+   "signature": "def make_event(event, session=\"s1\", slice_id=\"slice-042\", files=None, context=None, prompt=None)",
+   "span": [
+    232,
+    234
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Run Phase 1 (session_start) so the session has its context.",
+   "kind": "function",
+   "name": "loaded_context",
+   "signature": "def loaded_context(root, session=\"s1\", slice_id=\"slice-042\")",
+   "span": [
+    241,
+    242
+   ],
+   "visibility": "public"
+  }
+ ]
+}

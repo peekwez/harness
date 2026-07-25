@@ -1,0 +1,48 @@
+{
+ "exports": [
+  "jobs",
+  "name",
+  "on"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "yaml",
+ "module_id": "templates.ci-verify",
+ "source_hash": "sha256:a43ec5a989281ff257c768a7aa580f5ee880867a050d4446068f05a352e313ca",
+ "source_path": "templates/ci-verify.yml",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "name",
+   "signature": "name",
+   "span": [
+    12,
+    12
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "on",
+   "signature": "on",
+   "span": [
+    14,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "jobs",
+   "signature": "jobs",
+   "span": [
+    37,
+    37
+   ],
+   "visibility": "public"
+  }
+ ]
+}

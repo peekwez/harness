@@ -1,0 +1,212 @@
+{
+ "exports": [
+  "test_acceptance_runner_prefers_project_venv",
+  "test_compile_reconciles_refs_and_kind_on_recompile",
+  "test_custom_domain_preserved_and_gate_checks_coverage",
+  "test_decisions_block_includes_rows_from_loaded_adrs",
+  "test_default_binding_reaches_unknown_hook_sessions",
+  "test_descriptive_path_compiles_to_warning_not_block",
+  "test_descriptive_path_in_non_goal_is_not_a_blocking_glob",
+  "test_docs_edits_are_exempt_and_g3_consults_overrides",
+  "test_extract_path_outside_root_is_advisory_not_crash",
+  "test_g3_non_goal_block_is_overridable",
+  "test_generated_contract_mode_exempts_coverage",
+  "test_init_autonomy_writes_permission_profile",
+  "test_init_without_autonomy_writes_no_settings",
+  "test_out_of_root_paths_never_crash_the_stop_hook",
+  "test_resolver_skips_superseded_adr_guidance",
+  "test_slice_release_and_close_unbinds"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "importlib",
+  "json",
+  "os",
+  "pytest",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report2",
+ "source_hash": "sha256:e412a65a58d797614bdcf7c0287aa812e2e36ff9e628f6d5ed961cbeb8b455c4",
+ "source_path": "tests/engine/test_field_report2.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_out_of_root_paths_never_crash_the_stop_hook",
+   "signature": "def test_out_of_root_paths_never_crash_the_stop_hook(toy)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_extract_path_outside_root_is_advisory_not_crash",
+   "signature": "def test_extract_path_outside_root_is_advisory_not_crash(toy, tmp_path)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_resolver_skips_superseded_adr_guidance",
+   "signature": "def test_resolver_skips_superseded_adr_guidance(toy)",
+   "span": [
+    43,
+    44
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_reconciles_refs_and_kind_on_recompile",
+   "signature": "def test_compile_reconciles_refs_and_kind_on_recompile(toy)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_descriptive_path_in_non_goal_is_not_a_blocking_glob",
+   "signature": "def test_descriptive_path_in_non_goal_is_not_a_blocking_glob()",
+   "span": [
+    87,
+    88
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_descriptive_path_compiles_to_warning_not_block",
+   "signature": "def test_descriptive_path_compiles_to_warning_not_block(toy)",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g3_non_goal_block_is_overridable",
+   "signature": "def test_g3_non_goal_block_is_overridable(toy)",
+   "span": [
+    114,
+    115
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_docs_edits_are_exempt_and_g3_consults_overrides",
+   "signature": "def test_docs_edits_are_exempt_and_g3_consults_overrides(toy)",
+   "span": [
+    135,
+    136
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_default_binding_reaches_unknown_hook_sessions",
+   "signature": "def test_default_binding_reaches_unknown_hook_sessions(toy)",
+   "span": [
+    152,
+    153
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_slice_release_and_close_unbinds",
+   "signature": "def test_slice_release_and_close_unbinds(toy)",
+   "span": [
+    163,
+    164
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_acceptance_runner_prefers_project_venv",
+   "signature": "def test_acceptance_runner_prefers_project_venv(toy)",
+   "span": [
+    199,
+    200
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A row whose domain matches nothing declared still joins the curated\n    decisions block when its authoring ADR is loaded as guidance for the\n    slice \u2014 the block must be a superset of what the builder can already see\n    in that ADR's frontmatter.",
+   "kind": "function",
+   "name": "test_decisions_block_includes_rows_from_loaded_adrs",
+   "signature": "def test_decisions_block_includes_rows_from_loaded_adrs(toy)",
+   "span": [
+    230,
+    231
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_autonomy_writes_permission_profile",
+   "signature": "def test_init_autonomy_writes_permission_profile(tmp_path)",
+   "span": [
+    255,
+    256
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_without_autonomy_writes_no_settings",
+   "signature": "def test_init_without_autonomy_writes_no_settings(tmp_path)",
+   "span": [
+    278,
+    279
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_generated_contract_mode_exempts_coverage",
+   "signature": "def test_generated_contract_mode_exempts_coverage(toy)",
+   "span": [
+    286,
+    287
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_custom_domain_preserved_and_gate_checks_coverage",
+   "signature": "def test_custom_domain_preserved_and_gate_checks_coverage(toy)",
+   "span": [
+    297,
+    298
+   ],
+   "visibility": "public"
+  }
+ ]
+}

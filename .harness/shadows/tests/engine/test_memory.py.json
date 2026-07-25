@@ -1,0 +1,63 @@
+{
+ "exports": [
+  "test_attempt_requires_approach_outcome_why",
+  "test_compact_promotes_attempts_and_deletes_session_file",
+  "test_flush_reports_entries",
+  "test_invalid_kind_fails_loud"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_memory",
+ "source_hash": "sha256:965243c92e4aef670efd9816c00e8b615bf7423db5e9aa3054e7676d227c019b",
+ "source_path": "tests/engine/test_memory.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_attempt_requires_approach_outcome_why",
+   "signature": "def test_attempt_requires_approach_outcome_why(toy)",
+   "span": [
+    7,
+    8
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_invalid_kind_fails_loud",
+   "signature": "def test_invalid_kind_fails_loud(toy)",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compact_promotes_attempts_and_deletes_session_file",
+   "signature": "def test_compact_promotes_attempts_and_deletes_session_file(toy)",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_flush_reports_entries",
+   "signature": "def test_flush_reports_entries(toy)",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  }
+ ]
+}

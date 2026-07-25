@@ -1,0 +1,64 @@
+{
+ "exports": [
+  "acknowledge",
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "graph",
+  "json",
+  "pathlib",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g6_drift",
+ "source_hash": "sha256:515939f5ff1abf4b928f878e8dd8c6d493073ebfa870de5f17c2b61459c8f062",
+ "source_path": "engine/gates/g6_drift.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_shadow_source_hash",
+   "signature": "def _shadow_source_hash(root, entry)",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_acked",
+   "signature": "def _acked(ctx) -> set",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "acknowledge",
+   "signature": "def acknowledge(root, slice_id: str, module_id: str, note: str = \"\") -> dict",
+   "span": [
+    73,
+    74
+   ],
+   "visibility": "public"
+  }
+ ]
+}

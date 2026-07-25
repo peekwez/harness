@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ],
+    "BeforeAgent": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ],
+    "BeforeTool": [
+      {"matcher": "write_file|replace|run_shell_command",
+       "hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ],
+    "AfterTool": [
+      {"matcher": "write_file|replace",
+       "hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ],
+    "AfterAgent": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ],
+    "PreCompress": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/gemini/adapter.py\""}]}
+    ]
+  }
+}

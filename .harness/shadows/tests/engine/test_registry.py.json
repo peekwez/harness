@@ -1,0 +1,76 @@
+{
+ "exports": [
+  "test_duplicate_registry_id_fails_loud",
+  "test_flip_rejected_when_shadow_stale",
+  "test_flip_rejected_without_shadow",
+  "test_flip_succeeds_and_derives_fields",
+  "test_manifest_deletion_blocks_session_start"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_registry",
+ "source_hash": "sha256:08993a5ee35f957f5f9507cd4be4173a8e2de6ff4a712fe08fcafd71502723be",
+ "source_path": "tests/engine/test_registry.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_manifest_deletion_blocks_session_start",
+   "signature": "def test_manifest_deletion_blocks_session_start(toy)",
+   "span": [
+    10,
+    11
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_flip_rejected_without_shadow",
+   "signature": "def test_flip_rejected_without_shadow(toy): # 'orders' has no source file yet -> flip must fail loud",
+   "span": [
+    20,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_flip_rejected_when_shadow_stale",
+   "signature": "def test_flip_rejected_when_shadow_stale(toy)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_flip_succeeds_and_derives_fields",
+   "signature": "def test_flip_succeeds_and_derives_fields(toy)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_duplicate_registry_id_fails_loud",
+   "signature": "def test_duplicate_registry_id_fails_loud(toy)",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  }
+ ]
+}

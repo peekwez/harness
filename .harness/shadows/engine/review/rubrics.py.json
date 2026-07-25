@@ -1,0 +1,132 @@
+{
+ "exports": [
+  "duplicates_resolved",
+  "no_blocking_gate_findings",
+  "run_review",
+  "uses_reconciled"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "ensemble",
+  "events",
+  "graph",
+  "json",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.review.rubrics",
+ "source_hash": "sha256:7a810b19ed1307b9720dc795e630a7bfe90df0682056ecc39120beda599a61e8",
+ "source_path": "engine/review/rubrics.py",
+ "symbols": [
+  {
+   "doc": "Rubrics answerable from Layer-0 facts alone. Each returns\n    {answer: pass|fail, confidence: 1.0, evidence: str}.",
+   "kind": "function",
+   "name": "_deterministic_rubrics",
+   "signature": "def _deterministic_rubrics()",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "uses_reconciled",
+   "signature": "def uses_reconciled(facts)",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "no_blocking_gate_findings",
+   "signature": "def no_blocking_gate_findings(facts)",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "duplicates_resolved",
+   "signature": "def duplicates_resolved(facts)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Model-backed rubrics loaded from substrate decision rows: every\n    decision row in scope becomes one narrow conformance question.",
+   "kind": "function",
+   "name": "_model_rubrics",
+   "signature": "def _model_rubrics(root)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Nearest adjudicated exemplars from durable memory.",
+   "kind": "function",
+   "name": "_precedents",
+   "signature": "def _precedents(root, rubric_id: str, limit: int = 3) -> list",
+   "span": [
+    69,
+    70
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_validate_model_output",
+   "signature": "def _validate_model_output(out: dict, rubric_id: str) -> dict",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Finding IDs with a decided_by edge: the same question never parks\n    twice \u2014 prior adjudications suppress the repeat park (\u00a77.7, M6).",
+   "kind": "function",
+   "name": "_already_adjudicated",
+   "signature": "def _already_adjudicated(root) -> set",
+   "span": [
+    91,
+    92
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_already_parked",
+   "signature": "def _already_parked(root) -> set",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Full stack over assembled facts. Returns a verdict-shaped dict with\n    findings; parked findings are appended to .harness/parked.jsonl.\n    record_parks=False makes the run side-effect-free (golden replay).",
+   "kind": "function",
+   "name": "run_review",
+   "signature": "def run_review(root, facts: dict, config: dict, model=None, record_parks: bool = True) -> dict",
+   "span": [
+    104,
+    106
+   ],
+   "visibility": "public"
+  }
+ ]
+}

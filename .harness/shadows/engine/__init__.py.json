@@ -1,0 +1,270 @@
+{
+ "exports": [
+  "HarnessError",
+  "SchemaError",
+  "SubstrateMissing",
+  "append_jsonl",
+  "check_schema_version",
+  "find_root",
+  "get_slice",
+  "harness_dir",
+  "load_backlog",
+  "load_boundaries",
+  "load_config",
+  "load_decisions",
+  "now_iso",
+  "read_jsonl",
+  "save_slice",
+  "sha256_bytes",
+  "sha256_file",
+  "sha256_text",
+  "token_estimate",
+  "write_jsonl"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "hashlib",
+  "json",
+  "os",
+  "pathlib",
+  "time",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "engine.__init__",
+ "source_hash": "sha256:f6932f2b5f5468a941a81ef486e3ac499b02a7f690900fd798a87625ce998457",
+ "source_path": "engine/__init__.py",
+ "symbols": [
+  {
+   "doc": "Engine error (nonzero exit). Verdicts carry semantics; this does not.",
+   "kind": "class",
+   "name": "HarnessError",
+   "signature": "class HarnessError(Exception)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "class",
+   "name": "SubstrateMissing",
+   "signature": "class SubstrateMissing(HarnessError)",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "class",
+   "name": "SchemaError",
+   "signature": "class SchemaError(HarnessError)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "sha256_bytes",
+   "signature": "def sha256_bytes(data: bytes) -> str",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "sha256_text",
+   "signature": "def sha256_text(text: str) -> str",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "sha256_file",
+   "signature": "def sha256_file(path) -> str",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Deterministic token estimate: ~4 chars/token.",
+   "kind": "function",
+   "name": "token_estimate",
+   "signature": "def token_estimate(text: str) -> int",
+   "span": [
+    54,
+    55
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "now_iso",
+   "signature": "def now_iso() -> str",
+   "span": [
+    59,
+    60
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Walk up from start until a .harness/ substrate is found. Fail loud.",
+   "kind": "function",
+   "name": "find_root",
+   "signature": "def find_root(start=None) -> Path",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "harness_dir",
+   "signature": "def harness_dir(root) -> Path",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check_schema_version",
+   "signature": "def check_schema_version(root) -> None",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "read_jsonl",
+   "signature": "def read_jsonl(path) -> list",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Single-write append; O_APPEND single-line writes are concurrency-safe.",
+   "kind": "function",
+   "name": "append_jsonl",
+   "signature": "def append_jsonl(path, obj: dict) -> None",
+   "span": [
+    106,
+    107
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Atomic whole-file rewrite: serialize first, write to a temp file in\n    the same directory, then os.replace. A crash (or a concurrent reader)\n    never sees a truncated substrate file \u2014 the system's entire value is\n    substrate integrity.",
+   "kind": "function",
+   "name": "write_jsonl",
+   "signature": "def write_jsonl(path, rows: list) -> None",
+   "span": [
+    118,
+    119
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_backlog",
+   "signature": "def load_backlog(root) -> list",
+   "span": [
+    140,
+    141
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "get_slice",
+   "signature": "def get_slice(root, slice_id: str) -> dict",
+   "span": [
+    147,
+    148
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "save_slice",
+   "signature": "def save_slice(root, row: dict) -> None",
+   "span": [
+    154,
+    155
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_decisions",
+   "signature": "def load_decisions(root) -> list",
+   "span": [
+    165,
+    166
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "G3 scope boundaries compiled from [non-goal] blocks. Optional.",
+   "kind": "function",
+   "name": "load_boundaries",
+   "signature": "def load_boundaries(root) -> list",
+   "span": [
+    172,
+    173
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_deep_merge",
+   "signature": "def _deep_merge(base: dict, over: dict) -> dict",
+   "span": [
+    198,
+    199
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_config",
+   "signature": "def load_config(root) -> dict",
+   "span": [
+    208,
+    209
+   ],
+   "visibility": "public"
+  }
+ ]
+}

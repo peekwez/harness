@@ -1,0 +1,112 @@
+{
+ "exports": [
+  "test_bind_registers_resolved_context_for_the_session",
+  "test_ci_template_does_not_assume_a_vendored_engine",
+  "test_close_auto_extracts_missing_shadows_for_touched_files",
+  "test_g7_mismatch_names_a_fix_that_cannot_noop",
+  "test_resolve_accepts_session_and_registers_context",
+  "test_resolve_advertises_the_acceptance_interpreter",
+  "test_review_diff_with_missing_file_errors_cleanly",
+  "test_session_defaults_to_claude_session_id_env"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report5",
+ "source_hash": "sha256:69767679deafef07a2476b4bf9f869af2227b8d1f768f81b0db801bdd3251eed",
+ "source_path": "tests/engine/test_field_report5.py",
+ "symbols": [
+  {
+   "doc": "Consumer repos have no ./bin/harness \u2014 the scaffolded workflow must\n    fetch the engine (or use a vendored one) and fail with a NAMED fix when\n    it can't, not crash on the first push.",
+   "kind": "function",
+   "name": "test_ci_template_does_not_assume_a_vendored_engine",
+   "signature": "def test_ci_template_does_not_assume_a_vendored_engine()",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_review_diff_with_missing_file_errors_cleanly",
+   "signature": "def test_review_diff_with_missing_file_errors_cleanly(toy)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_resolve_accepts_session_and_registers_context",
+   "signature": "def test_resolve_accepts_session_and_registers_context(toy)",
+   "span": [
+    40,
+    41
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Improvement 1: after `harness slice`, an edit under that session must\n    pass G2 without a separate pre_context ceremony.",
+   "kind": "function",
+   "name": "test_bind_registers_resolved_context_for_the_session",
+   "signature": "def test_bind_registers_resolved_context_for_the_session(toy)",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_session_defaults_to_claude_session_id_env",
+   "signature": "def test_session_defaults_to_claude_session_id_env(toy)",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`extract --all` can legitimately report 'cached' in edge states; the\n    finding must name `extract --force <path>` \u2014 guaranteed effective.",
+   "kind": "function",
+   "name": "test_g7_mismatch_names_a_fix_that_cannot_noop",
+   "signature": "def test_g7_mismatch_names_a_fix_that_cannot_noop(toy)",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The documented contract: derived artifacts are the ENGINE's job.\n    Close extracts missing shadows for touched files itself and reports\n    them; G7 still blocks anything stale or hand-edited.",
+   "kind": "function",
+   "name": "test_close_auto_extracts_missing_shadows_for_touched_files",
+   "signature": "def test_close_auto_extracts_missing_shadows_for_touched_files(toy)",
+   "span": [
+    92,
+    93
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_resolve_advertises_the_acceptance_interpreter",
+   "signature": "def test_resolve_advertises_the_acceptance_interpreter(toy)",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  }
+ ]
+}

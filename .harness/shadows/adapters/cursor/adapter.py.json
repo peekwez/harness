@@ -1,0 +1,41 @@
+{
+ "exports": [
+  "main"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "common",
+  "json",
+  "os",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "adapters.cursor.adapter",
+ "source_hash": "sha256:a1762736e1d36ee4b1536a7cf2cf74b87306df0fee77c06e84dfea867495a5f8",
+ "source_path": "adapters/cursor/adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_files",
+   "signature": "def _files(hook)",
+   "span": [
+    39,
+    40
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "def main()",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  }
+ ]
+}

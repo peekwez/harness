@@ -1,0 +1,103 @@
+{
+ "exports": [
+  "seed_edges",
+  "test_concurrent_appends_lose_no_events",
+  "test_git_notes_mirror_and_orphan_detection",
+  "test_provenance_walk_returns_authored_chain",
+  "test_rebuild_from_log_equals_live",
+  "test_unknown_edge_type_fails_loud",
+  "test_uses_vs_declares_diff"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "pytest",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_graph",
+ "source_hash": "sha256:975681b4e3e7ee2762f1d6019a4e83635817ff31116aa3016c15ff1bebbc1049",
+ "source_path": "tests/engine/test_graph.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "seed_edges",
+   "signature": "def seed_edges(toy)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_rebuild_from_log_equals_live",
+   "signature": "def test_rebuild_from_log_equals_live(toy)",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_provenance_walk_returns_authored_chain",
+   "signature": "def test_provenance_walk_returns_authored_chain(toy)",
+   "span": [
+    36,
+    37
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_uses_vs_declares_diff",
+   "signature": "def test_uses_vs_declares_diff(toy)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unknown_edge_type_fails_loud",
+   "signature": "def test_unknown_edge_type_fails_loud(toy)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_concurrent_appends_lose_no_events",
+   "signature": "def test_concurrent_appends_lose_no_events(toy, plugin_root)",
+   "span": [
+    62,
+    63
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_git_notes_mirror_and_orphan_detection",
+   "signature": "def test_git_notes_mirror_and_orphan_detection(toy)",
+   "span": [
+    79,
+    80
+   ],
+   "visibility": "public"
+  }
+ ]
+}

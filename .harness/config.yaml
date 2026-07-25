@@ -1,0 +1,20 @@
+# harness self-hosting config — the plugin eats its own cooking.
+schema: 1
+resolver:
+  budget_tokens: 8000
+  ranking: [direct_deps, one_hop_types, durable_memories]
+  degrade: drop_docstrings_before_modules
+gates:
+  g3_mode: allow_with_findings
+  g5_override: recorded_justification
+  g5_similarity_threshold: 0.6
+ensemble:
+  trigger_confidence_below: 0.7
+  samples: 3
+languages:
+  python: true
+  typescript: false
+  yaml: true
+  hcl: false
+telemetry:
+  compaction_is_defect: true

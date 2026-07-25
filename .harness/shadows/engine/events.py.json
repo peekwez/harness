@@ -1,0 +1,379 @@
+{
+ "exports": [
+  "EventError",
+  "Sidecar",
+  "VerdictError",
+  "__init__",
+  "add_once",
+  "close",
+  "context_add",
+  "context_get",
+  "handle_event",
+  "make_finding",
+  "merge_verdicts",
+  "rel_in_root",
+  "release_slice",
+  "release_snapshots",
+  "run_stdin",
+  "snapshot_get",
+  "snapshot_set",
+  "state_get",
+  "state_set",
+  "telemetry_buffer",
+  "telemetry_drain",
+  "telemetry_peek",
+  "touch",
+  "touched_paths",
+  "validate_event",
+  "validate_finding",
+  "verdict_for"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "extractor",
+  "gates",
+  "graph",
+  "hashlib",
+  "json",
+  "pathlib",
+  "registry",
+  "resolver",
+  "sqlite3"
+ ],
+ "language": "python",
+ "module_id": "engine.events",
+ "source_hash": "sha256:6174e1f265d0fe5ee5ec454c17a4713c8b73623feb79a893653836836e21f167",
+ "source_path": "engine/events.py",
+ "symbols": [
+  {
+   "doc": "Malformed EnforcementEvent \u2014 exit 2 with error JSON.",
+   "kind": "class",
+   "name": "EventError",
+   "signature": "class EventError(HarnessError)",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Engine produced an invalid verdict \u2014 a bug, fail loud.",
+   "kind": "class",
+   "name": "VerdictError",
+   "signature": "class VerdictError(HarnessError)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "make_finding",
+   "signature": "def make_finding(code, rule_ref, message, severity=\"advisory\", layer=0, inject=None, precedents=None, key=None) -> dict",
+   "span": [
+    40,
+    42
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "validate_finding",
+   "signature": "def validate_finding(f: dict) -> None",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "verdict_for",
+   "signature": "def verdict_for(findings: list, injections=None) -> dict",
+   "span": [
+    68,
+    69
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Most restrictive wins: block > allow_with_findings > allow.",
+   "kind": "function",
+   "name": "merge_verdicts",
+   "signature": "def merge_verdicts(verdicts: list) -> dict",
+   "span": [
+    79,
+    80
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "validate_event",
+   "signature": "def validate_event(raw: dict) -> dict",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Gitignored SQLite: session context_loaded state, slice symbol snapshots,\n    touched-file tracking, extractor cache metadata. Fully rebuildable.",
+   "kind": "class",
+   "name": "Sidecar",
+   "signature": "class Sidecar",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, root)",
+   "span": [
+    141,
+    142
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "close",
+   "signature": "def close(self)",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "context_add",
+   "signature": "def context_add(self, session_id, items)",
+   "span": [
+    170,
+    171
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "context_get",
+   "signature": "def context_get(self, session_id) -> set",
+   "span": [
+    177,
+    178
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "state_set",
+   "signature": "def state_set(self, session_id, key, value)",
+   "span": [
+    182,
+    183
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "state_get",
+   "signature": "def state_get(self, session_id, key, default=None)",
+   "span": [
+    188,
+    189
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Clear active-slice bindings \u2014 for one slice (on close) or all\n        (`harness slice --release`). Returns rows cleared.",
+   "kind": "method",
+   "name": "release_slice",
+   "signature": "def release_slice(self, slice_id=None) -> int",
+   "span": [
+    195,
+    196
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Hook-frequency telemetry parks here (gitignored) instead of\n        churning the tracked file on every event (review R8).",
+   "kind": "method",
+   "name": "telemetry_buffer",
+   "signature": "def telemetry_buffer(self, row: dict) -> None",
+   "span": [
+    208,
+    209
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "telemetry_peek",
+   "signature": "def telemetry_peek(self) -> list",
+   "span": [
+    215,
+    216
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "telemetry_drain",
+   "signature": "def telemetry_drain(self) -> list",
+   "span": [
+    219,
+    220
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Drop a slice's G6 baselines at close \u2014 stale baselines cause\n        phantom drift when the id is later rebound (S6).",
+   "kind": "method",
+   "name": "release_snapshots",
+   "signature": "def release_snapshots(self, slice_id) -> int",
+   "span": [
+    225,
+    226
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "snapshot_set",
+   "signature": "def snapshot_set(self, slice_id, module_id, symbols)",
+   "span": [
+    233,
+    234
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "snapshot_get",
+   "signature": "def snapshot_get(self, slice_id) -> dict",
+   "span": [
+    239,
+    240
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "touch",
+   "signature": "def touch(self, session_id, slice_id, paths)",
+   "span": [
+    244,
+    245
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "touched_paths",
+   "signature": "def touched_paths(self, slice_id=None, session_id=None) -> set",
+   "span": [
+    250,
+    251
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Dispatch an EnforcementEvent to the gate pack for that event; merge\n    verdicts; Phase-1 events additionally run the resolver and inject.",
+   "kind": "function",
+   "name": "handle_event",
+   "signature": "def handle_event(raw: dict, root) -> dict",
+   "span": [
+    260,
+    261
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "True if rel is a RELATIVE path that stays inside root. Absolute paths\n    and `../` traversal both fail \u2014 a traversal path recorded as touched\n    poisons every later unit_complete with a crash (S5).",
+   "kind": "function",
+   "name": "rel_in_root",
+   "signature": "def rel_in_root(root, rel) -> bool",
+   "span": [
+    354,
+    355
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Root-relative paths at ingress: node IDs in edges.jsonl and git notes\n    must be stable logical IDs (\u00a75.7), never machine-specific absolutes.",
+   "kind": "function",
+   "name": "_normalize_file_paths",
+   "signature": "def _normalize_file_paths(root, evt)",
+   "span": [
+    369,
+    370
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "G6 baseline: public symbols per module at slice start (first Phase 1).\n    The source_hash rides along so G6 can tell real drift (source changed)\n    from extractor format skew (symbols changed, bytes did not) \u2014 W8.",
+   "kind": "function",
+   "name": "_snapshot_slice_baseline",
+   "signature": "def _snapshot_slice_baseline(root, sidecar, slice_id)",
+   "span": [
+    382,
+    383
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Stop hook duties: regenerate shadows for touched files, append\n    touches + uses edges (feeding G5 and the close-slice reconciliation).",
+   "kind": "function",
+   "name": "_regenerate_touched",
+   "signature": "def _regenerate_touched(root, sidecar, session, slice_id, config)",
+   "span": [
+    402,
+    403
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "add_once",
+   "signature": "def add_once(etype, frm, to)",
+   "span": [
+    416,
+    417
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Returns (exit_code, stdout_json_str). Malformed input -> exit 2.",
+   "kind": "function",
+   "name": "run_stdin",
+   "signature": "def run_stdin(root, stdin_text: str) -> tuple",
+   "span": [
+    439,
+    440
+   ],
+   "visibility": "public"
+  }
+ ]
+}

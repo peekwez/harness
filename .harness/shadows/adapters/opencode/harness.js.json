@@ -1,0 +1,11 @@
+{
+ "exports": "unknown",
+ "extractor_version": 2,
+ "imports": [],
+ "language": "unknown",
+ "module_id": "adapters.opencode.harness",
+ "raw_head": "/**\n * harness \u00d7 OpenCode (anomalyco/opencode) \u2014 plugin adapter.\n *\n * Install: copy to `<repo>/.opencode/plugins/harness.js` (project) or\n * `~/.config/opencode/plugins/harness.js` (global).\n * Set HARNESS_BIN to the absolute path of `<harness-checkout>/bin/harness`.\n *\n * Bindings:\n *   session.created (event)  -> session_start   (G1 + G6 baseline snapshot)\n *   tool.execute.before      -> pre_change      (throw = deny; edit/write/patch/bash)\n *   tool.execute.after       -> post_change     (touch recording)\n *   session.idle (event)     -> unit_complete   (shadow regen, edges, G4-G8)\n *   session.compacted (event)-> COMPACTION_REACHED telemetry (defect signal)\n *\n * Context injection: OpenCode has no additionalContext hook \u2014 Phase-1\n * context arrives via AGENTS.md plus the build workflow running\n * `harness resolve --slice <id>` (see README). G2 still verifies at\n * pre_change and denies with a pointer if context wasn't loaded.\n *\n * Contract: repos without a .harness/ substrate are inert; engine errors in\n * an initialised repo fail closed (throw).\n */\nimport { spawnSync } from \"node:child_process\";\n\nconst EDIT_TOOLS = new Set([\"edit\", \"write\", \"patch\", \"bash\"]);\n\nfunction makeEngine(root) {\n  const bin = process.env.HARNESS_BIN;\n  return function callEngine(event, session, files = [], slice = null) {\n    if (!bin) {\n      // fail loud once, never silently unenforced\n      console.error(\n        \"harness plugin: HARNESS_BIN is not set \u2014 enforcement disabled. \" +\n          \"export HARNESS_BIN=/abs/path/to/harness/bin/harness\",\n      );\n      return { verdict: \"allow\", findings: [], injections: [], inert: true };\n    }\n    const payload = {\n      event,\n      session_id: session || \"opencode-session\",",
+ "source_hash": "sha256:d0aaa421b9c0720c2c4e80b4ceead08b0d687b4d1aa9a450a0f23da5a5ce5181",
+ "source_path": "adapters/opencode/harness.js",
+ "symbols": []
+}

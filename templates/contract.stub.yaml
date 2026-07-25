@@ -1,0 +1,14 @@
+# OpenAPI contract stub — the FE/BE seam from day 0.
+# Backend validators and frontend typed clients both generate from here;
+# CI fails on drift. Parallel agent teams coordinate through this file.
+openapi: 3.0.3
+info:
+  title: api
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      summary: liveness
+      responses:
+        "200":
+          description: ok

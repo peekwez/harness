@@ -1,0 +1,129 @@
+{
+ "exports": [
+  "run_adapter",
+  "test_codex_stop_loop_guard",
+  "test_compaction_flush_and_telemetry_only",
+  "test_cursor_stop_uses_followup_and_loop_count",
+  "test_deny_before_phase1_then_inject_then_allow",
+  "test_gemini_after_agent_blocks_once",
+  "test_inert_without_substrate",
+  "test_non_goal_boundary_denied",
+  "test_pi_extension_parses_as_typescript"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "os",
+  "pathlib",
+  "pytest",
+  "re",
+  "shutil",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.adapter-conformance.test_multi_adapters",
+ "source_hash": "sha256:f02757db178f462fed4431f9cb7dd5c34969c1ddd00398fa4a94a7896dae4d30",
+ "source_path": "tests/adapter-conformance/test_multi_adapters.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_adapter",
+   "signature": "def run_adapter(name, hook_json, cwd, slice_id=\"slice-042\", session=\"mc-1\")",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_deny_before_phase1_then_inject_then_allow",
+   "signature": "def test_deny_before_phase1_then_inject_then_allow(toy, name)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_non_goal_boundary_denied",
+   "signature": "def test_non_goal_boundary_denied(toy, name)",
+   "span": [
+    96,
+    97
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compaction_flush_and_telemetry_only",
+   "signature": "def test_compaction_flush_and_telemetry_only(toy, name)",
+   "span": [
+    107,
+    108
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_inert_without_substrate",
+   "signature": "def test_inert_without_substrate(tmp_path, name)",
+   "span": [
+    117,
+    118
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_codex_stop_loop_guard",
+   "signature": "def test_codex_stop_loop_guard(toy)",
+   "span": [
+    127,
+    128
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cursor_stop_uses_followup_and_loop_count",
+   "signature": "def test_cursor_stop_uses_followup_and_loop_count(toy)",
+   "span": [
+    139,
+    140
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gemini_after_agent_blocks_once",
+   "signature": "def test_gemini_after_agent_blocks_once(toy)",
+   "span": [
+    152,
+    153
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "No TS runtime in this suite: strip types via a tolerant regex pass and\n    require node to accept the result as ESM \u2014 catches gross syntax errors.",
+   "kind": "function",
+   "name": "test_pi_extension_parses_as_typescript",
+   "signature": "def test_pi_extension_parses_as_typescript()",
+   "span": [
+    164,
+    165
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -1,0 +1,64 @@
+{
+ "exports": [
+  "command_allowed",
+  "declared_set",
+  "paths_in_scope"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "fnmatch",
+  "gates",
+  "re",
+  "shlex"
+ ],
+ "language": "python",
+ "module_id": "engine.permits",
+ "source_hash": "sha256:041a0db32647b2e81aff01b7ff23c9e41bd31d05742036219093298137e6f727",
+ "source_path": "engine/permits.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_segment_allowed",
+   "signature": "def _segment_allowed(seg: str, harness_bin: str | None) -> bool",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "(allow, reason). Conservative by construction: unknown commands are\n    NOT denied here \u2014 they simply are not auto-approved, so the host's\n    normal permission flow (and the user) decides.",
+   "kind": "function",
+   "name": "command_allowed",
+   "signature": "def command_allowed(command: str, harness_bin: str | None = None) -> tuple",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "declared_set",
+   "signature": "def declared_set(slice_row: dict, registry: list) -> set",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "True when every path is substrate or inside the slice's declaration.\n    Wandering keeps its prompt \u2014 auto-approval is scoped to what the slice\n    said it would touch, which is exactly what G3 reconciles at close.",
+   "kind": "function",
+   "name": "paths_in_scope",
+   "signature": "def paths_in_scope(slice_row: dict, registry: list, rels) -> bool",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "public"
+  }
+ ]
+}

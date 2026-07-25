@@ -1,0 +1,137 @@
+{
+ "exports": [
+  "test_adjudicate_requires_domain_with_decision_id",
+  "test_blocking_finding_without_rule_ref_rejected_by_engine",
+  "test_changed_verdict_fails_replay",
+  "test_ensemble_split_escalates_uncertain_never_average",
+  "test_ensemble_split_parks_with_gate_severity",
+  "test_findings_validate_against_schema",
+  "test_layer3_is_advisory_only",
+  "test_park_once_adjudication_prevents_repeat_park",
+  "test_replay_ten_pairs_stable_across_three_runs",
+  "test_reviewer_never_receives_builder_session_memory"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_review",
+ "source_hash": "sha256:130a66b5765cf9bd2e98425956d19a183313554c758ca3a33de8e8e361c61111",
+ "source_path": "tests/engine/test_review.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_findings_validate_against_schema",
+   "signature": "def test_findings_validate_against_schema(toy)",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_blocking_finding_without_rule_ref_rejected_by_engine",
+   "signature": "def test_blocking_finding_without_rule_ref_rejected_by_engine(toy)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Layer-0 facts must not contain session-memory content.",
+   "kind": "function",
+   "name": "test_reviewer_never_receives_builder_session_memory",
+   "signature": "def test_reviewer_never_receives_builder_session_memory(toy)",
+   "span": [
+    49,
+    50
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_replay_ten_pairs_stable_across_three_runs",
+   "signature": "def test_replay_ten_pairs_stable_across_three_runs(toy, plugin_root)",
+   "span": [
+    60,
+    61
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "M6 acceptance: an adjudication writes a decision row that prevents the\n    same park on a repeat run \u2014 the same question never parks twice (\u00a77.7).",
+   "kind": "function",
+   "name": "test_park_once_adjudication_prevents_repeat_park",
+   "signature": "def test_park_once_adjudication_prevents_repeat_park(toy)",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_adjudicate_requires_domain_with_decision_id",
+   "signature": "def test_adjudicate_requires_domain_with_decision_id(toy)",
+   "span": [
+    111,
+    112
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_changed_verdict_fails_replay",
+   "signature": "def test_changed_verdict_fails_replay(toy, plugin_root, tmp_path)",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_ensemble_split_escalates_uncertain_never_average",
+   "signature": "def test_ensemble_split_escalates_uncertain_never_average()",
+   "span": [
+    134,
+    135
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A split on a would-block rubric produces severity gate -> park.",
+   "kind": "function",
+   "name": "test_ensemble_split_parks_with_gate_severity",
+   "signature": "def test_ensemble_split_parks_with_gate_severity(toy)",
+   "span": [
+    145,
+    146
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_layer3_is_advisory_only",
+   "signature": "def test_layer3_is_advisory_only(toy)",
+   "span": [
+    164,
+    165
+   ],
+   "visibility": "public"
+  }
+ ]
+}

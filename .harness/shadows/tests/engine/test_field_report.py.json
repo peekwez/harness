@@ -1,0 +1,283 @@
+{
+ "exports": [
+  "test_api_surface_gaps_reported_and_gate_blocks",
+  "test_api_surface_stub_created_for_new_contract",
+  "test_author_gate_blocks_placeholders_and_dangling_deps",
+  "test_author_gate_recognizes_resolution_markers",
+  "test_backlog_auto_adds_acceptance_to_predicted",
+  "test_boundaries_regenerate_instead_of_accumulate",
+  "test_changed_row_gets_updated_stamp",
+  "test_close_refreshes_built_entry_hash_after_acked_drift",
+  "test_close_slice_blocks_on_placeholder",
+  "test_close_slice_names_notes_ref",
+  "test_compile_adopts_source_into_seeded_planned_entries",
+  "test_decision_rows_match_dep_id_even_when_kind_coerced",
+  "test_denied_pre_change_records_no_phantom_touch",
+  "test_doctor_reports_deps",
+  "test_epoch_timestamp_never_propagates",
+  "test_init_git_dx",
+  "test_missing_extraction_deps_degrade_not_crash",
+  "test_non_goal_multiline_block_keeps_patterns",
+  "test_non_goal_token_in_code_span_is_prose",
+  "test_pattern_less_non_goal_warns",
+  "test_replaces_prunes_scaffolded_planned_entries",
+  "test_template_adrs_never_compile"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "pytest",
+  "subprocess",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report",
+ "source_hash": "sha256:37e0d9c2ac02cab20c91ab53e36d5cbcd80fafcbc0b9771fb44b60cc87978c7a",
+ "source_path": "tests/engine/test_field_report.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_recognizes_resolution_markers",
+   "signature": "def test_author_gate_recognizes_resolution_markers(toy)",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_non_goal_multiline_block_keeps_patterns",
+   "signature": "def test_non_goal_multiline_block_keeps_patterns()",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_non_goal_token_in_code_span_is_prose",
+   "signature": "def test_non_goal_token_in_code_span_is_prose()",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_template_adrs_never_compile",
+   "signature": "def test_template_adrs_never_compile(toy)",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pattern_less_non_goal_warns",
+   "signature": "def test_pattern_less_non_goal_warns(toy)",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_boundaries_regenerate_instead_of_accumulate",
+   "signature": "def test_boundaries_regenerate_instead_of_accumulate(toy)",
+   "span": [
+    71,
+    72
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_extraction_deps_degrade_not_crash",
+   "signature": "def test_missing_extraction_deps_degrade_not_crash(toy, monkeypatch)",
+   "span": [
+    87,
+    88
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_reports_deps",
+   "signature": "def test_doctor_reports_deps(toy)",
+   "span": [
+    105,
+    106
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_replaces_prunes_scaffolded_planned_entries",
+   "signature": "def test_replaces_prunes_scaffolded_planned_entries(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_api_surface_gaps_reported_and_gate_blocks",
+   "signature": "def test_api_surface_gaps_reported_and_gate_blocks(toy)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_api_surface_stub_created_for_new_contract",
+   "signature": "def test_api_surface_stub_created_for_new_contract(toy)",
+   "span": [
+    149,
+    150
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_epoch_timestamp_never_propagates",
+   "signature": "def test_epoch_timestamp_never_propagates(toy)",
+   "span": [
+    161,
+    162
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_changed_row_gets_updated_stamp",
+   "signature": "def test_changed_row_gets_updated_stamp(toy)",
+   "span": [
+    171,
+    172
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_blocks_placeholders_and_dangling_deps",
+   "signature": "def test_author_gate_blocks_placeholders_and_dangling_deps(toy)",
+   "span": [
+    183,
+    184
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_slice_blocks_on_placeholder",
+   "signature": "def test_close_slice_blocks_on_placeholder(toy)",
+   "span": [
+    203,
+    204
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_auto_adds_acceptance_to_predicted",
+   "signature": "def test_backlog_auto_adds_acceptance_to_predicted(toy)",
+   "span": [
+    213,
+    214
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_decision_rows_match_dep_id_even_when_kind_coerced",
+   "signature": "def test_decision_rows_match_dep_id_even_when_kind_coerced(toy)",
+   "span": [
+    222,
+    223
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A slice that legitimately modifies a BUILT dep (G6-acked) must leave\n    the registry hash-consistent, or verify fails HASH_MISMATCH forever\n    (found live in the todo-api walkthrough).",
+   "kind": "function",
+   "name": "test_close_refreshes_built_entry_hash_after_acked_drift",
+   "signature": "def test_close_refreshes_built_entry_hash_after_acked_drift(toy)",
+   "span": [
+    246,
+    247
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A seeded planned entry (source: null) must adopt the ADR's source \u2014\n    otherwise it never qualifies for the planned->built flip at close-slice\n    (found live in the todo-api walkthrough: registry_flipped came back []).",
+   "kind": "function",
+   "name": "test_compile_adopts_source_into_seeded_planned_entries",
+   "signature": "def test_compile_adopts_source_into_seeded_planned_entries(toy)",
+   "span": [
+    282,
+    283
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A blocked edit never happened: it must not demand G3 reconciliation\n    at close-slice (found live in the todo-api walkthrough).",
+   "kind": "function",
+   "name": "test_denied_pre_change_records_no_phantom_touch",
+   "signature": "def test_denied_pre_change_records_no_phantom_touch(toy)",
+   "span": [
+    303,
+    304
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_git_dx",
+   "signature": "def test_init_git_dx(tmp_path)",
+   "span": [
+    327,
+    328
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_slice_names_notes_ref",
+   "signature": "def test_close_slice_names_notes_ref(toy)",
+   "span": [
+    341,
+    342
+   ],
+   "visibility": "public"
+  }
+ ]
+}

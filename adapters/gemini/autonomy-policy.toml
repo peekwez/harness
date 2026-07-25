@@ -1,0 +1,24 @@
+# harness autonomy profile for Gemini CLI — install to
+# ~/.gemini/policies/harness-autonomy.toml (USER tier: the workspace policy
+# tier is currently non-functional upstream, gemini-cli issue #18186).
+# Highest final priority wins; the deny rules outrank the blanket allow.
+# The harness BeforeTool hook remains the guardrail for edits.
+
+[[rule]]
+toolName = "*"
+decision = "allow"
+priority = 50
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git push"
+decision = "deny"
+priority = 900
+denyMessage = "harness autonomy profile: git push is blocked for autonomous runs"
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git remote"
+decision = "deny"
+priority = 900
+denyMessage = "harness autonomy profile: remotes are human-managed"

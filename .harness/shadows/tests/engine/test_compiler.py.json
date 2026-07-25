@@ -1,0 +1,124 @@
+{
+ "exports": [
+  "test_adjudicated_rows_outrank_recompiled_phase0",
+  "test_author_gate_blocks_on_seeded_gaps",
+  "test_author_gate_passes_when_gaps_closed",
+  "test_compile_adr_to_substrate",
+  "test_compile_chain_telemetry_end_to_end",
+  "test_compile_idempotent",
+  "test_malformed_frontmatter_fails_loud",
+  "test_missing_decision_row_fields_fail_loud",
+  "test_parse_frontmatter_shapes"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_compiler",
+ "source_hash": "sha256:f1ffd21ee3793bf25af6cfb1850ecc813dd45dbd5f6042cc352a66212db5222b",
+ "source_path": "tests/engine/test_compiler.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_adr_to_substrate",
+   "signature": "def test_compile_adr_to_substrate(toy)",
+   "span": [
+    10,
+    11
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_idempotent",
+   "signature": "def test_compile_idempotent(toy)",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_adjudicated_rows_outrank_recompiled_phase0",
+   "signature": "def test_adjudicated_rows_outrank_recompiled_phase0(toy)",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_malformed_frontmatter_fails_loud",
+   "signature": "def test_malformed_frontmatter_fails_loud(toy)",
+   "span": [
+    40,
+    41
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_decision_row_fields_fail_loud",
+   "signature": "def test_missing_decision_row_fields_fail_loud(toy)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_blocks_on_seeded_gaps",
+   "signature": "def test_author_gate_blocks_on_seeded_gaps(toy)",
+   "span": [
+    54,
+    55
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_passes_when_gaps_closed",
+   "signature": "def test_author_gate_passes_when_gaps_closed(toy)",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "ADR frontmatter -> decision row -> G-check citing it (M5 gate).",
+   "kind": "function",
+   "name": "test_compile_chain_telemetry_end_to_end",
+   "signature": "def test_compile_chain_telemetry_end_to_end(toy)",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_parse_frontmatter_shapes",
+   "signature": "def test_parse_frontmatter_shapes()",
+   "span": [
+    98,
+    99
+   ],
+   "visibility": "public"
+  }
+ ]
+}

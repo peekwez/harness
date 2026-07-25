@@ -1,0 +1,139 @@
+{
+ "exports": [
+  "mk",
+  "test_blocking_finding_without_rule_ref_rejected",
+  "test_context_loaded_persisted_per_session",
+  "test_golden_fixture_files",
+  "test_golden_round_trip_all_five_events",
+  "test_malformed_input_exit_2",
+  "test_phase1_reinjection_deduped_per_session",
+  "test_validate_event_rejects",
+  "test_verdict_merging_property",
+  "test_warm_pre_change_under_150ms"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "itertools",
+  "json",
+  "pytest",
+  "time"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_events",
+ "source_hash": "sha256:b46075efa0e3f482732e1952fd0b50a45b37cbdb59defdfffa9a4c9bc341e2ef",
+ "source_path": "tests/engine/test_events.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_golden_round_trip_all_five_events",
+   "signature": "def test_golden_round_trip_all_five_events(toy)",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_golden_fixture_files",
+   "signature": "def test_golden_fixture_files(toy, plugin_root)",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_malformed_input_exit_2",
+   "signature": "def test_malformed_input_exit_2(toy)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_validate_event_rejects",
+   "signature": "def test_validate_event_rejects()",
+   "span": [
+    68,
+    69
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Most restrictive wins, for every combination up to length 3.",
+   "kind": "function",
+   "name": "test_verdict_merging_property",
+   "signature": "def test_verdict_merging_property()",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "mk",
+   "signature": "def mk(v)",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_blocking_finding_without_rule_ref_rejected",
+   "signature": "def test_blocking_finding_without_rule_ref_rejected()",
+   "span": [
+    94,
+    95
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_context_loaded_persisted_per_session",
+   "signature": "def test_context_loaded_persisted_per_session(toy)",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "SessionStart re-runs on resume (same session_id) and pre_context fires\n    every prompt: once the manifest is loaded, injections must not repeat.",
+   "kind": "function",
+   "name": "test_phase1_reinjection_deduped_per_session",
+   "signature": "def test_phase1_reinjection_deduped_per_session(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_warm_pre_change_under_150ms",
+   "signature": "def test_warm_pre_change_under_150ms(toy)",
+   "span": [
+    127,
+    128
+   ],
+   "visibility": "public"
+  }
+ ]
+}

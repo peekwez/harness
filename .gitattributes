@@ -1,0 +1,7 @@
+.harness/telemetry.jsonl merge=union
+.harness/edges.jsonl merge=union
+.harness/memory/durable.jsonl merge=union
+.harness/backlog.jsonl merge=harness-substrate
+.harness/registry.jsonl merge=harness-substrate
+.harness/decisions.jsonl merge=harness-substrate
+.harness/shadows/** merge=ours

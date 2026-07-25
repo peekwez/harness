@@ -1,0 +1,76 @@
+{
+ "exports": [
+  "check",
+  "record_override"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "extractor",
+  "graph",
+  "json",
+  "pathlib",
+  "registry"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g5_conformance",
+ "source_hash": "sha256:37bfd15b41725ac549eae8c1d735022b89018dd9c25af8651d9c21ca02957790",
+ "source_path": "engine/gates/g5_conformance.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_severity",
+   "signature": "def _severity(ctx) -> str",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Bare ids of overridden targets (module:/registry: prefixes stripped).",
+   "kind": "function",
+   "name": "_override_targets",
+   "signature": "def _override_targets(ctx) -> set",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_shadow_for_touched",
+   "signature": "def _shadow_for_touched(ctx, rel)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Builder override-and-justification: auditable edge (T3). rule_ref\n    names the gate actually being overridden \u2014 hardcoding G5 falsified the\n    ledger for G1/G3 overrides (field report W9).",
+   "kind": "function",
+   "name": "record_override",
+   "signature": "def record_override(root, slice_id: str, target: str, justification: str, finding_id: str | None = None, rule_ref: str = \"gate:G5\") -> dict",
+   "span": [
+    114,
+    117
+   ],
+   "visibility": "public"
+  }
+ ]
+}

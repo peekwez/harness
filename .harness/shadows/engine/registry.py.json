@@ -1,0 +1,185 @@
+{
+ "exports": [
+  "RegistryError",
+  "digest_tokens",
+  "entry_for_source",
+  "flip_status",
+  "get_entry",
+  "load_registry",
+  "public_symbols",
+  "refresh_built",
+  "registry_path",
+  "save_registry",
+  "signature_digest",
+  "similarity",
+  "validate_manifests"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "extractor",
+  "json",
+  "pathlib",
+  "re"
+ ],
+ "language": "python",
+ "module_id": "engine.registry",
+ "source_hash": "sha256:40524cc254d229915276f59ac9f92d2315f276c593a3f2c1031ca386c3137735",
+ "source_path": "engine/registry.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "class",
+   "name": "RegistryError",
+   "signature": "class RegistryError(HarnessError)",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "registry_path",
+   "signature": "def registry_path(root) -> Path",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_registry",
+   "signature": "def load_registry(root) -> list",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "save_registry",
+   "signature": "def save_registry(root, entries: list) -> None",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "get_entry",
+   "signature": "def get_entry(root, entry_id: str) -> dict",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "entry_for_source",
+   "signature": "def entry_for_source(entries: list, rel_path: str)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Every path in every entry's manifest must exist. Findings name the\n    entry ID and each missing path. `base` overrides the tree checked\n    (CI validates the built/installed artifact, not just the source tree).\n\n    `pending`: paths an open slice is about to create. A PLANNED entry's\n    missing manifest path that is pending work is the normal pre-build state\n    (advisory), not the md-file-bug; built entries never get that grace.",
+   "kind": "function",
+   "name": "validate_manifests",
+   "signature": "def validate_manifests(root, entries=None, base=None, pending=None) -> list",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_tokenize_sig",
+   "signature": "def _tokenize_sig(sig: str) -> set",
+   "span": [
+    95,
+    96
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Normalized digest of the exported surface, used by G5 similarity.",
+   "kind": "function",
+   "name": "signature_digest",
+   "signature": "def signature_digest(shadow: dict) -> str",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "digest_tokens",
+   "signature": "def digest_tokens(digest: str) -> set",
+   "span": [
+    111,
+    112
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "similarity",
+   "signature": "def similarity(tokens_a: set, tokens_b: set) -> float",
+   "span": [
+    122,
+    123
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Public symbol signatures from an entry's shadow, or None if no shadow.",
+   "kind": "function",
+   "name": "public_symbols",
+   "signature": "def public_symbols(root, entry) -> list | None",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Re-derive a BUILT entry's source_hash/signature_digest from its (fresh)\n    shadow after a slice legitimately modified the source (G6-acknowledged\n    drift). Without this, verify reports HASH_MISMATCH forever.",
+   "kind": "function",
+   "name": "refresh_built",
+   "signature": "def refresh_built(root, entry_id: str) -> dict",
+   "span": [
+    140,
+    141
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "planned -> built. Rejected unless the shadow exists and its hash\n    matches current source (status flips are derived at close-slice).",
+   "kind": "function",
+   "name": "flip_status",
+   "signature": "def flip_status(root, entry_id: str) -> dict",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "public"
+  }
+ ]
+}

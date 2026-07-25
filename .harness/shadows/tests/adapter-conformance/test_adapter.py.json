@@ -1,0 +1,176 @@
+{
+ "exports": [
+  "run_adapter",
+  "test_gates_declare_preferred_and_fallback_events",
+  "test_hooks_json_binds_all_required_events",
+  "test_injection_clipped_under_hook_output_cap",
+  "test_plugin_inert_in_repo_without_substrate",
+  "test_post_tool_use_findings_as_context",
+  "test_pre_tool_use_allows_after_session_start",
+  "test_pre_tool_use_deny_with_reason",
+  "test_precompact_flush_and_telemetry_only",
+  "test_session_start_translates_and_injects",
+  "test_stop_hook_active_prevents_reblock_loop",
+  "test_stop_maps_to_unit_complete_and_can_block",
+  "test_unbound_hook_is_noop"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "importlib",
+  "json",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.adapter-conformance.test_adapter",
+ "source_hash": "sha256:0358b5a1d2d92479f898510f26e5e2dc46d22ca56995f9388d0ba3088e361a2a",
+ "source_path": "tests/adapter-conformance/test_adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_adapter",
+   "signature": "def run_adapter(hook_json, cwd, slice_id=None)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_session_start_translates_and_injects",
+   "signature": "def test_session_start_translates_and_injects(toy)",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pre_tool_use_deny_with_reason",
+   "signature": "def test_pre_tool_use_deny_with_reason(toy)",
+   "span": [
+    41,
+    42
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pre_tool_use_allows_after_session_start",
+   "signature": "def test_pre_tool_use_allows_after_session_start(toy)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_post_tool_use_findings_as_context",
+   "signature": "def test_post_tool_use_findings_as_context(toy)",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_stop_maps_to_unit_complete_and_can_block",
+   "signature": "def test_stop_maps_to_unit_complete_and_can_block(toy)",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Docs: a Stop hook must check stop_hook_active and not re-block \u2014\n    Claude Code force-overrides after 8 consecutive blocks anyway.",
+   "kind": "function",
+   "name": "test_stop_hook_active_prevents_reblock_loop",
+   "signature": "def test_stop_hook_active_prevents_reblock_loop(toy)",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Docs: hook output strings are capped at 10,000 chars; the adapter must\n    clip and point at the full resolve command instead of overflowing.",
+   "kind": "function",
+   "name": "test_injection_clipped_under_hook_output_cap",
+   "signature": "def test_injection_clipped_under_hook_output_cap()",
+   "span": [
+    115,
+    116
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_precompact_flush_and_telemetry_only",
+   "signature": "def test_precompact_flush_and_telemetry_only(toy)",
+   "span": [
+    130,
+    131
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unbound_hook_is_noop",
+   "signature": "def test_unbound_hook_is_noop(toy)",
+   "span": [
+    142,
+    143
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_hooks_json_binds_all_required_events",
+   "signature": "def test_hooks_json_binds_all_required_events()",
+   "span": [
+    148,
+    149
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "T1 portability: pre_change gates declare post_change fallbacks so\n    post-only frameworks can run degraded revert-and-retry mode.",
+   "kind": "function",
+   "name": "test_gates_declare_preferred_and_fallback_events",
+   "signature": "def test_gates_declare_preferred_and_fallback_events()",
+   "span": [
+    156,
+    157
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Deliberate stance: repos that never ran /harness:init are not\n    enforced \u2014 installing the plugin must not brick Edit everywhere.",
+   "kind": "function",
+   "name": "test_plugin_inert_in_repo_without_substrate",
+   "signature": "def test_plugin_inert_in_repo_without_substrate(tmp_path)",
+   "span": [
+    169,
+    170
+   ],
+   "visibility": "public"
+  }
+ ]
+}

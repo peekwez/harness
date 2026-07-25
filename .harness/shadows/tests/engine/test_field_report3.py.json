@@ -1,0 +1,138 @@
+{
+ "exports": [
+  "run_adapter",
+  "test_close_commits_its_own_substrate_mutations",
+  "test_close_extracts_missing_shadows_instead_of_passing_silently",
+  "test_hook_adapter_routes_edit_to_the_files_substrate_root",
+  "test_hook_adapter_stop_regenerates_shadows_in_the_worktree",
+  "test_init_installs_substrate_merge_drivers",
+  "test_merge_substrate_conflicting_row_fails_loud",
+  "test_merge_substrate_keyed_3way",
+  "test_parallel_close_branches_merge_without_conflict",
+  "test_python_class_fields_surface_in_shadow"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report3",
+ "source_hash": "sha256:69f7eeeb522abd1a2409f9255b61358b4433e96d876d1c965619e0a92e70c9ae",
+ "source_path": "tests/engine/test_field_report3.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_adapter",
+   "signature": "def run_adapter(hook: dict, cwd)",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A builder edits inside a worktree while the hook process runs in the\n    main tree: the event must land in the WORKTREE's substrate, not vanish\n    as an out-of-root path in the main tree's.",
+   "kind": "function",
+   "name": "test_hook_adapter_routes_edit_to_the_files_substrate_root",
+   "signature": "def test_hook_adapter_routes_edit_to_the_files_substrate_root(toy, tmp_path)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Stop (unit_complete) carries no file paths \u2014 the hook's cwd must\n    route it, so touched-file shadows regenerate inside the worktree.",
+   "kind": "function",
+   "name": "test_hook_adapter_stop_regenerates_shadows_in_the_worktree",
+   "signature": "def test_hook_adapter_stop_regenerates_shadows_in_the_worktree(toy, tmp_path)",
+   "span": [
+    49,
+    50
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "G7 asymmetry (W3): a brand-new predicted file with NO shadow sailed\n    through close \u2014 the md-file-bug class. The ruled contract: close\n    extracts the missing shadows itself (derived artifacts are the engine's\n    job) and reports them; it must never silently pass without them.",
+   "kind": "function",
+   "name": "test_close_extracts_missing_shadows_instead_of_passing_silently",
+   "signature": "def test_close_extracts_missing_shadows_instead_of_passing_silently(toy)",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The backlog status flip + telemetry land AFTER the commit the\n    ceremony stamps \u2014 close must commit its substrate mutations itself or\n    the flip is lost on worktree merge.",
+   "kind": "function",
+   "name": "test_close_commits_its_own_substrate_mutations",
+   "signature": "def test_close_commits_its_own_substrate_mutations(toy)",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_substrate_keyed_3way",
+   "signature": "def test_merge_substrate_keyed_3way(tmp_path)",
+   "span": [
+    131,
+    132
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_substrate_conflicting_row_fails_loud",
+   "signature": "def test_merge_substrate_conflicting_row_fails_loud(tmp_path)",
+   "span": [
+    151,
+    152
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_installs_substrate_merge_drivers",
+   "signature": "def test_init_installs_substrate_merge_drivers(tmp_path)",
+   "span": [
+    165,
+    166
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The W5 scenario end-to-end: two branches each flip their own backlog\n    row and append telemetry; the second merge must not conflict.",
+   "kind": "function",
+   "name": "test_parallel_close_branches_merge_without_conflict",
+   "signature": "def test_parallel_close_branches_merge_without_conflict(tmp_path)",
+   "span": [
+    181,
+    182
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "slice-009 had to confirm `max_count` from ADR prose because the\n    config shadow exposed Settings but not its fields.",
+   "kind": "function",
+   "name": "test_python_class_fields_surface_in_shadow",
+   "signature": "def test_python_class_fields_surface_in_shadow(toy)",
+   "span": [
+    219,
+    220
+   ],
+   "visibility": "public"
+  }
+ ]
+}

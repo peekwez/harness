@@ -1,0 +1,19 @@
+{
+  "_comment": "harness autonomy profile for Cursor — merge into <repo>/.cursor/cli.json (or ~/.cursor/cli-config.json). Deny rules take precedence over allow. In the IDE, also set Settings > Cursor Settings > Agents > Auto-Run (Run in Sandbox recommended). The harness preToolUse hook (failClosed) remains the guardrail.",
+  "permissions": {
+    "allow": [
+      "Shell(git)",
+      "Shell(pytest)",
+      "Shell(python)",
+      "Shell(python3)",
+      "Write(**)",
+      "Read(**)"
+    ],
+    "deny": [
+      "Shell(git:push*)",
+      "Shell(git:remote*)",
+      "Read(.env*)",
+      "Write(**/*.key)"
+    ]
+  }
+}

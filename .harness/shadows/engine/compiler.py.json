@@ -1,0 +1,122 @@
+{
+ "exports": [
+  "adr_ref_sec",
+  "author_gate",
+  "compile_substrate",
+  "extract_non_goals",
+  "parse_frontmatter"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "hashlib",
+  "pathlib",
+  "re",
+  "registry",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "engine.compiler",
+ "source_hash": "sha256:7b79eaafebe3ff2db4a2b004727fb63bf584549916e51027084a8ec72649b4a8",
+ "source_path": "engine/compiler.py",
+ "symbols": [
+  {
+   "doc": "Returns (frontmatter_dict, body). Fail loud on malformed frontmatter.",
+   "kind": "function",
+   "name": "parse_frontmatter",
+   "signature": "def parse_frontmatter(text: str) -> tuple",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Numbered ADRs; *template* files are examples, never compiled.",
+   "kind": "function",
+   "name": "_adr_files",
+   "signature": "def _adr_files(root) -> list",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Paragraph-scoped [non-goal] blocks.\n\n    - A token inside a backtick code span is prose, not a directive.\n    - The block runs from the token to the next [non-goal] token or the end\n      of the paragraph (multi-line blocks keep their trailing glob lines).\n    - ENFORCEMENT INTENT MUST BE EXPLICIT (field report #2-recurrence):\n      a backticked path becomes a blocking glob only if it contains a\n      wildcard, or is marked `forbid:` \u2014 descriptive prose that merely NAMES\n      a path (\"wiring lives in `infra/x.yaml`\") must never hard-block the\n      file's own legitimate creation.\n    Returns (text, patterns, descriptive_paths) triples.",
+   "kind": "function",
+   "name": "extract_non_goals",
+   "signature": "def extract_non_goals(text: str) -> list",
+   "span": [
+    51,
+    52
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_boundary",
+   "signature": "def _boundary(text: str, patterns: list, source: str, rule_ref: str) -> dict",
+   "span": [
+    89,
+    90
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "ADR ids that no longer bind: status superseded, or named in another\n    ADR's supersedes list.",
+   "kind": "function",
+   "name": "_out_of_force",
+   "signature": "def _out_of_force(root) -> set",
+   "span": [
+    95,
+    96
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Idempotent: recompiling the same sources produces the same substrate.\n    Planned registry entries are RECONCILED against the ADRs currently in\n    force \u2014 kind/domain/guidance_refs are rebuilt, not appended, so a\n    superseded ADR's refs never linger (field report #14/#15).",
+   "kind": "function",
+   "name": "compile_substrate",
+   "signature": "def compile_substrate(root, working_doc=None) -> dict",
+   "span": [
+    111,
+    112
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "adr_ref_sec",
+   "signature": "def adr_ref_sec(adr_ref: str, ab: dict) -> str",
+   "span": [
+    338,
+    339
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "[open-question] lines that carry no resolution marker.\n\n    Resolution markers (any one suffices): the token struck through with\n    ~~...~~, the word 'resolved' anywhere on the line ([resolved: adr/NNN],\n    '-> resolved', '\u2192 resolved: ...'), or 'deferred:' with an owner. Tokens\n    inside backtick code spans are prose, never open questions.",
+   "kind": "function",
+   "name": "_unresolved_open_questions",
+   "signature": "def _unresolved_open_questions(body: str) -> list",
+   "span": [
+    343,
+    344
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Day-0 completeness check \u2014 blocks backlog generation until it passes.\n    The human signs here: the one deliberate checkpoint. Placeholder\n    sentinels and epoch timestamps are hard gaps: a scaffold row must never\n    compile/build as if ratified (the md-file-bug class).",
+   "kind": "function",
+   "name": "author_gate",
+   "signature": "def author_gate(root, working_doc=None) -> dict",
+   "span": [
+    368,
+    369
+   ],
+   "visibility": "public"
+  }
+ ]
+}

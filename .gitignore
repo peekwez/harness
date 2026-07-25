@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.harness/sidecar.db
+.harness/sidecar.db-*
+.harness/memory/session/
+.worktrees/
+.claude/settings.local.json

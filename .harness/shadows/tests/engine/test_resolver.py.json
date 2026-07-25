@@ -1,0 +1,136 @@
+{
+ "exports": [
+  "test_budget_never_exceeded",
+  "test_decision_rows_for_touched_domains",
+  "test_degradation_drops_docstrings_before_modules",
+  "test_durable_memories_ranked_below_shadows",
+  "test_missing_built_shadow_fails_loud",
+  "test_missing_declared_dep_fails_loud",
+  "test_missing_guidance_file_fails_loud",
+  "test_planned_entry_uses_guidance_not_shadow",
+  "test_same_slice_same_substrate_byte_identical",
+  "test_superseded_guidance_absent_surviving_present"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_resolver",
+ "source_hash": "sha256:96d2abf2ba54bcda0d8e312840b9e64e26da10bd3627edf0f4df875088594e4b",
+ "source_path": "tests/engine/test_resolver.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_same_slice_same_substrate_byte_identical",
+   "signature": "def test_same_slice_same_substrate_byte_identical(toy)",
+   "span": [
+    11,
+    12
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_budget_never_exceeded",
+   "signature": "def test_budget_never_exceeded(toy)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "telemetry is built and supersedes adr/007#s2; #s3 survives (it is not\n    signature-expressible).",
+   "kind": "function",
+   "name": "test_superseded_guidance_absent_surviving_present",
+   "signature": "def test_superseded_guidance_absent_surviving_present(toy)",
+   "span": [
+    28,
+    29
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_planned_entry_uses_guidance_not_shadow",
+   "signature": "def test_planned_entry_uses_guidance_not_shadow(toy)",
+   "span": [
+    39,
+    40
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_decision_rows_for_touched_domains",
+   "signature": "def test_decision_rows_for_touched_domains(toy)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_durable_memories_ranked_below_shadows",
+   "signature": "def test_durable_memories_ranked_below_shadows(toy)",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_degradation_drops_docstrings_before_modules",
+   "signature": "def test_degradation_drops_docstrings_before_modules(toy)",
+   "span": [
+    73,
+    74
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_guidance_file_fails_loud",
+   "signature": "def test_missing_guidance_file_fails_loud(toy)",
+   "span": [
+    92,
+    93
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_built_shadow_fails_loud",
+   "signature": "def test_missing_built_shadow_fails_loud(toy)",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_declared_dep_fails_loud",
+   "signature": "def test_missing_declared_dep_fails_loud(toy)",
+   "span": [
+    106,
+    107
+   ],
+   "visibility": "public"
+  }
+ ]
+}

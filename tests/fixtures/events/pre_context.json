@@ -1,0 +1,11 @@
+{
+  "phase1_first": false,
+  "event": {
+    "event": "pre_context",
+    "session_id": "PLACEHOLDER",
+    "work_unit_id": "slice-042",
+    "payload": {"files": [], "context_loaded": [], "diff": null,
+                "prompt": "implement the orders service"}
+  },
+  "expect": {"verdict": "allow", "codes_subset": []}
+}

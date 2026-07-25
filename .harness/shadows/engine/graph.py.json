@@ -1,0 +1,170 @@
+{
+ "exports": [
+  "GraphError",
+  "append_edge",
+  "edges_path",
+  "load_edges",
+  "neighbors",
+  "orphaned_notes",
+  "provenance",
+  "read_notes",
+  "rebuild",
+  "uses_vs_declares",
+  "write_note"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "pathlib",
+  "subprocess"
+ ],
+ "language": "python",
+ "module_id": "engine.graph",
+ "source_hash": "sha256:50a202cefb3cc0ca5aedcbd60daa43b23365c1153a8d5a56305235179c773cd7",
+ "source_path": "engine/graph.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "class",
+   "name": "GraphError",
+   "signature": "class GraphError(HarnessError)",
+   "span": [
+    23,
+    24
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "edges_path",
+   "signature": "def edges_path(root) -> Path",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "append_edge",
+   "signature": "def append_edge(root, etype, frm, to, commit=None, meta=None) -> dict",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "load_edges",
+   "signature": "def load_edges(root) -> list",
+   "span": [
+    40,
+    41
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Adjacency built purely from the append-only log.",
+   "kind": "function",
+   "name": "rebuild",
+   "signature": "def rebuild(root) -> dict",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "neighbors",
+   "signature": "def neighbors(root, node) -> list",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Provenance walk: module -> commits -> slices -> memories.\n    'Show every decision that shaped this file.'",
+   "kind": "function",
+   "name": "provenance",
+   "signature": "def provenance(root, module_id: str) -> dict",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_bare",
+   "signature": "def _bare(node_id: str) -> str",
+   "span": [
+    84,
+    85
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "uses_vs_declares",
+   "signature": "def uses_vs_declares(root, slice_id: str) -> dict",
+   "span": [
+    88,
+    89
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_git",
+   "signature": "def _git(root, *args, check=True) -> str",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo.",
+   "kind": "function",
+   "name": "write_note",
+   "signature": "def write_note(root, commit, payload: dict) -> None",
+   "span": [
+    112,
+    113
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "read_notes",
+   "signature": "def read_notes(root) -> list",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Notes whose commit is unreachable from any ref (e.g. after a rebase).",
+   "kind": "function",
+   "name": "orphaned_notes",
+   "signature": "def orphaned_notes(root) -> list",
+   "span": [
+    136,
+    137
+   ],
+   "visibility": "public"
+  }
+ ]
+}

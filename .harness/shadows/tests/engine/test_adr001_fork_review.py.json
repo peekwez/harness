@@ -1,0 +1,75 @@
+{
+ "exports": [
+  "test_compile_carries_the_security_flag",
+  "test_non_security_slice_closes_engine_only",
+  "test_record_fork_requires_slice",
+  "test_security_slice_blocks_close_until_fork_review_pass"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_adr001_fork_review",
+ "source_hash": "sha256:fc6bfbf8d063d9ce90d4b8d469c7cd07118f71c9ed5136e8deb45dff72177806",
+ "source_path": "tests/engine/test_adr001_fork_review.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_ready_to_close",
+   "signature": "def _ready_to_close(toy, session)",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_security_slice_blocks_close_until_fork_review_pass",
+   "signature": "def test_security_slice_blocks_close_until_fork_review_pass(toy)",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "No security rows resolve for the slice: the deterministic stack is\n    the whole contract \u2014 no fork ceremony demanded.",
+   "kind": "function",
+   "name": "test_non_security_slice_closes_engine_only",
+   "signature": "def test_non_security_slice_closes_engine_only(toy)",
+   "span": [
+    62,
+    63
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_record_fork_requires_slice",
+   "signature": "def test_record_fork_requires_slice(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_carries_the_security_flag",
+   "signature": "def test_compile_carries_the_security_flag(toy)",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -1,0 +1,235 @@
+{
+ "exports": [
+  "codes",
+  "test_adapter_routes_by_any_file_not_just_the_first",
+  "test_bind_backfills_started_at_commit_and_snapshots_baseline",
+  "test_bind_self_heals_merge_driver_config_on_fresh_clones",
+  "test_cache_invalidated_when_deps_arrive_after_degenerate_shadow",
+  "test_cache_invalidated_when_language_is_toggled_off",
+  "test_close_covers_extensionless_touched_files",
+  "test_close_releases_g6_snapshots",
+  "test_close_warns_when_started_at_commit_is_missing",
+  "test_closing_an_already_closed_slice_refuses",
+  "test_extract_all_prunes_shadows_of_deleted_sources",
+  "test_extract_all_works_when_repo_lives_under_an_ignored_dir_name",
+  "test_g7_reports_out_of_root_shadow_instead_of_crashing",
+  "test_glob_acceptance_expands_at_close",
+  "test_glob_acceptance_with_zero_matches_blocks",
+  "test_merge_substrate_rejects_duplicate_ids",
+  "test_relative_traversal_paths_never_poison_the_sidecar",
+  "test_worktree_close_is_not_vacuous"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "subprocess",
+  "sys",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_review_gaps",
+ "source_hash": "sha256:a1d4a05962169d7d9f8c533d9ff1593d74fa71b0288b88d636f1c16571bbec3f",
+ "source_path": "tests/engine/test_review_gaps.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "codes",
+   "signature": "def codes(verdict)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "IGNORED_DIRS must filter path parts RELATIVE to the root \u2014 a worktree\n    at .worktrees/<slice> (or a repo cloned under ~/venv/\u2026) has an ignored\n    name in its ABSOLUTE parts and extract --all silently extracted nothing.",
+   "kind": "function",
+   "name": "test_extract_all_works_when_repo_lives_under_an_ignored_dir_name",
+   "signature": "def test_extract_all_works_when_repo_lives_under_an_ignored_dir_name(tmp_path)",
+   "span": [
+    23,
+    24
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A worktree checkout carries the committed row (no started_at_commit)\n    and an empty sidecar. Re-binding there must repair BOTH: the git-diff\n    anchor and the G6 baseline \u2014 regardless of the row's current status.",
+   "kind": "function",
+   "name": "test_bind_backfills_started_at_commit_and_snapshots_baseline",
+   "signature": "def test_bind_backfills_started_at_commit_and_snapshots_baseline(toy)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "S1's demonstrated symptom: close inside a worktree saw touched=[] and\n    waved through undeclared, unshadowed files. With bind-in-worktree, G3\n    must block the rogue file and the eventual close must see real touches.",
+   "kind": "function",
+   "name": "test_worktree_close_is_not_vacuous",
+   "signature": "def test_worktree_close_is_not_vacuous(toy, tmp_path)",
+   "span": [
+    58,
+    59
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_warns_when_started_at_commit_is_missing",
+   "signature": "def test_close_warns_when_started_at_commit_is_missing(toy)",
+   "span": [
+    88,
+    89
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Language toggled off: the cached real shadow must not be served while\n    G7 regenerates a degenerate one \u2014 that's the W7 deadlock again.",
+   "kind": "function",
+   "name": "test_cache_invalidated_when_language_is_toggled_off",
+   "signature": "def test_cache_invalidated_when_language_is_toggled_off(toy)",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A degenerate shadow written while tree-sitter was missing must be a\n    cache MISS once the deps exist.",
+   "kind": "function",
+   "name": "test_cache_invalidated_when_deps_arrive_after_degenerate_shadow",
+   "signature": "def test_cache_invalidated_when_deps_arrive_after_degenerate_shadow(toy)",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A slice that deletes a source must be closable: the orphaned shadow is\n    stale derived state and --all removes it (never hand-delete).",
+   "kind": "function",
+   "name": "test_extract_all_prunes_shadows_of_deleted_sources",
+   "signature": "def test_extract_all_prunes_shadows_of_deleted_sources(toy)",
+   "span": [
+    147,
+    148
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g7_reports_out_of_root_shadow_instead_of_crashing",
+   "signature": "def test_g7_reports_out_of_root_shadow_instead_of_crashing(toy)",
+   "span": [
+    162,
+    163
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_relative_traversal_paths_never_poison_the_sidecar",
+   "signature": "def test_relative_traversal_paths_never_poison_the_sidecar(toy)",
+   "span": [
+    180,
+    181
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_releases_g6_snapshots",
+   "signature": "def test_close_releases_g6_snapshots(toy)",
+   "span": [
+    198,
+    199
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_glob_acceptance_with_zero_matches_blocks",
+   "signature": "def test_glob_acceptance_with_zero_matches_blocks(toy)",
+   "span": [
+    225,
+    226
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_glob_acceptance_expands_at_close",
+   "signature": "def test_glob_acceptance_expands_at_close(toy)",
+   "span": [
+    238,
+    239
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_bind_self_heals_merge_driver_config_on_fresh_clones",
+   "signature": "def test_bind_self_heals_merge_driver_config_on_fresh_clones(toy, tmp_path)",
+   "span": [
+    259,
+    260
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_substrate_rejects_duplicate_ids",
+   "signature": "def test_merge_substrate_rejects_duplicate_ids(tmp_path)",
+   "span": [
+    275,
+    276
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_closing_an_already_closed_slice_refuses",
+   "signature": "def test_closing_an_already_closed_slice_refuses(toy)",
+   "span": [
+    290,
+    291
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A multi-file edit whose FIRST file lives outside any substrate must\n    still route by the file that does resolve.",
+   "kind": "function",
+   "name": "test_adapter_routes_by_any_file_not_just_the_first",
+   "signature": "def test_adapter_routes_by_any_file_not_just_the_first(toy, tmp_path)",
+   "span": [
+    310,
+    311
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Makefile-class files are enforced surface too: a touched one with no\n    shadow gets one at close (the W3 auto-extract contract), never a silent\n    pass.",
+   "kind": "function",
+   "name": "test_close_covers_extensionless_touched_files",
+   "signature": "def test_close_covers_extensionless_touched_files(toy)",
+   "span": [
+    331,
+    332
+   ],
+   "visibility": "public"
+  }
+ ]
+}

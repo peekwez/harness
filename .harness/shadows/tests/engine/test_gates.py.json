@@ -1,0 +1,232 @@
+{
+ "exports": [
+  "codes",
+  "test_g1_negative_missing_acceptance",
+  "test_g1_positive",
+  "test_g2_allows_after_phase1_injection",
+  "test_g2_blocks_without_context_with_pointer",
+  "test_g3_block_mode",
+  "test_g3_default_allow_with_findings",
+  "test_g3_non_goal_boundary_always_blocks",
+  "test_g3_radius_mode_same_package_allowed",
+  "test_g4_blocks_on_stale_shadow_with_refresh_pointer",
+  "test_g4_fresh_passes",
+  "test_g5_duplicate_candidate_vs_signature_digest",
+  "test_g5_override_requires_justification",
+  "test_g5_undeclared_use_blocks_and_override_is_auditable",
+  "test_g6_drift_blocks_until_acknowledged",
+  "test_g7_catches_hand_edited_shadow",
+  "test_g8_coverage_advisory_always_emitted"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_gates",
+ "source_hash": "sha256:4bc59f5328cc3b0f5b64b4ac0b0aee0713aa25bc937eedba405f54a14225a2b3",
+ "source_path": "tests/engine/test_gates.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "codes",
+   "signature": "def codes(v)",
+   "span": [
+    12,
+    13
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g1_positive",
+   "signature": "def test_g1_positive(toy)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g1_negative_missing_acceptance",
+   "signature": "def test_g1_negative_missing_acceptance(toy)",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g2_blocks_without_context_with_pointer",
+   "signature": "def test_g2_blocks_without_context_with_pointer(toy)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g2_allows_after_phase1_injection",
+   "signature": "def test_g2_allows_after_phase1_injection(toy)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g3_default_allow_with_findings",
+   "signature": "def test_g3_default_allow_with_findings(toy)",
+   "span": [
+    54,
+    55
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g3_block_mode",
+   "signature": "def test_g3_block_mode(tmp_path)",
+   "span": [
+    62,
+    63
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g3_radius_mode_same_package_allowed",
+   "signature": "def test_g3_radius_mode_same_package_allowed(tmp_path)",
+   "span": [
+    71,
+    72
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g3_non_goal_boundary_always_blocks",
+   "signature": "def test_g3_non_goal_boundary_always_blocks(toy)",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g4_blocks_on_stale_shadow_with_refresh_pointer",
+   "signature": "def test_g4_blocks_on_stale_shadow_with_refresh_pointer(toy)",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g4_fresh_passes",
+   "signature": "def test_g4_fresh_passes(toy)",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "orders.py imports config, which slice-042 DOES declare \u2014 fine;\n    then rogue.py imports telemetry without declaring.",
+   "kind": "function",
+   "name": "_write_orders_using_config",
+   "signature": "def _write_orders_using_config(toy, session)",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g5_undeclared_use_blocks_and_override_is_auditable",
+   "signature": "def test_g5_undeclared_use_blocks_and_override_is_auditable(toy)",
+   "span": [
+    120,
+    121
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g5_override_requires_justification",
+   "signature": "def test_g5_override_requires_justification(toy)",
+   "span": [
+    152,
+    153
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g5_duplicate_candidate_vs_signature_digest",
+   "signature": "def test_g5_duplicate_candidate_vs_signature_digest(toy)",
+   "span": [
+    159,
+    160
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g6_drift_blocks_until_acknowledged",
+   "signature": "def test_g6_drift_blocks_until_acknowledged(toy)",
+   "span": [
+    175,
+    176
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g7_catches_hand_edited_shadow",
+   "signature": "def test_g7_catches_hand_edited_shadow(toy)",
+   "span": [
+    198,
+    199
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g8_coverage_advisory_always_emitted",
+   "signature": "def test_g8_coverage_advisory_always_emitted(toy)",
+   "span": [
+    211,
+    212
+   ],
+   "visibility": "public"
+  }
+ ]
+}

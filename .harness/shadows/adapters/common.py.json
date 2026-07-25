@@ -1,0 +1,127 @@
+{
+ "exports": [
+  "call_engine",
+  "clip",
+  "emit",
+  "extract_paths",
+  "flush_compaction",
+  "injections_text",
+  "reasons_text",
+  "resolve_root",
+  "walk"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "os",
+  "pathlib",
+  "re",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "adapters.common",
+ "source_hash": "sha256:ed5fa8443f16c521c83307ae71edefcda303b0dd1930d2466865d6526938c864",
+ "source_path": "adapters/common.py",
+ "symbols": [
+  {
+   "doc": "The substrate the event belongs to: walk up from the edited file\n    first, then the given/process cwd. The hook process runs in the MAIN\n    tree even when the builder edits inside a slice worktree \u2014 without\n    this, worktree edits normalize to out-of-root paths and shadows never\n    regenerate there (parallel-worktree field report W2). Every file is a\n    candidate \u2014 the first that resolves wins. None -> engine default (its\n    own cwd walk).",
+   "kind": "function",
+   "name": "resolve_root",
+   "signature": "def resolve_root(files=None, cwd=None)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "call_engine",
+   "signature": "def call_engine(event: str, session: str, files=None, prompt=None, slice_id=None) -> dict",
+   "span": [
+    52,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Best-effort file paths from a host tool_input: common key names,\n    nested edit lists, and apply_patch '*** Update File:' markers.",
+   "kind": "function",
+   "name": "extract_paths",
+   "signature": "def extract_paths(tool_input) -> list",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "walk",
+   "signature": "def walk(node)",
+   "span": [
+    86,
+    87
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "reasons_text",
+   "signature": "def reasons_text(verdict: dict) -> str",
+   "span": [
+    110,
+    111
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "injections_text",
+   "signature": "def injections_text(verdict: dict) -> str",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "clip",
+   "signature": "def clip(text: str, slice_id=None) -> str",
+   "span": [
+    123,
+    124
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "PreCompact duty: memory flush + COMPACTION_REACHED telemetry only.",
+   "kind": "function",
+   "name": "flush_compaction",
+   "signature": "def flush_compaction(session: str) -> int",
+   "span": [
+    132,
+    133
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "emit",
+   "signature": "def emit(obj) -> None",
+   "span": [
+    151,
+    152
+   ],
+   "visibility": "public"
+  }
+ ]
+}

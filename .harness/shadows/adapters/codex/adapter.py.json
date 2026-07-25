@@ -1,0 +1,30 @@
+{
+ "exports": [
+  "main"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "common",
+  "json",
+  "os",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "adapters.codex.adapter",
+ "source_hash": "sha256:b0f9634505d7d35a9f26ee98c78c61c1206c29039c7439b9ca5bd80c7a9c29ad",
+ "source_path": "adapters/codex/adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "def main()",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  }
+ ]
+}

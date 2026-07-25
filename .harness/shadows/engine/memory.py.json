@@ -1,0 +1,101 @@
+{
+ "exports": [
+  "compact_to_durable",
+  "durable_path",
+  "flush",
+  "make_entry",
+  "read_session",
+  "session_path",
+  "write_entry"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "graph",
+  "hashlib",
+  "json",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.memory",
+ "source_hash": "sha256:5d4deaa1600be16fde892942507e8fc98357ac4e891d5949dd165f3a014e7f49",
+ "source_path": "engine/memory.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "session_path",
+   "signature": "def session_path(root, slice_id: str) -> Path",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "durable_path",
+   "signature": "def durable_path(root) -> Path",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "make_entry",
+   "signature": "def make_entry(slice_id, kind, content, attempt=None, edges=None, commit=None) -> dict",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "write_entry",
+   "signature": "def write_entry(root, entry: dict) -> dict",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "read_session",
+   "signature": "def read_session(root, slice_id: str) -> list",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Promote session memory to durable, then delete the session file.\n    Attempts and adjudications always survive; reasoning survives when marked\n    or when it carries module edges.",
+   "kind": "function",
+   "name": "compact_to_durable",
+   "signature": "def compact_to_durable(root, slice_id: str, commit=None) -> dict",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "PreCompact duty: session memory is already durable-on-write (JSONL), so\n    flush verifies the file is on disk and records the defect signal upstream.",
+   "kind": "function",
+   "name": "flush",
+   "signature": "def flush(root, slice_id: str | None) -> dict",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "public"
+  }
+ ]
+}

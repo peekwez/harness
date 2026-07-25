@@ -1,0 +1,41 @@
+{
+ "exports": [
+  "main"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "common",
+  "json",
+  "os",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "adapters.gemini.adapter",
+ "source_hash": "sha256:b103fc77046755b8dd702248df464c3372794372fb9e8cc3dfeb189cf9bf8d35",
+ "source_path": "adapters/gemini/adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_tool_input",
+   "signature": "def _tool_input(hook)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "def main()",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  }
+ ]
+}

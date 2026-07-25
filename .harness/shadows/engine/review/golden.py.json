@@ -1,0 +1,64 @@
+{
+ "exports": [
+  "ReplayModel",
+  "__init__",
+  "replay"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "layer0",
+  "pathlib",
+  "rubrics"
+ ],
+ "language": "python",
+ "module_id": "engine.review.golden",
+ "source_hash": "sha256:eafc9f5ec47a84b5a8810046661f7760b39d4dc681206dfcb52c04022442222c",
+ "source_path": "engine/review/golden.py",
+ "symbols": [
+  {
+   "doc": "Replays stored model outputs keyed by (rubric question, sample).",
+   "kind": "class",
+   "name": "ReplayModel",
+   "signature": "class ReplayModel",
+   "span": [
+    13,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, stored: dict)",
+   "span": [
+    16,
+    17
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__call__",
+   "signature": "def __call__(self, question: str, context: dict) -> dict",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Re-run stored diff+verdict pairs; any changed verdict fails.",
+   "kind": "function",
+   "name": "replay",
+   "signature": "def replay(root, golden_dir, config) -> dict",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -1,0 +1,164 @@
+{
+ "exports": [
+  "test_g7_reverifies_only_what_changed_since_the_last_clean_sweep",
+  "test_g7_still_catches_any_hand_edited_shadow_at_stop",
+  "test_park_requires_a_rule_ref_and_message",
+  "test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden",
+  "test_readme_documents_every_cli_subcommand",
+  "test_resolve_registers_context_only_when_it_emits_it",
+  "test_reviewer_records_findings_and_parks_into_the_queue",
+  "test_spec_glossary_resolves_every_referenced_marker",
+  "test_status_reports_parks_per_slice",
+  "test_substrate_writes_are_atomic",
+  "test_telemetry_buffers_in_the_sidecar_and_flushes_at_close",
+  "test_the_same_question_never_parks_twice"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "os",
+  "re",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_review_fixes",
+ "source_hash": "sha256:92e13193e8ceffc7c3bf54b143ed817e60a3b4f34311af82a51202730f985509",
+ "source_path": "tests/engine/test_review_fixes.py",
+ "symbols": [
+  {
+   "doc": "Layers 1-3 run in the reviewer agent, so its verdict must land in\n    substrate \u2014 otherwise the adjudication loop has no producer at all.",
+   "kind": "function",
+   "name": "test_reviewer_records_findings_and_parks_into_the_queue",
+   "signature": "def test_reviewer_records_findings_and_parks_into_the_queue(toy)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_park_requires_a_rule_ref_and_message",
+   "signature": "def test_park_requires_a_rule_ref_and_message(toy)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_same_question_never_parks_twice",
+   "signature": "def test_the_same_question_never_parks_twice(toy)",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_status_reports_parks_per_slice",
+   "signature": "def test_status_reports_parks_per_slice(toy)",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "G2 must certify what the caller actually printed, never the\n    resolver's intent \u2014 otherwise the gate verifies nothing.",
+   "kind": "function",
+   "name": "test_resolve_registers_context_only_when_it_emits_it",
+   "signature": "def test_resolve_registers_context_only_when_it_emits_it(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Regenerating every shadow on every Stop is an O(repo) scale cliff.\n    A shadow proven identical in an earlier sweep and untouched since is\n    skipped \u2014 provable by backdating its mtime past the watermark.",
+   "kind": "function",
+   "name": "test_g7_reverifies_only_what_changed_since_the_last_clean_sweep",
+   "signature": "def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(toy)",
+   "span": [
+    96,
+    97
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The guarantee is unchanged: a hand-edit moves mtime forward, so the\n    cache can never hide one \u2014 including for files this slice never touched.",
+   "kind": "function",
+   "name": "test_g7_still_catches_any_hand_edited_shadow_at_stop",
+   "signature": "def test_g7_still_catches_any_hand_edited_shadow_at_stop(toy)",
+   "span": [
+    118,
+    119
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A crash mid-write must never leave a truncated substrate file: the\n    whole system's value is substrate integrity.",
+   "kind": "function",
+   "name": "test_substrate_writes_are_atomic",
+   "signature": "def test_substrate_writes_are_atomic(toy, tmp_path)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Docs drift is a correctness bug in a tool whose whole thesis is\n    'lookup, never interpret'.",
+   "kind": "function",
+   "name": "test_readme_documents_every_cli_subcommand",
+   "signature": "def test_readme_documents_every_cli_subcommand()",
+   "span": [
+    156,
+    157
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The skills cite \u00a75.6 / C7 / T1 \u2014 an agent told to look things up must\n    be able to.",
+   "kind": "function",
+   "name": "test_spec_glossary_resolves_every_referenced_marker",
+   "signature": "def test_spec_glossary_resolves_every_referenced_marker()",
+   "span": [
+    168,
+    169
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The metric answers 'which rules are stable enough to promote?' \u2014 it\n    must look at rules that FIRED, not only ones that were overridden.",
+   "kind": "function",
+   "name": "test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden",
+   "signature": "def test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden(toy)",
+   "span": [
+    182,
+    183
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Hook events appending to a tracked file forced churn commits before\n    every merge; buffer them and flush once at close.",
+   "kind": "function",
+   "name": "test_telemetry_buffers_in_the_sidecar_and_flushes_at_close",
+   "signature": "def test_telemetry_buffers_in_the_sidecar_and_flushes_at_close(toy)",
+   "span": [
+    206,
+    207
+   ],
+   "visibility": "public"
+  }
+ ]
+}

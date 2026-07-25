@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ],
+    "PreToolUse": [
+      {"matcher": "apply_patch|Edit|Write",
+       "hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "apply_patch|Edit|Write",
+       "hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ],
+    "PreCompact": [
+      {"hooks": [{"type": "command",
+                  "command": "python3 \"${HARNESS_DIR}/adapters/codex/adapter.py\""}]}
+    ]
+  }
+}

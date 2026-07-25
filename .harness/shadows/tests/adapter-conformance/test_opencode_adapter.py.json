@@ -1,0 +1,69 @@
+{
+ "exports": [
+  "run_driver",
+  "test_autonomy_profiles_parse_and_deny_push",
+  "test_opencode_plugin_full_flow",
+  "test_opencode_plugin_inert_without_bin"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "json",
+  "os",
+  "pathlib",
+  "pytest",
+  "shutil",
+  "subprocess",
+  "sys",
+  "tomllib"
+ ],
+ "language": "python",
+ "module_id": "tests.adapter-conformance.test_opencode_adapter",
+ "source_hash": "sha256:def6b653c0db4ccc6119496711c46931b88a3d89a972d08ea41ddd65d470bc4e",
+ "source_path": "tests/adapter-conformance/test_opencode_adapter.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_driver",
+   "signature": "def run_driver(toy, env_extra=None)",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_opencode_plugin_full_flow",
+   "signature": "def test_opencode_plugin_full_flow(toy)",
+   "span": [
+    94,
+    95
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_opencode_plugin_inert_without_bin",
+   "signature": "def test_opencode_plugin_inert_without_bin(toy)",
+   "span": [
+    106,
+    107
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_autonomy_profiles_parse_and_deny_push",
+   "signature": "def test_autonomy_profiles_parse_and_deny_push()",
+   "span": [
+    123,
+    124
+   ],
+   "visibility": "public"
+  }
+ ]
+}

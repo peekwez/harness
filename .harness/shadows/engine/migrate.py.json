@@ -1,0 +1,38 @@
+{
+ "exports": [
+  "current_version",
+  "migrate"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.migrate",
+ "source_hash": "sha256:dbfe86ca09b6429d293b07582e1b25d9c36c7545be15aa5372ac72581c60c1fd",
+ "source_path": "engine/migrate.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "current_version",
+   "signature": "def current_version(root) -> int",
+   "span": [
+    10,
+    11
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "migrate",
+   "signature": "def migrate(root) -> dict",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  }
+ ]
+}

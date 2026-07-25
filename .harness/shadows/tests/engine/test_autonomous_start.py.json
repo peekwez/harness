@@ -1,0 +1,162 @@
+{
+ "exports": [
+  "out_of",
+  "run_adapter",
+  "test_blocked_edit_still_denies",
+  "test_egress_and_unknown_commands_are_never_auto_allowed",
+  "test_gate_approved_edit_is_auto_allowed_not_prompted",
+  "test_loop_commands_are_auto_allowed",
+  "test_no_slice_bound_means_no_auto_allow",
+  "test_start_is_idempotent_and_resumes",
+  "test_start_provisions_a_sandboxed_autonomy_profile_in_the_worktree",
+  "test_start_provisions_worktree_binding_and_context",
+  "test_start_without_worktree_binds_in_place",
+  "test_undeclared_file_still_prompts"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_autonomous_start",
+ "source_hash": "sha256:eec4b73086438f5e016d923fa535efb3bba6680a26d98f51d529cb186966709b",
+ "source_path": "tests/engine/test_autonomous_start.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "run_adapter",
+   "signature": "def run_adapter(hook: dict, cwd)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "out_of",
+   "signature": "def out_of(proc)",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_provisions_worktree_binding_and_context",
+   "signature": "def test_start_provisions_worktree_binding_and_context(toy)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_provisions_a_sandboxed_autonomy_profile_in_the_worktree",
+   "signature": "def test_start_provisions_a_sandboxed_autonomy_profile_in_the_worktree(toy)",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_is_idempotent_and_resumes",
+   "signature": "def test_start_is_idempotent_and_resumes(toy)",
+   "span": [
+    71,
+    72
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_without_worktree_binds_in_place",
+   "signature": "def test_start_without_worktree_binds_in_place(toy)",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The whole point: a declared file in a bound slice never prompts \u2014\n    the PreToolUse verdict says allow instead of staying silent.",
+   "kind": "function",
+   "name": "test_gate_approved_edit_is_auto_allowed_not_prompted",
+   "signature": "def test_gate_approved_edit_is_auto_allowed_not_prompted(toy)",
+   "span": [
+    91,
+    92
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Auto-allow is scoped to the declaration \u2014 wandering keeps its prompt.",
+   "kind": "function",
+   "name": "test_undeclared_file_still_prompts",
+   "signature": "def test_undeclared_file_still_prompts(toy)",
+   "span": [
+    105,
+    106
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Auto-approval never softens a real block: the non-goal boundary\n    denies even inside a bound slice.",
+   "kind": "function",
+   "name": "test_blocked_edit_still_denies",
+   "signature": "def test_blocked_edit_still_denies(toy)",
+   "span": [
+    116,
+    117
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_loop_commands_are_auto_allowed",
+   "signature": "def test_loop_commands_are_auto_allowed(toy)",
+   "span": [
+    131,
+    132
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_egress_and_unknown_commands_are_never_auto_allowed",
+   "signature": "def test_egress_and_unknown_commands_are_never_auto_allowed(toy)",
+   "span": [
+    146,
+    147
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Auto-allow is a property of being inside a bound slice, not a blanket\n    grant \u2014 outside one, the normal permission flow applies.",
+   "kind": "function",
+   "name": "test_no_slice_bound_means_no_auto_allow",
+   "signature": "def test_no_slice_bound_means_no_auto_allow(toy)",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "public"
+  }
+ ]
+}

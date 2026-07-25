@@ -1,0 +1,72 @@
+{
+ "exports": [
+  "ensemble",
+  "gates",
+  "languages",
+  "resolver",
+  "schema"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "yaml",
+ "module_id": "templates.harness",
+ "source_hash": "sha256:ccd804605bf36ecbbdf4c941ac2f4900025a3d0f2a3cbe88de945e447ea2a8fd",
+ "source_path": "templates/harness.yaml",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "schema",
+   "signature": "schema",
+   "span": [
+    2,
+    2
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "resolver",
+   "signature": "resolver",
+   "span": [
+    3,
+    3
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "gates",
+   "signature": "gates",
+   "span": [
+    7,
+    7
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "ensemble",
+   "signature": "ensemble",
+   "span": [
+    11,
+    11
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "const",
+   "name": "languages",
+   "signature": "languages",
+   "span": [
+    14,
+    14
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "exports": [
+  "aggregate",
+  "emit",
+  "flush",
+  "load"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "graph"
+ ],
+ "language": "python",
+ "module_id": "engine.telemetry",
+ "source_hash": "sha256:1612415d2f6f4b924401f027b6d239c2459420bd0b5cb3f500fe3174783a5972",
+ "source_path": "engine/telemetry.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "emit",
+   "signature": "def emit(root, kind: str, meta: dict) -> None",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Move buffered rows into the tracked file (close-slice / merge-slice).\n    Returns the number of rows flushed.",
+   "kind": "function",
+   "name": "flush",
+   "signature": "def flush(root) -> int",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Tracked rows plus anything still buffered \u2014 the dashboard must never\n    under-report just because a slice hasn't closed yet.",
+   "kind": "function",
+   "name": "load",
+   "signature": "def load(root) -> list",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "aggregate",
+   "signature": "def aggregate(root) -> dict",
+   "span": [
+    59,
+    60
+   ],
+   "visibility": "public"
+  }
+ ]
+}

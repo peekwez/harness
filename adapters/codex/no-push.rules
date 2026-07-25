@@ -1,0 +1,17 @@
+# harness rule for Codex (Starlark, experimental rules engine) — install to
+# ~/.codex/rules/no-push.rules. Belt-and-braces with the sandbox network
+# block: git push is forbidden even if network access is later enabled.
+# Test: codex execpolicy check --rules no-push.rules -- git push origin main
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "forbidden",
+    justification = "harness autonomy profile: never push from the agent loop",
+    match = ["git push", "git push origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", "remote"],
+    decision = "forbidden",
+    justification = "harness autonomy profile: remotes are human-managed",
+    match = ["git remote add origin x", "git remote set-url origin x"],
+)

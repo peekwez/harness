@@ -1,0 +1,160 @@
+{
+ "exports": [
+  "test_clean_repo_passes",
+  "test_corrupt_backlog_fails_loud",
+  "test_deleted_built_shadow_fails",
+  "test_manifest_checked_against_built_artifact",
+  "test_missing_manifest_file_fails",
+  "test_orphaned_note_fails",
+  "test_reformatted_shadow_fails_derivation",
+  "test_schema_mismatch_fails",
+  "test_stale_shadow_fails_with_derivation_mismatch",
+  "test_unreconciled_closed_slice_fails",
+  "test_verify_green_on_harness_repo_itself",
+  "verify"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_verify",
+ "source_hash": "sha256:9aeb97bc8904e97df17130e63622130b428a575134f09a5fb505b2242d5e47fe",
+ "source_path": "tests/engine/test_verify.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "verify",
+   "signature": "def verify(toy)",
+   "span": [
+    8,
+    9
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_clean_repo_passes",
+   "signature": "def test_clean_repo_passes(toy)",
+   "span": [
+    13,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_stale_shadow_fails_with_derivation_mismatch",
+   "signature": "def test_stale_shadow_fails_with_derivation_mismatch(toy)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_manifest_file_fails",
+   "signature": "def test_missing_manifest_file_fails(toy)",
+   "span": [
+    28,
+    29
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "CI validates the built/installed tree, not just the source tree.",
+   "kind": "function",
+   "name": "test_manifest_checked_against_built_artifact",
+   "signature": "def test_manifest_checked_against_built_artifact(toy, tmp_path)",
+   "span": [
+    36,
+    37
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_orphaned_note_fails",
+   "signature": "def test_orphaned_note_fails(toy)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unreconciled_closed_slice_fails",
+   "signature": "def test_unreconciled_closed_slice_fails(toy)",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The md-file-bug limit case: a missing derived artifact must fail CI.",
+   "kind": "function",
+   "name": "test_deleted_built_shadow_fails",
+   "signature": "def test_deleted_built_shadow_fails(toy)",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_corrupt_backlog_fails_loud",
+   "signature": "def test_corrupt_backlog_fails_loud(toy)",
+   "span": [
+    85,
+    86
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "'Regenerates identically' is byte-level: reformatting a derived file\n    is still a hand-edit.",
+   "kind": "function",
+   "name": "test_reformatted_shadow_fails_derivation",
+   "signature": "def test_reformatted_shadow_fails_derivation(toy)",
+   "span": [
+    92,
+    93
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_schema_mismatch_fails",
+   "signature": "def test_schema_mismatch_fails(toy)",
+   "span": [
+    103,
+    104
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The v0.1 ship gate: self-hosting substrate validates with its own\n    engine (skills and query packs carry manifests).",
+   "kind": "function",
+   "name": "test_verify_green_on_harness_repo_itself",
+   "signature": "def test_verify_green_on_harness_repo_itself(plugin_root)",
+   "span": [
+    110,
+    111
+   ],
+   "visibility": "public"
+  }
+ ]
+}

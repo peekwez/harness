@@ -1,0 +1,8 @@
+# harness autonomy profile for OpenAI Codex CLI — merge into
+# ~/.codex/config.toml (or trusted-project .codex/config.toml).
+# No approval prompts; the harness PreToolUse hook remains the guardrail.
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false   # nothing leaves the machine from the agent loop

@@ -1,0 +1,89 @@
+{
+ "exports": [
+  "test_500_file_repo_perf",
+  "test_byte_identical_across_two_runs",
+  "test_cache_hit_no_work",
+  "test_docstring_changes_shadow_body_does_not_change_symbols",
+  "test_unknown_extension_degenerate_shadow_plus_finding",
+  "test_visibility_mapping_per_language"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "time"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_extractor",
+ "source_hash": "sha256:68194c04d34b9f0307b1e01b4176fe8b65293f669fbbe70c5dde8697658e530a",
+ "source_path": "tests/engine/test_extractor.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_byte_identical_across_two_runs",
+   "signature": "def test_byte_identical_across_two_runs(toy)",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_docstring_changes_shadow_body_does_not_change_symbols",
+   "signature": "def test_docstring_changes_shadow_body_does_not_change_symbols(toy)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unknown_extension_degenerate_shadow_plus_finding",
+   "signature": "def test_unknown_extension_degenerate_shadow_plus_finding(toy)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cache_hit_no_work",
+   "signature": "def test_cache_hit_no_work(toy)",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_500_file_repo_perf",
+   "signature": "def test_500_file_repo_perf(tmp_path)",
+   "span": [
+    73,
+    74
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_visibility_mapping_per_language",
+   "signature": "def test_visibility_mapping_per_language(toy)",
+   "span": [
+    95,
+    96
+   ],
+   "visibility": "public"
+  }
+ ]
+}

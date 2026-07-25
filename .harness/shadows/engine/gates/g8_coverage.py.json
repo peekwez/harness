@@ -1,0 +1,28 @@
+{
+ "exports": [
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "extractor",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g8_coverage",
+ "source_hash": "sha256:81fa0fbbfbb698fd5cfccc37370bb962590962e67ba71c34c40a0f359e64e3e6",
+ "source_path": "engine/gates/g8_coverage.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  }
+ ]
+}

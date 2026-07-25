@@ -1,0 +1,148 @@
+{
+ "exports": [
+  "codes",
+  "test_close_uses_git_diff_as_touch_ground_truth",
+  "test_explicit_extract_reports_cache_hits_as_cached",
+  "test_extract_all_refreshes_existing_extensionless_shadows",
+  "test_extract_all_rewrites_stale_format_shadows",
+  "test_extract_force_bypasses_the_cache",
+  "test_g1_allows_creating_the_slices_own_acceptance_test",
+  "test_g6_silent_on_extractor_format_skew",
+  "test_merge_drivers_never_content_merge_shadows",
+  "test_override_records_the_actual_rule_ref",
+  "test_registry_refresh_cli"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_field_report4",
+ "source_hash": "sha256:5062f8cfae4f17fcd33db785e775fbe57438545cb81d09313985286c02733385",
+ "source_path": "tests/engine/test_field_report4.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "codes",
+   "signature": "def codes(verdict)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The G7 <-> cache deadlock: a shadow in an older format has a matching\n    source_hash, so extract --all cache-hits forever while G7's uncached\n    rebuild mismatches forever. A format/version change must be a cache miss.",
+   "kind": "function",
+   "name": "test_extract_all_rewrites_stale_format_shadows",
+   "signature": "def test_extract_all_rewrites_stale_format_shadows(toy)",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_explicit_extract_reports_cache_hits_as_cached",
+   "signature": "def test_explicit_extract_reports_cache_hits_as_cached(toy)",
+   "span": [
+    41,
+    42
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_extract_force_bypasses_the_cache",
+   "signature": "def test_extract_force_bypasses_the_cache(toy)",
+   "span": [
+    49,
+    50
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "--all skips extensionless files when discovering new modules, but a\n    shadow that already exists for one (hook-created: Makefile, LICENSE\u2026)\n    must still refresh \u2014 otherwise G7 mismatches with `extract --all` as a\n    no-op fix, the same deadlock class as W7.",
+   "kind": "function",
+   "name": "test_extract_all_refreshes_existing_extensionless_shadows",
+   "signature": "def test_extract_all_refreshes_existing_extensionless_shadows(toy)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Shadow symbols changed but source bytes did not: that is extractor\n    version skew, not interface drift \u2014 no ack-drift ceremony for non-events.",
+   "kind": "function",
+   "name": "test_g6_silent_on_extractor_format_skew",
+   "signature": "def test_g6_silent_on_extractor_format_skew(toy)",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The gate demanded a red acceptance test while blocking the very write\n    that creates it \u2014 builders were bootstrapping via bash heredoc.",
+   "kind": "function",
+   "name": "test_g1_allows_creating_the_slices_own_acceptance_test",
+   "signature": "def test_g1_allows_creating_the_slices_own_acceptance_test(toy)",
+   "span": [
+    98,
+    99
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_override_records_the_actual_rule_ref",
+   "signature": "def test_override_records_the_actual_rule_ref(toy)",
+   "span": [
+    117,
+    118
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Shadows are derived: content-merging them is semantically meaningless.\n    ours-merge keeps our version; post-merge extract regenerates from the\n    merged sources.",
+   "kind": "function",
+   "name": "test_merge_drivers_never_content_merge_shadows",
+   "signature": "def test_merge_drivers_never_content_merge_shadows(tmp_path)",
+   "span": [
+    133,
+    134
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A bash-side edit the hooks never saw must still land in the close\n    ceremony's touched set \u2014 git is ground truth, hooks an optimization.",
+   "kind": "function",
+   "name": "test_close_uses_git_diff_as_touch_ground_truth",
+   "signature": "def test_close_uses_git_diff_as_touch_ground_truth(toy)",
+   "span": [
+    168,
+    169
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_registry_refresh_cli",
+   "signature": "def test_registry_refresh_cli(toy)",
+   "span": [
+    193,
+    194
+   ],
+   "visibility": "public"
+  }
+ ]
+}

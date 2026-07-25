@@ -1,0 +1,11 @@
+{
+ "exports": "unknown",
+ "extractor_version": 2,
+ "imports": [],
+ "language": "unknown",
+ "module_id": "adapters.codex.no-push",
+ "raw_head": "# harness rule for Codex (Starlark, experimental rules engine) \u2014 install to\n# ~/.codex/rules/no-push.rules. Belt-and-braces with the sandbox network\n# block: git push is forbidden even if network access is later enabled.\n# Test: codex execpolicy check --rules no-push.rules -- git push origin main\nprefix_rule(\n    pattern = [\"git\", \"push\"],\n    decision = \"forbidden\",\n    justification = \"harness autonomy profile: never push from the agent loop\",\n    match = [\"git push\", \"git push origin main\"],\n)\n\nprefix_rule(\n    pattern = [\"git\", \"remote\"],\n    decision = \"forbidden\",\n    justification = \"harness autonomy profile: remotes are human-managed\",\n    match = [\"git remote add origin x\", \"git remote set-url origin x\"],\n)",
+ "source_hash": "sha256:14afe991abafdd963828b107cccee67c6f6fdc76ce2d85804c93fd0f9d90b99c",
+ "source_path": "adapters/codex/no-push.rules",
+ "symbols": []
+}

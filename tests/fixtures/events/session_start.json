@@ -1,0 +1,10 @@
+{
+  "phase1_first": false,
+  "event": {
+    "event": "session_start",
+    "session_id": "PLACEHOLDER",
+    "work_unit_id": "slice-042",
+    "payload": {"files": [], "context_loaded": [], "diff": null, "prompt": null}
+  },
+  "expect": {"verdict": "allow", "codes_subset": []}
+}

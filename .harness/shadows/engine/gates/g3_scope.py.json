@@ -1,0 +1,51 @@
+{
+ "exports": [
+  "check"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "fnmatch",
+  "graph",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.g3_scope",
+ "source_hash": "sha256:7aa033c02abb6c0a81017d8e54fa985e00277d4c6930d6900af45d84e5d2b30f",
+ "source_path": "engine/gates/g3_scope.py",
+ "symbols": [
+  {
+   "doc": "Bare ids of recorded overrides for this slice (boundary:B-x, file:path,\n    registry:x \u2014 prefix stripped). G3 consults the same override ledger as G5\n    (field report #2-recurrence/#21).",
+   "kind": "function",
+   "name": "_overridden",
+   "signature": "def _overridden(ctx) -> set",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_declared_set",
+   "signature": "def _declared_set(ctx) -> set",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "check",
+   "signature": "def check(ctx) -> list",
+   "span": [
+    49,
+    50
+   ],
+   "visibility": "public"
+  }
+ ]
+}
