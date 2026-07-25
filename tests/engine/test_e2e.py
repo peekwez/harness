@@ -149,8 +149,10 @@ def test_close_blocked_on_unreconciled_g3_touch(toy):
     rows[0]["predicted_files"].append("rogue.py")
     write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
     handle_event(make_event("unit_complete", session=session), toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "slice-042 + rogue")
     proc2 = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                    root=toy)
+                    "--commit", "HEAD", root=toy)
     assert proc2.returncode == 0, proc2.stdout + proc2.stderr
 
 

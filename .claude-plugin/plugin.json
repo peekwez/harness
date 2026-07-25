@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Development enforcement plugin: skills guide the workflow, hooks bind the rules, a framework-agnostic engine decides. Spec-driven development for autonomous coding agents.",
   "author": {
     "name": "Kwesi P Apponsah",

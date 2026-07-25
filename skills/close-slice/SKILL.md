@@ -22,7 +22,9 @@ from the wrong tree closes against the wrong substrate.
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" close-slice --slice $1 --commit HEAD`
    (`--commit HEAD` on purpose — the engine resolves it to the sha; a
    `$(git rev-parse HEAD)` substitution can never be
-   permission-auto-approved.)
+   permission-auto-approved. `--commit` is REQUIRED in a git repo: the
+   slice's provenance note is written onto that commit, and a close that
+   records no provenance is not a close.)
 
 The engine enforces: unit_complete gates pass (G4 freshness, G5 conformance,
 G6 drift acknowledged, G7 derivation integrity), uses ⊆ declares reconciled,

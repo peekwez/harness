@@ -17,7 +17,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_e2e",
- "source_hash": "sha256:72616f9c871ac64e0172a2e590e5000693cb3632e32228ebb507751349079c14",
+ "source_hash": "sha256:c942c4635814cd842005395d05ffe24407690e18187c7115989429bc6547f7ed",
  "source_path": "tests/engine/test_e2e.py",
  "symbols": [
   {
@@ -92,8 +92,8 @@
    "name": "test_backlog_splits_oversized_slice",
    "signature": "def test_backlog_splits_oversized_slice(tmp_path)",
    "span": [
-    157,
-    158
+    159,
+    160
    ],
    "visibility": "public"
   },
@@ -103,8 +103,8 @@
    "name": "test_init_scaffolds_and_refuses_overwrite",
    "signature": "def test_init_scaffolds_and_refuses_overwrite(tmp_path)",
    "span": [
-    172,
-    173
+    174,
+    175
    ],
    "visibility": "public"
   }

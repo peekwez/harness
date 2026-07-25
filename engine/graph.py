@@ -109,14 +109,35 @@ def _git(root, *args, check=True) -> str:
     return proc.stdout
 
 
+def _note_payloads(body: str) -> list:
+    """Normalize a note body to a list of slice payloads. Legacy notes hold
+    a single object; current ones hold an array, because a commit can carry
+    more than one slice (squash merges, repaired history)."""
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError:
+        return [{"raw": body}]
+    return parsed if isinstance(parsed, list) else [parsed]
+
+
 def write_note(root, commit, payload: dict) -> None:
     """Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the
-    commit so provenance travels with the repo."""
+    commit so provenance travels with the repo. Additive: a second slice on
+    the same commit joins the note instead of overwriting it (`notes add -f`
+    silently erased the first one); re-noting the same slice replaces its
+    own entry."""
+    existing = _git(root, "notes", f"--ref={NOTES_REF}", "show", commit,
+                    check=False).strip()
+    payloads = [p for p in (_note_payloads(existing) if existing else [])
+                if p.get("slice_id") != payload.get("slice_id")]
+    payloads.append(payload)
+    payloads.sort(key=lambda p: str(p.get("slice_id")))
     _git(root, "notes", f"--ref={NOTES_REF}", "add", "-f", "-m",
-         json.dumps(payload, sort_keys=True), commit)
+         json.dumps(payloads, sort_keys=True), commit)
 
 
 def read_notes(root) -> list:
+    """[{commit, payloads: [...], payload: <first, legacy accessor>}]"""
     out = _git(root, "notes", f"--ref={NOTES_REF}", "list", check=False)
     notes = []
     for line in out.splitlines():
@@ -124,12 +145,10 @@ def read_notes(root) -> list:
         if len(parts) != 2:
             continue
         note_obj, target = parts
-        body = _git(root, "cat-file", "-p", note_obj, check=False)
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError:
-            payload = {"raw": body}
-        notes.append({"commit": target, "payload": payload})
+        payloads = _note_payloads(_git(root, "cat-file", "-p", note_obj,
+                                       check=False))
+        notes.append({"commit": target, "payloads": payloads,
+                      "payload": payloads[0] if payloads else {}})
     return notes
 
 

@@ -20,7 +20,7 @@
  ],
  "language": "python",
  "module_id": "engine.graph",
- "source_hash": "sha256:50a202cefb3cc0ca5aedcbd60daa43b23365c1153a8d5a56305235179c773cd7",
+ "source_hash": "sha256:a9cba20eb5334b4864cfd443579aa3d5799257faffb5e22bc6ac5a85515f33b6",
  "source_path": "engine/graph.py",
  "symbols": [
   {
@@ -134,24 +134,35 @@
    "visibility": "private"
   },
   {
-   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo.",
+   "doc": "Normalize a note body to a list of slice payloads. Legacy notes hold\n    a single object; current ones hold an array, because a commit can carry\n    more than one slice (squash merges, repaired history).",
    "kind": "function",
-   "name": "write_note",
-   "signature": "def write_note(root, commit, payload: dict) -> None",
+   "name": "_note_payloads",
+   "signature": "def _note_payloads(body: str) -> list",
    "span": [
     112,
     113
    ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo. Additive: a second slice on\n    the same commit joins the note instead of overwriting it (`notes add -f`\n    silently erased the first one); re-noting the same slice replaces its\n    own entry.",
+   "kind": "function",
+   "name": "write_note",
+   "signature": "def write_note(root, commit, payload: dict) -> None",
+   "span": [
+    123,
+    124
+   ],
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "[{commit, payloads: [...], payload: <first, legacy accessor>}]",
    "kind": "function",
    "name": "read_notes",
    "signature": "def read_notes(root) -> list",
    "span": [
-    119,
-    120
+    139,
+    140
    ],
    "visibility": "public"
   },
@@ -161,8 +172,8 @@
    "name": "orphaned_notes",
    "signature": "def orphaned_notes(root) -> list",
    "span": [
-    136,
-    137
+    155,
+    156
    ],
    "visibility": "public"
   }

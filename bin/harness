@@ -505,7 +505,7 @@ def cmd_verify(args):
                     severity="block", key=e["id"] + "|" + ref))
 
     # orphaned-notes detection (git failures are loud; only a non-repo skips)
-    from engine.graph import orphaned_notes
+    from engine.graph import orphaned_notes, read_notes
     if (root / ".git").exists():
         for n in orphaned_notes(root):
             findings.append(make_finding(
@@ -527,9 +527,25 @@ def cmd_verify(args):
         findings.append(make_finding(
             "SCHEMA_MISMATCH", "gate:G1",
             f"backlog.jsonl unreadable: {exc}", severity="block", key="backlog"))
+    # provenance completeness: every CLOSED slice must carry a note naming
+    # it. The orphan check above catches notes whose commit went away; this
+    # catches the inverse — a slice closed with no note at all, which used
+    # to pass verify silently.
+    noted = set()
+    if (root / ".git").exists():
+        noted = {p.get("slice_id") for n in read_notes(root)
+                 for p in n["payloads"]}
+
     for s in backlog:
         if s.get("status") != "closed":
             continue
+        if (root / ".git").exists() and s["id"] not in noted:
+            findings.append(make_finding(
+                "MISSING_PROVENANCE_NOTE", "gate:G1",
+                f"closed slice {s['id']} has no provenance note; provenance "
+                f"must travel with the repo — repair with `harness graph "
+                f"note --slice {s['id']} --commit <sha>`",
+                severity="block", key=s["id"] + "|note"))
         ud = uses_vs_declares(root, s["id"])
         und = ud["unresolved"]
         if und:
@@ -903,10 +919,18 @@ def cmd_close_slice(args):
                              f"{sl['started_at_commit']}..{args.commit}"],
                             capture_output=True, text=True)
         if dp.returncode == 0:
+            from engine import IGNORED_DIRS
+
+            def _enforceable(rel):
+                # build artifacts and vendored trees are not slice scope:
+                # a repo without a tidy .gitignore would otherwise get G3
+                # blocks for __pycache__/node_modules churn
+                parts = Path(rel).parts
+                return (rel and not rel.startswith(".harness/")
+                        and not any(p in IGNORED_DIRS for p in parts))
             touched = sorted(set(touched) |
                              {ln.strip() for ln in dp.stdout.splitlines()
-                              if ln.strip()
-                              and not ln.strip().startswith(".harness/")})
+                              if _enforceable(ln.strip())})
         else:
             print(f"warning: git diff for touch reconciliation failed: "
                   f"{dp.stderr.strip()}", file=sys.stderr)
@@ -975,7 +999,18 @@ def cmd_close_slice(args):
                           f"re-close", "rule_ref": "gate:G7"})
         return 1
 
-    # Precondition 6 (Y1): the named commit must actually CONTAIN the
+    # Precondition 6: a slice IS a commit boundary. Closing without one
+    # records no provenance at all and used to succeed silently — the note
+    # is the artifact that makes provenance travel with the repo.
+    if (root / ".git").exists() and not args.commit:
+        _print({"closed": False, "rule_ref": "gate:G1",
+                "reason": "--commit is required to close in a git repo: the "
+                          "slice's provenance note is written onto it. "
+                          "Commit the work and re-close with `--commit HEAD` "
+                          "(the engine resolves the ref)."})
+        return 1
+
+    # Precondition 7 (Y1): the named commit must actually CONTAIN the
     # touched files — `git add -N` (intent-to-add) produced a commit
     # without the slice's sources and the provenance note landed on the
     # wrong commit.
@@ -1036,7 +1071,15 @@ def cmd_close_slice(args):
                 "memory_ids": memory_ids})
             note_written = True
         except GraphError as exc:
-            print(f"warning: git note not written: {exc}", file=sys.stderr)
+            # NOT a warning: an unwritten note means the provenance claim is
+            # false for this slice. Block before any status mutation so the
+            # close is retryable once the cause is fixed.
+            _print({"closed": False, "rule_ref": "gate:G1",
+                    "reason": f"provenance note could not be written to "
+                              f"{args.commit[:12]}: {exc}. Fix the cause "
+                              f"(stale ref lock? read-only .git?) and "
+                              f"re-close — provenance is not optional."})
+            return 1
 
     compacted = memory.compact_to_durable(root, args.slice, commit=args.commit)
 
@@ -1485,6 +1528,24 @@ def cmd_graph(args):
         _print(graph.provenance(root, args.module))
     elif args.graph_cmd == "uses-declares":
         _print(graph.uses_vs_declares(root, args.slice))
+    elif args.graph_cmd == "note":
+        # repair path for a closed slice whose note was lost (deleted ref,
+        # a close from before notes were enforced, a rewritten branch).
+        # Rebuilt from substrate — the same source close-slice used.
+        from engine import read_jsonl
+        sl = get_slice(root, args.slice)
+        touched = sorted(e["to"].split(":", 1)[1]
+                         for e in graph.load_edges(root)
+                         if e["type"] == "touches"
+                         and e["from"] == f"slice:{args.slice}")
+        durable = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
+        graph.write_note(root, args.commit, {
+            "slice_id": args.slice, "modules_touched": touched,
+            "registry_used": sl.get("declares_dep", []),
+            "memory_ids": [m["id"] for m in durable
+                           if m.get("slice") == args.slice]})
+        _print({"note_written": True, "slice": args.slice,
+                "commit": args.commit, "modules_touched": touched})
     elif args.graph_cmd == "edge":
         _print(graph.append_edge(root, args.type, args.frm, args.to,
                                  commit=args.commit,
@@ -1744,6 +1805,10 @@ def main(argv=None):
     n = gs.add_parser("neighbors"); n.add_argument("node")
     pr = gs.add_parser("provenance"); pr.add_argument("module")
     ud = gs.add_parser("uses-declares"); ud.add_argument("slice")
+    nt = gs.add_parser("note", help="(re)write a closed slice's provenance "
+                                    "note onto a commit")
+    nt.add_argument("--slice", required=True)
+    nt.add_argument("--commit", required=True)
     ed = gs.add_parser("edge")
     ed.add_argument("type"); ed.add_argument("frm"); ed.add_argument("to")
     ed.add_argument("--commit"); ed.add_argument("--meta")
