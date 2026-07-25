@@ -43,6 +43,24 @@ def flush(root) -> int:
     return len(rows)
 
 
+def rotate(root, config=None) -> int:
+    """Keep the tracked file bounded: rows beyond `telemetry.max_rows` move
+    to telemetry.archive.jsonl (append-only, union-merged like the live
+    file). Nothing is deleted — history stays, diffs stay small. Returns the
+    number of rows moved."""
+    from . import write_jsonl
+    cap = int(((config or {}).get("telemetry") or {}).get("max_rows", 5000))
+    path = harness_dir(root) / "telemetry.jsonl"
+    rows = read_jsonl(path)
+    if cap <= 0 or len(rows) <= cap:
+        return 0
+    keep = rows[-cap:]
+    for row in rows[:-cap]:
+        append_jsonl(harness_dir(root) / "telemetry.archive.jsonl", row)
+    write_jsonl(path, keep)
+    return len(rows) - cap
+
+
 def load(root) -> list:
     """Tracked rows plus anything still buffered — the dashboard must never
     under-report just because a slice hasn't closed yet."""
@@ -56,8 +74,12 @@ def load(root) -> list:
     return rows
 
 
-def aggregate(root) -> dict:
+def aggregate(root, since: str | None = None) -> dict:
     rows = load(root)
+    window = None
+    if since:
+        rows = [r for r in rows if str(r.get("ts", "")) >= since]
+        window = {"since": since, "rows": len(rows)}
     events = [r for r in rows if r["kind"] == "event"]
     pre_changes = [r for r in events if r["meta"].get("event") == "pre_change"]
     g2_blocks = [r for r in pre_changes
@@ -110,6 +132,7 @@ def aggregate(root) -> dict:
 
     return {
         "slices": slices,
+        "window": window,
         "pre_change_events": len(pre_changes),
         "g2_block_rate": (len(g2_blocks) / len(pre_changes)) if pre_changes else 0.0,
         "override_counts": overrides,

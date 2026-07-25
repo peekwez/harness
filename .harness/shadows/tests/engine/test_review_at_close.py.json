@@ -1,0 +1,88 @@
+{
+ "exports": [
+  "test_a_blocking_review_finding_blocks_the_close",
+  "test_agent_recorded_findings_are_surfaced_at_close",
+  "test_an_unadjudicated_park_blocks_the_close",
+  "test_close_runs_the_review_stack_and_records_its_verdict",
+  "test_review_at_close_can_be_disabled_by_config"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_review_at_close",
+ "source_hash": "sha256:9b2a9ae20ade6d28216c7594ae7c983f379151eac9cb139e0d185cf244a725d1",
+ "source_path": "tests/engine/test_review_at_close.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_work_and_commit",
+   "signature": "def _work_and_commit(toy, session=\"rc\")",
+   "span": [
+    16,
+    17
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_runs_the_review_stack_and_records_its_verdict",
+   "signature": "def test_close_runs_the_review_stack_and_records_its_verdict(toy)",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The deterministic rubrics are real gates now, not a report.",
+   "kind": "function",
+   "name": "test_a_blocking_review_finding_blocks_the_close",
+   "signature": "def test_a_blocking_review_finding_blocks_the_close(toy)",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A reviewer agent's own blocking finding must stop the close too \u2014\n    otherwise recording it changes nothing.",
+   "kind": "function",
+   "name": "test_agent_recorded_findings_are_surfaced_at_close",
+   "signature": "def test_agent_recorded_findings_are_surfaced_at_close(toy)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Parking is the reviewer saying 'a human must rule on this' \u2014 closing\n    over it would make parking meaningless.",
+   "kind": "function",
+   "name": "test_an_unadjudicated_park_blocks_the_close",
+   "signature": "def test_an_unadjudicated_park_blocks_the_close(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_review_at_close_can_be_disabled_by_config",
+   "signature": "def test_review_at_close_can_be_disabled_by_config(toy)",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  }
+ ]
+}

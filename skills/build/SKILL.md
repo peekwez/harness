@@ -15,6 +15,10 @@ context — no prompts, no follow-up ceremony:
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" start --slice $1`
 
+If it refuses because a `depends_on` slice is still open, close that one
+first — foundations exist so consumers can rely on them. Overriding needs a
+recorded reason: `--force --justification "<why>"`.
+
 Read the `injections` from that output — that is your context (shadows,
 guidance, decision rows, durable memories). `acceptance_python` is the
 interpreter for the acceptance tests. **From here on run every command —

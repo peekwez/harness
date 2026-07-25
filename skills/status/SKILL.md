@@ -9,6 +9,11 @@ allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" status --json`
 
+Repo health (schemas, stale bindings/worktrees, unadjudicated parks, missing
+provenance notes, unflushed telemetry) is a separate, complementary view:
+
+!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" doctor --substrate`
+
 Render the JSON as a short dashboard and interpret it — this is the view
 that proves human withdrawal is safe:
 

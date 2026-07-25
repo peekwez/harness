@@ -49,6 +49,32 @@ def resolve_root(files=None, cwd=None):
     return None
 
 
+def permit(session: str, files=None, command=None, cwd=None) -> tuple:
+    """(allow, reason) — would the bound slice's gates approve this tool
+    call? A separate question from the enforcement verdict: the gates are
+    the approval layer, so declared work never stops for a prompt. False
+    means "not auto-approved", leaving the host's normal flow in charge."""
+    root = resolve_root(files, cwd)
+    cmd = [sys.executable, HARNESS]
+    if root:
+        cmd += ["--root", str(root)]
+    cmd += ["permit"]
+    if command is not None:
+        cmd += ["--command", command]
+    if files:
+        cmd += ["--paths", *files]
+    if session:
+        cmd += ["--session", session]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        return False, ""
+    try:
+        out = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return False, ""
+    return bool(out.get("allow")), out.get("reason", "")
+
+
 def call_engine(event: str, session: str, files=None, prompt=None,
                 slice_id=None) -> dict:
     payload = {

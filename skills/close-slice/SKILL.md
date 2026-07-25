@@ -26,7 +26,10 @@ from the wrong tree closes against the wrong substrate.
    slice's provenance note is written onto that commit, and a close that
    records no provenance is not a close.)
 
-The engine enforces: unit_complete gates pass (G4 freshness, G5 conformance,
+The engine enforces: the review stack runs over this slice's own diff and
+its verdict is recorded (blocking findings — engine-side or reviewer-agent
+recorded — stop the close, and nothing may still be parked for this slice),
+unit_complete gates pass (G4 freshness, G5 conformance,
 G6 drift acknowledged, G7 derivation integrity), uses ⊆ declares reconciled,
 and — for slices resolving security-marked decision rows — an independent
 forked reviewer's pass verdict (ADR-001; dispatch the harness:reviewer

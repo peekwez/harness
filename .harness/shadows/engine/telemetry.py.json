@@ -3,7 +3,8 @@
   "aggregate",
   "emit",
   "flush",
-  "load"
+  "load",
+  "rotate"
  ],
  "extractor_version": 2,
  "imports": [
@@ -12,7 +13,7 @@
  ],
  "language": "python",
  "module_id": "engine.telemetry",
- "source_hash": "sha256:1612415d2f6f4b924401f027b6d239c2459420bd0b5cb3f500fe3174783a5972",
+ "source_hash": "sha256:4eee06346ab5218177a4455737178601f5fa3fe0ef3520e61418a7c9072407af",
  "source_path": "engine/telemetry.py",
  "symbols": [
   {
@@ -38,10 +39,10 @@
    "visibility": "public"
   },
   {
-   "doc": "Tracked rows plus anything still buffered \u2014 the dashboard must never\n    under-report just because a slice hasn't closed yet.",
+   "doc": "Keep the tracked file bounded: rows beyond `telemetry.max_rows` move\n    to telemetry.archive.jsonl (append-only, union-merged like the live\n    file). Nothing is deleted \u2014 history stays, diffs stay small. Returns the\n    number of rows moved.",
    "kind": "function",
-   "name": "load",
-   "signature": "def load(root) -> list",
+   "name": "rotate",
+   "signature": "def rotate(root, config=None) -> int",
    "span": [
     46,
     47
@@ -49,13 +50,24 @@
    "visibility": "public"
   },
   {
+   "doc": "Tracked rows plus anything still buffered \u2014 the dashboard must never\n    under-report just because a slice hasn't closed yet.",
+   "kind": "function",
+   "name": "load",
+   "signature": "def load(root) -> list",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": null,
    "kind": "function",
    "name": "aggregate",
-   "signature": "def aggregate(root) -> dict",
+   "signature": "def aggregate(root, since: str | None = None) -> dict",
    "span": [
-    59,
-    60
+    77,
+    78
    ],
    "visibility": "public"
   }

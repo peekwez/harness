@@ -5,7 +5,7 @@
  "language": "unknown",
  "module_id": "bin.harness",
  "raw_head": "#!/usr/bin/env python3\n\"\"\"harness \u2014 framework-agnostic enforcement engine CLI.\n\nThe portability boundary: CI and other agent frameworks call this with zero\nplugin involvement. Exit 0 = verdict/result emitted (semantics live in the\nJSON); exit 2 = malformed input; exit 1 = check failed / engine error.\n\"\"\"\nfrom __future__ import annotations\n\nimport argparse\nimport json\nimport os\nimport shutil\nimport sys\nfrom pathlib import Path\n\nPLUGIN_ROOT = Path(__file__).resolve().parent.parent\nsys.path.insert(0, str(PLUGIN_ROOT))\n\nfrom engine import (SCHEMA_VERSION, HarnessError, find_root, get_slice,       # noqa: E402\n                    harness_dir, load_backlog, load_config, save_slice,\n                    write_jsonl)\n\n\ndef _root(args):\n    if getattr(args, \"root\", None):\n        return Path(args.root).resolve()\n    return find_root()\n\n\ndef _print(obj):\n    print(json.dumps(obj, sort_keys=True, indent=2))\n\n\ndef _main_worktree_root(root):\n    \"\"\"If `root` is a linked git worktree, return the MAIN worktree root; else\n    None. A worktree has its own fresh .harness/sidecar.db, so the live host\n    session the hooks recorded lives in the MAIN repo's sidecar, not the\n    worktree's (field report Y2).\"\"\"\n    import subprocess",
- "source_hash": "sha256:7f693dfcad095c2f7c39bd49a23654d5a57a300744828d65bdfc62527b312eac",
+ "source_hash": "sha256:d2425196672ec301654303821d3603d71f01396e9a81c776136751e6631eaa8e",
  "source_path": "bin/harness",
  "symbols": []
 }

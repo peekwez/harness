@@ -1,0 +1,36 @@
+{
+ "exports": [
+  "validate_rows",
+  "validate_substrate"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "python",
+ "module_id": "engine.schema",
+ "source_hash": "sha256:e4ca64029bbebe3a6dbaebc4c4e2be18aad6e9276d1417c6a2b592e5781a03de",
+ "source_path": "engine/schema.py",
+ "symbols": [
+  {
+   "doc": "Returns a list of human-readable problems (empty = valid).",
+   "kind": "function",
+   "name": "validate_rows",
+   "signature": "def validate_rows(filename: str, rows: list) -> list",
+   "span": [
+    43,
+    44
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Every known substrate file. Unreadable files are reported by the\n    caller's own loud-failure path, not swallowed here.",
+   "kind": "function",
+   "name": "validate_substrate",
+   "signature": "def validate_substrate(root) -> list",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "public"
+  }
+ ]
+}

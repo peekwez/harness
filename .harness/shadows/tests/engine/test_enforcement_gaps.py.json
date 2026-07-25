@@ -1,0 +1,159 @@
+{
+ "exports": [
+  "test_doctor_fix_clears_what_is_safe_to_clear",
+  "test_doctor_healthy_substrate_exits_zero",
+  "test_doctor_substrate_reports_repo_health",
+  "test_force_without_justification_is_refused",
+  "test_start_allows_once_the_dependency_is_closed",
+  "test_start_force_records_an_auditable_override",
+  "test_start_refuses_a_slice_whose_dependency_is_open",
+  "test_unknown_dependency_is_named",
+  "test_valid_substrate_produces_no_schema_findings",
+  "test_verify_validates_backlog_rows",
+  "test_verify_validates_registry_and_decision_rows"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_enforcement_gaps",
+ "source_hash": "sha256:c0de9c6ddd04eebd796b922b532a31a73ab2b9a06fa661ff8f201a4ad1a3c1b9",
+ "source_path": "tests/engine/test_enforcement_gaps.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_add_dep_slice",
+   "signature": "def _add_dep_slice(toy, dep_status=\"planned\")",
+   "span": [
+    9,
+    10
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "depends_on was recorded, cost-estimated and displayed \u2014 but nothing\n    stopped starting out of order. Every other declaration is enforced.",
+   "kind": "function",
+   "name": "test_start_refuses_a_slice_whose_dependency_is_open",
+   "signature": "def test_start_refuses_a_slice_whose_dependency_is_open(toy)",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_allows_once_the_dependency_is_closed",
+   "signature": "def test_start_allows_once_the_dependency_is_closed(toy)",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_force_records_an_auditable_override",
+   "signature": "def test_start_force_records_an_auditable_override(toy)",
+   "span": [
+    40,
+    41
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_force_without_justification_is_refused",
+   "signature": "def test_force_without_justification_is_refused(toy)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unknown_dependency_is_named",
+   "signature": "def test_unknown_dependency_is_named(toy)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_validates_backlog_rows",
+   "signature": "def test_verify_validates_backlog_rows(toy)",
+   "span": [
+    71,
+    72
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_validates_registry_and_decision_rows",
+   "signature": "def test_verify_validates_registry_and_decision_rows(toy)",
+   "span": [
+    84,
+    85
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_valid_substrate_produces_no_schema_findings",
+   "signature": "def test_valid_substrate_produces_no_schema_findings(toy)",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_substrate_reports_repo_health",
+   "signature": "def test_doctor_substrate_reports_repo_health(toy)",
+   "span": [
+    105,
+    106
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_fix_clears_what_is_safe_to_clear",
+   "signature": "def test_doctor_fix_clears_what_is_safe_to_clear(toy)",
+   "span": [
+    133,
+    134
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_healthy_substrate_exits_zero",
+   "signature": "def test_doctor_healthy_substrate_exits_zero(toy)",
+   "span": [
+    155,
+    156
+   ],
+   "visibility": "public"
+  }
+ ]
+}

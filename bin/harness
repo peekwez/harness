@@ -101,14 +101,93 @@ def _dep_status():
 def cmd_doctor(args):
     """Engine preflight: run this (or init runs it for you) before blaming
     the gates. Missing extraction deps degrade shadows; missing pyyaml is
-    fatal for the engine itself."""
+    fatal for the engine itself. `--substrate` adds a repo health pass."""
     import platform
     deps = _dep_status()
     missing = sorted(k for k, v in deps.items() if v == "MISSING")
-    _print({"python": platform.python_version(), "deps": deps,
-            "healthy": not missing,
-            "fix": f"pip install {' '.join(missing)}" if missing else None})
-    return 0 if not missing else 1
+    report = {"python": platform.python_version(), "deps": deps,
+              "healthy": not missing,
+              "fix": f"pip install {' '.join(missing)}" if missing else None}
+    if args.substrate:
+        report.update(_substrate_health(_root(args), fix=args.fix))
+        report["healthy"] = report["healthy"] and report["substrate_healthy"]
+    _print(report)
+    return 0 if report["healthy"] else 1
+
+
+def _substrate_health(root, fix=False) -> dict:
+    """Everything that rots quietly: schema drift, bindings pointing at
+    closed slices, worktrees for slices nobody is building, findings parked
+    and never adjudicated, telemetry never flushed, closed slices with no
+    provenance note."""
+    import subprocess
+    from engine import read_jsonl, telemetry
+    from engine.events import Sidecar
+    from engine.schema import validate_substrate
+
+    problems = {"schema": validate_substrate(root)}
+    backlog = {s["id"]: s for s in load_backlog(root)}
+
+    sidecar = Sidecar(root)
+    try:
+        cur = sidecar.db.execute(
+            "SELECT session_id, value FROM session_state WHERE key='active_slice'")
+        bindings = [(s, json.loads(v)) for s, v in cur.fetchall()]
+        stale_bindings = [{"session": s, "slice": sid} for s, sid in bindings
+                          if backlog.get(sid, {}).get("status") == "closed"]
+        buffered = len(sidecar.telemetry_peek())
+    finally:
+        sidecar.close()
+
+    stale_worktrees = []
+    wt_dir = root / ".worktrees"
+    if wt_dir.is_dir():
+        for child in sorted(p for p in wt_dir.iterdir() if p.is_dir()):
+            row = backlog.get(child.name)
+            if row is None or row.get("status") == "closed":
+                stale_worktrees.append({
+                    "path": str(child), "slice": child.name,
+                    "reason": "no such slice" if row is None else "slice closed",
+                    "remove_with": f"git worktree remove --force {child}"})
+
+    parked = read_jsonl(harness_dir(root) / "parked.jsonl")
+    missing_notes = []
+    if (root / ".git").exists():
+        from engine.graph import read_notes
+        noted = {p.get("slice_id") for n in read_notes(root) for p in n["payloads"]}
+        missing_notes = [sid for sid, s in backlog.items()
+                         if s.get("status") == "closed" and sid not in noted]
+
+    fixed = {"bindings_released": 0, "telemetry_flushed": 0}
+    if fix:
+        sidecar = Sidecar(root)
+        try:
+            for b in stale_bindings:
+                sidecar.db.execute(
+                    "DELETE FROM session_state WHERE session_id=? AND key='active_slice'",
+                    (b["session"],))
+                fixed["bindings_released"] += 1
+            sidecar.db.commit()
+        finally:
+            sidecar.close()
+        fixed["telemetry_flushed"] = telemetry.flush(root)
+        stale_bindings, buffered = [], 0
+
+    healthy = not (problems["schema"] or stale_bindings or stale_worktrees
+                   or parked or missing_notes)
+    return {
+        "substrate_healthy": healthy,
+        "schema_problems": problems["schema"],
+        "stale_bindings": stale_bindings,
+        "stale_worktrees": stale_worktrees,      # never auto-removed: destructive
+        "parked_findings": len(parked),
+        "unflushed_telemetry": buffered,
+        "missing_notes": missing_notes,
+        "fixed": fixed if fix else None,
+        "next": ("harness adjudicate --list" if parked else
+                 "harness graph note --slice <id> --commit <sha>"
+                 if missing_notes else None),
+    }
 
 
 # ------------------------------------------------------------------ init
@@ -449,6 +528,14 @@ def cmd_verify(args):
         from engine.events import make_finding
         findings.append(make_finding("SCHEMA_MISMATCH", "gate:G1", str(exc),
                                      severity="block", key="schema"))
+
+    # substrate row schemas (§5.5/§5.6): a malformed row must fail here,
+    # naming file/row/field, not three ceremonies later
+    from engine.events import make_finding
+    from engine.schema import validate_substrate
+    for problem in validate_substrate(root):
+        findings.append(make_finding("SCHEMA_INVALID", "gate:G1", problem,
+                                     severity="block", key=problem[:80]))
 
     # shadow regeneration match (G7)
     from engine.gates.g7_derivation import derivation_findings
@@ -884,6 +971,62 @@ def cmd_close_slice(args):
                 return 1
             fork_review = "pass"
 
+    # Precondition 1.6: the review stack RUNS here, over the slice's own
+    # diff, and its verdict is recorded. Review used to be prompt discipline
+    # — an agent could skip it and close green. Layer 0 + the deterministic
+    # rubrics are engine-side; the agent's Layer 1-3 findings join via
+    # `review --record-finding`, and both can block.
+    review_result = {"ran": False, "verdict": None, "findings": []}
+    if config.get("review", {}).get("run_at_close", True):
+        from engine.graph import load_edges as _load_edges
+        from engine.review import assemble, run_review
+        diff_text = ""
+        if args.commit and (root / ".git").exists():
+            import subprocess
+            base = sl.get("started_at_commit")
+            rng = f"{base}..{args.commit}" if base else f"{args.commit}^!"
+            dp = subprocess.run(["git", "-C", str(root), "diff", rng],
+                                capture_output=True, text=True)
+            diff_text = dp.stdout if dp.returncode == 0 else ""
+        facts = assemble(root, diff_text, args.slice, config)
+        result = run_review(root, facts, config, model=None)
+        # findings the reviewer agent recorded for this slice count too
+        recorded = [e for e in _load_edges(root)
+                    if e["type"] == "reviewed_by"
+                    and e["from"] == f"slice:{args.slice}"
+                    and e.get("meta", {}).get("kind") == "finding"
+                    and e.get("meta", {}).get("severity") == "block"]
+        review_result = {"ran": True, "verdict": result["verdict"],
+                         "findings": [f["code"] for f in result["findings"]],
+                         "agent_blocking": [e["meta"]["code"] for e in recorded]}
+        if result["verdict"] == "block" or recorded:
+            _print({"closed": False, "rule_ref": "review:layer1",
+                    "reason": "review findings block this close — fix them "
+                              "and re-close (agent-recorded blockers clear by "
+                              "recording the fix, or by adjudication)",
+                    "findings": result["findings"],
+                    "agent_recorded": [e["meta"] for e in recorded]})
+            return 1
+        from engine.graph import append_edge as _append_edge
+        _append_edge(root, "reviewed_by", f"slice:{args.slice}", "review:close",
+                     meta={"kind": "close", "verdict": result["verdict"],
+                           "codes": sorted({f["code"] for f in result["findings"]})},
+                     commit=args.commit)
+
+    # Precondition 1.7: nothing parked for this slice may still be open —
+    # a park is the reviewer saying a human must rule on it.
+    from engine import read_jsonl as _read_jsonl
+    open_parks = [p for p in _read_jsonl(harness_dir(root) / "parked.jsonl")
+                  if p.get("slice") == args.slice]
+    if open_parks:
+        _print({"closed": False, "rule_ref": "review:layer2",
+                "reason": f"{len(open_parks)} finding(s) parked for "
+                          f"{args.slice} await adjudication — run "
+                          f"`harness adjudicate --list` and resolve them "
+                          f"(every resolution writes substrate)",
+                "parked": [p["finding"]["finding_id"] for p in open_parks]})
+        return 1
+
     # Precondition 2: unit_complete gate pack must not block.
     verdict = handle_event({
         "event": "unit_complete", "session_id": session,
@@ -1103,6 +1246,7 @@ def cmd_close_slice(args):
     # hook-frequency events buffered in the sidecar land here, once, so the
     # tracked file doesn't churn on every edit (review R8)
     telemetry_flushed = telemetry.flush(root)
+    telemetry_archived = telemetry.rotate(root, config)
 
     # The ceremony itself just mutated substrate (backlog flip, registry,
     # edges, telemetry) AFTER the commit it stamps — commit those mutations
@@ -1132,7 +1276,9 @@ def cmd_close_slice(args):
             "substrate_commit": substrate_commit,
             "shadows_extracted": shadows_extracted,
             "fork_review": fork_review,
+            "review": review_result,
             "telemetry_flushed": telemetry_flushed,
+            "telemetry_archived": telemetry_archived,
             "registry_refreshed": refreshed, "bindings_released": released,
             "flip_skipped": flip_skipped, "memory": compacted,
             "note_written": note_written,
@@ -1150,7 +1296,38 @@ def cmd_start(args):
     asks a human anything — that is the whole point."""
     import subprocess
     root = _root(args)
-    get_slice(root, args.slice)          # fail loud before touching git
+    sl = get_slice(root, args.slice)     # fail loud before touching git
+
+    # depends_on was recorded, ordered and cost-estimated — but never
+    # enforced. Foundations exist so consumers can rely on them: starting
+    # out of order is how a slice ends up coding against a module that does
+    # not exist yet.
+    if args.force and not args.justification:
+        print("error: --force requires --justification (an override without "
+              "a recorded reason is a silent bypass)", file=sys.stderr)
+        return 2
+    known = {s["id"]: s for s in load_backlog(root)}
+    blocking = []
+    for dep in sl.get("depends_on", []) or []:
+        row = known.get(dep)
+        if row is None:
+            blocking.append(f"{dep} (not in the backlog)")
+        elif row.get("status") != "closed":
+            blocking.append(f"{dep} ({row.get('status')})")
+    if blocking and not args.force:
+        _print({"started": False, "rule_ref": "gate:G1",
+                "reason": f"slice {args.slice} depends on unclosed slices: "
+                          f"{blocking}. Close them first, or override with "
+                          f"`--force --justification \"<why>\"` (recorded)."})
+        return 1
+    if blocking and args.force:
+        from engine.graph import append_edge
+        for dep in sl.get("depends_on", []) or []:
+            append_edge(root, "override", f"slice:{args.slice}",
+                        f"slice:{dep}",
+                        meta={"rule_ref": "gate:G1", "kind": "dependency_order",
+                              "justification": args.justification.strip()})
+
     resumed, worktree, branch = False, None, None
 
     if not args.no_worktree:
@@ -1589,7 +1766,7 @@ def cmd_memory(args):
 def cmd_status(args):
     from engine import telemetry
     root = _root(args)
-    _print(telemetry.aggregate(root))
+    _print(telemetry.aggregate(root, since=args.since))
     return 0
 
 
@@ -1652,7 +1829,14 @@ def main(argv=None):
 
     sub.add_parser("event", help="stdin EnforcementEvent -> stdout Verdict")
 
-    sub.add_parser("doctor", help="engine dependency preflight")
+    sp = sub.add_parser("doctor", help="engine dependency preflight "
+                                       "(+ --substrate for repo health)")
+    sp.add_argument("--substrate", action="store_true",
+                    help="also audit substrate health: schemas, stale "
+                         "bindings/worktrees, parks, notes, telemetry")
+    sp.add_argument("--fix", action="store_true",
+                    help="clear what is safe to clear (stale bindings, "
+                         "unflushed telemetry); never removes worktrees")
 
     sp = sub.add_parser("init", help="scaffold substrate")
     sp.add_argument("--migrate", action="store_true")
@@ -1739,6 +1923,10 @@ def main(argv=None):
     sp.add_argument("--session")
     sp.add_argument("--no-worktree", dest="no_worktree", action="store_true",
                     help="bind in the current tree instead of .worktrees/<slice>")
+    sp.add_argument("--force", action="store_true",
+                    help="start despite unclosed depends_on (records an "
+                         "auditable override; requires --justification)")
+    sp.add_argument("--justification")
 
     sp = sub.add_parser("permit",
                         help="host permission query: would the harness "
@@ -1829,6 +2017,8 @@ def main(argv=None):
 
     sp = sub.add_parser("status", help="telemetry rendering")
     sp.add_argument("--json", action="store_true")
+    sp.add_argument("--since", help="only events at/after this ISO timestamp "
+                                    "(e.g. 2026-07-01)")
 
     sp = sub.add_parser("adjudicate", help="resolve parked findings")
     sp.add_argument("--list", action="store_true")

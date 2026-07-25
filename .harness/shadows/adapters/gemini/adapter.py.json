@@ -12,7 +12,7 @@
  ],
  "language": "python",
  "module_id": "adapters.gemini.adapter",
- "source_hash": "sha256:b103fc77046755b8dd702248df464c3372794372fb9e8cc3dfeb189cf9bf8d35",
+ "source_hash": "sha256:8e787c123273145a0f563fc6a0149417502a2c2bbcf124c5d69d0e7e4c6674ba",
  "source_path": "adapters/gemini/adapter.py",
  "symbols": [
   {

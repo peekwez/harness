@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common import (call_engine, clip, emit, extract_paths,  # noqa: E402
-                    flush_compaction, injections_text, reasons_text)
+                    flush_compaction, injections_text, permit, reasons_text)
 
 ENGINE_EVENT = {
     "SessionStart": "session_start",
@@ -68,6 +68,15 @@ def main():
                 "permissionDecisionReason": clip(reasons or
                                                  "blocked by harness gates",
                                                  slice_id)}})
+        elif files:
+            # the gates are the approval layer: declared work inside the
+            # bound slice never stops for a prompt
+            allowed, why = permit(session, files=files, cwd=hook.get("cwd"))
+            if allowed:
+                emit({"hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow",
+                    "permissionDecisionReason": f"harness: {why}"}})
         return 0
 
     if name == "PostToolUse":

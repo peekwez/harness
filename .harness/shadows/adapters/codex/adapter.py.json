@@ -12,7 +12,7 @@
  ],
  "language": "python",
  "module_id": "adapters.codex.adapter",
- "source_hash": "sha256:b0f9634505d7d35a9f26ee98c78c61c1206c29039c7439b9ca5bd80c7a9c29ad",
+ "source_hash": "sha256:6044aa07f4ca704b80c1d7939841c6c1b819edc76069289f823f9bc1da8ad8fa",
  "source_path": "adapters/codex/adapter.py",
  "symbols": [
   {

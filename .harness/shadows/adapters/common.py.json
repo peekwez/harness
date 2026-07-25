@@ -6,6 +6,7 @@
   "extract_paths",
   "flush_compaction",
   "injections_text",
+  "permit",
   "reasons_text",
   "resolve_root",
   "walk"
@@ -21,7 +22,7 @@
  ],
  "language": "python",
  "module_id": "adapters.common",
- "source_hash": "sha256:ed5fa8443f16c521c83307ae71edefcda303b0dd1930d2466865d6526938c864",
+ "source_hash": "sha256:2eac45e78b6d47756fd61382eba63cc74a5e57cc71bf372cc3372857f7b7089c",
  "source_path": "adapters/common.py",
  "symbols": [
   {
@@ -36,13 +37,24 @@
    "visibility": "public"
   },
   {
+   "doc": "(allow, reason) \u2014 would the bound slice's gates approve this tool\n    call? A separate question from the enforcement verdict: the gates are\n    the approval layer, so declared work never stops for a prompt. False\n    means \"not auto-approved\", leaving the host's normal flow in charge.",
+   "kind": "function",
+   "name": "permit",
+   "signature": "def permit(session: str, files=None, command=None, cwd=None) -> tuple",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": null,
    "kind": "function",
    "name": "call_engine",
    "signature": "def call_engine(event: str, session: str, files=None, prompt=None, slice_id=None) -> dict",
    "span": [
-    52,
-    54
+    78,
+    80
    ],
    "visibility": "public"
   },
@@ -52,8 +64,8 @@
    "name": "extract_paths",
    "signature": "def extract_paths(tool_input) -> list",
    "span": [
-    81,
-    82
+    107,
+    108
    ],
    "visibility": "public"
   },
@@ -63,8 +75,8 @@
    "name": "walk",
    "signature": "def walk(node)",
    "span": [
-    86,
-    87
+    112,
+    113
    ],
    "visibility": "public"
   },
@@ -74,8 +86,8 @@
    "name": "reasons_text",
    "signature": "def reasons_text(verdict: dict) -> str",
    "span": [
-    110,
-    111
+    136,
+    137
    ],
    "visibility": "public"
   },
@@ -85,8 +97,8 @@
    "name": "injections_text",
    "signature": "def injections_text(verdict: dict) -> str",
    "span": [
-    119,
-    120
+    145,
+    146
    ],
    "visibility": "public"
   },
@@ -96,8 +108,8 @@
    "name": "clip",
    "signature": "def clip(text: str, slice_id=None) -> str",
    "span": [
-    123,
-    124
+    149,
+    150
    ],
    "visibility": "public"
   },
@@ -107,8 +119,8 @@
    "name": "flush_compaction",
    "signature": "def flush_compaction(session: str) -> int",
    "span": [
-    132,
-    133
+    158,
+    159
    ],
    "visibility": "public"
   },
@@ -118,8 +130,8 @@
    "name": "emit",
    "signature": "def emit(obj) -> None",
    "span": [
-    151,
-    152
+    177,
+    178
    ],
    "visibility": "public"
   }

@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common import (call_engine, clip, emit, extract_paths,  # noqa: E402
-                    flush_compaction, injections_text, reasons_text)
+                    flush_compaction, injections_text, permit, reasons_text)
 
 ENGINE_EVENT = {
     "SessionStart": "session_start",
@@ -49,8 +49,8 @@ def main():
     if name not in ENGINE_EVENT:
         return 0
 
-    verdict = call_engine(ENGINE_EVENT[name], session,
-                          files=extract_paths(_tool_input(hook)),
+    files = extract_paths(_tool_input(hook))
+    verdict = call_engine(ENGINE_EVENT[name], session, files=files,
                           prompt=hook.get("prompt"))
     if verdict.get("inert"):
         return 0
@@ -69,6 +69,12 @@ def main():
         if verdict["verdict"] == "block":
             emit({"decision": "deny",
                   "reason": clip(reasons or "blocked by harness gates", slice_id)})
+        elif files:
+            # the gates are the approval layer: declared work inside the
+            # bound slice never stops for a prompt
+            allowed, why = permit(session, files=files, cwd=hook.get("cwd"))
+            if allowed:
+                emit({"decision": "allow", "reason": f"harness: {why}"})
         return 0
 
     if name == "AfterTool":

@@ -104,7 +104,8 @@ compiled G3 boundaries and the adjudication queue respectively.
 ## Engine CLI (the portability boundary)
 
 `bin/harness` subcommands: `event` (stdin EnforcementEvent -> stdout
-Verdict), `doctor`, `init`, `compile`, `author-gate`, `resolve`, `extract`,
+Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
+`compile`, `author-gate`, `resolve`, `extract`,
 `gates`, `verify` (the CI entry), `backlog` (+ `add`), `slice`, `start`
 (worktree + sandbox + binding, no prompts), `permit` (host permission
 query), `close-slice`, `merge-slice`, `registry`, `merge-substrate`,
