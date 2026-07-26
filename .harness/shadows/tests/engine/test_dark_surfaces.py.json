@@ -6,6 +6,7 @@
   "test_scaffolded_ci_workflow_is_valid_yaml_with_the_engine_step",
   "test_status_since_filters_the_window",
   "test_telemetry_rotates_into_an_archive",
+  "test_this_repo_actually_runs_its_own_ship_gate",
   "test_typescript_shadow_extracts_the_real_interface",
   "test_typescript_shadow_regenerates_identically",
   "test_yaml_shadow_extracts_top_level_keys"
@@ -21,7 +22,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_dark_surfaces",
- "source_hash": "sha256:12356630059b7b36bcff151c12cd1615bf97ad110efccc043917e63e50d46d28",
+ "source_hash": "sha256:97a5367a67ea2c19c1508c04a17ce13758c661001b6bf4314caff12b1914a44f",
  "source_path": "tests/engine/test_dark_surfaces.py",
  "symbols": [
   {
@@ -80,13 +81,24 @@
    "visibility": "public"
   },
   {
+   "doc": "README: \"`harness verify` runs in this repo's CI ... the ship gate for\n    every release.\" That claim needs a workflow to exist.",
+   "kind": "function",
+   "name": "test_this_repo_actually_runs_its_own_ship_gate",
+   "signature": "def test_this_repo_actually_runs_its_own_ship_gate()",
+   "span": [
+    129,
+    130
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": "Exercise the locate-or-fetch shell logic itself: vendored engine wins,\n    and a repo with neither vendor nor variable fails with the named fix.",
    "kind": "function",
    "name": "test_ci_engine_resolution_step_runs",
    "signature": "def test_ci_engine_resolution_step_runs(tmp_path)",
    "span": [
-    127,
-    128
+    139,
+    140
    ],
    "visibility": "public"
   },
@@ -96,8 +108,8 @@
    "name": "test_non_claude_adapters_auto_approve_declared_work",
    "signature": "def test_non_claude_adapters_auto_approve_declared_work(toy)",
    "span": [
-    161,
-    162
+    173,
+    174
    ],
    "visibility": "public"
   },
@@ -107,8 +119,8 @@
    "name": "test_telemetry_rotates_into_an_archive",
    "signature": "def test_telemetry_rotates_into_an_archive(toy)",
    "span": [
-    186,
-    187
+    198,
+    199
    ],
    "visibility": "public"
   },
@@ -118,8 +130,8 @@
    "name": "test_status_since_filters_the_window",
    "signature": "def test_status_since_filters_the_window(toy)",
    "span": [
-    207,
-    208
+    219,
+    220
    ],
    "visibility": "public"
   }

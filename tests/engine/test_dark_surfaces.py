@@ -115,6 +115,8 @@ def test_scaffolded_ci_workflow_is_valid_yaml_with_the_engine_step(tmp_path):
     assert run_cli("init", root=root).returncode == 0
     wf = yaml.safe_load((root / ".github" / "workflows" /
                          "harness-verify.yml").read_text())
+    triggers = wf.get(True) or wf.get("on")     # yaml parses bare `on:` as True
+    assert "pull_request" in triggers and "workflow_dispatch" in triggers, triggers
     steps = wf["jobs"]["verify"]["steps"]
     names = [s.get("name", "") for s in steps]
     assert any("harness engine" in n for n in names), names
@@ -122,6 +124,16 @@ def test_scaffolded_ci_workflow_is_valid_yaml_with_the_engine_step(tmp_path):
     # the verify step must not assume a vendored ./bin/harness (X5)
     verify_step = next(s for s in steps if s.get("name") == "harness verify")
     assert "$HARNESS_BIN" in verify_step["run"]
+
+
+def test_this_repo_actually_runs_its_own_ship_gate():
+    """README: "`harness verify` runs in this repo's CI ... the ship gate for
+    every release." That claim needs a workflow to exist."""
+    import yaml
+    wf_path = PLUGIN_ROOT / ".github" / "workflows" / "harness-verify.yml"
+    assert wf_path.exists(), "the self-hosting claim needs a real workflow"
+    wf = yaml.safe_load(wf_path.read_text())
+    assert "verify" in wf["jobs"]
 
 
 def test_ci_engine_resolution_step_runs(tmp_path):

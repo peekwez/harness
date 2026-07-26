@@ -7,9 +7,9 @@
  "extractor_version": 2,
  "imports": [],
  "language": "yaml",
- "module_id": "templates.ci-verify",
+ "module_id": ".github.workflows.harness-verify",
  "source_hash": "sha256:cf3aebea4393753a80e23105d4e9621e63c08e9099c36599b87af3ad0be3dd7f",
- "source_path": "templates/ci-verify.yml",
+ "source_path": ".github/workflows/harness-verify.yml",
  "symbols": [
   {
    "doc": null,
