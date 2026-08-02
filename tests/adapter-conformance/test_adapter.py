@@ -64,11 +64,11 @@ def test_pre_tool_use_allows_after_session_start(toy):
 def test_post_tool_use_findings_as_context(toy):
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-4"},
                 toy, slice_id="slice-042")
-    (toy / "main.go").write_text("package main\n")
+    (toy / "main.rb").write_text("puts 1\n")
     code, out, err = run_adapter(
         {"hook_event_name": "PostToolUse", "session_id": "ac-4",
          "tool_name": "Write",
-         "tool_input": {"file_path": str(toy / "main.go")}},
+         "tool_input": {"file_path": str(toy / "main.rb")}},
         toy, slice_id="slice-042")
     assert code == 0
     assert "UNSHADOWED_FILE" in out["hookSpecificOutput"]["additionalContext"]

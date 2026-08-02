@@ -1,0 +1,160 @@
+{
+ "exports": [
+  "interface",
+  "test_body_edits_do_not_perturb_the_interface_shadow",
+  "test_disabled_language_degrades_loudly_not_silently",
+  "test_go_docs_and_imports",
+  "test_go_symbols_cover_the_declaration_kinds",
+  "test_go_visibility_follows_capitalization",
+  "test_init_detects_rust_and_go_and_enables_the_packs",
+  "test_rust_and_go_shadows_regenerate_identically",
+  "test_rust_docs_and_imports",
+  "test_rust_symbols_cover_the_item_kinds",
+  "test_rust_visibility_follows_pub"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_rust_go",
+ "source_hash": "sha256:2912bbab7efc246314e2929cbe1484d3f04df63f7e01457533ca4d9cb67b6f41",
+ "source_path": "tests/engine/test_rust_go.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_extract",
+   "signature": "def _extract(toy, name, source)",
+   "span": [
+    88,
+    89
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_rust_symbols_cover_the_item_kinds",
+   "signature": "def test_rust_symbols_cover_the_item_kinds(toy)",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_rust_visibility_follows_pub",
+   "signature": "def test_rust_visibility_follows_pub(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_rust_docs_and_imports",
+   "signature": "def test_rust_docs_and_imports(toy)",
+   "span": [
+    124,
+    125
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_go_symbols_cover_the_declaration_kinds",
+   "signature": "def test_go_symbols_cover_the_declaration_kinds(toy)",
+   "span": [
+    136,
+    137
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_go_visibility_follows_capitalization",
+   "signature": "def test_go_visibility_follows_capitalization(toy)",
+   "span": [
+    148,
+    149
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_go_docs_and_imports",
+   "signature": "def test_go_docs_and_imports(toy)",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "G7's guarantee must hold for every enabled language.",
+   "kind": "function",
+   "name": "test_rust_and_go_shadows_regenerate_identically",
+   "signature": "def test_rust_and_go_shadows_regenerate_identically(toy)",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The C2 acceptance property: a shadow tracks the interface, so bodies\n    can churn without producing interface drift. (Spans are line numbers and\n    do move; G6 compares kind+signature, which must not.)",
+   "kind": "function",
+   "name": "test_body_edits_do_not_perturb_the_interface_shadow",
+   "signature": "def test_body_edits_do_not_perturb_the_interface_shadow(toy)",
+   "span": [
+    177,
+    178
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "interface",
+   "signature": "def interface(shadow)",
+   "span": [
+    183,
+    184
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_detects_rust_and_go_and_enables_the_packs",
+   "signature": "def test_init_detects_rust_and_go_and_enables_the_packs(tmp_path)",
+   "span": [
+    200,
+    201
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Turning a pack off must enumerate the surface, never hide it.",
+   "kind": "function",
+   "name": "test_disabled_language_degrades_loudly_not_silently",
+   "signature": "def test_disabled_language_degrades_loudly_not_silently(toy)",
+   "span": [
+    213,
+    214
+   ],
+   "visibility": "public"
+  }
+ ]
+}

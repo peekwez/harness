@@ -211,8 +211,8 @@ def test_g7_catches_hand_edited_shadow(toy):
 def test_g8_coverage_advisory_always_emitted(toy):
     session = "g8"
     loaded_context(toy, session=session)
-    (toy / "main.go").write_text("package main\n")
+    (toy / "main.rb").write_text("puts 1\n")
     v = handle_event(make_event("post_change", session=session,
-                                files=["main.go"]), toy)
+                                files=["main.rb"]), toy)
     assert "UNSHADOWED_FILE" in codes(v)
     assert v["verdict"] == "allow_with_findings"  # advisory, never a block

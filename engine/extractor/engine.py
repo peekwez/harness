@@ -25,6 +25,8 @@ EXTRACTOR_VERSION = 2
 LANG_BY_EXT = {
     ".py": "python",
     ".ts": "typescript", ".tsx": "typescript",
+    ".rs": "rust",
+    ".go": "go",
     ".yaml": "yaml", ".yml": "yaml",
     ".tf": "hcl", ".hcl": "hcl",
 }
@@ -248,6 +250,225 @@ def _ts_imports(tree, src):
     return sorted(imports)
 
 
+def _rust_doc(node, src) -> str | None:
+    """Rust docs are `///` line comments preceding the item (and `//!` inner
+    docs, which belong to the module, not to any symbol)."""
+    lines, prev = [], node.prev_sibling
+    while prev is not None and prev.type == "line_comment":
+        text = _text(prev, src).strip()
+        if not text.startswith("///"):
+            break
+        lines.append(text.lstrip("/").strip())
+        prev = prev.prev_sibling
+    return "\n".join(reversed(lines)) or None
+
+
+def _rust_visibility(node) -> str:
+    return ("public"
+            if any(c.type == "visibility_modifier" for c in node.children)
+            else "private")
+
+
+def _rust_header(node, src, body_types) -> tuple:
+    """(signature, last_line_of_header) — the header stops at the body, so
+    body edits never perturb the interface shadow (C2 acceptance)."""
+    body = next((c for c in node.children if c.type in body_types), None)
+    end = body.start_byte if body is not None else node.end_byte
+    end_line = (body.start_point[0] + 1) if body is not None \
+        else (node.end_point[0] + 1)
+    sig = " ".join(src[node.start_byte:end].decode("utf-8", "replace").split())
+    return sig.rstrip("{ ").rstrip(";"), end_line
+
+
+RUST_BODIES = ("block", "field_declaration_list", "enum_variant_list",
+               "declaration_list")
+
+
+def _rust_symbols(tree, src):
+    symbols = []
+    caps = _captures(_get_query("rust", "symbols"), tree.root_node)
+
+    def add(node, kind, name):
+        sig, end_line = _rust_header(node, src, RUST_BODIES)
+        symbols.append({
+            "kind": kind, "name": name, "signature": sig,
+            "doc": _rust_doc(node, src),
+            "visibility": _rust_visibility(node),
+            "span": [node.start_point[0] + 1, end_line],
+        })
+
+    def name_of(node):
+        for field in ("name",):
+            n = node.child_by_field_name(field)
+            if n is not None:
+                return _text(n, src)
+        n = next((c for c in node.children
+                  if c.type in ("identifier", "type_identifier")), None)
+        return _text(n, src) if n is not None else None
+
+    for cap, kind in (("function", "function"), ("struct", "struct"),
+                      ("enum", "enum"), ("trait", "trait"),
+                      ("type", "type"), ("const", "const")):
+        for node in caps.get(cap, []):
+            if node.parent is not None and node.parent.type == "declaration_list":
+                continue  # trait/impl members are handled with their owner
+            name = name_of(node)
+            if name:
+                add(node, kind, name)
+
+    # impl blocks contribute methods qualified by their type; the impl
+    # header itself is not a symbol
+    for impl in caps.get("impl", []):
+        type_node = impl.child_by_field_name("type") or next(
+            (c for c in impl.children if c.type == "type_identifier"), None)
+        owner = _text(type_node, src) if type_node is not None else "impl"
+        body = next((c for c in impl.children if c.type == "declaration_list"),
+                    None)
+        for member in (body.named_children if body is not None else []):
+            if member.type != "function_item":
+                continue
+            name = name_of(member)
+            if name:
+                add(member, "method", f"{owner}::{name}")
+
+    # trait method requirements are part of the trait's public surface
+    for trait in caps.get("trait", []):
+        owner = name_of(trait)
+        body = next((c for c in trait.children
+                     if c.type == "declaration_list"), None)
+        for member in (body.named_children if body is not None else []):
+            if member.type not in ("function_item", "function_signature_item"):
+                continue
+            name = name_of(member)
+            if name:
+                sig, end_line = _rust_header(member, src, RUST_BODIES)
+                symbols.append({
+                    "kind": "method", "name": f"{owner}::{name}",
+                    "signature": sig, "doc": _rust_doc(member, src),
+                    "visibility": _rust_visibility(trait),  # trait vis wins
+                    "span": [member.start_point[0] + 1, end_line],
+                })
+    return symbols
+
+
+def _rust_imports(tree, src):
+    """The segment that names a MODULE, because that is what matches a
+    registry id: `crate::telemetry::emit_span` -> telemetry, `std::x` -> std.
+    """
+    imports = set()
+    caps = _captures(_get_query("rust", "imports"), tree.root_node)
+    for node in caps.get("import", []):
+        text = _text(node, src)
+        text = text.replace("pub ", "").replace("use ", "")
+        text = text.replace("extern crate ", "").strip().rstrip(";")
+        path = text.split("{")[0].split(" as ")[0].strip()
+        segments = [s for s in path.split("::") if s]
+        while segments and segments[0] in ("crate", "self", "super"):
+            segments.pop(0)
+        if segments:
+            imports.add(segments[0].strip())
+    return sorted(imports)
+
+
+def _go_visibility(name: str) -> str:
+    """Go's own rule: an identifier is exported iff it starts upper-case."""
+    return "public" if name[:1].isupper() else "private"
+
+
+def _go_doc(node, src) -> str | None:
+    lines, prev = [], node.prev_sibling
+    while prev is not None and prev.type == "comment":
+        text = _text(prev, src).strip()
+        if not text.startswith("//"):
+            break
+        lines.append(text.lstrip("/").strip())
+        prev = prev.prev_sibling
+    return "\n".join(reversed(lines)) or None
+
+
+def _go_symbols(tree, src):
+    symbols = []
+    caps = _captures(_get_query("go", "symbols"), tree.root_node)
+
+    def header(node, doc_node=None):
+        body = node.child_by_field_name("body")
+        end = body.start_byte if body is not None else node.end_byte
+        end_line = (body.start_point[0] + 1) if body is not None \
+            else (node.end_point[0] + 1)
+        sig = " ".join(src[node.start_byte:end].decode("utf-8", "replace").split())
+        return sig.rstrip("{ "), end_line
+
+    for node in caps.get("function", []):
+        name_node = node.child_by_field_name("name")
+        if name_node is None:
+            continue
+        name = _text(name_node, src)
+        sig, end_line = header(node)
+        symbols.append({"kind": "function", "name": name, "signature": sig,
+                        "doc": _go_doc(node, src),
+                        "visibility": _go_visibility(name),
+                        "span": [node.start_point[0] + 1, end_line]})
+
+    for node in caps.get("method", []):
+        name_node = node.child_by_field_name("name")
+        recv = node.child_by_field_name("receiver")
+        if name_node is None:
+            continue
+        name = _text(name_node, src)
+        owner = ""
+        if recv is not None:
+            owner = _text(recv, src).strip("()").replace("*", "")
+            owner = owner.split()[-1] if owner.split() else owner
+        sig, end_line = header(node)
+        symbols.append({"kind": "method",
+                        "name": f"{owner}.{name}" if owner else name,
+                        "signature": sig, "doc": _go_doc(node, src),
+                        "visibility": _go_visibility(name),
+                        "span": [node.start_point[0] + 1, end_line]})
+
+    for cap, default_kind in (("type_spec", "type"), ("const_spec", "const"),
+                              ("var_spec", "const")):
+        for node in caps.get(cap, []):
+            name_node = node.child_by_field_name("name")
+            if name_node is None:
+                continue
+            name = _text(name_node, src)
+            kind = default_kind
+            typ = node.child_by_field_name("type")
+            if cap == "type_spec" and typ is not None:
+                kind = {"struct_type": "struct",
+                        "interface_type": "interface"}.get(typ.type, "type")
+            # a spec's own doc may sit on the enclosing declaration
+            doc = _go_doc(node, src) or (
+                _go_doc(node.parent, src) if node.parent is not None else None)
+            if kind in ("struct", "interface"):
+                end = typ.start_byte + len(typ.type)  # header only
+                sig = " ".join(
+                    src[node.start_byte:typ.start_byte].decode(
+                        "utf-8", "replace").split())
+                sig = f"{sig} {typ.type.replace('_type', '')}".strip()
+                end_line = typ.start_point[0] + 1
+            else:
+                sig = " ".join(_text(node, src).split())
+                end_line = node.end_point[0] + 1
+            symbols.append({"kind": kind, "name": name, "signature": sig,
+                            "doc": doc, "visibility": _go_visibility(name),
+                            "span": [node.start_point[0] + 1, end_line]})
+    return symbols
+
+
+def _go_imports(tree, src):
+    """The package identifier the code actually calls (`telemetry` from
+    "github.com/acme/telemetry") — that is what matches a registry id."""
+    imports = set()
+    caps = _captures(_get_query("go", "imports"), tree.root_node)
+    for node in caps.get("source", []):
+        path = _text(node, src).strip('"')
+        if path:
+            imports.add(path.rstrip("/").split("/")[-1])
+    return sorted(imports)
+
+
 def _yaml_symbols(tree, src):
     symbols = []
     caps = _captures(_get_query("yaml", "symbols"), tree.root_node)
@@ -343,6 +564,17 @@ def build_shadow(root, path: Path, source: bytes, lang: str) -> dict:
         symbols = _ts_symbols(tree, source)
         imports = _ts_imports(tree, source)
         exports = sorted({s["name"] for s in symbols if s["visibility"] == "public"})
+    elif lang == "rust":
+        symbols = _rust_symbols(tree, source)
+        imports = _rust_imports(tree, source)
+        # methods are interface detail on their type, not crate exports
+        exports = sorted({s["name"] for s in symbols
+                          if s["visibility"] == "public" and s["kind"] != "method"})
+    elif lang == "go":
+        symbols = _go_symbols(tree, source)
+        imports = _go_imports(tree, source)
+        exports = sorted({s["name"] for s in symbols
+                          if s["visibility"] == "public" and s["kind"] != "method"})
     elif lang == "yaml":
         symbols = _yaml_symbols(tree, source)
         imports, exports = [], sorted({s["name"] for s in symbols})

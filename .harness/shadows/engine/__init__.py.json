@@ -32,7 +32,7 @@
  ],
  "language": "python",
  "module_id": "engine.__init__",
- "source_hash": "sha256:bd562a0251b9d5fd74ab5dc1b77fe60e0f8a86047ffca3358444ce2e8b7e880f",
+ "source_hash": "sha256:5d0b4dd50b40e70429379fc02715b0d304eb43ee85e690219abbf224975aade9",
  "source_path": "engine/__init__.py",
  "symbols": [
   {
@@ -250,8 +250,8 @@
    "name": "_deep_merge",
    "signature": "def _deep_merge(base: dict, over: dict) -> dict",
    "span": [
-    198,
-    199
+    199,
+    200
    ],
    "visibility": "private"
   },
@@ -261,8 +261,8 @@
    "name": "load_config",
    "signature": "def load_config(root) -> dict",
    "span": [
-    208,
-    209
+    209,
+    210
    ],
    "visibility": "public"
   }

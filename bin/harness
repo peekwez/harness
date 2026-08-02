@@ -192,6 +192,7 @@ def _substrate_health(root, fix=False) -> dict:
 
 # ------------------------------------------------------------------ init
 LANG_HINTS = {".py": "python", ".ts": "typescript", ".tsx": "typescript",
+              ".rs": "rust", ".go": "go",
               ".yaml": "yaml", ".yml": "yaml", ".tf": "hcl", ".hcl": "hcl"}
 
 PROVENANCE_RULE = (
@@ -234,7 +235,8 @@ def cmd_init(args):
     # detect languages -> enable packs (relative parts: an ignored name in
     # the ABSOLUTE path — repo under ~/venv, a worktree — must not blank it)
     from engine import IGNORED_DIRS
-    detected = {v: False for v in ("python", "typescript", "yaml", "hcl")}
+    detected = {v: False for v in ("python", "typescript", "rust", "go",
+                                   "yaml", "hcl")}
     for p in root.rglob("*"):
         if any(part in IGNORED_DIRS for part in p.relative_to(root).parts):
             continue

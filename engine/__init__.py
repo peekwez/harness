@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-ENGINE_VERSION = "0.5.0"
+ENGINE_VERSION = "0.6.0"
 
 # Extensions we consider "source modules". Anything else in these families is
 # either substrate/docs (ignored) or unknown-language source (degenerate
@@ -190,7 +190,8 @@ DEFAULT_CONFIG = {
     },
     "ensemble": {"trigger_confidence_below": 0.7, "samples": 3},
     "review": {"fork_for_security_rows": True},   # ADR-001
-    "languages": {"python": True, "typescript": True, "yaml": True, "hcl": True},
+    "languages": {"python": True, "typescript": True, "rust": True,
+                  "go": True, "yaml": True, "hcl": True},
     "telemetry": {"compaction_is_defect": True},
 }
 

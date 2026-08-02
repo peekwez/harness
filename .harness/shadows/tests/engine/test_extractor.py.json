@@ -16,7 +16,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_extractor",
- "source_hash": "sha256:68194c04d34b9f0307b1e01b4176fe8b65293f669fbbe70c5dde8697658e530a",
+ "source_hash": "sha256:0aa274732d5d95f4e17d1a24b2543cf54b931d8125bed6234263dc832c6dc34a",
  "source_path": "tests/engine/test_extractor.py",
  "symbols": [
   {

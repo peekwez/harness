@@ -26,7 +26,7 @@
  ],
  "language": "python",
  "module_id": "tests.adapter-conformance.test_adapter",
- "source_hash": "sha256:0358b5a1d2d92479f898510f26e5e2dc46d22ca56995f9388d0ba3088e361a2a",
+ "source_hash": "sha256:37922c80d9e02c2c96efea2e13143916ab099a6c8d54e96796a9c9f8af41bd1a",
  "source_path": "tests/adapter-conformance/test_adapter.py",
  "symbols": [
   {

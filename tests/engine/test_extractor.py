@@ -52,11 +52,11 @@ def test_docstring_changes_shadow_body_does_not_change_symbols(toy):
 
 def test_unknown_extension_degenerate_shadow_plus_finding(toy):
     config = load_config(toy)
-    (toy / "main.go").write_text("package main\nfunc main() {}\n")
-    shadow, findings = extract_path(toy, toy / "main.go", config)
+    (toy / "main.rb").write_text("puts 1\n")
+    shadow, findings = extract_path(toy, toy / "main.rb", config)
     assert shadow["exports"] == "unknown"
     assert shadow["symbols"] == []
-    assert "raw_head" in shadow and "package main" in shadow["raw_head"]
+    assert "raw_head" in shadow and "puts 1" in shadow["raw_head"]
     codes = [f["code"] for f in findings]
     assert "UNKNOWN_LANGUAGE" in codes  # never silence
     assert all(f["rule_ref"] == "gate:G8" for f in findings)

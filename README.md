@@ -114,6 +114,10 @@ query), `close-slice`, `merge-slice`, `registry`, `merge-substrate`,
 these thinly. Exit code 0 = verdict emitted (semantics in the JSON);
 2 = malformed input; 1 = check failed.
 
+Language packs: Python, TypeScript/TSX, Rust, Go, YAML, HCL/Terraform —
+detected at `init`, toggled in `.harness/config.yaml`. Anything else is
+enumerated by G8 as unenforced surface, never silently skipped.
+
 `docs/SPEC.md` defines every `§`/`C`/`T`/`M` marker the skills cite.
 
 Five events: `session_start`, `pre_context`, `pre_change`, `post_change`,
