@@ -271,7 +271,9 @@ def cmd_init(args):
     gi = root / ".gitignore"
     lines = gi.read_text().splitlines() if gi.exists() else []
     for entry in (".harness/sidecar.db", ".harness/sidecar.db-*",
-                  ".harness/memory/session/", ".worktrees/"):
+                  ".harness/memory/session/", ".worktrees/",
+                  ".claude/settings.local.json",
+                  "__pycache__/", "*.pyc", ".pytest_cache/"):
         if entry not in lines:
             lines.append(entry)
     gi.write_text("\n".join(lines) + "\n")
@@ -296,6 +298,26 @@ def cmd_init(args):
     else:
         print("note: CLAUDE.md already exists — not touched; consider adding "
               "'@AGENTS.md' so agents load the harness working agreement")
+
+    # bare `pytest` must SEE acceptance tests: the NNN_*.py convention is
+    # invisible to pytest's default python_files under directory collection
+    # (the engine always passes explicit paths, but a human's bare run
+    # silently skipping the whole suite is a hidden trap). Only written when
+    # the project has no pytest config of its own.
+    has_pytest_cfg = any((root / n).exists()
+                         for n in ("pytest.ini", "tox.ini", "setup.cfg"))
+    if not has_pytest_cfg and not (
+            (root / "pyproject.toml").exists()
+            and "[tool.pytest" in (root / "pyproject.toml").read_text()):
+        (root / "pytest.ini").write_text(
+            "# harness: make NNN_*.py acceptance tests collectable by bare\n"
+            "# pytest (the engine passes explicit paths and is unaffected)\n"
+            "[pytest]\n"
+            "python_files = test_*.py *_test.py [0-9]*_*.py\n")
+    else:
+        print("note: existing pytest config found — ensure python_files "
+              "includes the [0-9]*_*.py acceptance-test pattern, or bare "
+              "pytest will skip tests/slices/")
 
     _install_merge_drivers(root)
 
@@ -385,14 +407,20 @@ def _install_merge_drivers(root):
     _config_merge_drivers(root)
 
 
-def _write_autonomy_settings(root, quiet=False):
+def _write_autonomy_settings(root, quiet=False, local=False):
     """Pre-approve the slice loop's command surface and sandbox it, in
     .claude/settings.json. Approval prompts are redundant inside a bound
     slice — the PreToolUse hook gate-checks every edit deterministically and
     CI verify backstops it. The profile still denies anything that leaves
     the machine (git push/remote/fetch). Returns the path written, or None."""
     templates = PLUGIN_ROOT / "templates"
-    target = root / ".claude" / "settings.json"
+    # local=True -> settings.local.json: the per-worktree sandbox profile is
+    # MACHINE state (absolute paths into that worktree). Committing it made
+    # every parallel merge an add/add conflict and would point main's
+    # sandbox at a deleted worktree. settings.local.json is the canonical
+    # never-committed layer, and init gitignores it.
+    name = "settings.local.json" if local else "settings.json"
+    target = root / ".claude" / name
     if target.exists():
         # refresh our own profile (marker in _comment); never clobber a
         # hand-authored settings file
@@ -593,6 +621,29 @@ def cmd_verify(args):
                     f"registry {e['id']!r}: guidance_ref {ref!r} missing",
                     severity="block", key=e["id"] + "|" + ref))
 
+    # contract lint: contracts/ is scaffolded as the FE/BE seam — an
+    # unparseable or shapeless contract silently disables that seam
+    contracts = root / "contracts"
+    if contracts.is_dir():
+        import yaml as _yaml
+        for c in sorted(contracts.glob("*.y*ml")):
+            rel = str(c.relative_to(root))
+            try:
+                doc = _yaml.safe_load(c.read_text())
+            except _yaml.YAMLError as exc:
+                findings.append(make_finding(
+                    "CONTRACT_INVALID", "gate:G1",
+                    f"{rel}: unparseable YAML: {exc}"[:300],
+                    severity="block", key=rel))
+                continue
+            if not isinstance(doc, dict) or "openapi" not in doc \
+                    or "paths" not in doc:
+                findings.append(make_finding(
+                    "CONTRACT_INVALID", "gate:G1",
+                    f"{rel}: not an OpenAPI document (needs `openapi` and "
+                    f"`paths` keys) — fix it or delete the contract",
+                    severity="block", key=rel))
+
     # orphaned-notes detection (git failures are loud; only a non-repo skips)
     from engine.graph import orphaned_notes, read_notes
     if (root / ".git").exists():
@@ -787,8 +838,10 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
         if key not in existing:
             append_edge(root, *key)
     dirty = False
-    if sl.get("status") == "planned":
+    if sl.get("status") in ("planned", "parked"):
+        # binding a PARKED slice is the human's deliberate unpark
         sl["status"] = "in_progress"
+        sl.pop("parked_reason", None)
         dirty = True
     # record where the slice started: close-slice diffs from here to catch
     # edits the hooks never saw (W11). Backfilled on ANY bind regardless of
@@ -830,6 +883,35 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
             "injections": res["injections"],
             "acceptance_python": _acceptance_python(root, load_config(root)),
             "started_at_commit": sl.get("started_at_commit")}
+
+
+DEP_MANIFESTS = ("requirements.txt", "requirements-dev.txt",
+                 "pyproject.toml", "setup.py", "setup.cfg", "package.json",
+                 "Cargo.toml", "go.mod")
+
+
+def _added_dependency_lines(root, sl, commit) -> dict:
+    """{manifest: [added lines]} between the slice anchor and its commit.
+    Comments/blank lines are ignored; parsing every ecosystem's semantics is
+    not attempted — an added line in a manifest IS the signal."""
+    import subprocess
+    base = sl.get("started_at_commit")
+    rng = f"{base}..{commit}" if base else f"{commit}^!"
+    proc = subprocess.run(["git", "-C", str(root), "diff", rng, "--",
+                          *DEP_MANIFESTS],
+                         capture_output=True, text=True)
+    if proc.returncode != 0:
+        return {}
+    added, current = {}, None
+    for line in proc.stdout.splitlines():
+        if line.startswith("+++ b/"):
+            current = line[6:]
+        elif (line.startswith("+") and not line.startswith("+++")
+              and current is not None):
+            body = line[1:].strip()
+            if body and not body.startswith(("#", "//", ";")):
+                added.setdefault(current, []).append(body[:120])
+    return added
 
 
 def _security_rows_for_slice(root, sl):
@@ -895,10 +977,104 @@ def _acceptance_green(root, sl, config):
     proc = subprocess.run([interpreter, "-m", "pytest", *paths, "-q"],
                           cwd=str(root), capture_output=True, text=True, env=env)
     tail = (proc.stdout or proc.stderr).strip().splitlines()[-5:]
-    return proc.returncode == 0, "\n".join(tail)
+    if proc.returncode != 0:
+        return False, "\n".join(tail)
+    # cumulative ratchet: a slice must not close green while breaking an
+    # EARLIER slice's acceptance tests — the merged tree is what ships
+    if config["gates"].get("regression_at_close", True):
+        ok, detail = _regression_suite(root, config, exclude=sl.get("id"),
+                                       interpreter=interpreter, env=env)
+        if not ok:
+            return False, detail
+    return True, "\n".join(tail)
 
 
-def cmd_close_slice(args):
+def _regression_suite(root, config, exclude=None, interpreter=None, env=None):
+    """(ok, detail): run every CLOSED slice's acceptance paths. Shared by
+    close (pre-close, in the slice tree) and merge-slice (post-merge, with
+    rollback)."""
+    import subprocess
+    regression = []
+    for s in load_backlog(root):
+        if s.get("status") != "closed" or s.get("id") == exclude:
+            continue
+        for pat in s.get("acceptance", []):
+            if "*" in pat:
+                regression.extend(sorted(str(p.relative_to(root))
+                                         for p in Path(root).glob(pat)))
+            elif (Path(root) / pat).exists():
+                regression.append(pat)
+    regression = sorted(set(regression))
+    if not regression:
+        return True, "no closed-slice acceptance tests to protect"
+    if interpreter is None:
+        interpreter = _acceptance_python(root, config)
+    if env is None:
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(root) + os.pathsep + env.get("PYTHONPATH", "")
+    proc = subprocess.run([interpreter, "-m", "pytest", *regression, "-q"],
+                          cwd=str(root), capture_output=True, text=True, env=env)
+    if proc.returncode == 0:
+        return True, f"regression suite green ({len(regression)} paths)"
+    tail = "\n".join((proc.stdout or proc.stderr).strip().splitlines()[-6:])
+    return False, (f"cumulative regression: earlier slices' acceptance tests "
+                   f"are now red ({regression}) — this change breaks closed "
+                   f"work.\n{tail}")
+
+
+class _CeremonyFail(Exception):
+    """A close precondition failed. `attempt` marks substantive failures
+    (they count toward the auto-park cap); guard refusals do not."""
+
+    def __init__(self, payload, attempt=True):
+        self.payload = payload
+        self.attempt = attempt
+
+
+def _fail(payload, attempt=True):
+    raise _CeremonyFail(payload, attempt)
+
+
+def _bump_close_attempts(root, slice_id, config, payload) -> bool:
+    """Count substantive close failures in the sidecar; at the cap, PARK the
+    slice (status + reason + telemetry) so an unattended loop stops burning
+    attempts and a human knows exactly why. Returns True when parked."""
+    from engine import telemetry
+    from engine.events import Sidecar
+    cap = int(config.get("run", {}).get("max_close_attempts", 3))
+    sidecar = Sidecar(root)
+    try:
+        n = int(sidecar.state_get("__attempts__", slice_id) or 0) + 1
+        sidecar.state_set("__attempts__", slice_id, n)
+    finally:
+        sidecar.close()
+    if n < cap:
+        payload["close_attempts"] = n
+        return False
+    sl = get_slice(root, slice_id)
+    sl["status"] = "parked"
+    sl["parked_reason"] = str(payload.get("reason", ""))[:300]
+    save_slice(root, sl)
+    telemetry.emit(root, "slice_parked", {"slice": slice_id, "attempts": n,
+                                          "reason": sl["parked_reason"]})
+    _reset_close_attempts(root, slice_id)
+    payload["close_attempts"] = n
+    return True
+
+
+def _reset_close_attempts(root, slice_id):
+    from engine.events import Sidecar
+    sidecar = Sidecar(root)
+    try:
+        sidecar.db.execute(
+            "DELETE FROM session_state WHERE session_id='__attempts__' AND key=?",
+            (slice_id,))
+        sidecar.db.commit()
+    finally:
+        sidecar.close()
+
+
+def _close_ceremony(args):
     from engine.events import Sidecar, handle_event
     from engine.gates.g3_scope import SUBSTRATE_PREFIXES
     from engine.graph import (append_edge, load_edges, uses_vs_declares,
@@ -911,11 +1087,19 @@ def cmd_close_slice(args):
     sl = get_slice(root, args.slice)
 
     # Re-closing re-runs the whole ceremony (duplicate telemetry, note
-    # rewrite, fresh substrate commit) — refuse (S10).
+    # rewrite, fresh substrate commit) — refuse (S10). Guards are not
+    # attempts: they must never push a slice toward auto-park.
     if sl.get("status") == "closed":
-        _print({"closed": False,
-                "reason": f"slice {args.slice} is already closed"})
-        return 1
+        _fail({"closed": False,
+                "reason": f"slice {args.slice} is already closed"},
+              attempt=False)
+    if sl.get("status") == "parked":
+        _fail({"closed": False,
+                "reason": f"slice {args.slice} is parked: "
+                          f"{sl.get('parked_reason', '(no reason recorded)')} "
+                          f"— a human re-binds (`harness slice --slice "
+                          f"{args.slice}`) to unpark",
+                "rule_ref": "gate:G1"}, attempt=False)
 
     # Symbolic --commit refs (HEAD, branch names) resolve to the stable sha
     # up front: provenance rows and notes must never carry a moving ref, and
@@ -931,18 +1115,18 @@ def cmd_close_slice(args):
     # Precondition 0: no scaffold placeholders ratify by inertia.
     from engine.compiler import PLACEHOLDER_SENTINEL
     if PLACEHOLDER_SENTINEL in json.dumps(sl):
-        _print({"closed": False,
+        _fail({"closed": False,
                 "reason": f"slice {args.slice} still contains the scaffold "
                           f"'{PLACEHOLDER_SENTINEL}' placeholder — edit the "
                           f"backlog row before closing"})
-        return 1
 
     # Precondition 1: acceptance green (engine-enforced, §7.5 / §1.4).
     green, evidence = _acceptance_green(root, sl, config)
     if not green:
-        _print({"closed": False, "reason": "acceptance tests are not green",
-                "evidence": evidence})
-        return 1
+        reason = "acceptance tests are not green"
+        if str(evidence).startswith("cumulative regression"):
+            reason = str(evidence).splitlines()[0]
+        _fail({"closed": False, "reason": reason, "evidence": evidence})
 
     # Precondition 1.5 — ADR-001: a slice resolving any security-marked
     # decision row needs an INDEPENDENT forked reviewer's pass verdict.
@@ -960,7 +1144,7 @@ def cmd_close_slice(args):
                      and e.get("meta", {}).get("kind") == "fork"]
             latest = forks[-1]["meta"].get("verdict") if forks else None
             if latest != "pass":
-                _print({"closed": False, "rule_ref": "adr:001",
+                _fail({"closed": False, "rule_ref": "adr:001",
                         "reason": f"slice {args.slice} resolves security-"
                                   f"marked decision rows {sec_rows} — an "
                                   f"independent forked review is required "
@@ -970,7 +1154,6 @@ def cmd_close_slice(args):
                                   f"context; it records its verdict with "
                                   f"`harness review --record-fork pass "
                                   f"--slice {args.slice}`"})
-                return 1
             fork_review = "pass"
 
     # Precondition 1.6: the review stack RUNS here, over the slice's own
@@ -1002,13 +1185,12 @@ def cmd_close_slice(args):
                          "findings": [f["code"] for f in result["findings"]],
                          "agent_blocking": [e["meta"]["code"] for e in recorded]}
         if result["verdict"] == "block" or recorded:
-            _print({"closed": False, "rule_ref": "review:layer1",
+            _fail({"closed": False, "rule_ref": "review:layer1",
                     "reason": "review findings block this close — fix them "
                               "and re-close (agent-recorded blockers clear by "
                               "recording the fix, or by adjudication)",
                     "findings": result["findings"],
                     "agent_recorded": [e["meta"] for e in recorded]})
-            return 1
         from engine.graph import append_edge as _append_edge
         _append_edge(root, "reviewed_by", f"slice:{args.slice}", "review:close",
                      meta={"kind": "close", "verdict": result["verdict"],
@@ -1021,13 +1203,12 @@ def cmd_close_slice(args):
     open_parks = [p for p in _read_jsonl(harness_dir(root) / "parked.jsonl")
                   if p.get("slice") == args.slice]
     if open_parks:
-        _print({"closed": False, "rule_ref": "review:layer2",
+        _fail({"closed": False, "rule_ref": "review:layer2",
                 "reason": f"{len(open_parks)} finding(s) parked for "
                           f"{args.slice} await adjudication — run "
                           f"`harness adjudicate --list` and resolve them "
                           f"(every resolution writes substrate)",
                 "parked": [p["finding"]["finding_id"] for p in open_parks]})
-        return 1
 
     # Precondition 2: unit_complete gate pack must not block.
     verdict = handle_event({
@@ -1036,18 +1217,16 @@ def cmd_close_slice(args):
         "payload": {"files": [], "context_loaded": [], "diff": None, "prompt": None},
     }, root)
     if verdict["verdict"] == "block":
-        _print({"closed": False, "reason": "unit_complete gates block",
+        _fail({"closed": False, "reason": "unit_complete gates block",
                 "findings": verdict["findings"]})
-        return 1
 
     # Precondition 3: uses ⊆ declares reconciled.
     ud = uses_vs_declares(root, args.slice)
     unreconciled = ud["unresolved"]
     if unreconciled:
-        _print({"closed": False,
+        _fail({"closed": False,
                 "reason": f"uses not ⊆ declares: {unreconciled} (amend the "
                           f"slice declaration or record an override)"})
-        return 1
 
     sidecar = Sidecar(root)
     try:
@@ -1102,11 +1281,10 @@ def cmd_close_slice(args):
              if not t.startswith(SUBSTRATE_PREFIXES)
              and t not in declared and t not in overridden]
     if rogue:
-        _print({"closed": False,
+        _fail({"closed": False,
                 "reason": f"G3 unreconciled: touched files not in the declared/"
                           f"predicted set: {rogue}; amend the slice declaration "
                           f"or record an override", "rule_ref": "gate:G3"})
-        return 1
 
     # Precondition 5 → the W3 ruling, now the documented contract: derived
     # artifacts are the ENGINE's job. A touched shadow-eligible file with no
@@ -1138,22 +1316,20 @@ def cmd_close_slice(args):
         else:
             shadows_extracted.append(rel)
     if shadow_failures:
-        _print({"closed": False,
+        _fail({"closed": False,
                 "reason": f"touched files could not be shadowed: "
                           f"{shadow_failures} — fix the named cause and "
                           f"re-close", "rule_ref": "gate:G7"})
-        return 1
 
     # Precondition 6: a slice IS a commit boundary. Closing without one
     # records no provenance at all and used to succeed silently — the note
     # is the artifact that makes provenance travel with the repo.
     if (root / ".git").exists() and not args.commit:
-        _print({"closed": False, "rule_ref": "gate:G1",
+        _fail({"closed": False, "rule_ref": "gate:G1",
                 "reason": "--commit is required to close in a git repo: the "
                           "slice's provenance note is written onto it. "
                           "Commit the work and re-close with `--commit HEAD` "
                           "(the engine resolves the ref)."})
-        return 1
 
     # Precondition 7 (Y1): the named commit must actually CONTAIN the
     # touched files — `git add -N` (intent-to-add) produced a commit
@@ -1172,13 +1348,12 @@ def cmd_close_slice(args):
             if ok.returncode != 0:
                 missing_from_commit.append(rel)
         if missing_from_commit:
-            _print({"closed": False, "rule_ref": "gate:G1",
+            _fail({"closed": False, "rule_ref": "gate:G1",
                     "reason": f"commit {args.commit[:12]} does not contain "
                               f"touched files {missing_from_commit} — the "
                               f"provenance note would land on the wrong "
                               f"commit; `git add` them, commit, and re-close "
                               f"with the new HEAD"})
-            return 1
 
     # registry status flips (planned -> built) for modules this slice
     # produced; built entries whose source this slice touched (G6-acked
@@ -1204,6 +1379,30 @@ def cmd_close_slice(args):
             # not silently: the entry keeps its status and the reason is named
             flip_skipped.append({"id": e["id"], "reason": str(exc)})
 
+    # Precondition 8: dependency governance. Third-party deps are outside
+    # shadow enforcement — a builder silently adding one is the drift class
+    # G5 exists to stop, one level down. Added lines in dependency manifests
+    # require a recorded override naming why.
+    if args.commit and (root / ".git").exists():
+        added = _added_dependency_lines(root, sl, args.commit)
+        if added:
+            from engine.graph import load_edges as _edges
+            overridden_deps = {e["to"].split(":", 1)[-1]
+                               for e in _edges(root)
+                               if e["from"] == f"slice:{args.slice}"
+                               and e["type"] == "override"
+                               and e["to"].startswith("deps:")}
+            rogue_deps = {f: lines for f, lines in added.items()
+                          if f not in overridden_deps}
+            if rogue_deps:
+                _fail({"closed": False, "rule_ref": "gate:G5",
+                        "reason": f"new dependencies added without a recorded "
+                                  f"decision: {rogue_deps}. Record why: "
+                                  f"`harness gates override --slice "
+                                  f"{args.slice} --target deps:<file> "
+                                  f"--rule-ref gate:G5 --justification "
+                                  f'"<why>"` — or remove them.'})
+
     # git note: slice = commit boundary; provenance travels with the repo
     from engine.graph import NOTES_REF
     memory_ids = [m["id"] for m in memory.read_session(root, args.slice)]
@@ -1219,12 +1418,11 @@ def cmd_close_slice(args):
             # NOT a warning: an unwritten note means the provenance claim is
             # false for this slice. Block before any status mutation so the
             # close is retryable once the cause is fixed.
-            _print({"closed": False, "rule_ref": "gate:G1",
+            _fail({"closed": False, "rule_ref": "gate:G1",
                     "reason": f"provenance note could not be written to "
                               f"{args.commit[:12]}: {exc}. Fix the cause "
                               f"(stale ref lock? read-only .git?) and "
                               f"re-close — provenance is not optional."})
-            return 1
 
     compacted = memory.compact_to_durable(root, args.slice, commit=args.commit)
 
@@ -1255,6 +1453,9 @@ def cmd_close_slice(args):
     # or they ride as uncommitted worktree state and the flip is lost on
     # merge (parallel-worktree field report W4). A follow-up commit, never
     # an amend: amending args.commit would orphan its git note.
+    # (Attempt-counter reset happens HERE, before the substrate commit —
+    # resetting after it would dirty the sidecar post-commit.)
+    _reset_close_attempts(root, args.slice)
     substrate_commit = None
     if args.commit and (root / ".git").exists():
         import subprocess
@@ -1274,7 +1475,7 @@ def cmd_close_slice(args):
                       f"{committed.stderr.strip() or committed.stdout.strip()}",
                       file=sys.stderr)
 
-    _print({"closed": True, "slice": args.slice, "registry_flipped": flipped,
+    return {"closed": True, "slice": args.slice, "registry_flipped": flipped,
             "substrate_commit": substrate_commit,
             "shadows_extracted": shadows_extracted,
             "fork_review": fork_review,
@@ -1287,7 +1488,23 @@ def cmd_close_slice(args):
             "notes_ref": NOTES_REF if note_written else None,
             "notes_hint": (f"view with: git notes --ref={NOTES_REF} show "
                            f"{args.commit}") if note_written else None,
-            "touched": touched})
+            "touched": touched}
+
+
+def cmd_close_slice(args):
+    root = _root(args)
+    config = load_config(root)
+    try:
+        payload = _close_ceremony(args)
+    except _CeremonyFail as fail:
+        payload = fail.payload
+        payload.setdefault("closed", False)
+        if fail.attempt and _bump_close_attempts(root, args.slice, config,
+                                                 payload):
+            payload["parked"] = True
+        _print(payload)
+        return 1
+    _print(payload)
     return 0
 
 
@@ -1358,7 +1575,8 @@ def cmd_start(args):
             resumed = have_branch
 
     target = worktree or root
-    settings_written = _write_autonomy_settings(target, quiet=True)
+    settings_written = _write_autonomy_settings(target, quiet=True,
+                                                 local=worktree is not None)
     bound = _bind_slice(target, args.slice, _session(args, target))
 
     _print({**bound, "slice": args.slice, "resumed": resumed,
@@ -1368,6 +1586,189 @@ def cmd_start(args):
                      f"`harness close-slice --slice {args.slice} --commit HEAD`"
                      f" from {target}")})
     return 0
+
+
+# ------------------------------------------------------------------ run
+def cmd_run(args):
+    """The campaign dispatcher: walk the dependency DAG, provision each
+    ready slice (worktree + sandbox + binding), invoke the configured
+    builder agent, merge closes, park failures, repeat until the backlog is
+    empty or something needs a human. The engine orchestrates and enforces;
+    the AGENT is the host's (`run.builder_cmd`) — that boundary is the
+    portability contract, not a shortcut: point it at `claude -p`, an Agent
+    SDK script, or any CLI that can drive the slice loop.
+
+    Exit 0: backlog fully closed and merged. Exit 2: stopped on a park (the
+    report names it). Exit 1: dispatcher error."""
+    import shlex
+    import subprocess
+    import time
+    from engine import telemetry
+    root = _root(args)
+    config = load_config(root)
+    run_cfg = config.get("run") or {}
+    harness_bin = str(PLUGIN_ROOT / "bin" / "harness")
+
+    if not (root / ".git").is_dir():
+        print("error: run dispatches worktrees — it needs the MAIN tree of "
+              "a git repo", file=sys.stderr)
+        return 2
+
+    def statuses():
+        return {s["id"]: s for s in load_backlog(root)}
+
+    def ready(rows):
+        return sorted(sid for sid, s in rows.items()
+                      if s.get("status") == "planned"
+                      and all(rows.get(d, {}).get("status") == "closed"
+                              for d in s.get("depends_on", []) or []))
+
+    if args.dry_run:
+        rows = statuses()
+        waves, closed = [], {sid for sid, s in rows.items()
+                             if s.get("status") == "closed"}
+        pending = {sid for sid, s in rows.items()
+                   if s.get("status") == "planned"}
+        while pending:
+            wave = sorted(sid for sid in pending
+                          if all(d in closed for d in
+                                 rows[sid].get("depends_on", []) or []))
+            if not wave:
+                break  # blocked (parked dep or cycle) — reported below
+            waves.append(wave)
+            closed |= set(wave)
+            pending -= set(wave)
+        _print({"waves": waves, "blocked": sorted(pending),
+                "lanes": int(args.lanes)})
+        return 0
+
+    builder_cmd = args.builder_cmd or run_cfg.get("builder_cmd")
+    if not builder_cmd:
+        print("error: no builder configured — set run.builder_cmd in "
+              ".harness/config.yaml (e.g. a `claude -p` invocation or any "
+              "agent CLI that drives the slice loop) or pass --builder-cmd",
+              file=sys.stderr)
+        return 2
+    lanes = max(1, int(args.lanes))
+    max_attempts = int(run_cfg.get("max_slice_attempts", 2))
+    timeout = int(run_cfg.get("builder_timeout", 3600))
+
+    def hcli(*a):
+        return subprocess.run([sys.executable, harness_bin,
+                               "--root", str(root), *a],
+                              capture_output=True, text=True)
+
+    def park(sid, reason):
+        sl = get_slice(root, sid)
+        sl["status"] = "parked"
+        sl["parked_reason"] = reason[:300]
+        save_slice(root, sl)
+        telemetry.emit(root, "slice_parked", {"slice": sid, "reason": reason[:300]})
+        # commit the park immediately: dirty main substrate would block
+        # every later lane's merge (the W4 principle, dispatcher edition)
+        subprocess.run(["git", "-C", str(root), "add", "-A", "--", ".harness"],
+                       capture_output=True)
+        c = subprocess.run(["git", "-C", str(root), "commit", "-q", "-m",
+                            f"harness: park {sid}", "--", ".harness"],
+                           capture_output=True, text=True)
+        if c.returncode != 0:
+            print(f"warning: park commit failed: {c.stderr.strip()}",
+                  file=sys.stderr)
+
+    completed, attempts, active = [], {}, {}
+    while True:
+        rows = statuses()
+        parked_now = sorted(sid for sid, s in rows.items()
+                            if s.get("status") == "parked")
+        if parked_now and not active:
+            break  # stop loudly: a human owns parked slices
+        wave = ready(rows)
+        # launch builders up to the lane cap
+        for sid in wave:
+            if len(active) >= lanes or sid in active:
+                continue
+            start = hcli("start", "--slice", sid, "--session", f"run:{sid}")
+            if start.returncode != 0:
+                park(sid, f"start failed: "
+                          f"{(start.stdout or start.stderr).strip()[:200]}")
+                continue
+            wt = json.loads(start.stdout).get("worktree") or str(root)
+            env = dict(os.environ)
+            env.update({"HARNESS_BIN": harness_bin, "HARNESS_SLICE": sid,
+                        "HARNESS_WORKTREE": wt, "HARNESS_ROOT": str(root),
+                        "CLAUDE_SESSION_ID": f"run:{sid}"})
+            print(f"run: dispatching builder for {sid} in {wt}",
+                  file=sys.stderr)
+            active[sid] = {"proc": subprocess.Popen(
+                builder_cmd, shell=True, cwd=wt, env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True),
+                "worktree": wt, "deadline": time.monotonic() + timeout}
+        if not active:
+            planned = [sid for sid, s in rows.items()
+                       if s.get("status") in ("planned", "in_progress")]
+            if planned and not parked_now:
+                park(planned[0], "unreachable: dependencies can never close "
+                                 "(cycle or parked dependency)")
+                continue
+            break  # nothing running, nothing launchable: campaign over
+        # wait for any builder to finish (merges serialize below)
+        finished = None
+        while finished is None:
+            for sid, lane in list(active.items()):
+                if lane["proc"].poll() is not None:
+                    finished = sid
+                    break
+                if time.monotonic() > lane["deadline"]:
+                    lane["proc"].kill()
+                    finished = sid
+                    break
+            if finished is None:
+                time.sleep(0.2)
+        lane = active.pop(finished)
+        tail = (lane["proc"].stdout.read() or "").strip()[-400:]
+        # did the builder actually CLOSE the slice on its branch?
+        show = subprocess.run(
+            ["git", "-C", str(root), "show",
+             f"slice/{finished}:.harness/backlog.jsonl"],
+            capture_output=True, text=True)
+        closed_on_branch = any(
+            r.get("id") == finished and r.get("status") == "closed"
+            for r in (json.loads(ln) for ln in show.stdout.splitlines()
+                      if ln.strip())) if show.returncode == 0 else False
+        if closed_on_branch:
+            merged = hcli("merge-slice", "--slice", finished,
+                          "--session", f"run:{finished}")
+            if merged.returncode == 0:
+                completed.append(finished)
+                telemetry.emit(root, "slice_dispatched", {"slice": finished})
+                continue
+            failure = f"merge failed: {(merged.stdout or '').strip()[-300:]}"
+        else:
+            failure = (f"builder exited rc={lane['proc'].returncode} without "
+                       f"closing the slice; tail: {tail}")
+        attempts[finished] = attempts.get(finished, 0) + 1
+        if attempts[finished] >= max_attempts:
+            park(finished, f"{attempts[finished]} attempts: {failure}")
+        else:
+            print(f"run: retrying {finished} "
+                  f"({attempts[finished]}/{max_attempts}): {failure[:160]}",
+                  file=sys.stderr)
+
+    rows = statuses()
+    parked = sorted(sid for sid, s in rows.items()
+                    if s.get("status") == "parked")
+    payload = {
+        "completed": completed, "parked": parked,
+        "remaining": sorted(sid for sid, s in rows.items()
+                            if s.get("status") not in ("closed",)),
+        "next": (None if not parked else
+                 "a human owns parked slices: `harness adjudicate --list` "
+                 "for review parks, or re-bind to unpark and retry "
+                 "(`harness slice --slice <id>`); worktrees are kept for "
+                 "inspection"),
+    }
+    _print(payload)
+    return 0 if not parked and not payload["remaining"] else 2
 
 
 # ------------------------------------------------------------------ permit
@@ -1473,9 +1874,31 @@ def cmd_merge_slice(args):
                   "retrying once (Y3)", file=sys.stderr)
             merged = _git("merge", "--no-edit", branch)
         if merged.returncode != 0:
+            # NEVER leave main mid-merge: conflict markers inside
+            # .harness/*.jsonl are substrate corruption. Abort, report, and
+            # name the likely cause.
+            _git("merge", "--abort")
             _print({"merged": False, "conflicts": unmerged or None,
-                    "detail": (merged.stderr or merged.stdout).strip()[-500:]})
+                    "rolled_back": True,
+                    "detail": (merged.stderr or merged.stdout).strip()[-500:],
+                    "hint": "keyed substrate conflicts resolve mechanically "
+                            "when the merge drivers are installed — if "
+                            ".gitattributes lacks the harness entries, run "
+                            "`harness init --migrate`"})
             return 1
+
+    # the merged tree is what ships: the FULL accumulated acceptance suite
+    # must be green on it. Each side being green alone proves nothing about
+    # the combination — on red, the merge is rolled back, loudly, and the
+    # branch/worktree stay put for fixing.
+    ok, detail = _regression_suite(root, config)
+    if not ok:
+        rolled = _git("reset", "--hard", "ORIG_HEAD")
+        _print({"merged": False, "rolled_back": rolled.returncode == 0,
+                "reason": f"merged tree fails the accumulated acceptance "
+                          f"suite — merge rolled back; fix on branch "
+                          f"{branch} and re-run merge-slice.\n{detail}"})
+        return 1
 
     # shadows never content-merge (W10): regenerate from the merged tree,
     # THEN run the G4 safety net, THEN commit — every byte this ceremony
@@ -1930,6 +2353,17 @@ def main(argv=None):
                          "auditable override; requires --justification)")
     sp.add_argument("--justification")
 
+    sp = sub.add_parser("run",
+                        help="campaign dispatcher: build every ready slice "
+                             "via run.builder_cmd until the backlog is "
+                             "empty or a park needs a human")
+    sp.add_argument("--lanes", default=1,
+                    help="parallel builder lanes (merges always serialize)")
+    sp.add_argument("--builder-cmd", dest="builder_cmd",
+                    help="override run.builder_cmd for this invocation")
+    sp.add_argument("--dry-run", dest="dry_run", action="store_true",
+                    help="print the dependency waves and exit; mutates nothing")
+
     sp = sub.add_parser("permit",
                         help="host permission query: would the harness "
                              "approve this tool call in the bound slice?")
@@ -2037,7 +2471,7 @@ def main(argv=None):
         "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
         "compile": cmd_compile, "author-gate": cmd_author_gate,
         "backlog": cmd_backlog, "slice": cmd_slice,
-        "start": cmd_start, "permit": cmd_permit,
+        "start": cmd_start, "run": cmd_run, "permit": cmd_permit,
         "close-slice": cmd_close_slice, "merge-slice": cmd_merge_slice,
         "review": cmd_review,
         "registry": cmd_registry, "merge-substrate": cmd_merge_substrate,

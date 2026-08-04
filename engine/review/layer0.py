@@ -25,6 +25,54 @@ def diff_files(diff_text: str) -> list:
     return files
 
 
+# Deterministic secret patterns over ADDED diff lines. Deliberately narrow:
+# a false-positive storm teaches agents to override reflexively. Findings
+# never echo the matched text — a report that repeats the secret IS a leak.
+SECRET_PATTERNS = (
+    ("aws-access-key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("private-key-block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY")),
+    ("github-token", re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}")),
+    ("slack-token", re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}")),
+    ("assigned-credential", re.compile(
+        r"(?i)\b(api[_-]?key|secret|token|passw(?:or)?d)\b[\"']?\s*[:=]"
+        r"\s*[\"'][A-Za-z0-9+/_\-]{16,}[\"']")),
+)
+
+
+def _secret_findings(root, diff_text, slice_id):
+    """Layer-0 secret scan (the seed-leak class, caught deterministically on
+    every slice — not only when a fork reviewer runs). A recorded override
+    edge `secret:<file>` downgrades a named false positive, auditable."""
+    from ..events import make_finding
+    from ..graph import load_edges
+    findings, current = [], None
+    overridden = {e["to"].split(":", 1)[-1] for e in load_edges(root)
+                  if e["from"] == f"slice:{slice_id}"
+                  and e["type"] == "override" and e["to"].startswith("secret:")}
+    for line in (diff_text or "").splitlines():
+        if line.startswith("+++ b/"):
+            current = line[6:]
+            continue
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        for label, pattern in SECRET_PATTERNS:
+            if pattern.search(line):
+                sev = "advisory" if current in overridden else "block"
+                findings.append(make_finding(
+                    "SECRET_IN_DIFF", "review:layer0",
+                    f"{current or '<unknown file>'}: added line matches the "
+                    f"{label} pattern"
+                    + (" (override recorded — audited)" if sev == "advisory"
+                       else " — remove it, or record a false-positive "
+                            "override: `harness gates override --slice "
+                            f"{slice_id} --target secret:{current} "
+                            "--rule-ref review:layer0 --justification "
+                            '"<why>"`'),
+                    severity=sev, key=f"{current}|{label}"))
+                break
+    return findings
+
+
 def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
     """Substrate + diff only. The reviewer never receives builder session
     memory — independent derivation from the same ground truth is the point."""
@@ -47,6 +95,7 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
             gate_findings.extend(run_gates(root, evt, config, sidecar))
     finally:
         sidecar.close()
+    gate_findings.extend(_secret_findings(root, diff_text, slice_id))
 
     ud = uses_vs_declares(root, slice_id)
     sl = get_slice(root, slice_id)

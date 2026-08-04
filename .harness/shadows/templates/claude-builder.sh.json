@@ -1,0 +1,11 @@
+{
+ "exports": "unknown",
+ "extractor_version": 2,
+ "imports": [],
+ "language": "unknown",
+ "module_id": "templates.claude-builder",
+ "raw_head": "#!/usr/bin/env bash\n# Reference builder for `harness run` \u2014 headless Claude Code edition.\n#\n# The dispatcher owns orchestration (worktrees, retries, merges, parking);\n# this script owns exactly one thing: drive ONE slice from red tests to a\n# closed close-slice inside the worktree the dispatcher provisioned. That\n# boundary is the portability contract \u2014 swap this file for any agent CLI\n# and `harness run` does not change.\n#\n# Wire it up in .harness/config.yaml:\n#\n#   run:\n#     builder_cmd: \"bash /path/to/plugin/templates/claude-builder.sh\"\n#     max_slice_attempts: 3\n#     builder_timeout: 3600\n#\n# Environment (exported by the dispatcher for every lane):\n#   HARNESS_BIN       absolute path to the harness CLI\n#   HARNESS_SLICE     the slice id this lane must close\n#   HARNESS_WORKTREE  the provisioned worktree (also this script's cwd)\n#   HARNESS_ROOT      the main repo root (do not build here)\n#\n# Optional knobs:\n#   CLAUDE_BIN                 claude executable (default: claude)\n#   HARNESS_BUILDER_MAX_TURNS  agent turn budget per attempt (default: 100)\n#   HARNESS_BUILDER_MODEL      --model override (default: host default)\n#\n# Why no --dangerously-skip-permissions: the worktree already carries the\n# harness autonomy profile (.claude/settings.local.json \u2014 sandbox on,\n# acceptEdits, the loop's command surface pre-approved, git egress denied),\n# and when the harness plugin is installed its PreToolUse hook answers the\n# permission question from the gates themselves. Declared work never\n# prompts; undeclared work SHOULD fail in headless mode \u2014 that is G3\n# telling the builder to amend its declaration, not an inconvenience.\n\nset -euo pipefail\n\n: \"${HARNESS_BIN:?claude-builder.sh must be launched by 'harness run'}\"\n: \"${HARNESS_SLICE:?missing HARNESS_SLICE}\"\n: \"${HARNESS_WORKTREE:?missing HARNESS_WORKTREE}\"",
+ "source_hash": "sha256:a8ecf25c3d93837d0c39328cc694f6782353211f793fca26940de4a97ed51766",
+ "source_path": "templates/claude-builder.sh",
+ "symbols": []
+}

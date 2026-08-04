@@ -10,7 +10,7 @@
     {
       "name": "harness",
       "description": "Development enforcement plugin: two-phase context injection (resolver + gates G1-G8), interface shadows via tree-sitter, ADR-compiled decision tables, slice-based build loop with worktree partitioning, four-layer review stack with golden replay, and adjudication that converts every human intervention into durable substrate. Includes /harness:init, architect, backlog, build, review, close-slice, status, adjudicate workflows plus 7 knowledge skills and 4 agent personas.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": {
         "name": "Kwesi P Apponsah",
         "email": "kwesiparry@gmail.com"

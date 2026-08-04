@@ -410,3 +410,4 @@
 {"kind": "event", "meta": {"codes": ["NO_ACTIVE_WORK_UNIT"], "event": "pre_change", "gates": ["gate:G2"], "session": "923b545e-df61-471e-9d41-ddb600a201f2", "slice": null, "verdict": "allow_with_findings"}, "ts": "2026-07-25T17:09:56+00:00"}
 {"kind": "event", "meta": {"codes": [], "event": "post_change", "gates": [], "session": "923b545e-df61-471e-9d41-ddb600a201f2", "slice": null, "verdict": "allow"}, "ts": "2026-07-25T17:09:56+00:00"}
 {"kind": "event", "meta": {"codes": ["NO_ACTIVE_WORK_UNIT"], "event": "pre_change", "gates": ["gate:G2"], "session": "923b545e-df61-471e-9d41-ddb600a201f2", "slice": null, "verdict": "allow_with_findings"}, "ts": "2026-07-25T17:10:06+00:00"}
+{"kind": "COMPACTION_REACHED", "meta": {"session": "923b545e-df61-471e-9d41-ddb600a201f2", "slice": null}, "ts": "2026-08-04T00:19:26+00:00"}

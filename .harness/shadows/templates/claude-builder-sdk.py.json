@@ -1,0 +1,54 @@
+{
+ "exports": [
+  "build_prompt",
+  "main",
+  "slice_closed"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "asyncio",
+  "claude_agent_sdk",
+  "json",
+  "os",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "templates.claude-builder-sdk",
+ "source_hash": "sha256:bda125b1bd731eac2c62cdf3af3b0f70ae307a84aa633ab4651a0a4862957a69",
+ "source_path": "templates/claude-builder-sdk.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "build_prompt",
+   "signature": "def build_prompt(harness_bin: str, slice_id: str) -> str",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "slice_closed",
+   "signature": "def slice_closed(worktree: str, slice_id: str) -> bool",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "async def main() -> int",
+   "span": [
+    79,
+    80
+   ],
+   "visibility": "public"
+  }
+ ]
+}

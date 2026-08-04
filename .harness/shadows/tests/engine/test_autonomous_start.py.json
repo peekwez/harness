@@ -23,7 +23,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_autonomous_start",
- "source_hash": "sha256:eec4b73086438f5e016d923fa535efb3bba6680a26d98f51d529cb186966709b",
+ "source_hash": "sha256:28b874e418a165c4fcc6fa46976d7001472ccfc3407c1e97e5825b93e967ef8e",
  "source_path": "tests/engine/test_autonomous_start.py",
  "symbols": [
   {
@@ -76,8 +76,8 @@
    "name": "test_start_is_idempotent_and_resumes",
    "signature": "def test_start_is_idempotent_and_resumes(toy)",
    "span": [
-    71,
-    72
+    72,
+    73
    ],
    "visibility": "public"
   },
@@ -87,8 +87,8 @@
    "name": "test_start_without_worktree_binds_in_place",
    "signature": "def test_start_without_worktree_binds_in_place(toy)",
    "span": [
-    81,
-    82
+    82,
+    83
    ],
    "visibility": "public"
   },
@@ -98,8 +98,8 @@
    "name": "test_gate_approved_edit_is_auto_allowed_not_prompted",
    "signature": "def test_gate_approved_edit_is_auto_allowed_not_prompted(toy)",
    "span": [
-    91,
-    92
+    92,
+    93
    ],
    "visibility": "public"
   },
@@ -109,8 +109,8 @@
    "name": "test_undeclared_file_still_prompts",
    "signature": "def test_undeclared_file_still_prompts(toy)",
    "span": [
-    105,
-    106
+    106,
+    107
    ],
    "visibility": "public"
   },
@@ -120,8 +120,8 @@
    "name": "test_blocked_edit_still_denies",
    "signature": "def test_blocked_edit_still_denies(toy)",
    "span": [
-    116,
-    117
+    117,
+    118
    ],
    "visibility": "public"
   },
@@ -131,8 +131,8 @@
    "name": "test_loop_commands_are_auto_allowed",
    "signature": "def test_loop_commands_are_auto_allowed(toy)",
    "span": [
-    131,
-    132
+    132,
+    133
    ],
    "visibility": "public"
   },
@@ -142,8 +142,8 @@
    "name": "test_egress_and_unknown_commands_are_never_auto_allowed",
    "signature": "def test_egress_and_unknown_commands_are_never_auto_allowed(toy)",
    "span": [
-    146,
-    147
+    147,
+    148
    ],
    "visibility": "public"
   },
@@ -153,8 +153,8 @@
    "name": "test_no_slice_bound_means_no_auto_allow",
    "signature": "def test_no_slice_bound_means_no_auto_allow(toy)",
    "span": [
-    158,
-    159
+    159,
+    160
    ],
    "visibility": "public"
   }

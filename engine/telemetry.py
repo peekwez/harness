@@ -13,7 +13,7 @@ from . import append_jsonl, harness_dir, now_iso, read_jsonl
 # close: appending every one to the tracked file forced "session churn"
 # commits before every merge (review R8). Ceremony-level events (close,
 # merge, park, compaction) are milestones — they land immediately.
-BUFFERED_KINDS = ("event",)
+BUFFERED_KINDS = ("event", "slice_dispatched")
 
 
 def emit(root, kind: str, meta: dict) -> None:

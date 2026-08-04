@@ -56,7 +56,8 @@ def test_start_provisions_a_sandboxed_autonomy_profile_in_the_worktree(toy):
     proc = run_cli("start", "--slice", "slice-042", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     settings = json.loads(
-        (toy / ".worktrees" / "slice-042" / ".claude" / "settings.json").read_text())
+        (toy / ".worktrees" / "slice-042" / ".claude"
+         / "settings.local.json").read_text())
     assert settings["sandbox"]["enabled"] is True
     assert settings["sandbox"]["autoAllowBashIfSandboxed"] is True
     # the feature's writes stay inside the feature's tree

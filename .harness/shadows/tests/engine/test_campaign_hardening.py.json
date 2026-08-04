@@ -1,0 +1,134 @@
+{
+ "exports": [
+  "test_a_recorded_override_clears_a_secret_false_positive",
+  "test_a_secret_in_the_diff_blocks_the_close",
+  "test_close_runs_the_full_accumulated_acceptance_suite",
+  "test_explicit_bind_unparks",
+  "test_merge_slice_rolls_back_when_the_merged_suite_is_red",
+  "test_new_dependencies_require_a_recorded_override",
+  "test_repeated_close_failures_auto_park_the_slice",
+  "test_verify_lints_contracts"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_campaign_hardening",
+ "source_hash": "sha256:682631e190da3082678679f6a84939d5a082ace465bab10c04bad6c5d43292ee",
+ "source_path": "tests/engine/test_campaign_hardening.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_ready",
+   "signature": "def _ready(toy, session=\"camp\", orders=GOOD_ORDERS)",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_close",
+   "signature": "def _close(toy, session)",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A slice must not close green while breaking an EARLIER slice's\n    acceptance tests \u2014 the ratchet is cumulative or it is not a ratchet.",
+   "kind": "function",
+   "name": "test_close_runs_the_full_accumulated_acceptance_suite",
+   "signature": "def test_close_runs_the_full_accumulated_acceptance_suite(toy)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Two slices can each be green alone and red together \u2014 the merged\n    tree is what ships, so the merged tree is what must pass.",
+   "kind": "function",
+   "name": "test_merge_slice_rolls_back_when_the_merged_suite_is_red",
+   "signature": "def test_merge_slice_rolls_back_when_the_merged_suite_is_red(toy)",
+   "span": [
+    66,
+    67
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_repeated_close_failures_auto_park_the_slice",
+   "signature": "def test_repeated_close_failures_auto_park_the_slice(toy)",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_explicit_bind_unparks",
+   "signature": "def test_explicit_bind_unparks(toy)",
+   "span": [
+    116,
+    117
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_secret_in_the_diff_blocks_the_close",
+   "signature": "def test_a_secret_in_the_diff_blocks_the_close(toy)",
+   "span": [
+    136,
+    137
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_recorded_override_clears_a_secret_false_positive",
+   "signature": "def test_a_recorded_override_clears_a_secret_false_positive(toy)",
+   "span": [
+    145,
+    146
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_new_dependencies_require_a_recorded_override",
+   "signature": "def test_new_dependencies_require_a_recorded_override(toy)",
+   "span": [
+    157,
+    158
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_lints_contracts",
+   "signature": "def test_verify_lints_contracts(toy)",
+   "span": [
+    180,
+    181
+   ],
+   "visibility": "public"
+  }
+ ]
+}

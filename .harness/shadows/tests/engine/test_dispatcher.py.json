@@ -1,0 +1,126 @@
+{
+ "exports": [
+  "test_claude_builder_template_trusts_only_a_closed_slice",
+  "test_init_makes_acceptance_tests_collectable_by_bare_pytest",
+  "test_run_completes_a_campaign_unattended",
+  "test_run_dry_run_prints_the_waves",
+  "test_run_parallel_lanes_complete_independent_slices",
+  "test_run_parks_a_failing_slice_and_stops_loudly",
+  "test_run_requires_a_builder_command"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "os",
+  "subprocess",
+  "textwrap",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_dispatcher",
+ "source_hash": "sha256:1aaad617667191742c2f42c409dfc1da6258b2564306c1b4f0fe2f0720a36a30",
+ "source_path": "tests/engine/test_dispatcher.py",
+ "symbols": [
+  {
+   "doc": "Three chained slices + a scripted builder, all committed to main.",
+   "kind": "function",
+   "name": "_campaign",
+   "signature": "def _campaign(toy, builder=BUILDER, builder_cmd=None, impl=None)",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_run",
+   "signature": "def _run(toy, *extra)",
+   "span": [
+    82,
+    83
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The intended goal, end to end: architecture + backlog done -> every\n    slice builds, reviews, closes and merges with zero interventions.",
+   "kind": "function",
+   "name": "test_run_completes_a_campaign_unattended",
+   "signature": "def test_run_completes_a_campaign_unattended(toy)",
+   "span": [
+    88,
+    89
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_run_parks_a_failing_slice_and_stops_loudly",
+   "signature": "def test_run_parks_a_failing_slice_and_stops_loudly(toy)",
+   "span": [
+    112,
+    113
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_run_requires_a_builder_command",
+   "signature": "def test_run_requires_a_builder_command(toy)",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_run_dry_run_prints_the_waves",
+   "signature": "def test_run_dry_run_prints_the_waves(toy)",
+   "span": [
+    134,
+    135
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_run_parallel_lanes_complete_independent_slices",
+   "signature": "def test_run_parallel_lanes_complete_independent_slices(toy)",
+   "span": [
+    145,
+    146
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The reference builder's exit code mirrors the dispatcher's check:\n    the agent exiting 0 means nothing \u2014 only status=closed counts.",
+   "kind": "function",
+   "name": "test_claude_builder_template_trusts_only_a_closed_slice",
+   "signature": "def test_claude_builder_template_trusts_only_a_closed_slice(tmp_path)",
+   "span": [
+    166,
+    167
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The engine passes explicit paths, so IT always saw them \u2014 but a\n    human's bare `pytest` silently skipping tests/slices/ is a hidden trap.",
+   "kind": "function",
+   "name": "test_init_makes_acceptance_tests_collectable_by_bare_pytest",
+   "signature": "def test_init_makes_acceptance_tests_collectable_by_bare_pytest(tmp_path)",
+   "span": [
+    190,
+    191
+   ],
+   "visibility": "public"
+  }
+ ]
+}

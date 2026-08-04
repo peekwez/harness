@@ -16,7 +16,7 @@
  ],
  "language": "python",
  "module_id": "engine.review.layer0",
- "source_hash": "sha256:46dc45558ecf89007ef000b8f7c37d2590882cf7ac9bffb04ac38c2054905d2b",
+ "source_hash": "sha256:95d8655f10132b8988846716157331779477cfaad60c0b20a80f158160bc2ea2",
  "source_path": "engine/review/layer0.py",
  "symbols": [
   {
@@ -31,13 +31,24 @@
    "visibility": "public"
   },
   {
+   "doc": "Layer-0 secret scan (the seed-leak class, caught deterministically on\n    every slice \u2014 not only when a fork reviewer runs). A recorded override\n    edge `secret:<file>` downgrades a named false positive, auditable.",
+   "kind": "function",
+   "name": "_secret_findings",
+   "signature": "def _secret_findings(root, diff_text, slice_id)",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "private"
+  },
+  {
    "doc": "Substrate + diff only. The reviewer never receives builder session\n    memory \u2014 independent derivation from the same ground truth is the point.",
    "kind": "function",
    "name": "assemble",
    "signature": "def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict",
    "span": [
-    28,
-    29
+    76,
+    77
    ],
    "visibility": "public"
   }

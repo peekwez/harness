@@ -211,6 +211,19 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     extract_path(root, root / "config.py", config)
     flip_status(root, "telemetry")
 
+    (root / ".gitattributes").write_text(
+        ".harness/telemetry.jsonl merge=union\n"
+        ".harness/edges.jsonl merge=union\n"
+        ".harness/memory/durable.jsonl merge=union\n"
+        ".harness/backlog.jsonl merge=harness-substrate\n"
+        ".harness/registry.jsonl merge=harness-substrate\n"
+        ".harness/decisions.jsonl merge=harness-substrate\n"
+        ".harness/shadows/** merge=ours\n")
+    (root / ".gitignore").write_text(
+        ".harness/sidecar.db\n.harness/sidecar.db-*\n"
+        ".harness/memory/session/\n.worktrees/\n"
+        ".claude/settings.local.json\n"
+        "__pycache__/\n*.pyc\n.pytest_cache/\n")
     git(root, "init", "-q")
     git(root, "config", "user.email", "t@t")
     git(root, "config", "user.name", "t")

@@ -56,6 +56,33 @@ declaration* — amend it, don't approve it.
 serial (no-worktree) work. This is safe precisely because approval prompts
 were never the enforcement layer here — the gates and CI verify are.
 
+### Campaign mode: `harness run`
+
+Once architecture and backlog are authored, `harness run` drives the whole
+backlog unattended: it walks the dependency DAG in waves, runs `harness
+start` per ready slice, launches your configured builder in the worktree,
+verifies the slice actually **closed on its branch**, serializes the
+merges (cumulative acceptance suite, rollback on red), retries up to
+`run.max_slice_attempts`, and parks what still fails — then stops loudly
+(exit 2) so a human adjudicates. The engine orchestrates; the LLM builder
+is the host's, injected via config:
+
+```yaml
+# .harness/config.yaml
+run:
+  builder_cmd: "bash /path/to/plugin/templates/claude-builder.sh"
+  max_slice_attempts: 3
+  builder_timeout: 3600   # seconds per builder attempt
+```
+
+`templates/claude-builder.sh` is the reference builder (headless
+`claude -p` inside the provisioned sandbox profile);
+`templates/claude-builder-sdk.py` is the Claude Agent SDK equivalent. Any
+command that exits 0 after `close-slice` reports `{"closed": true}`
+satisfies the contract — that boundary is what makes the dispatcher
+framework-agnostic. `harness run --dry-run` prints the waves;
+`--lanes N` builds independent slices in parallel worktrees.
+
 ## The two-tree model
 
 **The plugin** (this repo) installs once, is versioned, and holds zero
@@ -106,7 +133,12 @@ compiled G3 boundaries and the adjudication queue respectively.
 `bin/harness` subcommands: `event` (stdin EnforcementEvent -> stdout
 Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
 `compile`, `author-gate`, `resolve`, `extract`,
-`gates`, `verify` (the CI entry), `backlog` (+ `add`), `slice`, `start`
+`gates`, `verify` (the CI entry), `backlog` (+ `add`), `slice`, `start`,
+`run` (campaign dispatcher: builds every ready slice via `run.builder_cmd`
+until the backlog is empty or a park needs a human — reference builders in
+`templates/claude-builder.sh` (headless `claude -p`) and
+`templates/claude-builder-sdk.py` (Claude Agent SDK); any CLI that closes
+the slice works)
 (worktree + sandbox + binding, no prompts), `permit` (host permission
 query), `close-slice`, `merge-slice`, `registry`, `merge-substrate`,
 `review` (+ `--replay`, `--record-finding`, `--park`, `--record-fork`),

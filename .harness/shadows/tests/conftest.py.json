@@ -22,7 +22,7 @@
  ],
  "language": "python",
  "module_id": "tests.conftest",
- "source_hash": "sha256:9ed61c8e676d5bf2bbba33211caf5b01278c5a9046626375fcdabcd714d713c4",
+ "source_hash": "sha256:579fbeada54c8f64445b51800e8cc3bfa94bb1e0bc77375db57aba7c6226f629",
  "source_path": "tests/conftest.py",
  "symbols": [
   {
@@ -75,8 +75,8 @@
    "name": "toy",
    "signature": "def toy(tmp_path)",
    "span": [
-    223,
-    224
+    236,
+    237
    ],
    "visibility": "public"
   },
@@ -86,8 +86,8 @@
    "name": "plugin_root",
    "signature": "def plugin_root()",
    "span": [
-    228,
-    229
+    241,
+    242
    ],
    "visibility": "public"
   },
@@ -97,8 +97,8 @@
    "name": "make_event",
    "signature": "def make_event(event, session=\"s1\", slice_id=\"slice-042\", files=None, context=None, prompt=None)",
    "span": [
-    232,
-    234
+    245,
+    247
    ],
    "visibility": "public"
   },
@@ -108,8 +108,8 @@
    "name": "loaded_context",
    "signature": "def loaded_context(root, session=\"s1\", slice_id=\"slice-042\")",
    "span": [
-    241,
-    242
+    254,
+    255
    ],
    "visibility": "public"
   }
