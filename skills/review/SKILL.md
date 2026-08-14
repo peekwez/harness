@@ -17,9 +17,13 @@ builder disagree, the substrate underdetermined the answer, and that
 disagreement is signal.
 
 Layer 0 — deterministic facts (gates, uses/declares diff, duplicate
-candidates, decision rows in scope, shadows of everything the diff imports):
+candidates, decision rows in scope, shadows of everything the diff imports).
+**Run this now, before anything else** (a preflight cannot carry the slice
+argument, so this is your first command):
 
-!`git diff main...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only`
+```
+git diff main...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
+```
 
 Layers 1–3 — rubric-bound checks over those facts:
 

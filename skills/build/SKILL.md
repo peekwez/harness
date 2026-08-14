@@ -11,9 +11,13 @@ argument-hint: "<slice-id>"
 Start (or resume) the slice. This one command creates the isolated worktree
 `.worktrees/$1` on branch `slice/$1`, provisions its sandboxed autonomy
 profile, binds the slice, snapshots the G6 baseline, and emits the Phase-1
-context — no prompts, no follow-up ceremony:
+context — no prompts, no follow-up ceremony. **Run it now, before anything
+else** (a preflight cannot carry the slice argument, so this is your first
+command):
 
-!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" start --slice $1`
+```
+"${CLAUDE_PLUGIN_ROOT}/bin/harness" start --slice $1
+```
 
 If it refuses because a `depends_on` slice is still open, close that one
 first — foundations exist so consumers can rely on them. Overriding needs a

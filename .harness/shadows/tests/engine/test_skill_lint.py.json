@@ -1,0 +1,50 @@
+{
+ "exports": [
+  "test_preflight_commands_never_use_positional_arguments",
+  "test_preflights_still_exist_where_no_argument_is_needed"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "re"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_skill_lint",
+ "source_hash": "sha256:fd9a7d88425dff5a964f1eb070e450d4a4cfa2c62018d15720e7ea327397d23a",
+ "source_path": "tests/engine/test_skill_lint.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_preflights",
+   "signature": "def _preflights()",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_preflight_commands_never_use_positional_arguments",
+   "signature": "def test_preflight_commands_never_use_positional_arguments()",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The fix is moving argument-bearing commands into the body \u2014 not\n    deleting preflights wholesale. Argument-free ones must survive.",
+   "kind": "function",
+   "name": "test_preflights_still_exist_where_no_argument_is_needed",
+   "signature": "def test_preflights_still_exist_where_no_argument_is_needed()",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "public"
+  }
+ ]
+}
