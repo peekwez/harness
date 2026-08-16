@@ -1,0 +1,30 @@
+{
+ "exports": [
+  "COMMANDS",
+  "main"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "argparse",
+  "engine",
+  "json",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.__init__",
+ "source_hash": "sha256:4356bec107cfce7ee1e5da348d303c4c9fee71dae78aeee0e7c7e3d61dd32907",
+ "source_path": "engine/cli/__init__.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "main",
+   "signature": "def main(argv=None)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  }
+ ]
+}

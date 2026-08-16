@@ -1,0 +1,40 @@
+{
+ "exports": [
+  "cmd_adjudicate",
+  "cmd_review"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.review",
+ "source_hash": "sha256:5a6e968bfdab6e5dd337b38f028d77d6e75bd503d1fa8d3a192aa1e0f4354801",
+ "source_path": "engine/cli/review.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_review",
+   "signature": "def cmd_review(args)",
+   "span": [
+    16,
+    17
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_adjudicate",
+   "signature": "def cmd_adjudicate(args)",
+   "span": [
+    114,
+    115
+   ],
+   "visibility": "public"
+  }
+ ]
+}

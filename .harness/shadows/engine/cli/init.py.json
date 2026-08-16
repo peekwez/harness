@@ -1,0 +1,42 @@
+{
+ "exports": [
+  "cmd_init"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "os",
+  "pathlib",
+  "shutil",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.init",
+ "source_hash": "sha256:b03731317e46fb3ab0f5c29e7e337012bc7e4f15b2dc656a9f9dcbe13dd29477",
+ "source_path": "engine/cli/init.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_init",
+   "signature": "def cmd_init(args)",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Pre-approve the slice loop's command surface and sandbox it, in\n    .claude/settings.json. Approval prompts are redundant inside a bound\n    slice \u2014 the PreToolUse hook gate-checks every edit deterministically and\n    CI verify backstops it. The profile still denies anything that leaves\n    the machine (git push/remote/fetch). Returns the path written, or None.",
+   "kind": "function",
+   "name": "_write_autonomy_settings",
+   "signature": "def _write_autonomy_settings(root, quiet=False, local=False)",
+   "span": [
+    174,
+    175
+   ],
+   "visibility": "private"
+  }
+ ]
+}

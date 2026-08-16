@@ -197,18 +197,8 @@ def test_slice_release_and_close_unbinds(toy):
 
 # ---------------------------------------------------------------- #20
 def test_acceptance_runner_prefers_project_venv(toy):
-    from importlib.machinery import SourceFileLoader
-    harness_cli = SourceFileLoader(
-        "harness_cli", str((toy / "..").resolve() )).path  # noqa: unused trick
-    # import the CLI module directly for the helper
-    import importlib.util
-    from conftest import PLUGIN_ROOT
-    spec = importlib.util.spec_from_loader("hbin", None)
-    src = (PLUGIN_ROOT / "bin" / "harness").read_text()
-    module = importlib.util.module_from_spec(spec)
-    module.__dict__["__file__"] = str(PLUGIN_ROOT / "bin" / "harness")
-    exec(compile(src, str(PLUGIN_ROOT / "bin" / "harness"), "exec"),
-         module.__dict__)
+    # the helpers live in the CLI package now (bin/harness is a dispatcher)
+    from engine.cli import common as module
     cfg = load_config(toy)
     # no venv -> engine interpreter
     assert module._acceptance_python(toy, cfg) == sys.executable
@@ -221,7 +211,8 @@ def test_acceptance_runner_prefers_project_venv(toy):
     cfg["gates"]["acceptance_python"] = "/custom/python"
     assert module._acceptance_python(toy, cfg) == "/custom/python"
     # a configured-but-missing interpreter fails LOUD at close
-    ok, msg = module._acceptance_green(
+    from engine.cli.slice import _acceptance_green
+    ok, msg = _acceptance_green(
         toy, {"acceptance": ["tests/slices/042_orders.py"]}, cfg)
     assert not ok and "does not exist" in msg
 

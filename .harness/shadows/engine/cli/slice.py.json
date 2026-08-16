@@ -1,0 +1,86 @@
+{
+ "exports": [
+  "cmd_permit",
+  "cmd_start"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.slice",
+ "source_hash": "sha256:792ff2e74378c49ec8b1124970e44c6ec111efcd6cc739a106a4aa3015957b38",
+ "source_path": "engine/cli/slice.py",
+ "symbols": [
+  {
+   "doc": "Everything binding a slice entails, in one place (shared by `slice`\n    and `start`): session + repo-default binding, declares_dep edges, status\n    flip, git anchor, G6 baseline, context registration, merge drivers.",
+   "kind": "function",
+   "name": "_bind_slice",
+   "signature": "def _bind_slice(root, slice_id: str, session: str) -> dict",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "\u00a77.5 precondition, engine-enforced: gates live in CLI, not in prompts.",
+   "kind": "function",
+   "name": "_acceptance_green",
+   "signature": "def _acceptance_green(root, sl, config)",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "(ok, detail): run every CLOSED slice's acceptance paths. Shared by\n    close (pre-close, in the slice tree) and merge-slice (post-merge, with\n    rollback).",
+   "kind": "function",
+   "name": "_regression_suite",
+   "signature": "def _regression_suite(root, config, exclude=None, interpreter=None, env=None)",
+   "span": [
+    131,
+    132
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "One command to begin a slice: isolated worktree, provisioned sandbox\n    + autonomy profile, bound slice, Phase-1 context emitted. Nothing here\n    asks a human anything \u2014 that is the whole point.",
+   "kind": "function",
+   "name": "cmd_start",
+   "signature": "def cmd_start(args)",
+   "span": [
+    165,
+    166
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_git",
+   "signature": "def _git(*a)",
+   "span": [
+    213,
+    214
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Host permission query \u2014 NOT an EnforcementEvent. Answers \"would the\n    harness approve this?\" so a bound slice never stops for a prompt. Only\n    ever returns allow=true; a false is \"not auto-approved\", leaving the\n    host's normal flow (and the human) in charge.",
+   "kind": "function",
+   "name": "cmd_permit",
+   "signature": "def cmd_permit(args)",
+   "span": [
+    245,
+    246
+   ],
+   "visibility": "public"
+  }
+ ]
+}

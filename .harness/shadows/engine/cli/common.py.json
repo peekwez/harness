@@ -1,0 +1,163 @@
+{
+ "exports": [
+  "__init__"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.common",
+ "source_hash": "sha256:a893d64df6b5d9a208d4f3bcd5562a4d9f7f76ea65acfc7e1612e780da43e41e",
+ "source_path": "engine/cli/common.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_root",
+   "signature": "def _root(args)",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_print",
+   "signature": "def _print(obj)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "If `root` is a linked git worktree, return the MAIN worktree root; else\n    None. A worktree has its own fresh .harness/sidecar.db, so the live host\n    session the hooks recorded lives in the MAIN repo's sidecar, not the\n    worktree's (field report Y2).",
+   "kind": "function",
+   "name": "_main_worktree_root",
+   "signature": "def _main_worktree_root(root)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "--session > $CLAUDE_SESSION_ID > the live hook session recorded in\n    the sidecar > \"cli\". Builder shells often lack the env export (Y2); the\n    sidecar fallback joins the session the hooks are actually gating\n    instead of creating a parallel 'cli' one. In a worktree the hooks write\n    the live session into the MAIN repo's sidecar, so consult that too.",
+   "kind": "function",
+   "name": "_session",
+   "signature": "def _session(args, root=None)",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_dep_status",
+   "signature": "def _dep_status()",
+   "span": [
+    75,
+    76
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The interpreter that runs acceptance tests: explicit config wins,\n    then the project's own venv, then the engine's interpreter. Running the\n    engine's pyenv against a venv-pinned project fails on imports the\n    project legitimately has (field report #20).",
+   "kind": "function",
+   "name": "_acceptance_python",
+   "signature": "def _acceptance_python(root, config)",
+   "span": [
+    87,
+    88
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The .gitattributes half \u2014 travels with the repo; written at init/\n    migrate only (a bind must never mutate the working tree mid-slice, or\n    the file lands in the slice's own diff and trips G3).",
+   "kind": "function",
+   "name": "_write_merge_attributes",
+   "signature": "def _write_merge_attributes(root)",
+   "span": [
+    123,
+    124
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The git-config half \u2014 repo-local, does NOT travel with clones (S8);\n    re-asserted at every bind (idempotent, tree-untouching).",
+   "kind": "function",
+   "name": "_config_merge_drivers",
+   "signature": "def _config_merge_drivers(root)",
+   "span": [
+    144,
+    145
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_install_merge_drivers",
+   "signature": "def _install_merge_drivers(root)",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A close precondition failed. `attempt` marks substantive failures\n    (they count toward the auto-park cap); guard refusals do not.",
+   "kind": "class",
+   "name": "_CeremonyFail",
+   "signature": "class _CeremonyFail(Exception)",
+   "span": [
+    172,
+    173
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, payload, attempt=True)",
+   "span": [
+    176,
+    177
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_fail",
+   "signature": "def _fail(payload, attempt=True)",
+   "span": [
+    181,
+    182
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_reset_close_attempts",
+   "signature": "def _reset_close_attempts(root, slice_id)",
+   "span": [
+    185,
+    186
+   ],
+   "visibility": "private"
+  }
+ ]
+}

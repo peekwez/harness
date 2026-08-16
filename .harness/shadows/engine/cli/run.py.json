@@ -1,0 +1,80 @@
+{
+ "exports": [
+  "cmd_run",
+  "hcli",
+  "park",
+  "ready",
+  "statuses"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "os",
+  "shlex",
+  "subprocess",
+  "sys",
+  "time"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.run",
+ "source_hash": "sha256:60202d1ed94676e4889f915e0413beaf6535d3526fd342b93976e5ccd0be68cd",
+ "source_path": "engine/cli/run.py",
+ "symbols": [
+  {
+   "doc": "The campaign dispatcher: walk the dependency DAG, provision each\n    ready slice (worktree + sandbox + binding), invoke the configured\n    builder agent, merge closes, park failures, repeat until the backlog is\n    empty or something needs a human. The engine orchestrates and enforces;\n    the AGENT is the host's (`run.builder_cmd`) \u2014 that boundary is the\n    portability contract, not a shortcut: point it at `claude -p`, an Agent\n    SDK script, or any CLI that can drive the slice loop.\n\n    Exit 0: backlog fully closed and merged. Exit 2: stopped on a park (the\n    report names it). Exit 1: dispatcher error.",
+   "kind": "function",
+   "name": "cmd_run",
+   "signature": "def cmd_run(args)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "statuses",
+   "signature": "def statuses()",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "ready",
+   "signature": "def ready(rows)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "hcli",
+   "signature": "def hcli(*a)",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "park",
+   "signature": "def park(sid, reason)",
+   "span": [
+    86,
+    87
+   ],
+   "visibility": "public"
+  }
+ ]
+}

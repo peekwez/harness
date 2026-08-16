@@ -1,0 +1,113 @@
+{
+ "exports": [
+  "cmd_extract",
+  "cmd_gates",
+  "cmd_graph",
+  "cmd_memory",
+  "cmd_merge_substrate",
+  "cmd_registry",
+  "cmd_resolve",
+  "cmd_status"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.substrate",
+ "source_hash": "sha256:636338808cbd97ffffbe26627668d0fc7e65d800104082fe2dc2bf03d28bc04f",
+ "source_path": "engine/cli/substrate.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_extract",
+   "signature": "def cmd_extract(args)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_resolve",
+   "signature": "def cmd_resolve(args)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_gates",
+   "signature": "def cmd_gates(args)",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Registry maintenance. `refresh <id>` re-derives a built entry's\n    source_hash/signature_digest from its fresh shadow \u2014 the repair for\n    hook-bypassing edits that left verify reporting HASH_MISMATCH (W11).",
+   "kind": "function",
+   "name": "cmd_registry",
+   "signature": "def cmd_registry(args)",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "W5: git merge driver for keyed-by-id substrate JSONL (%O %A %B).\n    Parallel worktree closes conflict on .harness rows by construction;\n    the resolution is mechanical \u2014 per-id 3-way. A row both sides changed\n    differently is a real conflict: exit 1, ours left for manual merge.",
+   "kind": "function",
+   "name": "cmd_merge_substrate",
+   "signature": "def cmd_merge_substrate(args)",
+   "span": [
+    121,
+    122
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_graph",
+   "signature": "def cmd_graph(args)",
+   "span": [
+    180,
+    181
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_memory",
+   "signature": "def cmd_memory(args)",
+   "span": [
+    215,
+    216
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_status",
+   "signature": "def cmd_status(args)",
+   "span": [
+    247,
+    248
+   ],
+   "visibility": "public"
+  }
+ ]
+}

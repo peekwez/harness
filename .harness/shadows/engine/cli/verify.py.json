@@ -1,0 +1,67 @@
+{
+ "exports": [
+  "cmd_doctor",
+  "cmd_event",
+  "cmd_verify"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "pathlib",
+  "platform",
+  "subprocess",
+  "sys",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.verify",
+ "source_hash": "sha256:9c65622417db7aa07a893005824b114891dd6d5124e363236f660846d860bc7d",
+ "source_path": "engine/cli/verify.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_event",
+   "signature": "def cmd_event(args)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Engine preflight: run this (or init runs it for you) before blaming\n    the gates. Missing extraction deps degrade shadows; missing pyyaml is\n    fatal for the engine itself. `--substrate` adds a repo health pass.",
+   "kind": "function",
+   "name": "cmd_doctor",
+   "signature": "def cmd_doctor(args)",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Everything that rots quietly: schema drift, bindings pointing at\n    closed slices, worktrees for slices nobody is building, findings parked\n    and never adjudicated, telemetry never flushed, closed slices with no\n    provenance note.",
+   "kind": "function",
+   "name": "_substrate_health",
+   "signature": "def _substrate_health(root, fix=False) -> dict",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "C9 \u2014 CI verifier: runs with no plugin. Named finding codes.",
+   "kind": "function",
+   "name": "cmd_verify",
+   "signature": "def cmd_verify(args)",
+   "span": [
+    118,
+    119
+   ],
+   "visibility": "public"
+  }
+ ]
+}

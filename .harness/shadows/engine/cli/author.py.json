@@ -1,0 +1,75 @@
+{
+ "exports": [
+  "cmd_author_gate",
+  "cmd_backlog",
+  "cmd_compile",
+  "cmd_slice"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "pathlib",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.author",
+ "source_hash": "sha256:7a29616aaee051b4eed9acce61ee5a7d066b59103afe3839dbd267f7262dab6e",
+ "source_path": "engine/cli/author.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_compile",
+   "signature": "def cmd_compile(args)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_author_gate",
+   "signature": "def cmd_author_gate(args)",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "imp-3: slice rows were the last hand-edited substrate (the historical\n    EDIT-ME defect source) \u2014 append them through the CLI, validated.",
+   "kind": "function",
+   "name": "_backlog_add",
+   "signature": "def _backlog_add(args)",
+   "span": [
+    39,
+    40
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_backlog",
+   "signature": "def cmd_backlog(args)",
+   "span": [
+    73,
+    74
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_slice",
+   "signature": "def cmd_slice(args)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  }
+ ]
+}

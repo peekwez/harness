@@ -21,7 +21,6 @@
  "imports": [
   "conftest",
   "engine",
-  "importlib",
   "json",
   "os",
   "pytest",
@@ -29,7 +28,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_field_report2",
- "source_hash": "sha256:e412a65a58d797614bdcf7c0287aa812e2e36ff9e628f6d5ed961cbeb8b455c4",
+ "source_hash": "sha256:b622fb642415479993fa81241719121d9964500ac08c1371b7d3c3a5656f2f81",
  "source_path": "tests/engine/test_field_report2.py",
  "symbols": [
   {
@@ -146,10 +145,10 @@
    "doc": null,
    "kind": "function",
    "name": "test_acceptance_runner_prefers_project_venv",
-   "signature": "def test_acceptance_runner_prefers_project_venv(toy)",
+   "signature": "def test_acceptance_runner_prefers_project_venv(toy): # the helpers live in the CLI package now (bin/harness is a dispatcher)",
    "span": [
     199,
-    200
+    201
    ],
    "visibility": "public"
   },
@@ -159,8 +158,8 @@
    "name": "test_decisions_block_includes_rows_from_loaded_adrs",
    "signature": "def test_decisions_block_includes_rows_from_loaded_adrs(toy)",
    "span": [
-    230,
-    231
+    221,
+    222
    ],
    "visibility": "public"
   },
@@ -170,8 +169,8 @@
    "name": "test_init_autonomy_writes_permission_profile",
    "signature": "def test_init_autonomy_writes_permission_profile(tmp_path)",
    "span": [
-    255,
-    256
+    246,
+    247
    ],
    "visibility": "public"
   },
@@ -181,8 +180,8 @@
    "name": "test_init_without_autonomy_writes_no_settings",
    "signature": "def test_init_without_autonomy_writes_no_settings(tmp_path)",
    "span": [
-    278,
-    279
+    269,
+    270
    ],
    "visibility": "public"
   },
@@ -192,8 +191,8 @@
    "name": "test_generated_contract_mode_exempts_coverage",
    "signature": "def test_generated_contract_mode_exempts_coverage(toy)",
    "span": [
-    286,
-    287
+    277,
+    278
    ],
    "visibility": "public"
   },
@@ -203,8 +202,8 @@
    "name": "test_custom_domain_preserved_and_gate_checks_coverage",
    "signature": "def test_custom_domain_preserved_and_gate_checks_coverage(toy)",
    "span": [
-    297,
-    298
+    288,
+    289
    ],
    "visibility": "public"
   }

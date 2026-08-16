@@ -1,0 +1,63 @@
+{
+ "exports": [
+  "cmd_close_slice",
+  "cmd_merge_slice"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "json",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.close",
+ "source_hash": "sha256:7621d3115cc96f58384b56e3a62435a0d973948737fa41490079fabc6536f7be",
+ "source_path": "engine/cli/close.py",
+ "symbols": [
+  {
+   "doc": "Count substantive close failures in the sidecar; at the cap, PARK the\n    slice (status + reason + telemetry) so an unattended loop stops burning\n    attempts and a human knows exactly why. Returns True when parked.",
+   "kind": "function",
+   "name": "_bump_close_attempts",
+   "signature": "def _bump_close_attempts(root, slice_id, config, payload) -> bool",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_close_slice",
+   "signature": "def cmd_close_slice(args)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "imp-4: the mechanical tail after an in-worktree close, one command \u2014\n    merge the slice branch into the current (main) tree, regenerate and\n    commit shadows from the merged sources, run the G4 safety net, remove\n    the worktree and branch.",
+   "kind": "function",
+   "name": "cmd_merge_slice",
+   "signature": "def cmd_merge_slice(args)",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_git",
+   "signature": "def _git(*a)",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "private"
+  }
+ ]
+}

@@ -1,0 +1,65 @@
+{
+ "exports": [
+  "test_bin_is_thin_dispatcher",
+  "test_cli_modules_under_500_lines",
+  "test_every_subcommand_has_a_cli_module",
+  "test_help_still_lists_all_subcommands"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_cli_split",
+ "source_hash": "sha256:12e95fd5373897f7f913938787d049dbfc4075875c3fd6285e8a2fd8ca5d8c09",
+ "source_path": "tests/engine/test_cli_split.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_bin_is_thin_dispatcher",
+   "signature": "def test_bin_is_thin_dispatcher()",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_every_subcommand_has_a_cli_module",
+   "signature": "def test_every_subcommand_has_a_cli_module()",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_modules_under_500_lines",
+   "signature": "def test_cli_modules_under_500_lines()",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_help_still_lists_all_subcommands",
+   "signature": "def test_help_still_lists_all_subcommands()",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  }
+ ]
+}
