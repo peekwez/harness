@@ -8,7 +8,7 @@
  "imports": [],
  "language": "yaml",
  "module_id": ".github.workflows.harness-verify",
- "source_hash": "sha256:cf3aebea4393753a80e23105d4e9621e63c08e9099c36599b87af3ad0be3dd7f",
+ "source_hash": "sha256:ec0fb5260ad67bbf0250e44c7104bec864be7ca532a175a8d25b05520a19eec8",
  "source_path": ".github/workflows/harness-verify.yml",
  "symbols": [
   {
@@ -17,8 +17,8 @@
    "name": "name",
    "signature": "name",
    "span": [
-    12,
-    12
+    15,
+    15
    ],
    "visibility": "public"
   },
@@ -28,8 +28,8 @@
    "name": "on",
    "signature": "on",
    "span": [
-    14,
-    14
+    17,
+    17
    ],
    "visibility": "public"
   },
@@ -39,8 +39,8 @@
    "name": "jobs",
    "signature": "jobs",
    "span": [
-    40,
-    40
+    46,
+    46
    ],
    "visibility": "public"
   }

@@ -2,7 +2,7 @@
 name: architect
 description: Drive the five-stage Phase-0 pipeline (brainstorm, red-team, converge, compile, author-gate). Each stage ends at a safe session boundary — state lives in the working document, never the transcript.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
+allowed-tools: Bash(*/bin/harness *)
 ---
 
 # /harness:architect

@@ -2,7 +2,7 @@
 name: review
 description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *) Bash(git diff *)
+allowed-tools: Bash(*/bin/harness *) Bash(git diff *)
 context: fork
 agent: reviewer
 argument-hint: "<slice-id>"
@@ -43,6 +43,16 @@ Layers 1–3 — rubric-bound checks over those facts:
   one of its findings to a blocking finding ONLY when you can cite a
   `rule_ref` for it; otherwise record it as a Layer-3 advisory plus a
   proposed rule.
+- Layer 3, second opinion: when Codex is available (an MCP tool named
+  `codex`, or the `codex` CLI on PATH), run it over the same slice diff —
+  `make review-codex` if the repo's Makefile defines that target, else
+  `codex review` (or `codex exec` with the diff). Two independent reviewers
+  disagreeing is signal. Verify every Codex finding against the substrate
+  yourself, then record the real ones with
+  `harness review --record-finding …`; blocking still requires a `rule_ref`,
+  so the rest are Layer-3 advisories. Codex never auto-fixes inside the
+  slice — the slice owner applies fixes so the gates see the edits. If Codex
+  is absent, skip this silently.
 
 Output: findings list (§5.2 schema), verdict, and any Layer-3 proposals.
 Blocking findings gate the merge; disputes park via `/harness:adjudicate`.

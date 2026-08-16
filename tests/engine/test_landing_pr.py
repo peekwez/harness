@@ -445,8 +445,6 @@ def test_local_mode_profile_is_byte_identical_to_the_template(tmp_path):
     (tmp_path / ".claude").mkdir()
     _write_autonomy_settings(tmp_path, quiet=True, config=LOCAL_CFG)
     expected = (PLUGIN_ROOT / "templates" / "claude-settings.json").read_text()
-    expected = expected.replace("{{HARNESS_BIN}}",
-                                str(PLUGIN_ROOT / "bin" / "harness"))
     expected = expected.replace("{{PROJECT_DIR}}", str(tmp_path.resolve()))
     assert (tmp_path / ".claude" / "settings.json").read_text() == expected
 

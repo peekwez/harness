@@ -2,7 +2,7 @@
 name: backlog
 description: Turn the spec and ADRs into dependency-ordered slices with declared deps, red acceptance-test stubs, and context-cost estimates; oversized slices are split at decomposition time.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
+allowed-tools: Bash(*/bin/harness *)
 ---
 
 # /harness:backlog

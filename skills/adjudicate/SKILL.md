@@ -2,7 +2,7 @@
 name: adjudicate
 description: Present parked findings with evidence and nearest precedents; every resolution writes back a decision row or durable memory plus an adjudication edge.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
+allowed-tools: Bash(*/bin/harness *)
 ---
 
 # /harness:adjudicate

@@ -2,7 +2,7 @@
 name: init
 description: Scaffold the harness substrate (.harness/, adr/, contracts/, CI verify workflow) into this repo, detect languages, enable query packs, stamp the schema version, and install hook wiring.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
+allowed-tools: Bash(*/bin/harness *)
 ---
 
 # /harness:init

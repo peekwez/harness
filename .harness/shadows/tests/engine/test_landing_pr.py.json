@@ -54,7 +54,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_landing_pr",
- "source_hash": "sha256:3917e53062d829a07d01563daa81f498256d765abbe8c554ad2ade280fb5f2dd",
+ "source_hash": "sha256:3d40dcb6c209a77902e655e2cf68209beb7def556be87645cfad611db414fffa",
  "source_path": "tests/engine/test_landing_pr.py",
  "symbols": [
   {
@@ -415,8 +415,8 @@
    "name": "test_pr_landing_commits_and_pushes_its_own_metadata",
    "signature": "def test_pr_landing_commits_and_pushes_its_own_metadata(tmp_path)",
    "span": [
-    455,
-    456
+    453,
+    454
    ],
    "visibility": "public"
   },
@@ -426,8 +426,8 @@
    "name": "test_a_failed_landing_is_recorded_and_re_landable",
    "signature": "def test_a_failed_landing_is_recorded_and_re_landable(tmp_path)",
    "span": [
-    472,
-    473
+    470,
+    471
    ],
    "visibility": "public"
   },
@@ -437,8 +437,8 @@
    "name": "test_land_refuses_an_already_landed_slice",
    "signature": "def test_land_refuses_an_already_landed_slice(tmp_path)",
    "span": [
-    505,
-    506
+    503,
+    504
    ],
    "visibility": "public"
   },
@@ -448,8 +448,8 @@
    "name": "test_landing_refuses_to_push_from_the_wrong_branch",
    "signature": "def test_landing_refuses_to_push_from_the_wrong_branch(tmp_path)",
    "span": [
-    514,
-    515
+    512,
+    513
    ],
    "visibility": "public"
   },
@@ -459,8 +459,8 @@
    "name": "test_an_unknown_pr_cmd_placeholder_fails_loud",
    "signature": "def test_an_unknown_pr_cmd_placeholder_fails_loud()",
    "span": [
-    532,
-    533
+    530,
+    531
    ],
    "visibility": "public"
   },
@@ -470,8 +470,8 @@
    "name": "test_pr_mode_profile_opens_the_forge_and_fetch",
    "signature": "def test_pr_mode_profile_opens_the_forge_and_fetch(tmp_path)",
    "span": [
-    539,
-    540
+    537,
+    538
    ],
    "visibility": "public"
   },
@@ -481,8 +481,8 @@
    "name": "test_pr_mode_profile_derives_the_forge_host_from_the_remote",
    "signature": "def test_pr_mode_profile_derives_the_forge_host_from_the_remote(tmp_path)",
    "span": [
-    550,
-    551
+    548,
+    549
    ],
    "visibility": "public"
   },
@@ -492,8 +492,8 @@
    "name": "test_local_mode_profile_keeps_every_egress_denied",
    "signature": "def test_local_mode_profile_keeps_every_egress_denied(tmp_path)",
    "span": [
-    557,
-    558
+    555,
+    556
    ],
    "visibility": "public"
   },
@@ -503,8 +503,8 @@
    "name": "test_verify_resolves_against_a_remote_tracking_base",
    "signature": "def test_verify_resolves_against_a_remote_tracking_base(tmp_path)",
    "span": [
-    564,
-    565
+    562,
+    563
    ],
    "visibility": "public"
   },
@@ -514,8 +514,8 @@
    "name": "test_init_creates_an_empty_notes_log",
    "signature": "def test_init_creates_an_empty_notes_log(tmp_path)",
    "span": [
-    574,
-    575
+    572,
+    573
    ],
    "visibility": "public"
   },
@@ -525,8 +525,8 @@
    "name": "test_a_failed_metadata_push_is_a_failed_landing",
    "signature": "def test_a_failed_metadata_push_is_a_failed_landing(tmp_path)",
    "span": [
-    584,
-    585
+    582,
+    583
    ],
    "visibility": "public"
   },
@@ -536,8 +536,8 @@
    "name": "_decision",
    "signature": "def _decision(command, config=PR_CFG, slice_id=\"slice-042\")",
    "span": [
-    624,
-    625
+    622,
+    623
    ],
    "visibility": "private"
   },
@@ -547,8 +547,8 @@
    "name": "test_pr_mode_denies_every_spelling_of_egress",
    "signature": "def test_pr_mode_denies_every_spelling_of_egress(command)",
    "span": [
-    677,
-    678
+    675,
+    676
    ],
    "visibility": "public"
   },
@@ -558,8 +558,8 @@
    "name": "test_the_exact_landing_shapes_stay_allowed",
    "signature": "def test_the_exact_landing_shapes_stay_allowed(command)",
    "span": [
-    690,
-    691
+    688,
+    689
    ],
    "visibility": "public"
   },
@@ -569,8 +569,8 @@
    "name": "test_normalized_spellings_do_not_widen_the_allow_list",
    "signature": "def test_normalized_spellings_do_not_widen_the_allow_list(command)",
    "span": [
-    699,
-    700
+    697,
+    698
    ],
    "visibility": "public"
   },
@@ -580,8 +580,8 @@
    "name": "test_harmless_commands_are_never_denied",
    "signature": "def test_harmless_commands_are_never_denied(command)",
    "span": [
-    716,
-    717
+    714,
+    715
    ],
    "visibility": "public"
   },
@@ -591,8 +591,8 @@
    "name": "test_local_mode_never_denies_anything",
    "signature": "def test_local_mode_never_denies_anything(command)",
    "span": [
-    723,
-    724
+    721,
+    722
    ],
    "visibility": "public"
   }

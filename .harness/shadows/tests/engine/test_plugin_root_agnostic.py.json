@@ -1,0 +1,171 @@
+{
+ "exports": [
+  "test_ci_workflows_accept_a_token_for_a_private_engine_repo",
+  "test_codex_is_wired_as_a_second_layer3_advisory",
+  "test_codex_never_fixes_inside_the_slice",
+  "test_every_engine_rule_is_the_path_agnostic_form",
+  "test_init_autonomy_writes_no_absolute_plugin_path",
+  "test_no_skill_allowed_tools_names_the_plugin_root",
+  "test_preflights_may_still_use_the_plugin_root",
+  "test_readme_documents_the_private_engine_repo_setup",
+  "test_start_writes_no_absolute_plugin_path",
+  "test_the_clone_never_echoes_the_credentialled_url",
+  "test_the_note_for_a_hand_authored_profile_names_no_absolute_path"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "json",
+  "re",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_plugin_root_agnostic",
+ "source_hash": "sha256:a673c0006d71fcb5bed46058f8d281cf07fe1708b8e55ddb832ca3220c41d2dd",
+ "source_path": "tests/engine/test_plugin_root_agnostic.py",
+ "symbols": [
+  {
+   "doc": "Yield (path, value) for every SKILL.md frontmatter allowed-tools.",
+   "kind": "function",
+   "name": "_allowed_tools",
+   "signature": "def _allowed_tools()",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_settings_text",
+   "signature": "def _settings_text(root, name=\"settings.json\")",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_no_skill_allowed_tools_names_the_plugin_root",
+   "signature": "def test_no_skill_allowed_tools_names_the_plugin_root()",
+   "span": [
+    43,
+    44
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_every_engine_rule_is_the_path_agnostic_form",
+   "signature": "def test_every_engine_rule_is_the_path_agnostic_form()",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Only the frontmatter is install-path-sensitive: a `!`\u2026` preflight is\n    expanded by the host at invocation time, where the variable is defined.",
+   "kind": "function",
+   "name": "test_preflights_may_still_use_the_plugin_root",
+   "signature": "def test_preflights_may_still_use_the_plugin_root()",
+   "span": [
+    59,
+    60
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_autonomy_writes_no_absolute_plugin_path",
+   "signature": "def test_init_autonomy_writes_no_absolute_plugin_path(tmp_path)",
+   "span": [
+    67,
+    68
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_writes_no_absolute_plugin_path",
+   "signature": "def test_start_writes_no_absolute_plugin_path(tmp_path)",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The 'merge it yourself' hint is prose, but it printed the same\n    absolute path \u2014 a user pasting it gets the same brittle rule.",
+   "kind": "function",
+   "name": "test_the_note_for_a_hand_authored_profile_names_no_absolute_path",
+   "signature": "def test_the_note_for_a_hand_authored_profile_names_no_absolute_path(tmp_path)",
+   "span": [
+    92,
+    93
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_ci_workflows_accept_a_token_for_a_private_engine_repo",
+   "signature": "def test_ci_workflows_accept_a_token_for_a_private_engine_repo()",
+   "span": [
+    108,
+    109
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_clone_never_echoes_the_credentialled_url",
+   "signature": "def test_the_clone_never_echoes_the_credentialled_url()",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_readme_documents_the_private_engine_repo_setup",
+   "signature": "def test_readme_documents_the_private_engine_repo_setup()",
+   "span": [
+    130,
+    131
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A second independent reviewer is only real if the files the reviewer\n    actually reads say so \u2014 and it must inherit the findings contract.",
+   "kind": "function",
+   "name": "test_codex_is_wired_as_a_second_layer3_advisory",
+   "signature": "def test_codex_is_wired_as_a_second_layer3_advisory()",
+   "span": [
+    136,
+    137
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_codex_never_fixes_inside_the_slice",
+   "signature": "def test_codex_never_fixes_inside_the_slice()",
+   "span": [
+    150,
+    151
+   ],
+   "visibility": "public"
+  }
+ ]
+}

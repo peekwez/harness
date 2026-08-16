@@ -9,6 +9,9 @@
 #      that covers plain pull_request runs.
 # None of the three -> the job fails with that exact instruction, not a
 # file-not-found crash (field report X5).
+# A PRIVATE engine repo also needs the HARNESS_TOKEN secret (fine-grained
+# PAT, Contents: read, resource owner = the org): it is injected into the
+# clone URL and never printed.
 name: harness-verify
 
 on:
@@ -35,7 +38,10 @@ on:
         required: false
         type: string
         default: ""
-    secrets: {}
+    secrets:
+      HARNESS_TOKEN:
+        description: read-only token for a private harness engine repo
+        required: false
 
 jobs:
   verify:
@@ -44,6 +50,9 @@ jobs:
       HARNESS_REPO_INPUT: ${{ inputs.harness-repo }}
       HARNESS_REPO_VAR: ${{ vars.HARNESS_REPO }}
       HARNESS_REF: ${{ inputs.harness-ref }}
+      # read-only credential for a private engine repo; injected into the
+      # clone URL below, never printed
+      HARNESS_TOKEN: ${{ secrets.HARNESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,7 +80,10 @@ jobs:
             echo "::error::harness engine not found. Either vendor bin/harness+engine/ into this repo, pass the harness-repo workflow input, or set the HARNESS_REPO repository variable (Settings > Secrets and variables > Actions > Variables) to the harness plugin's git URL."
             exit 1
           fi
-          git clone --depth 1 --branch "${HARNESS_REF:-main}" "$REPO" .harness-engine
+          if [ -n "$HARNESS_TOKEN" ]; then
+            REPO="${REPO/https:\/\/github.com\//https://x-access-token:${HARNESS_TOKEN}@github.com/}"
+          fi
+          git clone --quiet --depth 1 --branch "${HARNESS_REF:-main}" "$REPO" .harness-engine
           echo "HARNESS_BIN=.harness-engine/bin/harness" >> "$GITHUB_ENV"
 
       - name: harness verify

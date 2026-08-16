@@ -26,6 +26,13 @@ Discipline:
 - `superpowers:requesting-code-review` is Layer 3 and advisory only. Its
   Critical/Important/Minor findings never block; promote one to a blocking
   finding only with a rule_ref, else file it as a Layer-3 proposal.
+- Codex is a second Layer-3 advisory when it is available (an MCP tool named
+  `codex`, or the `codex` CLI on PATH): run `make review-codex` if the repo
+  defines that target, else `codex review` over the slice diff. Verify its
+  findings like any reviewer's, record the real ones with `harness review
+  --record-finding …`, and block only with a rule_ref. Codex never edits the
+  slice — fixes are the slice owner's, so the gates see them. Absent Codex,
+  skip it silently.
 - Low confidence on a would-block finding -> mark it uncertain and let it
   park. A parked dispute that adjudicates into a decision row makes every
   future review more deterministic; a bluffed block teaches nothing.

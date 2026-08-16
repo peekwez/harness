@@ -239,12 +239,14 @@ def _write_autonomy_settings(root, quiet=False, local=False, config=None):
                 print(f"note: {target} already exists and is not a harness "
                       f"profile — not touched. To enable autonomy, merge "
                       f"templates/claude-settings.json (substituting "
-                      f"{{{{HARNESS_BIN}}}} with "
-                      f"{PLUGIN_ROOT / 'bin' / 'harness'}) into it yourself.")
+                      f"{{{{PROJECT_DIR}}}} with this repo's path) into it "
+                      f"yourself.")
             return None
     target.parent.mkdir(parents=True, exist_ok=True)
     text = (templates / "claude-settings.json").read_text()
-    text = text.replace("{{HARNESS_BIN}}", str(PLUGIN_ROOT / "bin" / "harness"))
+    # the engine rules stay path-agnostic (`*/bin/harness`, D-015): the
+    # expanded plugin path is install-, version- and machine-specific, and a
+    # profile that names it stops matching the moment the plugin moves.
     # the sandbox and permission scope follow the TREE this profile governs:
     # a slice worktree confines writes to itself
     text = text.replace("{{PROJECT_DIR}}", str(Path(root).resolve()))

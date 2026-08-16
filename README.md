@@ -285,6 +285,11 @@ rule does not apply (the sandbox and the gates are the permission layer);
 `superpowers:using-git-worktrees` reuses the `.worktrees/<slice>` that
 `harness start` provisioned. `superpowers:requesting-code-review` runs only
 as review Layer 3, advisory — anything blocking still cites a `rule_ref`.
+When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
+PATH), `/harness:review` runs it as a second Layer-3 advisory over the same
+slice diff under the same contract — verify, record with
+`harness review --record-finding`, block only with a `rule_ref`, and never let
+it fix the slice itself.
 
 ## The acceptance command (`acceptance.*`)
 
@@ -415,6 +420,18 @@ This repo carries its own substrate: every skill directory and query pack is
 a registry entry whose manifest is validated by the plugin's own engine
 (`harness verify` runs in this repo's CI). `harness verify` green on the
 harness repo itself is the ship gate for every release.
+
+### Private engine repo
+
+Consumer repos don't vendor the engine — the scaffolded
+`.github/workflows/harness-verify.yml` clones it. Point at it with the
+`HARNESS_REPO` repository variable (Settings > Secrets and variables >
+Actions > Variables), and if that repo is **private**, add a `HARNESS_TOKEN`
+repository secret: a fine-grained PAT with **Contents: read**, resource owner
+= the org that holds the engine. The workflow injects it into the clone URL
+as `x-access-token` and clones `--quiet`, so the credentialled URL is never
+echoed into the log; without the secret the clone is anonymous, which is all
+a public engine repo needs.
 
 ## Tests
 

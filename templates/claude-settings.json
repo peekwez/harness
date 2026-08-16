@@ -1,13 +1,13 @@
 {
-  "_comment": "harness autonomy profile — the slice loop (build -> review -> refine -> close) runs without a single permission prompt, sandboxed to this tree. Three layers: (1) the harness PreToolUse hook answers the permission question from the GATES themselves, auto-approving work inside the bound slice's declared scope and staying silent elsewhere; (2) these rules pre-approve the loop's command surface for hosts/sessions where the hook is not the decider — prefix syntax `Bash(cmd:*)`, every segment of a chain must match, and `$(...)` substitution never auto-approves (use `--commit HEAD`); (3) the sandbox confines writes to this worktree and egress to the listed domains. Safe because approval was never the guardrail here: gates deny, CI verify backstops. Written by `harness init --autonomy` and by `harness start` (into the slice worktree); refreshed on re-run while this 'harness autonomy profile' marker is present — drop the marker to hand-maintain it.",
+  "_comment": "harness autonomy profile — the slice loop (build -> review -> refine -> close) runs without a single permission prompt, sandboxed to this tree. Three layers: (1) the harness PreToolUse hook answers the permission question from the GATES themselves, auto-approving work inside the bound slice's declared scope and staying silent elsewhere; (2) these rules pre-approve the loop's command surface for hosts/sessions where the hook is not the decider — prefix syntax `Bash(cmd:*)`, every segment of a chain must match, and `$(...)` substitution never auto-approves (use `--commit HEAD`); the engine is matched path-agnostically (`*/bin/harness`) so the profile survives a plugin reinstall, a version bump, or another machine's checkout; (3) the sandbox confines writes to this worktree and egress to the listed domains. Safe because approval was never the guardrail here: gates deny, CI verify backstops. Written by `harness init --autonomy` and by `harness start` (into the slice worktree); refreshed on re-run while this 'harness autonomy profile' marker is present — drop the marker to hand-maintain it.",
   "permissions": {
     "defaultMode": "acceptEdits",
     "additionalDirectories": ["{{PROJECT_DIR}}"],
     "allow": [
-      "Bash({{HARNESS_BIN}}:*)",
-      "Bash(\"{{HARNESS_BIN}}\":*)",
-      "Bash(python3 {{HARNESS_BIN}}:*)",
-      "Bash(python3 \"{{HARNESS_BIN}}\":*)",
+      "Bash(*/bin/harness:*)",
+      "Bash(\"*/bin/harness\":*)",
+      "Bash(python3 */bin/harness:*)",
+      "Bash(python3 \"*/bin/harness\":*)",
       "Bash(pytest)",
       "Bash(pytest:*)",
       "Bash(python -m pytest:*)",

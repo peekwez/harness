@@ -2,7 +2,7 @@
 name: status
 description: Render harness telemetry — slice progress, gate block rates, override and reversal rates, compaction defects, parks per slice.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *)
+allowed-tools: Bash(*/bin/harness *)
 ---
 
 # /harness:status

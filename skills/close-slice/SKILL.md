@@ -2,7 +2,7 @@
 name: close-slice
 description: The close ceremony — acceptance green, uses/declares reconciled, drift acknowledged, commit + git note, memory compaction, registry flips, worktree merge.
 disable-model-invocation: true
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/harness *) Bash(git *)
+allowed-tools: Bash(*/bin/harness *) Bash(git *)
 argument-hint: "<slice-id>"
 ---
 

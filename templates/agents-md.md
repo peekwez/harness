@@ -78,6 +78,18 @@ Read that as these obligations:
   finding you receive — verify it against the substrate, then fix it or rebut
   it with technical reasoning.
 
+## Independent review with Codex
+
+When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
+PATH), `/harness:review` also runs it as a **second Layer-3 advisory** over
+the slice diff: `make review-codex` if this repo's Makefile defines that
+target, else `codex review` (or `codex exec` with the diff). Verify its
+findings against the substrate like any reviewer's, record the real ones
+with `harness review --record-finding …`, and block only with a `rule_ref` —
+Codex severities carry no blocking power of their own. Codex never auto-fixes
+inside a slice: the slice owner applies the fix so the gates see the edits.
+If Codex is not installed, skip it silently.
+
 ## Workflow (in order)
 
 ```
