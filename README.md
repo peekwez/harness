@@ -101,6 +101,90 @@ will instead call the same engine command the skill wraps
 (`${CLAUDE_PLUGIN_ROOT}/bin/harness init`) — identical result, since skills
 are pointers to the engine, not the other way around.
 
+## Landing modes
+
+How a closed slice reaches the base branch is `landing.mode` in
+`.harness/config.yaml` (ADR-002, decision rows **D-009**–**D-011**):
+
+```yaml
+landing:
+  mode: pr            # local (default) | pr
+  remote: origin
+  base: main
+  pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
+```
+
+**`local`** is the default and unchanged: `merge-slice` merges `slice/<id>`
+into the checked-out base and nothing leaves the machine. A repo with no
+`landing:` block behaves exactly as before.
+
+**`pr`** is for a base branch nobody may push to. `close-slice` becomes the
+landing: after the ceremony's own substrate commit and provenance note it
+pushes `slice/<id>` to `landing.remote` and runs `landing.pr_cmd` (split
+with `shlex`, run without a shell; `{base}` `{branch}` `{title}` `{body}`
+are substituted inside their own token, `{body}` being a temp file holding
+the generated PR body). **`pr_cmd` must print the pull request's URL** —
+`gh pr create` does — because that URL is what `pr_url` records, and a
+re-land uses it to know a PR already exists; a command that prints nothing
+lands once and would open a second PR if it ever had to re-land. The slice
+row records `landed_via: pr` and the first URL the command printed as
+`pr_url`; an optional `linear` id on the row
+prefixes the PR title and is linked in the body. That metadata is committed
+and pushed by the landing itself, so a pr-mode close leaves nothing
+uncommitted and the PR carries it. The slice's own branch must be checked
+out — pushing `slice/<id>` from another tree would publish a stale branch,
+so that is a hard error naming both branches.
+
+If the push or the PR command fails the close still stands — it is already
+committed — and the output is `{"closed": true, "landed": false, "error": …}`
+with exit 1. The row records `landed_via: pending` and `landing_error`
+(committed too, so the state is not lost with the shell), `harness verify`
+reports the advisory finding `LANDING_PENDING`, and `harness land --slice
+<id>` re-runs just the push and the PR command — never the ceremony, and
+never `pr_cmd` again once the row has a `pr_url` (no duplicate PRs). A
+failure to push the metadata counts as a failed landing too: the PR is open
+but its branch does not carry the row, so the slice goes `pending` with its
+`pr_url` kept.
+`merge-slice` refuses with the blocking finding `LANDING_MODE_PR`, and
+`harness run` refuses up front: a campaign cannot merge PRs for you.
+
+Two things follow from pushing inside a sandboxed slice:
+
+- **Egress permits (D-011).** In `pr` mode the permit layer auto-approves
+  exactly `git push [-u] <remote> slice/<bound-slice>`,
+  `git fetch <remote> [--prune|--tags]` and `gh pr create|view|checks|status`.
+  Everything else stops for a human: another slice's branch, the base
+  branch, `--force`, a fetch refspec or `--upload-pack=…` (which executes a
+  command of the caller's choosing), `gh --repo/-R` (which retargets any
+  repo the token can reach) and `gh --web`. **In pr mode the hook is the
+  decider, not the settings file:** the generated profile drops the blanket
+  `git push`/`git fetch` denies (a deny outranks everything) but adds no
+  egress allow rule, because a Bash prefix rule cannot express "this slice's
+  own branch" — `Bash(git push origin slice/:*)` would also open
+  `slice/x:main`. The PreToolUse hook answers `allow` for the exact shapes
+  above and `deny`, with the reason, for every other egress command. The
+  profile does add the forge host to the sandbox's `allowedDomains` (derived
+  from `landing.remote` when it is a URL, else
+  `github.com`/`api.github.com`/`ssh.github.com`) — a permission decision
+  does not open a socket. In `local` mode nothing changes: no egress is ever
+  auto-approved and the hook stays silent, exactly as in 0.7.
+
+  Residual, by design: `gh pr create --body-file <path>` is auto-approved
+  with any path, so a body file is an exfiltration surface an agent could
+  point at a secret — the PR content itself is not gated. Review the PR body
+  like any other artifact the slice produced, and keep secrets out of the
+  worktree (they should never be readable there in the first place).
+- **Squash-safe provenance (D-010).** Notes are keyed twice — on the commit,
+  and in the derived append-only `.harness/notes.jsonl` by
+  `{slice_id, tree_hash, source_tree}`. When a squash or rebase merge makes
+  the noted commit unreachable, `harness verify` resolves the slice against
+  a reachable commit carrying one of those keys (reported in `resolved_via`)
+  instead of reporting `ORPHANED_NOTE` forever; only a slice with neither
+  key is `MISSING_PROVENANCE_NOTE`. `harness graph note --repoint <slice-id>
+  <sha>` re-attaches the note itself to the commit that landed.
+  `.harness/notes.jsonl` is history: union-merged, never regenerated by G7,
+  never hand-edited.
+
 ## The provenance rule
 
 Every artifact is either **authored** (human judgment, written once, amended
@@ -111,6 +195,9 @@ tell which a file is, that's a design defect: flag it in review.
 Note: `.harness/boundaries.jsonl` (derived) and `.harness/parked.jsonl`
 (runtime queue) are engine-internal files not shown in the original tree —
 compiled G3 boundaries and the adjudication queue respectively.
+`.harness/notes.jsonl` is derived too, but append-only history: G7 never
+regenerates it (there is nothing to re-derive it from), it union-merges, and
+hand-editing it is a bug like any other derived file.
 
 ## 10-minute walkthrough
 
@@ -147,9 +234,14 @@ until the backlog is empty or a park needs a human — reference builders in
 `templates/claude-builder-sdk.py` (Claude Agent SDK); any CLI that closes
 the slice works)
 (worktree + sandbox + binding, no prompts), `permit` (host permission
-query), `close-slice`, `merge-slice`, `registry`, `merge-substrate`,
+query), `close-slice`, `merge-slice`, `land` (`landing.mode: pr` — re-push a
+closed slice's branch and re-open its PR after a failed landing),
+`registry`, `merge-substrate`,
 `review` (+ `--replay`, `--record-finding`, `--park`, `--record-fork`),
-`graph`, `memory`, `status`, `adjudicate`. Make targets in `Makefile` wrap
+`graph` (`neighbors`, `provenance`, `uses-declares`, `note` — `--slice/--commit`
+to (re)write a note, `--repoint <slice-id> <sha>` to move one onto the commit
+a squash/rebase landed, `edge`),
+`memory`, `status`, `adjudicate`. Make targets in `Makefile` wrap
 these thinly. Exit code 0 = verdict emitted (semantics in the JSON);
 2 = malformed input; 1 = check failed.
 

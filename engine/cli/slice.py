@@ -191,7 +191,7 @@ def cmd_permit(args):
     ever returns allow=true; a false is "not auto-approved", leaving the
     host's normal flow (and the human) in charge."""
     from engine.events import Sidecar
-    from engine.permits import command_allowed, paths_in_scope
+    from engine.permits import command_decision, paths_in_scope
     from engine.registry import load_registry
     root = _root(args)
     session = _session(args, root)
@@ -206,9 +206,14 @@ def cmd_permit(args):
                                           "auto-approval is scoped to a bound slice"})
         return 0
     if args.command:
-        allow, reason = command_allowed(
-            args.command, harness_bin=str(PLUGIN_ROOT / "bin" / "harness"))
-        _print({"allow": allow, "reason": reason, "slice": slice_id})
+        # the bound slice and the repo's landing block are both part of the
+        # answer now: pr-mode egress is scoped to THIS slice's branch, and a
+        # refusal there is a DENY the adapter must emit, not silence (D-011)
+        decision, allow, reason = command_decision(
+            args.command, harness_bin=str(PLUGIN_ROOT / "bin" / "harness"),
+            config=load_config(root), slice_id=slice_id)
+        _print({"allow": allow, "decision": decision, "reason": reason,
+                "slice": slice_id})
         return 0
     if args.paths:
         rels = []
@@ -224,7 +229,8 @@ def cmd_permit(args):
             rels.append(str(pp))
         sl = get_slice(root, slice_id)
         ok = paths_in_scope(sl, load_registry(root), rels)
-        _print({"allow": ok, "slice": slice_id,
+        _print({"allow": ok, "decision": "allow" if ok else "defer",
+                "slice": slice_id,
                 "reason": (f"gate-approved for slice {slice_id} (declared "
                            f"scope)" if ok else
                            "outside the slice's declared/predicted set — "

@@ -6,7 +6,9 @@
  "imports": [
   "engine",
   "engine.cli.common",
+  "engine.cli.landing",
   "engine.migrate",
+  "json",
   "os",
   "pathlib",
   "shutil",
@@ -15,7 +17,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.init",
- "source_hash": "sha256:b03731317e46fb3ab0f5c29e7e337012bc7e4f15b2dc656a9f9dcbe13dd29477",
+ "source_hash": "sha256:b33e69d7b4654e2fd8cb5f771f68c5057e1952dff2dadf617dea151045604f4a",
  "source_path": "engine/cli/init.py",
  "symbols": [
   {
@@ -30,13 +32,24 @@
    "visibility": "public"
   },
   {
-   "doc": "Pre-approve the slice loop's command surface and sandbox it, in\n    .claude/settings.json. Approval prompts are redundant inside a bound\n    slice \u2014 the PreToolUse hook gate-checks every edit deterministically and\n    CI verify backstops it. The profile still denies anything that leaves\n    the machine (git push/remote/fetch). Returns the path written, or None.",
+   "doc": "Open exactly the egress a pr-mode slice needs, in the written profile.\n\n    In `landing.mode: pr` the slice cannot finish without pushing its own\n    branch and opening a PR (ADR-002 / D-011), so the blanket `git push` and\n    `git fetch` denies would stop the loop dead, and the sandbox's domain\n    allowlist would drop the connection anyway. Everything else that leaves\n    the machine stays denied.\n\n    Only the denies are dropped \u2014 no allow rule is added. Bash rules are\n    PREFIX rules, and a prefix cannot express \"this slice's own branch\":\n    `Bash(git push origin slice/:*)` would also open\n    `git push origin slice/x:main`, and `Bash(gh pr create:*)` would open\n    `--repo attacker/repo`. The harness PreToolUse hook is the only opener \u2014\n    it answers `allow` for the exact shapes D-011 names and `deny` for every\n    other egress command in pr mode, so nothing rides on a coarse rule.\n\n    Args:\n        text: The substituted profile JSON.\n        landing: Resolved landing config.\n\n    Returns:\n        The profile JSON, rewritten in pr mode and untouched in local mode.",
    "kind": "function",
-   "name": "_write_autonomy_settings",
-   "signature": "def _write_autonomy_settings(root, quiet=False, local=False)",
+   "name": "_pr_landing_rules",
+   "signature": "def _pr_landing_rules(text, landing) -> str",
    "span": [
     174,
     175
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Pre-approve the slice loop's command surface and sandbox it, in\n    .claude/settings.json. Approval prompts are redundant inside a bound\n    slice \u2014 the PreToolUse hook gate-checks every edit deterministically and\n    CI verify backstops it. The profile still denies anything that leaves\n    the machine (git push/remote/fetch) \u2014 except, in `landing.mode: pr`, the\n    slice branch push and `gh pr` that D-011 names. Returns the path\n    written, or None.",
+   "kind": "function",
+   "name": "_write_autonomy_settings",
+   "signature": "def _write_autonomy_settings(root, quiet=False, local=False, config=None)",
+   "span": [
+    218,
+    219
    ],
    "visibility": "private"
   }

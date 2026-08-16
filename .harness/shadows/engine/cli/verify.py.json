@@ -8,6 +8,7 @@
  "imports": [
   "engine",
   "engine.cli.common",
+  "engine.cli.landing",
   "engine.events",
   "engine.gates.extra",
   "engine.gates.g7_derivation",
@@ -23,7 +24,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.verify",
- "source_hash": "sha256:78e99195373dbd5af2cc1738c80569daf97721b7115f968999200634c9256d92",
+ "source_hash": "sha256:6071d3a3c56eed9e288d828716d06918627797f9ef011ca7736fd882bedc31f4",
  "source_path": "engine/cli/verify.py",
  "symbols": [
   {
@@ -69,6 +70,28 @@
     119
    ],
    "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_source_keys",
+   "signature": "def _source_keys(): # one `git ls-tree` per commit: computed once, and only for a repo # that actually has a note to resolve",
+   "span": [
+    232,
+    235
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_resolves",
+   "signature": "def _resolves(slice_id)",
+   "span": [
+    239,
+    240
+   ],
+   "visibility": "private"
   }
  ]
 }

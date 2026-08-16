@@ -91,8 +91,14 @@ resolves (`close-slice --commit HEAD`), never `$(git rev-parse HEAD)`.
    `superpowers:systematic-debugging` named a root cause you cannot fix
    inside this slice's declared scope (log an attempt memory first, then
    report the finding verbatim).
-9. Close releases the binding; then `/harness:close-slice` finishes the
-   merge with `harness merge-slice --slice $1` from the main tree.
+9. Close releases the binding. How the slice LANDS depends on
+   `landing.mode` in `.harness/config.yaml`: in `local` mode (the default)
+   `/harness:close-slice` finishes with `harness merge-slice --slice $1`
+   from the main tree; in `pr` mode there is no merge-slice — the close
+   itself pushed `slice/$1` and opened the PR, and that PR is the landing
+   (`merge-slice` refuses). In pr mode the loop may push its own branch and
+   drive `gh pr create|view|checks|status` without asking; every other
+   remote command still stops for a human.
 
 ## Composing with superpowers
 
@@ -102,6 +108,7 @@ bite inside a bound slice:
 - `superpowers:using-git-worktrees`: `harness start` already provisioned
   `.worktrees/$1` — detect it and work there; never create a second worktree.
 - `superpowers:finishing-a-development-branch`: not used here. `close-slice`
-  is the finish and `merge-slice` (or the PR) is the landing — no menu.
+  is the finish and `merge-slice` (or, in `landing.mode: pr`, the pull
+  request close-slice opened) is the landing — no menu.
 - `superpowers:subagent-driven-development`: its stop-for-side-effects rule
   does not apply. The sandbox and the gates are the permission layer.

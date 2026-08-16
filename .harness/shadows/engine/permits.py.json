@@ -1,11 +1,15 @@
 {
  "exports": [
   "command_allowed",
+  "command_decision",
   "declared_set",
+  "git_subcommand",
+  "is_egress",
   "paths_in_scope"
  ],
  "extractor_version": 3,
  "imports": [
+  "engine.cli.landing",
   "fnmatch",
   "gates.g3_scope",
   "re",
@@ -13,28 +17,138 @@
  ],
  "language": "python",
  "module_id": "engine.permits",
- "source_hash": "sha256:041a0db32647b2e81aff01b7ff23c9e41bd31d05742036219093298137e6f727",
+ "source_hash": "sha256:7d3069e6bd7becf7f151a82b3e4a36169ae6a414e924d80274184154b5567dc0",
  "source_path": "engine/permits.py",
  "symbols": [
   {
-   "doc": null,
+   "doc": "True for the exact egress a bound slice needs in pr mode (D-011).\n\n    Args:\n        parts: The already-split command tokens.\n        landing: Resolved landing config.\n        slice_id: The slice bound to this session.\n\n    Returns:\n        Whether this command is one of the four auto-approved shapes.",
    "kind": "function",
-   "name": "_segment_allowed",
-   "signature": "def _segment_allowed(seg: str, harness_bin: str | None) -> bool",
+   "name": "_pr_egress_allowed",
+   "signature": "def _pr_egress_allowed(parts: list, landing: dict, slice_id: str) -> bool",
    "span": [
-    46,
-    47
+    60,
+    61
    ],
    "visibility": "private"
   },
   {
-   "doc": "(allow, reason). Conservative by construction: unknown commands are\n    NOT denied here \u2014 they simply are not auto-approved, so the host's\n    normal permission flow (and the user) decides.",
+   "doc": null,
+   "kind": "function",
+   "name": "_segment_allowed",
+   "signature": "def _segment_allowed(seg: str, harness_bin: str | None, landing=None, slice_id=None) -> bool",
+   "span": [
+    108,
+    110
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Drop leading `NAME=value` assignments (`GIT_DIR=x git push \u2026`).",
+   "kind": "function",
+   "name": "_strip_env",
+   "signature": "def _strip_env(parts: list) -> list",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The program a segment runs, by basename (`/usr/bin/git` -> `git`).",
+   "kind": "function",
+   "name": "_program",
+   "signature": "def _program(parts: list) -> str",
+   "span": [
+    166,
+    167
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Split a `git` invocation into its global options and subcommand.\n\n    The subcommand is the first token that neither starts with `-` nor is the\n    argument of an option that takes one \u2014 so `git -C /x -c a=b push` is a\n    push, however it is spelled.\n\n    Args:\n        parts: Tokens of one segment, env assignments already stripped.\n\n    Returns:\n        `(subcommand or None, index or -1, saw_global_option)`.",
+   "kind": "function",
+   "name": "git_subcommand",
+   "signature": "def git_subcommand(parts: list) -> tuple",
+   "span": [
+    171,
+    172
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The `-c` script of a shell invocation, or None when there is none.\n\n    None is the fail-closed sentinel: a script FILE, an interactive shell, a\n    `-c` with no script, or an unknown long option are all opaque to us.\n    Only SHORT clusters (`-c`, `-lc`, `-xc`) carry `-c` \u2014 long options such\n    as `--norc` contain the letter but are not it.",
+   "kind": "function",
+   "name": "_shell_script",
+   "signature": "def _shell_script(args: list)",
+   "span": [
+    213,
+    214
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Classify what a wrapper (`env`, `timeout`, `xargs`, `eval`, \u2026) runs.\n\n    The wrapped program can sit behind flags and their arguments, or inside a\n    single quoted token (`eval \"git push\"`), so both are tried.",
+   "kind": "function",
+   "name": "_wrapper_egress",
+   "signature": "def _wrapper_egress(args: list, depth: int) -> bool",
+   "span": [
+    248,
+    249
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Whether one already-split command segment talks to a remote.",
+   "kind": "function",
+   "name": "_segment_egress",
+   "signature": "def _segment_egress(parts: list, depth: int = 0) -> bool",
+   "span": [
+    263,
+    264
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_text_egress",
+   "signature": "def _text_egress(command: str, depth: int = 0) -> bool",
+   "span": [
+    290,
+    291
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "True when any segment of the command talks to a remote.\n\n    The permit layer only auto-approves; for these commands a refusal has to\n    become an actual DENY (D-011), because no host permission rule can\n    express \"this slice's own branch\" \u2014 a prefix rule that opens\n    `git push origin slice/` also opens `slice/x:main` \u2014 and a sandboxed\n    host auto-runs whatever the harness leaves silent.\n\n    Args:\n        command: The command line the host is asking about.\n\n    Returns:\n        Whether it is egress-shaped. Unknown/opaque shapes count as egress.",
+   "kind": "function",
+   "name": "is_egress",
+   "signature": "def is_egress(command: str) -> bool",
+   "span": [
+    304,
+    305
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The host-facing verdict: `allow`, `deny` or `defer`.\n\n    `allow` and `defer` are the historical answers (auto-approve, or leave it\n    to the human). `deny` exists only for `landing.mode: pr`, where the\n    profile has to drop its blanket `git push`/`git fetch` denies so the\n    slice can land itself: there, an egress command the permit refuses is\n    denied outright rather than handed to a coarse prefix rule.\n\n    Args:\n        command: The command line.\n        harness_bin: Absolute path of the engine binary, when known.\n        config: The loaded repo config (supplies `landing`).\n        slice_id: The slice bound to this session.\n\n    Returns:\n        `(decision, allow, reason)`.",
+   "kind": "function",
+   "name": "command_decision",
+   "signature": "def command_decision(command: str, harness_bin: str | None = None, config=None, slice_id=None) -> tuple",
+   "span": [
+    322,
+    324
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Would the harness auto-approve this command?\n\n    Conservative by construction: unknown commands are NOT denied here \u2014\n    they simply are not auto-approved, so the host's normal permission flow\n    (and the user) decides.\n\n    Args:\n        command: The command line the host is asking about.\n        harness_bin: Absolute path of the engine binary, when known.\n        config: The loaded repo config; supplies `landing` (D-011). Omitted\n            (or `landing.mode: local`) keeps the historical surface, with no\n            egress at all.\n        slice_id: The slice bound to this session \u2014 pr-mode egress is scoped\n            to that slice's own branch.\n\n    Returns:\n        `(allow, reason)`.",
    "kind": "function",
    "name": "command_allowed",
-   "signature": "def command_allowed(command: str, harness_bin: str | None = None) -> tuple",
+   "signature": "def command_allowed(command: str, harness_bin: str | None = None, config=None, slice_id=None) -> tuple",
    "span": [
-    74,
-    75
+    354,
+    356
    ],
    "visibility": "public"
   },
@@ -44,8 +158,8 @@
    "name": "declared_set",
    "signature": "def declared_set(slice_row: dict, registry: list) -> set",
    "span": [
-    90,
-    91
+    388,
+    389
    ],
    "visibility": "public"
   },
@@ -55,8 +169,8 @@
    "name": "paths_in_scope",
    "signature": "def paths_in_scope(slice_row: dict, registry: list, rels) -> bool",
    "span": [
-    101,
-    102
+    399,
+    400
    ],
    "visibility": "public"
   }

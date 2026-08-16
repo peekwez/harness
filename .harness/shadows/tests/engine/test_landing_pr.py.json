@@ -1,0 +1,600 @@
+{
+ "exports": [
+  "test_a_bogus_landing_mode_stops_the_cli",
+  "test_a_failed_landing_is_recorded_and_re_landable",
+  "test_a_failed_metadata_push_is_a_failed_landing",
+  "test_a_failed_pr_command_still_records_the_close",
+  "test_a_slice_with_neither_key_is_still_missing_provenance",
+  "test_a_squashed_slice_resolves_by_tree_hash",
+  "test_a_squashed_slice_resolves_with_the_notes_ref_gone",
+  "test_an_unknown_landing_key_names_itself",
+  "test_an_unknown_landing_mode_fails_loud",
+  "test_an_unknown_pr_cmd_placeholder_fails_loud",
+  "test_graph_note_repoints_a_slice_onto_the_squashed_commit",
+  "test_harmless_commands_are_never_denied",
+  "test_init_creates_an_empty_notes_log",
+  "test_land_refuses_an_already_landed_slice",
+  "test_landing_refuses_to_push_from_the_wrong_branch",
+  "test_local_mode_auto_approves_no_egress_at_all",
+  "test_local_mode_close_never_pushes",
+  "test_local_mode_never_denies_anything",
+  "test_local_mode_profile_is_byte_identical_to_the_template",
+  "test_local_mode_profile_keeps_every_egress_denied",
+  "test_merge_slice_refuses_in_pr_mode",
+  "test_no_landing_key_is_local_mode",
+  "test_normalized_spellings_do_not_widen_the_allow_list",
+  "test_notes_jsonl_is_union_merged_substrate",
+  "test_permit_answers_for_the_bound_slice_in_pr_mode",
+  "test_pr_landing_commits_and_pushes_its_own_metadata",
+  "test_pr_mode_auto_approves_exactly_its_egress",
+  "test_pr_mode_auto_approves_nothing_else",
+  "test_pr_mode_close_pushes_the_branch_and_opens_a_pr",
+  "test_pr_mode_denies_every_spelling_of_egress",
+  "test_pr_mode_egress_needs_a_bound_slice",
+  "test_pr_mode_profile_derives_the_forge_host_from_the_remote",
+  "test_pr_mode_profile_opens_nothing_the_hook_cannot_scope",
+  "test_pr_mode_profile_opens_the_forge_and_fetch",
+  "test_pr_title_carries_the_linear_id",
+  "test_run_refuses_in_pr_mode",
+  "test_the_exact_landing_shapes_stay_allowed",
+  "test_verify_resolves_against_a_remote_tracking_base"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.cli.common",
+  "engine.cli.init",
+  "engine.cli.landing",
+  "engine.events",
+  "engine.graph",
+  "engine.permits",
+  "json",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_landing_pr",
+ "source_hash": "sha256:3917e53062d829a07d01563daa81f498256d765abbe8c554ad2ade280fb5f2dd",
+ "source_path": "tests/engine/test_landing_pr.py",
+ "symbols": [
+  {
+   "doc": "A stand-in for `gh` that records its argv and the PR body, counts its\n    invocations, and prints a URL the way the real one does.",
+   "kind": "function",
+   "name": "_fake_gh",
+   "signature": "def _fake_gh(tmp_path, extra=\"\")",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_gh_calls",
+   "signature": "def _gh_calls(tmp_path)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_pr_cmd",
+   "signature": "def _pr_cmd(script)",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_set_landing",
+   "signature": "def _set_landing(root, **keys)",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Toy repo whose `origin` is a bare repo, configured for pr landing and\n    checked out on the slice branch.",
+   "kind": "function",
+   "name": "_pr_repo",
+   "signature": "def _pr_repo(tmp_path, pr_cmd=\"true\", linear=None)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_work_and_commit",
+   "signature": "def _work_and_commit(toy, session=\"pr\")",
+   "span": [
+    85,
+    86
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_close",
+   "signature": "def _close(toy, session=\"pr\")",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_row",
+   "signature": "def _row(toy, slice_id=\"slice-042\")",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_no_landing_key_is_local_mode",
+   "signature": "def test_no_landing_key_is_local_mode()",
+   "span": [
+    108,
+    109
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_an_unknown_landing_mode_fails_loud",
+   "signature": "def test_an_unknown_landing_mode_fails_loud()",
+   "span": [
+    114,
+    115
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_an_unknown_landing_key_names_itself",
+   "signature": "def test_an_unknown_landing_key_names_itself()",
+   "span": [
+    120,
+    121
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_bogus_landing_mode_stops_the_cli",
+   "signature": "def test_a_bogus_landing_mode_stops_the_cli(toy)",
+   "span": [
+    126,
+    127
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_title_carries_the_linear_id",
+   "signature": "def test_pr_title_carries_the_linear_id()",
+   "span": [
+    133,
+    134
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_close_pushes_the_branch_and_opens_a_pr",
+   "signature": "def test_pr_mode_close_pushes_the_branch_and_opens_a_pr(tmp_path)",
+   "span": [
+    141,
+    142
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_failed_pr_command_still_records_the_close",
+   "signature": "def test_a_failed_pr_command_still_records_the_close(tmp_path)",
+   "span": [
+    172,
+    173
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_slice_refuses_in_pr_mode",
+   "signature": "def test_merge_slice_refuses_in_pr_mode(tmp_path)",
+   "span": [
+    183,
+    184
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_run_refuses_in_pr_mode",
+   "signature": "def test_run_refuses_in_pr_mode(tmp_path)",
+   "span": [
+    197,
+    198
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backward compatibility: no landing key -> nothing leaves the machine.",
+   "kind": "function",
+   "name": "test_local_mode_close_never_pushes",
+   "signature": "def test_local_mode_close_never_pushes(tmp_path)",
+   "span": [
+    205,
+    206
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Land the pushed slice branch the way a squash-merge PR does, then\n    bring the working repo to that main and make the noted commit\n    unreachable.",
+   "kind": "function",
+   "name": "_squash_land",
+   "signature": "def _squash_land(toy, origin, tmp_path)",
+   "span": [
+    223,
+    224
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The complaint ADR-002 records: the note lands on the pre-squash sha,\n    so every squash used to leave verify reporting ORPHANED_NOTE forever.",
+   "kind": "function",
+   "name": "test_a_squashed_slice_resolves_by_tree_hash",
+   "signature": "def test_a_squashed_slice_resolves_by_tree_hash(tmp_path)",
+   "span": [
+    246,
+    247
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "CI clones without `refs/notes/*`: the committed notes log is what\n    proves provenance travelled with the repo (D-010).",
+   "kind": "function",
+   "name": "test_a_squashed_slice_resolves_with_the_notes_ref_gone",
+   "signature": "def test_a_squashed_slice_resolves_with_the_notes_ref_gone(tmp_path)",
+   "span": [
+    271,
+    272
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The finding must not go toothless: no note and no notes.jsonl row is\n    still a hole in the provenance chain.",
+   "kind": "function",
+   "name": "test_a_slice_with_neither_key_is_still_missing_provenance",
+   "signature": "def test_a_slice_with_neither_key_is_still_missing_provenance(toy)",
+   "span": [
+    286,
+    287
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_graph_note_repoints_a_slice_onto_the_squashed_commit",
+   "signature": "def test_graph_note_repoints_a_slice_onto_the_squashed_commit(tmp_path)",
+   "span": [
+    300,
+    301
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Append-only derived logs conflict by construction across parallel\n    slices \u2014 the merge driver entry is not optional.",
+   "kind": "function",
+   "name": "test_notes_jsonl_is_union_merged_substrate",
+   "signature": "def test_notes_jsonl_is_union_merged_substrate(tmp_path)",
+   "span": [
+    318,
+    319
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_auto_approves_exactly_its_egress",
+   "signature": "def test_pr_mode_auto_approves_exactly_its_egress(command)",
+   "span": [
+    348,
+    349
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_auto_approves_nothing_else",
+   "signature": "def test_pr_mode_auto_approves_nothing_else(command)",
+   "span": [
+    384,
+    385
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_local_mode_auto_approves_no_egress_at_all",
+   "signature": "def test_local_mode_auto_approves_no_egress_at_all(command)",
+   "span": [
+    394,
+    395
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_egress_needs_a_bound_slice",
+   "signature": "def test_pr_mode_egress_needs_a_bound_slice()",
+   "span": [
+    401,
+    402
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_permit_answers_for_the_bound_slice_in_pr_mode",
+   "signature": "def test_permit_answers_for_the_bound_slice_in_pr_mode(tmp_path)",
+   "span": [
+    407,
+    408
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_profile",
+   "signature": "def _profile(root, config)",
+   "span": [
+    419,
+    420
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A prefix rule cannot express \"this slice's branch\": `Bash(git push\n    origin slice/:*)` also matches `slice/x:main`. The profile only removes\n    the blanket denies (a deny outranks the hook); the harness PreToolUse\n    decision is the sole opener.",
+   "kind": "function",
+   "name": "test_pr_mode_profile_opens_nothing_the_hook_cannot_scope",
+   "signature": "def test_pr_mode_profile_opens_nothing_the_hook_cannot_scope(tmp_path)",
+   "span": [
+    426,
+    427
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_local_mode_profile_is_byte_identical_to_the_template",
+   "signature": "def test_local_mode_profile_is_byte_identical_to_the_template(tmp_path)",
+   "span": [
+    442,
+    443
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "W4 in pr mode: `landed_via`/`pr_url` are written AFTER the ceremony's\n    substrate commit, so the landing must commit and push them itself \u2014\n    otherwise the tree is left dirty and the metadata never reaches the PR.",
+   "kind": "function",
+   "name": "test_pr_landing_commits_and_pushes_its_own_metadata",
+   "signature": "def test_pr_landing_commits_and_pushes_its_own_metadata(tmp_path)",
+   "span": [
+    455,
+    456
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A closed-but-not-landed slice is a real state: it must be durable\n    substrate, visible to verify, and re-landable with one command.",
+   "kind": "function",
+   "name": "test_a_failed_landing_is_recorded_and_re_landable",
+   "signature": "def test_a_failed_landing_is_recorded_and_re_landable(tmp_path)",
+   "span": [
+    472,
+    473
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_land_refuses_an_already_landed_slice",
+   "signature": "def test_land_refuses_an_already_landed_slice(tmp_path)",
+   "span": [
+    505,
+    506
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Closing from the main tree would push whatever `slice/<id>` happens to\n    point at \u2014 a stale branch, silently.",
+   "kind": "function",
+   "name": "test_landing_refuses_to_push_from_the_wrong_branch",
+   "signature": "def test_landing_refuses_to_push_from_the_wrong_branch(tmp_path)",
+   "span": [
+    514,
+    515
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_an_unknown_pr_cmd_placeholder_fails_loud",
+   "signature": "def test_an_unknown_pr_cmd_placeholder_fails_loud()",
+   "span": [
+    532,
+    533
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_profile_opens_the_forge_and_fetch",
+   "signature": "def test_pr_mode_profile_opens_the_forge_and_fetch(tmp_path)",
+   "span": [
+    539,
+    540
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_profile_derives_the_forge_host_from_the_remote",
+   "signature": "def test_pr_mode_profile_derives_the_forge_host_from_the_remote(tmp_path)",
+   "span": [
+    550,
+    551
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_local_mode_profile_keeps_every_egress_denied",
+   "signature": "def test_local_mode_profile_keeps_every_egress_denied(tmp_path)",
+   "span": [
+    557,
+    558
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A developer who never checks main out still has origin/main.",
+   "kind": "function",
+   "name": "test_verify_resolves_against_a_remote_tracking_base",
+   "signature": "def test_verify_resolves_against_a_remote_tracking_base(tmp_path)",
+   "span": [
+    564,
+    565
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_creates_an_empty_notes_log",
+   "signature": "def test_init_creates_an_empty_notes_log(tmp_path)",
+   "span": [
+    574,
+    575
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The PR exists but its branch does not carry `landed_via`/`pr_url`:\n    reporting success there would leave the row claiming a landing the forge\n    never saw.",
+   "kind": "function",
+   "name": "test_a_failed_metadata_push_is_a_failed_landing",
+   "signature": "def test_a_failed_metadata_push_is_a_failed_landing(tmp_path)",
+   "span": [
+    584,
+    585
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_decision",
+   "signature": "def _decision(command, config=PR_CFG, slice_id=\"slice-042\")",
+   "span": [
+    624,
+    625
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`defer` means silent, and silent means the host decides \u2014 which in pr\n    mode is a sandboxed shell with the forge reachable. Anything that talks\n    to a remote and is not the slice's own landing must be DENIED.",
+   "kind": "function",
+   "name": "test_pr_mode_denies_every_spelling_of_egress",
+   "signature": "def test_pr_mode_denies_every_spelling_of_egress(command)",
+   "span": [
+    677,
+    678
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_exact_landing_shapes_stay_allowed",
+   "signature": "def test_the_exact_landing_shapes_stay_allowed(command)",
+   "span": [
+    690,
+    691
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_normalized_spellings_do_not_widen_the_allow_list",
+   "signature": "def test_normalized_spellings_do_not_widen_the_allow_list(command)",
+   "span": [
+    699,
+    700
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_harmless_commands_are_never_denied",
+   "signature": "def test_harmless_commands_are_never_denied(command)",
+   "span": [
+    716,
+    717
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_local_mode_never_denies_anything",
+   "signature": "def test_local_mode_never_denies_anything(command)",
+   "span": [
+    723,
+    724
+   ],
+   "visibility": "public"
+  }
+ ]
+}

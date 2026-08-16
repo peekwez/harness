@@ -19,7 +19,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_notes_enforcement",
- "source_hash": "sha256:559dc4a3ea09f2664cc4f34015da74be25c5e1aaf7aa6186824b225e64f66386",
+ "source_hash": "sha256:496eb26fcecfef591610723148748a2c9f58352288985cfd5be941820e47225b",
  "source_path": "tests/engine/test_notes_enforcement.py",
  "symbols": [
   {
@@ -83,8 +83,8 @@
    "name": "test_graph_note_repairs_missing_provenance",
    "signature": "def test_graph_note_repairs_missing_provenance(toy)",
    "span": [
-    84,
-    85
+    89,
+    90
    ],
    "visibility": "public"
   },
@@ -94,8 +94,8 @@
    "name": "test_one_commit_can_carry_several_slices_provenance",
    "signature": "def test_one_commit_can_carry_several_slices_provenance(toy)",
    "span": [
-    98,
-    99
+    104,
+    105
    ],
    "visibility": "public"
   },
@@ -105,8 +105,8 @@
    "name": "test_verify_accepts_a_commit_noting_every_closed_slice",
    "signature": "def test_verify_accepts_a_commit_noting_every_closed_slice(toy)",
    "span": [
-    117,
-    118
+    123,
+    124
    ],
    "visibility": "public"
   },
@@ -116,8 +116,8 @@
    "name": "test_close_still_works_without_git",
    "signature": "def test_close_still_works_without_git(tmp_path)",
    "span": [
-    136,
-    137
+    143,
+    144
    ],
    "visibility": "public"
   }

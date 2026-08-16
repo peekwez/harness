@@ -187,23 +187,23 @@ def cmd_graph(args):
     elif args.graph_cmd == "uses-declares":
         _print(graph.uses_vs_declares(root, args.slice))
     elif args.graph_cmd == "note":
-        # repair path for a closed slice whose note was lost (deleted ref,
-        # a close from before notes were enforced, a rewritten branch).
-        # Rebuilt from substrate — the same source close-slice used.
-        from engine import read_jsonl
-        sl = get_slice(root, args.slice)
-        touched = sorted(e["to"].split(":", 1)[1]
-                         for e in graph.load_edges(root)
-                         if e["type"] == "touches"
-                         and e["from"] == f"slice:{args.slice}")
-        durable = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
-        graph.write_note(root, args.commit, {
-            "slice_id": args.slice, "modules_touched": touched,
-            "registry_used": sl.get("declares_dep", []),
-            "memory_ids": [m["id"] for m in durable
-                           if m.get("slice") == args.slice]})
+        # repair paths for a closed slice whose note was lost (deleted ref,
+        # a close from before notes were enforced, a rewritten branch) or
+        # whose commit a squash/rebase merge replaced (--repoint, D-010).
+        if args.repoint:
+            slice_id, commit = args.repoint
+            _print(graph.repoint_note(root, slice_id, commit))
+            return 0
+        if not (args.slice and args.commit):
+            print("error: graph note needs --slice and --commit, or "
+                  "--repoint <slice-id> <sha>", file=sys.stderr)
+            return 2
+        # rebuilt from substrate — the same source close-slice used
+        payload = graph.slice_note_payload(root, args.slice)
+        graph.write_note(root, args.commit, payload)
         _print({"note_written": True, "slice": args.slice,
-                "commit": args.commit, "modules_touched": touched})
+                "commit": args.commit,
+                "modules_touched": payload["modules_touched"]})
     elif args.graph_cmd == "edge":
         _print(graph.append_edge(root, args.type, args.frm, args.to,
                                  commit=args.commit,

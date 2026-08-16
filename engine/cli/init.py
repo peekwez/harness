@@ -82,7 +82,7 @@ def cmd_init(args):
                        ("backlog.seed.jsonl", "backlog.jsonl")):
         shutil.copy(templates / name, hdir / dest)
     for empty in ("edges.jsonl", "telemetry.jsonl", "boundaries.jsonl",
-                  "memory/durable.jsonl"):
+                  "notes.jsonl", "memory/durable.jsonl"):
         (hdir / empty).touch()
 
     (root / "adr").mkdir(exist_ok=True)
@@ -171,12 +171,58 @@ def cmd_init(args):
     return 0
 
 
-def _write_autonomy_settings(root, quiet=False, local=False):
+def _pr_landing_rules(text, landing) -> str:
+    """Open exactly the egress a pr-mode slice needs, in the written profile.
+
+    In `landing.mode: pr` the slice cannot finish without pushing its own
+    branch and opening a PR (ADR-002 / D-011), so the blanket `git push` and
+    `git fetch` denies would stop the loop dead, and the sandbox's domain
+    allowlist would drop the connection anyway. Everything else that leaves
+    the machine stays denied.
+
+    Only the denies are dropped — no allow rule is added. Bash rules are
+    PREFIX rules, and a prefix cannot express "this slice's own branch":
+    `Bash(git push origin slice/:*)` would also open
+    `git push origin slice/x:main`, and `Bash(gh pr create:*)` would open
+    `--repo attacker/repo`. The harness PreToolUse hook is the only opener —
+    it answers `allow` for the exact shapes D-011 names and `deny` for every
+    other egress command in pr mode, so nothing rides on a coarse rule.
+
+    Args:
+        text: The substituted profile JSON.
+        landing: Resolved landing config.
+
+    Returns:
+        The profile JSON, rewritten in pr mode and untouched in local mode.
+    """
+    if landing["mode"] != "pr":
+        return text
+    import json
+    from engine.cli.landing import forge_hosts
+    profile = json.loads(text)
+    perms = profile["permissions"]
+    opened = ("Bash(git push:*)", "Bash(git fetch:*)")
+    perms["deny"] = [r for r in perms["deny"] if r not in opened]
+    remote = landing["remote"]
+    # the sandbox is the other half: a permission decision does not open a
+    # socket
+    domains = profile.get("sandbox", {}).get("network", {}).get(
+        "allowedDomains")
+    if domains is not None:
+        for host in forge_hosts(remote):
+            if host not in domains:
+                domains.append(host)
+    return json.dumps(profile, indent=2) + "\n"
+
+
+def _write_autonomy_settings(root, quiet=False, local=False, config=None):
     """Pre-approve the slice loop's command surface and sandbox it, in
     .claude/settings.json. Approval prompts are redundant inside a bound
     slice — the PreToolUse hook gate-checks every edit deterministically and
     CI verify backstops it. The profile still denies anything that leaves
-    the machine (git push/remote/fetch). Returns the path written, or None."""
+    the machine (git push/remote/fetch) — except, in `landing.mode: pr`, the
+    slice branch push and `gh pr` that D-011 names. Returns the path
+    written, or None."""
     templates = PLUGIN_ROOT / "templates"
     # local=True -> settings.local.json: the per-worktree sandbox profile is
     # MACHINE state (absolute paths into that worktree). Committing it made
@@ -202,13 +248,27 @@ def _write_autonomy_settings(root, quiet=False, local=False):
     # the sandbox and permission scope follow the TREE this profile governs:
     # a slice worktree confines writes to itself
     text = text.replace("{{PROJECT_DIR}}", str(Path(root).resolve()))
+    from engine import HarnessError, load_config
+    from engine.cli.landing import landing_config
+    if config is None:
+        try:
+            config = load_config(root)
+        except HarnessError:
+            config = {}          # pre-substrate init: local mode by default
+    landing = landing_config(config)
+    text = _pr_landing_rules(text, landing)
     target.write_text(text)
     if quiet:
         return str(target)
+    push_note = ("git push and git remote stay denied"
+                 if landing["mode"] != "pr" else
+                 f"only `git push [-u] {landing['remote']} slice/*` and "
+                 f"`gh pr create|view|checks|status` are opened (landing.mode: "
+                 f"pr, D-011); every other remote command stays denied")
     print(f"autonomy profile written to {target}: acceptEdits + pre-approved "
-          f"harness/pytest/git-local commands; git push and git remote stay "
-          f"denied. The harness gates remain the guardrail — approval prompts "
-          f"were never the enforcement layer.")
+          f"harness/pytest/git-local commands; {push_note}. The harness gates "
+          f"remain the guardrail — approval prompts were never the "
+          f"enforcement layer.")
     print("other hosts: install the matching profile from the plugin's "
           "adapters/ dir (codex/autonomy.toml, gemini/autonomy-policy.toml, "
           "cursor/cli-permissions.json, opencode/opencode-permissions.json; "

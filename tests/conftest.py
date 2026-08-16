@@ -214,6 +214,7 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     (root / ".gitattributes").write_text(
         ".harness/telemetry.jsonl merge=union\n"
         ".harness/edges.jsonl merge=union\n"
+        ".harness/notes.jsonl merge=union\n"
         ".harness/memory/durable.jsonl merge=union\n"
         ".harness/backlog.jsonl merge=harness-substrate\n"
         ".harness/registry.jsonl merge=harness-substrate\n"

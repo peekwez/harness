@@ -9,11 +9,12 @@ from __future__ import annotations
 import json
 import sys
 
-from engine import get_slice, load_config, save_slice
+from engine import HarnessError, get_slice, load_config, save_slice
 from engine.cli.acceptance import GATE_REASON, gate_finding
 from engine.cli.ceremony import _close_ceremony
 from engine.cli.common import (_CeremonyFail, _config_merge_drivers, _print,
                                _reset_close_attempts, _root, _session)
+from engine.cli.landing import land_pr, landing_config, redact
 from engine.cli.slice import _regression_suite
 
 
@@ -47,6 +48,7 @@ def _bump_close_attempts(root, slice_id, config, payload) -> bool:
 def cmd_close_slice(args):
     root = _root(args)
     config = load_config(root)
+    landing = landing_config(config)      # fail loud on a bogus block first
     try:
         payload = _close_ceremony(args)
     except _CeremonyFail as fail:
@@ -57,6 +59,29 @@ def cmd_close_slice(args):
             payload["parked"] = True
         _print(payload)
         return 1
+    if landing["mode"] == "pr":
+        # D-009: in pr mode the close IS the landing. The ceremony already
+        # committed substrate and wrote the note, so a failed push or
+        # pr_cmd never un-closes the slice — it is reported, loudly, with a
+        # non-zero exit so the agent sees it and re-lands (`harness land`).
+        sl = get_slice(root, args.slice)
+        try:
+            landed = land_pr(root, sl, config,
+                             note_meta={"commit": args.commit,
+                                        "tree_hash": payload.get("note_tree_hash")})
+        except HarnessError as exc:
+            # A usage error (wrong branch) must not swallow the close payload
+            # — and must write NOTHING: committing a pending marker onto
+            # whatever branch happens to be checked out is worse than the
+            # error it records. Nothing was pushed, so nothing is pending.
+            landed = {"landed": False, "pushed": False, "error": str(exc)}
+        payload.update(landed)
+        if not landed["landed"]:
+            payload["next"] = (f"fix the cause, then re-land with `harness "
+                               f"land --slice {args.slice}` (the slice is "
+                               f"closed; do not re-run close-slice)")
+            _print(payload)
+            return 1
     _print(payload)
     return 0
 
@@ -71,6 +96,22 @@ def cmd_merge_slice(args):
     from engine import telemetry
     root = _root(args)
     config = load_config(root)
+    landing = landing_config(config)
+    if landing["mode"] == "pr":
+        # D-009: merging locally in pr mode is how a protected base branch
+        # gets bypassed. The PR is the landing; say where it is.
+        from engine.events import make_finding
+        row = get_slice(root, args.slice)
+        where = (row.get("pr_url")
+                 or f"push slice/{args.slice} to {redact(landing['remote'])} "
+                    f"and open a PR with `harness close-slice` (or `harness "
+                    f"land --slice {args.slice}` if it already closed)")
+        _print({"merged": False, "slice": args.slice, "findings": [make_finding(
+            "LANDING_MODE_PR", "adr:002",
+            f"landing.mode is 'pr': slice {args.slice} lands by pull request "
+            f"against {landing['base']}, not by a local merge — {where}",
+            severity="block", key=args.slice)]})
+        return 1
 
     def _git(*a):
         return subprocess.run(["git", "-C", str(root), *a],

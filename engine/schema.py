@@ -8,6 +8,7 @@ the file, the row, and the field.
 from __future__ import annotations
 
 SLICE_STATUS = ("planned", "in_progress", "parked", "closed")
+LANDED_VIA = ("local", "pr", "pending")
 REGISTRY_STATUS = ("planned", "built", "deprecated")
 REGISTRY_KIND = ("logging", "telemetry", "config", "errors", "util",
                  "component", "other")
@@ -20,8 +21,12 @@ SCHEMAS = {
         "fields": [("id", str, True), ("status", str, True),
                    ("declares_dep", list, True), ("acceptance", list, True),
                    ("predicted_files", list, True), ("depends_on", list, False),
-                   ("title", str, False), ("spec", str, False)],
-        "enums": {"status": SLICE_STATUS},
+                   ("title", str, False), ("spec", str, False),
+                   # landing (ADR-002 / D-009): the tracker id the PR quotes,
+                   # and how the slice actually reached the base branch
+                   ("linear", str, False), ("landed_via", str, False),
+                   ("pr_url", str, False), ("landing_error", str, False)],
+        "enums": {"status": SLICE_STATUS, "landed_via": LANDED_VIA},
     },
     "registry.jsonl": {
         "id_field": "id",

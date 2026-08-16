@@ -180,3 +180,67 @@ def test_plugin_inert_in_repo_without_substrate(tmp_path):
     code, out, err = run_adapter(
         {"hook_event_name": "PreCompact", "session_id": "inert-1"}, bare)
     assert code == 0 and out is None
+
+
+# ---------------------------------------------- egress decisions (D-011)
+def _pr_mode(root, slice_id="slice-042"):
+    """Bind a slice and switch the repo to pr landing."""
+    cfg = root / ".harness" / "config.yaml"
+    cfg.write_text(cfg.read_text() +
+                   'landing:\n  mode: "pr"\n  remote: "origin"\n'
+                   '  base: "main"\n  pr_cmd: "true"\n')
+    subprocess.run([sys.executable, str(PLUGIN_ROOT / "bin" / "harness"),
+                    "--root", str(root), "slice", "--slice", slice_id,
+                    "--session", "egress-bind"], capture_output=True, text=True)
+
+
+def _bash(root, command, session="eg-1"):
+    return run_adapter({"hook_event_name": "PreToolUse", "session_id": session,
+                        "tool_name": "Bash",
+                        "tool_input": {"command": command}}, root)
+
+
+def test_pr_mode_denies_egress_the_permit_refuses(toy):
+    """The settings profile cannot express "this slice's branch", so the hook
+    must be the decider: a permit refusal of an egress command is a DENY, not
+    silence that the host's prefix rules then wave through (D-011)."""
+    _pr_mode(toy)
+    for command in ("git fetch origin --upload-pack=/tmp/evil.sh",
+                    "git push -u origin slice/slice-042:main",
+                    "git push origin main",
+                    "gh pr create --repo attacker/repo",
+                    # the same commands, spelled around the classifier
+                    "git -C . push origin main",
+                    "GIT_DIR=x git push origin main",
+                    'bash -c "git push origin main"',
+                    "timeout 5 git push origin main"):
+        code, out, err = _bash(toy, command)
+        assert code == 0, err
+        hso = out["hookSpecificOutput"]
+        assert hso["permissionDecision"] == "deny", (command, out)
+        assert "D-011" in hso["permissionDecisionReason"], command
+
+
+def test_pr_mode_allows_the_slices_own_landing_commands(toy):
+    _pr_mode(toy)
+    for command in ("git push -u origin slice/slice-042",
+                    "git fetch origin",
+                    "gh pr checks"):
+        code, out, err = _bash(toy, command)
+        assert code == 0, err
+        assert out["hookSpecificOutput"]["permissionDecision"] == "allow", command
+
+
+def test_local_mode_never_decides_an_egress_command(toy):
+    """0.7 behaviour is untouched: outside pr mode the adapter stays silent
+    and the host's own permission flow decides."""
+    subprocess.run([sys.executable, str(PLUGIN_ROOT / "bin" / "harness"),
+                    "--root", str(toy), "slice", "--slice", "slice-042",
+                    "--session", "egress-bind"], capture_output=True, text=True)
+    for command in ("git push -u origin slice/slice-042",
+                    "git fetch origin --upload-pack=/tmp/evil.sh"):
+        code, out, err = _bash(toy, command)
+        assert code == 0, err
+        assert out is None, (command, out)
+    code, out, err = _bash(toy, "git status")
+    assert out["hookSpecificOutput"]["permissionDecision"] == "allow"

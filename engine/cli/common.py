@@ -107,6 +107,7 @@ def _acceptance_python(root, config):
 # Append-only logs union-merge; keyed-by-id rows go through the
 # `harness merge-substrate` 3-way driver.
 SUBSTRATE_UNION_MERGE = (".harness/telemetry.jsonl", ".harness/edges.jsonl",
+                         ".harness/notes.jsonl",
                          ".harness/memory/durable.jsonl")
 
 

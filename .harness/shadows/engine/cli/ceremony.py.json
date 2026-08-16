@@ -20,7 +20,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.ceremony",
- "source_hash": "sha256:8548603fe3afa7534b860618a3eb8797ec5f650fedadac35ce98b2e26187f183",
+ "source_hash": "sha256:392350302be18adc3e6e59100ff4a0fed27f81b63a9f087694f6a0da5ef0741e",
  "source_path": "engine/cli/ceremony.py",
  "symbols": [
   {

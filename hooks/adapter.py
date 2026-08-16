@@ -79,8 +79,16 @@ def resolve_root(files, hook_cwd):
 
 def permit(session, root=None, command=None, paths=None):
     """Ask the engine whether the bound slice's gates approve this tool call.
+
     A separate question from the enforcement verdict (which never grows
-    fields): policy lives in engine/permits.py, the adapter only translates."""
+    fields): policy lives in engine/permits.py, the adapter only translates.
+
+    Returns:
+        `(decision, reason)` where decision is `allow` (auto-approve),
+        `deny` (pr-mode egress outside D-011's surface — the settings profile
+        cannot express "this slice's branch", so the hook is the decider) or
+        `defer` (stay silent; the host's own flow decides).
+    """
     cmd = [sys.executable, HARNESS]
     if root:
         cmd += ["--root", str(root)]
@@ -93,12 +101,13 @@ def permit(session, root=None, command=None, paths=None):
         cmd += ["--session", session]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        return False, ""
+        return "defer", ""
     try:
         out = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return False, ""
-    return bool(out.get("allow")), out.get("reason", "")
+        return "defer", ""
+    return (out.get("decision") or ("allow" if out.get("allow") else "defer"),
+            out.get("reason", ""))
 
 
 def call_engine(event, root=None):
@@ -149,11 +158,11 @@ def main():
     # host's normal permission flow decides.
     if hook_name == "PreToolUse" and hook.get("tool_name") == "Bash":
         command = (hook.get("tool_input") or {}).get("command", "")
-        allow, reason = permit(session, root, command=command)
-        if allow:
+        decision, reason = permit(session, root, command=command)
+        if decision in ("allow", "deny"):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
+                "permissionDecision": decision,
                 "permissionDecisionReason": f"harness: {reason}"}}))
         return 0
 
@@ -203,9 +212,9 @@ def main():
             # Undeclared work stays silent here — wandering keeps its prompt.
             files = [f["path"] for f in
                      files_from_tool_input(hook.get("tool_input"))]
-            allow, reason = permit(session, root, paths=files) if files \
-                else (False, "")
-            if allow:
+            decision, reason = permit(session, root, paths=files) if files \
+                else ("defer", "")
+            if decision == "allow":
                 print(json.dumps({"hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
                     "permissionDecision": "allow",

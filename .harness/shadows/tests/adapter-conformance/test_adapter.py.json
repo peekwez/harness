@@ -4,8 +4,11 @@
   "test_gates_declare_preferred_and_fallback_events",
   "test_hooks_json_binds_all_required_events",
   "test_injection_clipped_under_hook_output_cap",
+  "test_local_mode_never_decides_an_egress_command",
   "test_plugin_inert_in_repo_without_substrate",
   "test_post_tool_use_findings_as_context",
+  "test_pr_mode_allows_the_slices_own_landing_commands",
+  "test_pr_mode_denies_egress_the_permit_refuses",
   "test_pre_tool_use_allows_after_session_start",
   "test_pre_tool_use_deny_with_reason",
   "test_precompact_flush_and_telemetry_only",
@@ -26,7 +29,7 @@
  ],
  "language": "python",
  "module_id": "tests.adapter-conformance.test_adapter",
- "source_hash": "sha256:37922c80d9e02c2c96efea2e13143916ab099a6c8d54e96796a9c9f8af41bd1a",
+ "source_hash": "sha256:778add57c1bd8fa7b6b44f73779db98c107a2b82fb1fd888cbe93e55f197c4f7",
  "source_path": "tests/adapter-conformance/test_adapter.py",
  "symbols": [
   {
@@ -169,6 +172,61 @@
    "span": [
     169,
     170
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Bind a slice and switch the repo to pr landing.",
+   "kind": "function",
+   "name": "_pr_mode",
+   "signature": "def _pr_mode(root, slice_id=\"slice-042\")",
+   "span": [
+    186,
+    187
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_bash",
+   "signature": "def _bash(root, command, session=\"eg-1\")",
+   "span": [
+    197,
+    198
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The settings profile cannot express \"this slice's branch\", so the hook\n    must be the decider: a permit refusal of an egress command is a DENY, not\n    silence that the host's prefix rules then wave through (D-011).",
+   "kind": "function",
+   "name": "test_pr_mode_denies_egress_the_permit_refuses",
+   "signature": "def test_pr_mode_denies_egress_the_permit_refuses(toy)",
+   "span": [
+    203,
+    204
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_allows_the_slices_own_landing_commands",
+   "signature": "def test_pr_mode_allows_the_slices_own_landing_commands(toy)",
+   "span": [
+    224,
+    225
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "0.7 behaviour is untouched: outside pr mode the adapter stays silent\n    and the host's own permission flow decides.",
+   "kind": "function",
+   "name": "test_local_mode_never_decides_an_egress_command",
+   "signature": "def test_local_mode_never_decides_an_egress_command(toy)",
+   "span": [
+    234,
+    235
    ],
    "visibility": "public"
   }

@@ -31,6 +31,18 @@ def cmd_run(args):
     from engine import telemetry
     root = _root(args)
     config = load_config(root)
+    # D-009: the dispatcher's tail is merge-slice, which pr mode refuses.
+    # Refusing up front beats building half a backlog and stopping at the
+    # first landing.
+    from engine import HarnessError
+    from engine.cli.landing import landing_config
+    if landing_config(config)["mode"] == "pr":
+        raise HarnessError(
+            "harness run requires landing.mode: local — in pr mode a slice "
+            "lands by pull request (close-slice pushes slice/<id> and opens "
+            "the PR), and a campaign cannot merge them for you. Drive the "
+            "slices one at a time with `harness start` / `harness "
+            "close-slice`.")
     run_cfg = config.get("run") or {}
     harness_bin = str(PLUGIN_ROOT / "bin" / "harness")
 

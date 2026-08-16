@@ -215,14 +215,46 @@ def cmd_verify(args):
                     f"`paths` keys) — fix it or delete the contract",
                     severity="block", key=rel))
 
-    # orphaned-notes detection (git failures are loud; only a non-repo skips)
-    from engine.graph import orphaned_notes, read_notes
-    if (root / ".git").exists():
+    # orphaned-notes detection (git failures are loud; only a non-repo skips).
+    # A squash/rebase merge rewrites the sha a note was written on, so an
+    # unreachable note is only a hole when the derived notes log cannot
+    # resolve the slice either (ADR-002 / D-010).
+    from engine.cli.landing import landing_config
+    from engine.graph import (orphaned_notes, read_notes, reachable_source_keys,
+                              reachable_trees, resolve_note)
+    resolved_via, trees, cache = {}, {}, {}
+    is_repo = (root / ".git").exists()
+    landing = landing_config(config)
+    base, remote = landing["base"], landing["remote"]
+    if is_repo:
+        trees = reachable_trees(root, base, remote=remote)
+
+    def _source_keys():
+        # one `git ls-tree` per commit: computed once, and only for a repo
+        # that actually has a note to resolve
+        if "keys" not in cache:
+            cache["keys"] = reachable_source_keys(root, base, remote=remote)
+        return cache["keys"]
+
+    def _resolves(slice_id):
+        if not (is_repo and slice_id):
+            return False
+        hit = resolve_note(root, slice_id, trees, _source_keys)
+        if hit:
+            resolved_via[slice_id] = hit["resolved_via"]
+        return bool(hit)
+
+    if is_repo:
         for n in orphaned_notes(root):
+            slices = [p.get("slice_id") for p in n["payloads"]]
+            if slices and all(_resolves(sid) for sid in slices):
+                continue
             findings.append(make_finding(
                 "ORPHANED_NOTE", "gate:G1",
-                f"git note on unreachable commit {n['commit']} "
-                f"(payload: {json.dumps(n['payload'])[:120]})",
+                f"git note on unreachable commit {n['commit']} with no "
+                f"tree-hash match in .harness/notes.jsonl "
+                f"(payload: {json.dumps(n['payload'])[:120]}); repair with "
+                f"`harness graph note --repoint <slice-id> <sha>`",
                 severity="block", key=n["commit"]))
 
     # uses/declares reconciliation for all closed slices. A missing backlog is
@@ -258,13 +290,25 @@ def cmd_verify(args):
     for s in backlog:
         if s.get("status") != "closed":
             continue
-        if (root / ".git").exists() and s["id"] not in noted:
+        if (root / ".git").exists() and s["id"] not in noted \
+                and not _resolves(s["id"]):
             findings.append(make_finding(
                 "MISSING_PROVENANCE_NOTE", "gate:G1",
-                f"closed slice {s['id']} has no provenance note; provenance "
-                f"must travel with the repo — repair with `harness graph "
-                f"note --slice {s['id']} --commit <sha>`",
+                f"closed slice {s['id']} has no provenance note and no "
+                f"tree-hash key in .harness/notes.jsonl; provenance must "
+                f"travel with the repo — repair with `harness graph note "
+                f"--slice {s['id']} --commit <sha>`",
                 severity="block", key=s["id"] + "|note"))
+        if s.get("landed_via") == "pending":
+            # closed, but the push or the PR command did not go through: not
+            # a block (the work IS closed and committed), and not silence
+            # either — the branch is not on the forge yet
+            findings.append(make_finding(
+                "LANDING_PENDING", "adr:002",
+                f"slice {s['id']} closed but its landing did not complete: "
+                f"{str(s.get('landing_error', ''))[:200]} — re-land with "
+                f"`harness land --slice {s['id']}` from the slice's worktree",
+                severity="advisory", key=s["id"] + "|landing"))
         ud = uses_vs_declares(root, s["id"])
         und = ud["unresolved"]
         if und:
@@ -274,5 +318,11 @@ def cmd_verify(args):
                 severity="block", key=s["id"]))
 
     passed = not any(f["severity"] == "block" for f in findings)
-    _print({"passed": passed, "findings": findings})
+    report = {"passed": passed, "findings": findings}
+    if resolved_via:
+        # how a landed slice's provenance was recovered: `tree_hash` (a
+        # reachable commit carries the recorded tree) or `notes_row` (the
+        # committed notes log names the slice)
+        report["resolved_via"] = resolved_via
+    _print(report)
     return 0 if passed else 1

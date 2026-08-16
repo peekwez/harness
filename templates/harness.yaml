@@ -60,6 +60,27 @@ gates:
 #   # always shadowed whole (`kente.telemetry.decorators`), and G5 + the
 #   # resolver match those ids by longest dotted prefix.
 #   src_roots: ["src", "packages/*/src"]
+# landing:
+#   # How a closed slice reaches the base branch (ADR-002 / D-009).
+#   #   local (default) — `merge-slice` merges into the checked-out base;
+#   #     nothing leaves the machine.
+#   #   pr — `close-slice` IS the landing: after its substrate commit and
+#   #     provenance note it pushes `slice/<id>` to `remote` and runs
+#   #     `pr_cmd`; `merge-slice` and `run` refuse. Use this when the base
+#   #     branch is PR-protected.
+#   # In pr mode the permit layer and the generated autonomy profile
+#   # auto-approve exactly `git push [-u] <remote> slice/<bound-slice>`,
+#   # `git fetch <remote>` and `gh pr create|view|checks|status` (D-011) —
+#   # every other remote command still stops for a human.
+#   # `pr_cmd` is split with shlex and run WITHOUT a shell; {base} {branch}
+#   # {title} {body} are replaced inside their own token ({body} is a temp
+#   # file holding the PR body). The first URL it prints is recorded as the
+#   # slice row's `pr_url`, next to `landed_via: pr`. A slice row's optional
+#   # `linear` id prefixes the PR title and links in the body.
+#   mode: pr
+#   remote: origin
+#   base: main
+#   pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
 ensemble:
   trigger_confidence_below: 0.7
   samples: 3

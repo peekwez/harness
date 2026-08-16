@@ -16,6 +16,7 @@ from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
 from engine.cli.init import cmd_init
+from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
 from engine.cli.run import cmd_run
 from engine.cli.slice import cmd_permit, cmd_start
@@ -37,6 +38,7 @@ COMMANDS = {
     "backlog": cmd_backlog, "slice": cmd_slice,
     "start": cmd_start, "run": cmd_run, "permit": cmd_permit,
     "close-slice": cmd_close_slice, "merge-slice": cmd_merge_slice,
+    "land": cmd_land,
     "review": cmd_review,
     "registry": cmd_registry, "merge-substrate": cmd_merge_substrate,
     "graph": cmd_graph, "memory": cmd_memory, "status": cmd_status,
@@ -195,6 +197,12 @@ def main(argv=None):
     sp.add_argument("--slice", required=True)
     sp.add_argument("--session")
 
+    sp = sub.add_parser("land",
+                        help="landing.mode: pr — (re)push a closed slice's "
+                             "branch and open its PR after a failed landing")
+    sp.add_argument("--slice", required=True)
+    sp.add_argument("--session")
+
     sp = sub.add_parser("registry", help="registry maintenance")
     rsub = sp.add_subparsers(dest="registry_cmd", required=True)
     rf = rsub.add_parser("refresh", help="re-derive a built entry's hashes "
@@ -242,8 +250,12 @@ def main(argv=None):
     ud = gs.add_parser("uses-declares"); ud.add_argument("slice")
     nt = gs.add_parser("note", help="(re)write a closed slice's provenance "
                                     "note onto a commit")
-    nt.add_argument("--slice", required=True)
-    nt.add_argument("--commit", required=True)
+    nt.add_argument("--slice")
+    nt.add_argument("--commit")
+    nt.add_argument("--repoint", nargs=2, metavar=("SLICE", "SHA"),
+                    help="re-attach a slice's existing note to the commit "
+                         "that carries its content after a squash/rebase "
+                         "merge (ADR-002 / D-010)")
     ed = gs.add_parser("edge")
     ed.add_argument("type"); ed.add_argument("frm"); ed.add_argument("to")
     ed.add_argument("--commit"); ed.add_argument("--meta")

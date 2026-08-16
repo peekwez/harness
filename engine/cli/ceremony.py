@@ -401,10 +401,10 @@ def _close_ceremony(args):
     # git note: slice = commit boundary; provenance travels with the repo
     from engine.graph import NOTES_REF
     memory_ids = [m["id"] for m in memory.read_session(root, args.slice)]
-    note_written = False
+    note_written, note_row = False, {}
     if args.commit:
         try:
-            write_note(root, args.commit, {
+            note_row = write_note(root, args.commit, {
                 "slice_id": args.slice, "modules_touched": touched,
                 "registry_used": sl.get("declares_dep", []),
                 "memory_ids": memory_ids})
@@ -480,6 +480,7 @@ def _close_ceremony(args):
             "registry_refreshed": refreshed, "bindings_released": released,
             "flip_skipped": flip_skipped, "memory": compacted,
             "note_written": note_written,
+            "note_tree_hash": note_row.get("tree_hash"),
             "notes_ref": NOTES_REF if note_written else None,
             "notes_hint": (f"view with: git notes --ref={NOTES_REF} show "
                            f"{args.commit}") if note_written else None,

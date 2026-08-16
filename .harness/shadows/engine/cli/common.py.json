@@ -14,7 +14,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.common",
- "source_hash": "sha256:a893d64df6b5d9a208d4f3bcd5562a4d9f7f76ea65acfc7e1612e780da43e41e",
+ "source_hash": "sha256:f16089bdc02a5ae5937e37f5dcd09ff16fb0da5a15d3fdde6132472b49c9db41",
  "source_path": "engine/cli/common.py",
  "symbols": [
   {
@@ -89,8 +89,8 @@
    "name": "_write_merge_attributes",
    "signature": "def _write_merge_attributes(root)",
    "span": [
-    123,
-    124
+    124,
+    125
    ],
    "visibility": "private"
   },
@@ -100,8 +100,8 @@
    "name": "_config_merge_drivers",
    "signature": "def _config_merge_drivers(root)",
    "span": [
-    144,
-    145
+    145,
+    146
    ],
    "visibility": "private"
   },
@@ -111,8 +111,8 @@
    "name": "_install_merge_drivers",
    "signature": "def _install_merge_drivers(root)",
    "span": [
-    167,
-    168
+    168,
+    169
    ],
    "visibility": "private"
   },
@@ -122,8 +122,8 @@
    "name": "_CeremonyFail",
    "signature": "class _CeremonyFail(Exception)",
    "span": [
-    172,
-    173
+    173,
+    174
    ],
    "visibility": "private"
   },
@@ -133,8 +133,8 @@
    "name": "__init__",
    "signature": "def __init__(self, payload, attempt=True)",
    "span": [
-    176,
-    177
+    177,
+    178
    ],
    "visibility": "public"
   },
@@ -144,8 +144,8 @@
    "name": "_fail",
    "signature": "def _fail(payload, attempt=True)",
    "span": [
-    181,
-    182
+    182,
+    183
    ],
    "visibility": "private"
   },
@@ -155,8 +155,8 @@
    "name": "_reset_close_attempts",
    "signature": "def _reset_close_attempts(root, slice_id)",
    "span": [
-    185,
-    186
+    186,
+    187
    ],
    "visibility": "private"
   }

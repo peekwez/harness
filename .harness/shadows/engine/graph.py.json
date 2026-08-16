@@ -3,12 +3,23 @@
   "GraphError",
   "append_edge",
   "edges_path",
+  "last_note_payload",
   "load_edges",
   "neighbors",
+  "notes_log",
+  "notes_log_path",
   "orphaned_notes",
   "provenance",
+  "reachable_source_keys",
+  "reachable_trees",
   "read_notes",
   "rebuild",
+  "record_tree",
+  "repoint_note",
+  "resolve_note",
+  "slice_note_payload",
+  "source_key",
+  "tree_hash",
   "uses_vs_declares",
   "write_note"
  ],
@@ -20,7 +31,7 @@
  ],
  "language": "python",
  "module_id": "engine.graph",
- "source_hash": "sha256:a9cba20eb5334b4864cfd443579aa3d5799257faffb5e22bc6ac5a85515f33b6",
+ "source_hash": "sha256:cc9d87db0d7a05c23d9a19a3544c222e603b06f6a909248ecd4a13926a95ce43",
  "source_path": "engine/graph.py",
  "symbols": [
   {
@@ -29,8 +40,8 @@
    "name": "GraphError",
    "signature": "class GraphError(HarnessError)",
    "span": [
-    23,
-    24
+    32,
+    33
    ],
    "visibility": "public"
   },
@@ -40,8 +51,8 @@
    "name": "edges_path",
    "signature": "def edges_path(root) -> Path",
    "span": [
-    27,
-    28
+    36,
+    37
    ],
    "visibility": "public"
   },
@@ -51,8 +62,8 @@
    "name": "append_edge",
    "signature": "def append_edge(root, etype, frm, to, commit=None, meta=None) -> dict",
    "span": [
-    31,
-    32
+    40,
+    41
    ],
    "visibility": "public"
   },
@@ -62,8 +73,8 @@
    "name": "load_edges",
    "signature": "def load_edges(root) -> list",
    "span": [
-    40,
-    41
+    49,
+    50
    ],
    "visibility": "public"
   },
@@ -73,8 +84,8 @@
    "name": "rebuild",
    "signature": "def rebuild(root) -> dict",
    "span": [
-    44,
-    45
+    53,
+    54
    ],
    "visibility": "public"
   },
@@ -84,8 +95,8 @@
    "name": "neighbors",
    "signature": "def neighbors(root, node) -> list",
    "span": [
-    53,
-    54
+    62,
+    63
    ],
    "visibility": "public"
   },
@@ -95,8 +106,8 @@
    "name": "provenance",
    "signature": "def provenance(root, module_id: str) -> dict",
    "span": [
-    61,
-    62
+    70,
+    71
    ],
    "visibility": "public"
   },
@@ -106,8 +117,8 @@
    "name": "_bare",
    "signature": "def _bare(node_id: str) -> str",
    "span": [
-    84,
-    85
+    93,
+    94
    ],
    "visibility": "private"
   },
@@ -117,8 +128,8 @@
    "name": "uses_vs_declares",
    "signature": "def uses_vs_declares(root, slice_id: str) -> dict",
    "span": [
-    88,
-    89
+    97,
+    98
    ],
    "visibility": "public"
   },
@@ -128,8 +139,8 @@
    "name": "_git",
    "signature": "def _git(root, *args, check=True) -> str",
    "span": [
-    104,
-    105
+    113,
+    114
    ],
    "visibility": "private"
   },
@@ -139,19 +150,107 @@
    "name": "_note_payloads",
    "signature": "def _note_payloads(body: str) -> list",
    "span": [
-    112,
-    113
+    121,
+    122
    ],
    "visibility": "private"
   },
   {
-   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo. Additive: a second slice on\n    the same commit joins the note instead of overwriting it (`notes add -f`\n    silently erased the first one); re-noting the same slice replaces its\n    own entry.",
+   "doc": "Path of the derived notes log (`.harness/notes.jsonl`).",
+   "kind": "function",
+   "name": "notes_log_path",
+   "signature": "def notes_log_path(root) -> Path",
+   "span": [
+    132,
+    133
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The tree a commit points at, or None when it cannot be resolved.",
+   "kind": "function",
+   "name": "tree_hash",
+   "signature": "def tree_hash(root, commit: str)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Digest of a commit's tree with `.harness` excluded, or None.\n\n    A slice branch ends with the ceremony's own substrate commit, so the\n    commit a squash merge produces never reproduces the NOTED commit's whole\n    tree \u2014 but it does reproduce its source tree, because the substrate\n    commit touches nothing outside `.harness`. Hashing the top-level tree\n    entries minus `.harness` is therefore the key that survives the squash,\n    and every entry's sha covers its whole subtree.\n\n    Args:\n        root: Substrate root.\n        commit: Commit-ish to key.\n\n    Returns:\n        `sha256:<hex>` over the filtered top-level tree entries, or None.",
+   "kind": "function",
+   "name": "source_key",
+   "signature": "def source_key(root, commit: str)",
+   "span": [
+    143,
+    144
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Append one `{ts, slice_id, commit, tree_hash, source_tree}` row.\n\n    Args:\n        root: Substrate root.\n        slice_id: The slice whose provenance this row keys.\n        commit: The commit whose tree is recorded.\n\n    Returns:\n        The appended row (hashes are None outside a git repo).",
+   "kind": "function",
+   "name": "record_tree",
+   "signature": "def record_tree(root, slice_id: str, commit: str) -> dict",
+   "span": [
+    168,
+    169
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Rows of the derived notes log, optionally for one slice.",
+   "kind": "function",
+   "name": "notes_log",
+   "signature": "def notes_log(root, slice_id=None) -> list",
+   "span": [
+    186,
+    187
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo. Additive: a second slice on\n    the same commit joins the note instead of overwriting it (`notes add -f`\n    silently erased the first one); re-noting the same slice replaces its\n    own entry. The same write is keyed a second time into the derived notes\n    log by tree hash (D-010), which is what survives a squash merge.\n\n    Args:\n        root: Substrate root.\n        commit: The commit to annotate.\n        payload: The slice's provenance payload.\n\n    Returns:\n        The notes-log row `{ts, slice_id, commit, tree_hash}`.",
    "kind": "function",
    "name": "write_note",
-   "signature": "def write_note(root, commit, payload: dict) -> None",
+   "signature": "def write_note(root, commit, payload: dict) -> dict",
    "span": [
-    123,
-    124
+    192,
+    193
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Rebuild a slice's note payload from substrate.\n\n    The same source `close-slice` used, so the repair paths (`graph note`,\n    `graph note --repoint`) write the note the ceremony would have written.\n\n    Args:\n        root: Substrate root.\n        slice_id: The slice to describe.\n\n    Returns:\n        `{slice_id, modules_touched, registry_used, memory_ids}`.",
+   "kind": "function",
+   "name": "slice_note_payload",
+   "signature": "def slice_note_payload(root, slice_id: str) -> dict",
+   "span": [
+    219,
+    220
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The payload a slice's most recent note carried, or a rebuilt one.\n\n    Args:\n        root: Substrate root.\n        slice_id: The slice to look up.\n\n    Returns:\n        The payload recorded on the newest notes-log commit that still has a\n        readable note, else the substrate-rebuilt payload.",
+   "kind": "function",
+   "name": "last_note_payload",
+   "signature": "def last_note_payload(root, slice_id: str) -> dict",
+   "span": [
+    244,
+    245
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Re-attach a slice's provenance note to `commit` (D-010).\n\n    The repair after a squash or rebase merge rewrote the sha the note was\n    written on. The payload is the one the slice's last note carried, so a\n    repoint never invents provenance.\n\n    Args:\n        root: Substrate root.\n        slice_id: The slice whose note moves.\n        commit: The commit that now carries the slice's content.\n\n    Returns:\n        `{note_written, slice, commit, tree_hash, payload}`.",
+   "kind": "function",
+   "name": "repoint_note",
+   "signature": "def repoint_note(root, slice_id: str, commit: str) -> dict",
+   "span": [
+    266,
+    267
    ],
    "visibility": "public"
   },
@@ -161,8 +260,8 @@
    "name": "read_notes",
    "signature": "def read_notes(root) -> list",
    "span": [
-    139,
-    140
+    288,
+    289
    ],
    "visibility": "public"
   },
@@ -172,8 +271,52 @@
    "name": "orphaned_notes",
    "signature": "def orphaned_notes(root) -> list",
    "span": [
-    155,
-    156
+    304,
+    305
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The refs a provenance walk covers.\n\n    `landing.base` when it exists locally, its remote-tracking ref (a\n    developer who never checks the base branch out still has `origin/main`),\n    and HEAD. Never `--all`: a slice sitting on an unmerged branch has not\n    landed.\n\n    Args:\n        root: Substrate root.\n        base: The base branch name.\n        remote: `landing.remote`, for the remote-tracking ref.\n\n    Returns:\n        The refs that exist, in walk order.",
+   "kind": "function",
+   "name": "_walk_revs",
+   "signature": "def _walk_revs(root, base=None, remote=None) -> list",
+   "span": [
+    321,
+    322
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Map every reachable commit's tree hash to that commit.\n\n    Args:\n        root: Substrate root.\n        base: Ref to walk (`landing.base`); its remote-tracking ref and\n            HEAD are walked too.\n        max_count: Cap on the walk.\n        remote: `landing.remote`, for the remote-tracking ref.\n\n    Returns:\n        `{tree_hash: commit_sha}`, newest commit wins per tree.",
+   "kind": "function",
+   "name": "reachable_trees",
+   "signature": "def reachable_trees(root, base=None, max_count=TREE_WALK_LIMIT, remote=None) -> dict",
+   "span": [
+    346,
+    348
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`{source_key: commit}` for the newest reachable commits.\n\n    Args:\n        root: Substrate root.\n        base: Ref to walk alongside its remote-tracking ref and HEAD.\n        max_count: Cap on the walk (one `git ls-tree` per commit).\n        remote: `landing.remote`, for the remote-tracking ref.\n\n    Returns:\n        Mapping of source key to the newest commit carrying it.",
+   "kind": "function",
+   "name": "reachable_source_keys",
+   "signature": "def reachable_source_keys(root, base=None, max_count=SOURCE_WALK_LIMIT, remote=None) -> dict",
+   "span": [
+    373,
+    375
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Resolve a slice's provenance against the derived notes log (D-010).\n\n    Notes are keyed twice \u2014 on the commit and in `.harness/notes.jsonl` by\n    `{slice_id, tree_hash}`. A squash or rebase merge rewrites the commit a\n    note was written on, but not the content it landed: a recorded tree that\n    is still reachable IS the provenance, and no orphan finding is due. Two\n    keys are tried, exact first \u2014 the whole tree (a rebase-replayed or\n    cherry-picked commit reproduces it) and then the source tree with\n    `.harness` excluded (what a squash of a slice branch reproduces, since\n    the ceremony's substrate commit rides in the same squash).\n\n    Args:\n        root: Substrate root.\n        slice_id: The slice to resolve.\n        trees: `reachable_trees()` output.\n        source_keys: `reachable_source_keys()` output, or a zero-argument\n            callable returning it (so the costlier walk stays lazy).\n\n    Returns:\n        `{resolved_via: \"tree_hash\", commit}` or None when nothing resolves\n        the slice \u2014 which is the finding the caller already had.",
+   "kind": "function",
+   "name": "resolve_note",
+   "signature": "def resolve_note(root, slice_id: str, trees: dict, source_keys=None)",
+   "span": [
+    399,
+    400
    ],
    "visibility": "public"
   }

@@ -1,0 +1,184 @@
+{
+ "exports": [
+  "cmd_land",
+  "forge_hosts",
+  "land_pr",
+  "landing_config",
+  "pr_body",
+  "pr_title",
+  "record_pending",
+  "redact",
+  "slice_branch"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "engine",
+  "engine.cli.common",
+  "engine.graph",
+  "os",
+  "re",
+  "shlex",
+  "subprocess",
+  "tempfile"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.landing",
+ "source_hash": "sha256:df026c18586c3ca1c10e797fc64b976b9c1042d18d73ac925c18dfcec429d9bc",
+ "source_path": "engine/cli/landing.py",
+ "symbols": [
+  {
+   "doc": "Return `text` with any `scheme://user:secret@host` credential masked.\n\n    Args:\n        text: Command output that may quote a remote URL.\n\n    Returns:\n        The same text with the userinfo component replaced by `***`.",
+   "kind": "function",
+   "name": "redact",
+   "signature": "def redact(text: str) -> str",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Resolve the `landing` block, defaults filled in.\n\n    Args:\n        config: The loaded repo config (or None).\n\n    Returns:\n        `{mode, remote, base, pr_cmd}`.\n\n    Raises:\n        HarnessError: The block is not a mapping, names an unknown key, has\n            a non-string value, or sets an unknown `mode`.",
+   "kind": "function",
+   "name": "landing_config",
+   "signature": "def landing_config(config) -> dict",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Hosts a pr-mode sandbox must be allowed to reach.\n\n    Args:\n        remote: `landing.remote` \u2014 a git remote NAME (whose URL the engine\n            does not resolve for the sandbox profile) or a URL.\n\n    Returns:\n        The host parsed out of a URL remote, else the GitHub defaults.",
+   "kind": "function",
+   "name": "forge_hosts",
+   "signature": "def forge_hosts(remote: str) -> list",
+   "span": [
+    107,
+    108
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The branch a slice is built and landed on.",
+   "kind": "function",
+   "name": "slice_branch",
+   "signature": "def slice_branch(slice_id: str) -> str",
+   "span": [
+    121,
+    122
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Pull-request title for a slice row: `<linear>: <title> (slice <id>)`.\n\n    Args:\n        sl: The backlog row.\n\n    Returns:\n        The title, prefixed with the row's `linear` id when it has one.",
+   "kind": "function",
+   "name": "pr_title",
+   "signature": "def pr_title(sl: dict) -> str",
+   "span": [
+    126,
+    127
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Pull-request body: what a reviewer needs before opening the diff.\n\n    Args:\n        root: Substrate root (unused today; keeps the signature stable for\n            richer bodies).\n        sl: The backlog row.\n        note_meta: `{commit, tree_hash}` of the provenance note, if written.\n\n    Returns:\n        Markdown body text.",
+   "kind": "function",
+   "name": "pr_body",
+   "signature": "def pr_body(root, sl: dict, note_meta=None) -> str",
+   "span": [
+    140,
+    141
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_git",
+   "signature": "def _git(root, *args)",
+   "span": [
+    174,
+    175
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_tail",
+   "signature": "def _tail(proc) -> str",
+   "span": [
+    179,
+    180
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Fail loud unless the slice's own branch is checked out.\n\n    Pushing `slice/<id>` from another tree would publish whatever that ref\n    happens to point at \u2014 a stale branch, silently, under the closed slice's\n    name.\n\n    Args:\n        root: The tree the landing runs in.\n        branch: The branch the slice must be on.\n\n    Raises:\n        HarnessError: HEAD is not `branch`.",
+   "kind": "function",
+   "name": "_require_branch",
+   "signature": "def _require_branch(root, branch: str) -> None",
+   "span": [
+    184,
+    185
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Commit the landing metadata the close ceremony could not know yet.\n\n    `landed_via`/`pr_url` are written after the ceremony's substrate commit,\n    so without this the tree is left dirty and the metadata rides into some\n    later slice's commit (W4).\n\n    Args:\n        root: Substrate root.\n        sl: The backlog row that was just updated.\n\n    Returns:\n        The commit sha, or None when there was nothing to commit.",
+   "kind": "function",
+   "name": "_commit_landing",
+   "signature": "def _commit_landing(root, sl: dict) -> str | None",
+   "span": [
+    207,
+    208
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Persist a closed-but-not-landed slice so it is not lost with the shell.\n\n    Args:\n        root: Substrate root.\n        sl: The backlog row.\n        error: The redacted failure tail.",
+   "kind": "function",
+   "name": "record_pending",
+   "signature": "def record_pending(root, sl: dict, error: str) -> None",
+   "span": [
+    231,
+    232
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Push the slice branch and open its pull request.\n\n    The close is already recorded when this runs: a push or pr-command\n    failure is reported (and surfaces as a non-zero exit) but never rolls\n    the close back \u2014 the substrate commit exists, the row records\n    `landed_via: pending` with the reason, and `harness land` re-runs it.\n\n    Args:\n        root: Substrate root (the slice's tree).\n        sl: The backlog row, already flipped to closed.\n        config: The loaded repo config.\n        note_meta: `{commit, tree_hash}` of the provenance note.\n\n    Returns:\n        `{landed, pushed, branch, remote, pr_url, error}`.\n\n    Raises:\n        HarnessError: The slice's branch is not checked out.",
+   "kind": "function",
+   "name": "land_pr",
+   "signature": "def land_pr(root, sl: dict, config, note_meta=None) -> dict",
+   "span": [
+    245,
+    246
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Record the landing on the row, commit it, and push it to the branch.\n\n    The metadata is written after the ceremony's substrate commit, so the\n    landing owns committing it (W4) and pushing it \u2014 the PR is built from\n    that branch, and a row claiming `landed_via: pr` that the branch does not\n    carry is a false claim. A failed metadata push therefore fails the\n    landing (the row goes `pending`, keeping `pr_url` so a re-land never\n    opens a second PR).\n\n    Args:\n        root: Substrate root.\n        sl: The backlog row.\n        landing: Resolved landing config.\n        out: The result dict being built.\n\n    Returns:\n        `out`, updated.",
+   "kind": "function",
+   "name": "_finish_landing",
+   "signature": "def _finish_landing(root, sl: dict, landing: dict, out: dict) -> dict",
+   "span": [
+    319,
+    320
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`harness land` \u2014 (re)run the landing for a slice that closed but did\n    not land (`landed_via: pending`). Thin on purpose: the close ceremony is\n    not repeated, only the push and the pr command.",
+   "kind": "function",
+   "name": "cmd_land",
+   "signature": "def cmd_land(args)",
+   "span": [
+    359,
+    360
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -72,7 +72,12 @@ def test_verify_flags_a_closed_slice_with_no_note(toy):
                    "--commit", "HEAD", root=toy).returncode == 0
     assert run_cli("verify", root=toy).returncode == 0
 
+    # both keys must go: since ADR-002 / D-010 a note is keyed twice — on the
+    # commit and in the derived .harness/notes.jsonl — and only a slice with
+    # NEITHER is missing provenance (losing just the ref now resolves by tree
+    # hash, which is the point of the second key)
     git(toy, "update-ref", "-d", "refs/notes/harness")     # provenance lost
+    (toy / ".harness" / "notes.jsonl").unlink()
     proc = run_cli("verify", root=toy)
     assert proc.returncode == 1
     out = json.loads(proc.stdout)
@@ -86,6 +91,7 @@ def test_graph_note_repairs_missing_provenance(toy):
     run_cli("close-slice", "--slice", "slice-042", "--session", session,
             "--commit", "HEAD", root=toy)
     git(toy, "update-ref", "-d", "refs/notes/harness")
+    (toy / ".harness" / "notes.jsonl").unlink()          # D-010: both keys
     head = git(toy, "rev-parse", "HEAD").stdout.strip()
     proc = run_cli("graph", "note", "--slice", "slice-042", "--commit", head,
                    root=toy)
@@ -120,6 +126,7 @@ def test_verify_accepts_a_commit_noting_every_closed_slice(toy):
     run_cli("close-slice", "--slice", "slice-042", "--session", session,
             "--commit", "HEAD", root=toy)
     git(toy, "update-ref", "-d", "refs/notes/harness")
+    (toy / ".harness" / "notes.jsonl").unlink()          # D-010: both keys
     head = git(toy, "rev-parse", "HEAD").stdout.strip()
     # two historical slices, one commit
     rows = read_jsonl(toy / ".harness" / "backlog.jsonl")

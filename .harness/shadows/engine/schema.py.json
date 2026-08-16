@@ -9,7 +9,7 @@
  ],
  "language": "python",
  "module_id": "engine.schema",
- "source_hash": "sha256:238e9f02ab2bdd73e6878016e0f21ae3b8eabe56c3a99310aa0bdc04704e0003",
+ "source_hash": "sha256:d783beddae8cf3f176ec59dae32d272a09ada7d010e88860d08d8bc7b4619f1e",
  "source_path": "engine/schema.py",
  "symbols": [
   {
@@ -18,8 +18,8 @@
    "name": "validate_rows",
    "signature": "def validate_rows(filename: str, rows: list, kinds=None) -> list",
    "span": [
-    43,
-    44
+    48,
+    49
    ],
    "visibility": "public"
   },
@@ -29,8 +29,8 @@
    "name": "validate_substrate",
    "signature": "def validate_substrate(root, config=None) -> list",
    "span": [
-    91,
-    92
+    96,
+    97
    ],
    "visibility": "public"
   }
