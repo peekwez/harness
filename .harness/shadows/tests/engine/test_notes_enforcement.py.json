@@ -8,10 +8,12 @@
   "test_verify_accepts_a_commit_noting_every_closed_slice",
   "test_verify_flags_a_closed_slice_with_no_note"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.graph",
   "json",
   "shutil"
  ],

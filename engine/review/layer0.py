@@ -10,7 +10,8 @@ import re
 from pathlib import Path
 
 from .. import get_slice, load_decisions
-from ..extractor.engine import LANG_BY_EXT, shadow_path_for
+from ..extractor.engine import (LANG_BY_EXT, RegistryIndex,
+                                shadow_path_for)
 from ..graph import uses_vs_declares
 from ..registry import load_registry
 
@@ -101,6 +102,7 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
     sl = get_slice(root, slice_id)
     domains = set()
     reg_by_id = {e["id"]: e for e in registry}
+    index = RegistryIndex(registry)
     for did in sl.get("declares_dep", []):
         if did in reg_by_id:
             domains.add(reg_by_id[did].get("kind", "other"))
@@ -118,7 +120,9 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
             continue
         shadow = json.loads(sp.read_text())
         for imp in shadow.get("imports", []):
-            entry = reg_by_id.get(imp)
+            # longest dotted prefix, like G5 and the resolver (D-008):
+            # exact-id matching drops `telemetry.spans` -> `telemetry`
+            entry = index.match(imp)
             if entry and entry.get("shadow") and (root / entry["shadow"]).exists():
                 imported_shadows[imp] = json.loads((root / entry["shadow"]).read_text())
 

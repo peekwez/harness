@@ -11,10 +11,14 @@
   "test_replay_ten_pairs_stable_across_three_runs",
   "test_reviewer_never_receives_builder_session_memory"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.review",
+  "engine.review.ensemble",
+  "engine.review.golden",
   "json",
   "pytest"
  ],

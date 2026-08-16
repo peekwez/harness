@@ -1,0 +1,195 @@
+{
+ "exports": [
+  "test_architect_is_registered_in_the_command_table",
+  "test_doc_ends_with_an_empty_decisions_table",
+  "test_every_heading_becomes_a_constraint_block",
+  "test_force_overwrites",
+  "test_from_spec_accepts_an_explicit_doc_path",
+  "test_from_spec_writes_the_working_doc_at_stage_3",
+  "test_heading_without_a_paragraph_gets_no_summary",
+  "test_missing_spec_fails_loud",
+  "test_refuses_to_overwrite_an_existing_doc_without_force",
+  "test_seed_doc_from_spec_is_importable_and_pure",
+  "test_seeded_doc_compiles_and_the_gate_sees_the_open_questions",
+  "test_spec_that_is_a_directory_fails_loud",
+  "test_todo_tbd_and_open_lines_become_open_questions"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine.cli",
+  "engine.compiler",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_architect_from_spec",
+ "source_hash": "sha256:dfa98877efa226507a71a23bbc6d58674bd2770e6782914e7d0346e716830b14",
+ "source_path": "tests/engine/test_architect_from_spec.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_write_spec",
+   "signature": "def _write_spec(toy, body=SPEC)",
+   "span": [
+    39,
+    40
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_seed",
+   "signature": "def _seed(toy, *extra, spec_body=SPEC)",
+   "span": [
+    46,
+    47
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_from_spec_writes_the_working_doc_at_stage_3",
+   "signature": "def test_from_spec_writes_the_working_doc_at_stage_3(toy)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_every_heading_becomes_a_constraint_block",
+   "signature": "def test_every_heading_becomes_a_constraint_block(toy)",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_heading_without_a_paragraph_gets_no_summary",
+   "signature": "def test_heading_without_a_paragraph_gets_no_summary(toy)",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_todo_tbd_and_open_lines_become_open_questions",
+   "signature": "def test_todo_tbd_and_open_lines_become_open_questions(toy)",
+   "span": [
+    84,
+    85
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doc_ends_with_an_empty_decisions_table",
+   "signature": "def test_doc_ends_with_an_empty_decisions_table(toy)",
+   "span": [
+    95,
+    96
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Round trip: the seed is real substrate input, not a decoration.",
+   "kind": "function",
+   "name": "test_seeded_doc_compiles_and_the_gate_sees_the_open_questions",
+   "signature": "def test_seeded_doc_compiles_and_the_gate_sees_the_open_questions(toy)",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_from_spec_accepts_an_explicit_doc_path",
+   "signature": "def test_from_spec_accepts_an_explicit_doc_path(toy)",
+   "span": [
+    115,
+    116
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_refuses_to_overwrite_an_existing_doc_without_force",
+   "signature": "def test_refuses_to_overwrite_an_existing_doc_without_force(toy)",
+   "span": [
+    123,
+    124
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_force_overwrites",
+   "signature": "def test_force_overwrites(toy)",
+   "span": [
+    134,
+    135
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_spec_fails_loud",
+   "signature": "def test_missing_spec_fails_loud(toy)",
+   "span": [
+    143,
+    144
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_seed_doc_from_spec_is_importable_and_pure",
+   "signature": "def test_seed_doc_from_spec_is_importable_and_pure()",
+   "span": [
+    149,
+    150
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_architect_is_registered_in_the_command_table",
+   "signature": "def test_architect_is_registered_in_the_command_table()",
+   "span": [
+    156,
+    157
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_spec_that_is_a_directory_fails_loud",
+   "signature": "def test_spec_that_is_a_directory_fails_loud(toy)",
+   "span": [
+    161,
+    162
+   ],
+   "visibility": "public"
+  }
+ ]
+}

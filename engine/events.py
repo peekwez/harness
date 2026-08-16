@@ -402,15 +402,14 @@ def _snapshot_slice_baseline(root, sidecar, slice_id):
 def _regenerate_touched(root, sidecar, session, slice_id, config):
     """Stop hook duties: regenerate shadows for touched files, append
     touches + uses edges (feeding G5 and the close-slice reconciliation)."""
-    from .extractor.engine import extract_path
+    from .extractor.engine import RegistryIndex, extract_path
     from .graph import append_edge, load_edges
     from .registry import load_registry
     touched = sidecar.touched_paths(session_id=session)
     if not touched:
         return
     registry = load_registry(root)
-    by_id = {e["id"]: e for e in registry}
-    by_module = {e.get("module_id"): e for e in registry if e.get("module_id")}
+    index = RegistryIndex(registry)
     existing = {(e["type"], e["from"], e["to"]) for e in load_edges(root)}
 
     def add_once(etype, frm, to):
@@ -430,7 +429,7 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
         add_once("touches", f"slice:{slice_id}", f"file:{rel}")
         own = next((e for e in registry if e.get("source") == rel), None)
         for imp in shadow.get("imports", []):
-            target = by_id.get(imp) or by_module.get(imp)
+            target = index.match(imp)
             if target is not None and (own is None or own["id"] != target["id"]):
                 add_once("uses", f"slice:{slice_id}", f"module:{target['id']}")
 

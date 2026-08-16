@@ -1,0 +1,316 @@
+{
+ "exports": [
+  "test_a_non_table_line_inside_a_block_names_the_pipe_requirement",
+  "test_abstraction_claimed_by_both_sources_is_a_hard_error",
+  "test_adjudicated_rows_still_outrank_doc_rows",
+  "test_an_all_empty_row_is_malformed_not_a_separator",
+  "test_author_gate_passes_on_doc_only_substrate",
+  "test_bare_compile_is_silent_when_the_doc_has_no_typed_blocks",
+  "test_bare_compile_warns_that_doc_rows_are_ignored",
+  "test_compile_with_the_doc_does_not_warn",
+  "test_doc_abstraction_compiles_into_the_registry",
+  "test_doc_abstraction_with_unknown_kind_is_coerced_and_warned",
+  "test_doc_decision_rows_compile_with_phase0_origin",
+  "test_doc_only_substrate_needs_no_adr_at_all",
+  "test_doc_sourced_compile_is_idempotent",
+  "test_doc_without_fenced_blocks_compiles_exactly_as_before",
+  "test_duplicate_id_inside_the_doc_fails_loud",
+  "test_fenced_tables_inside_a_plain_code_block_are_prose",
+  "test_id_claimed_by_both_an_adr_and_the_doc_is_a_hard_error",
+  "test_parse_doc_blocks_on_a_doc_without_fences_is_empty",
+  "test_parse_doc_blocks_reads_both_tables",
+  "test_row_missing_a_required_field_fails_loud",
+  "test_row_missing_an_id_fails_loud",
+  "test_single_dash_separator_rows_are_separators",
+  "test_unterminated_fenced_block_fails_loud",
+  "test_wrong_column_count_names_the_doc_and_the_line"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.compiler",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_compile_doc_sections",
+ "source_hash": "sha256:2859e5c24c22679252fb52572c38151ef16fbb8479bc362e8e9d0a934915aca3",
+ "source_path": "tests/engine/test_compile_doc_sections.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_write_doc",
+   "signature": "def _write_doc(toy, body=DOC)",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_parse_doc_blocks_reads_both_tables",
+   "signature": "def test_parse_doc_blocks_reads_both_tables()",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_parse_doc_blocks_on_a_doc_without_fences_is_empty",
+   "signature": "def test_parse_doc_blocks_on_a_doc_without_fences_is_empty()",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A doc that DOCUMENTS the table syntax must not compile the example.",
+   "kind": "function",
+   "name": "test_fenced_tables_inside_a_plain_code_block_are_prose",
+   "signature": "def test_fenced_tables_inside_a_plain_code_block_are_prose()",
+   "span": [
+    60,
+    61
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doc_decision_rows_compile_with_phase0_origin",
+   "signature": "def test_doc_decision_rows_compile_with_phase0_origin(toy)",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doc_abstraction_compiles_into_the_registry",
+   "signature": "def test_doc_abstraction_compiles_into_the_registry(toy)",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doc_abstraction_with_unknown_kind_is_coerced_and_warned",
+   "signature": "def test_doc_abstraction_with_unknown_kind_is_coerced_and_warned(toy)",
+   "span": [
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doc_sourced_compile_is_idempotent",
+   "signature": "def test_doc_sourced_compile_is_idempotent(toy)",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_adjudicated_rows_still_outrank_doc_rows",
+   "signature": "def test_adjudicated_rows_still_outrank_doc_rows(toy)",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backward compatibility: the pre-D-013 doc path is untouched.",
+   "kind": "function",
+   "name": "test_doc_without_fenced_blocks_compiles_exactly_as_before",
+   "signature": "def test_doc_without_fenced_blocks_compiles_exactly_as_before(toy)",
+   "span": [
+    130,
+    131
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_id_claimed_by_both_an_adr_and_the_doc_is_a_hard_error",
+   "signature": "def test_id_claimed_by_both_an_adr_and_the_doc_is_a_hard_error(toy)",
+   "span": [
+    140,
+    141
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_abstraction_claimed_by_both_sources_is_a_hard_error",
+   "signature": "def test_abstraction_claimed_by_both_sources_is_a_hard_error(toy)",
+   "span": [
+    149,
+    150
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_wrong_column_count_names_the_doc_and_the_line",
+   "signature": "def test_wrong_column_count_names_the_doc_and_the_line(toy)",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_row_missing_a_required_field_fails_loud",
+   "signature": "def test_row_missing_a_required_field_fails_loud(toy)",
+   "span": [
+    169,
+    170
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_row_missing_an_id_fails_loud",
+   "signature": "def test_row_missing_an_id_fails_loud(toy)",
+   "span": [
+    175,
+    176
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`all()` over an empty generator is True \u2014 an empty row must not slip\n    through the separator check and become a `{\"id\": \"\", ...}` row.",
+   "kind": "function",
+   "name": "test_an_all_empty_row_is_malformed_not_a_separator",
+   "signature": "def test_an_all_empty_row_is_malformed_not_a_separator(toy)",
+   "span": [
+    181,
+    182
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "GFM allows one dash per column: `|-|-|...|` is the alignment row, not\n    a decision whose every field is '-'.",
+   "kind": "function",
+   "name": "test_single_dash_separator_rows_are_separators",
+   "signature": "def test_single_dash_separator_rows_are_separators(toy, sep)",
+   "span": [
+    193,
+    194
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_non_table_line_inside_a_block_names_the_pipe_requirement",
+   "signature": "def test_a_non_table_line_inside_a_block_names_the_pipe_requirement(toy)",
+   "span": [
+    204,
+    205
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_duplicate_id_inside_the_doc_fails_loud",
+   "signature": "def test_duplicate_id_inside_the_doc_fails_loud(toy)",
+   "span": [
+    212,
+    213
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unterminated_fenced_block_fails_loud",
+   "signature": "def test_unterminated_fenced_block_fails_loud(toy)",
+   "span": [
+    218,
+    219
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The D-013 point: a repo may author Phase 0 entirely in the document.",
+   "kind": "function",
+   "name": "test_doc_only_substrate_needs_no_adr_at_all",
+   "signature": "def test_doc_only_substrate_needs_no_adr_at_all(tmp_path)",
+   "span": [
+    226,
+    227
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Every sliceable domain covered by rows the human wrote in the doc.",
+   "kind": "function",
+   "name": "test_author_gate_passes_on_doc_only_substrate",
+   "signature": "def test_author_gate_passes_on_doc_only_substrate(toy)",
+   "span": [
+    240,
+    241
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Silent degradation: `compile` without --doc compiled zero doc rows and\n    said nothing. Behaviour is unchanged; the omission is now audible.",
+   "kind": "function",
+   "name": "test_bare_compile_warns_that_doc_rows_are_ignored",
+   "signature": "def test_bare_compile_warns_that_doc_rows_are_ignored(toy)",
+   "span": [
+    249,
+    250
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_bare_compile_is_silent_when_the_doc_has_no_typed_blocks",
+   "signature": "def test_bare_compile_is_silent_when_the_doc_has_no_typed_blocks(toy)",
+   "span": [
+    260,
+    261
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_with_the_doc_does_not_warn",
+   "signature": "def test_compile_with_the_doc_does_not_warn(toy)",
+   "span": [
+    265,
+    266
+   ],
+   "visibility": "public"
+  }
+ ]
+}

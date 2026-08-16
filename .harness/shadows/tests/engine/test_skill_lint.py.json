@@ -3,7 +3,7 @@
   "test_preflight_commands_never_use_positional_arguments",
   "test_preflights_still_exist_where_no_argument_is_needed"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "re"

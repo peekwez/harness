@@ -17,10 +17,16 @@
   "test_resolver_skips_superseded_adr_guidance",
   "test_slice_release_and_close_unbinds"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.cli",
+  "engine.cli.slice",
+  "engine.compiler",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.resolver",
   "json",
   "os",
   "pytest",

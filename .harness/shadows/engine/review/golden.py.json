@@ -4,7 +4,7 @@
   "__init__",
   "replay"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "json",
   "layer0",

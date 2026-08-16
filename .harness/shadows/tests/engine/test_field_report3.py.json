@@ -11,10 +11,12 @@
   "test_parallel_close_branches_merge_without_conflict",
   "test_python_class_fields_surface_in_shadow"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.extractor.engine",
   "json",
   "subprocess",
   "sys"

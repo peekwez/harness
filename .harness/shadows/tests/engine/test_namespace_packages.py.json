@@ -1,0 +1,285 @@
+{
+ "exports": [
+  "install_ns_packages",
+  "shadow_of",
+  "test_absent_extractor_block_uses_the_defaults",
+  "test_deep_dotted_import_survives_whole",
+  "test_g5_undeclared_use_names_the_dotted_module",
+  "test_layer0_imported_shadows_follow_dotted_prefix",
+  "test_malformed_extractor_block_fails_loud",
+  "test_malformed_src_roots_fails_loud",
+  "test_match_registry_module_falls_back_to_ids",
+  "test_match_registry_module_longest_prefix",
+  "test_module_id_for_flat_src_layout",
+  "test_module_id_honours_configured_src_roots",
+  "test_module_id_strips_packages_src_root",
+  "test_module_id_unchanged_when_no_src_root_matches",
+  "test_python_imports_keep_the_full_dotted_path",
+  "test_relative_imports_keep_their_dotted_tail",
+  "test_resolver_one_hop_follows_dotted_imports",
+  "test_src_root_glob_is_anchored_at_the_repo_root",
+  "test_typescript_imports_unchanged",
+  "test_v2_shadow_is_rebuilt_not_served"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.resolver",
+  "engine.review.layer0",
+  "json",
+  "pathlib",
+  "pytest",
+  "shutil"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_namespace_packages",
+ "source_hash": "sha256:6f11fe331bd29718bd48b10fa25f8d3a35e6d695f646ff542c070071c705892a",
+ "source_path": "tests/engine/test_namespace_packages.py",
+ "symbols": [
+  {
+   "doc": "Copy the namespace-package fixture into a repo and extract it.\n\n    Args:\n        root: Repo root carrying a harness substrate (the `toy` fixture).\n\n    Returns:\n        The repo root, for chaining.",
+   "kind": "function",
+   "name": "install_ns_packages",
+   "signature": "def install_ns_packages(root: Path) -> Path",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Load the shadow written for a repo-relative source path.",
+   "kind": "function",
+   "name": "shadow_of",
+   "signature": "def shadow_of(root: Path, rel: str) -> dict",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_module_id_strips_packages_src_root",
+   "signature": "def test_module_id_strips_packages_src_root(toy)",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_module_id_for_flat_src_layout",
+   "signature": "def test_module_id_for_flat_src_layout(toy)",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A flat repo (no `src` anywhere) keeps the dotted relative path.",
+   "kind": "function",
+   "name": "test_module_id_unchanged_when_no_src_root_matches",
+   "signature": "def test_module_id_unchanged_when_no_src_root_matches(toy)",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_module_id_honours_configured_src_roots",
+   "signature": "def test_module_id_honours_configured_src_roots(toy)",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_malformed_src_roots_fails_loud",
+   "signature": "def test_malformed_src_roots_fails_loud(toy, bad)",
+   "span": [
+    87,
+    88
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_python_imports_keep_the_full_dotted_path",
+   "signature": "def test_python_imports_keep_the_full_dotted_path(toy)",
+   "span": [
+    96,
+    97
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_deep_dotted_import_survives_whole",
+   "signature": "def test_deep_dotted_import_survives_whole(toy)",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_relative_imports_keep_their_dotted_tail",
+   "signature": "def test_relative_imports_keep_their_dotted_tail(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_typescript_imports_unchanged",
+   "signature": "def test_typescript_imports_unchanged(toy)",
+   "span": [
+    122,
+    123
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_entries",
+   "signature": "def _entries()",
+   "span": [
+    131,
+    132
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_match_registry_module_longest_prefix",
+   "signature": "def test_match_registry_module_longest_prefix()",
+   "span": [
+    141,
+    142
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Flat repos keep matching on `id` exactly, as before.",
+   "kind": "function",
+   "name": "test_match_registry_module_falls_back_to_ids",
+   "signature": "def test_match_registry_module_falls_back_to_ids()",
+   "span": [
+    150,
+    151
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Registry + slice for the fixture constellation.\n\n    `config` is a built entry whose module_id is `kente.config`; `kente` and\n    `kente.service` are planned entries with no module_id. The slice declares\n    only `config`, so the `kente.service` import is undeclared.",
+   "kind": "function",
+   "name": "_ns_registry",
+   "signature": "def _ns_registry(toy)",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g5_undeclared_use_names_the_dotted_module",
+   "signature": "def test_g5_undeclared_use_names_the_dotted_module(toy)",
+   "span": [
+    187,
+    188
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_resolver_one_hop_follows_dotted_imports",
+   "signature": "def test_resolver_one_hop_follows_dotted_imports(toy)",
+   "span": [
+    200,
+    201
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The FORMAT changed, so the extractor-version half of the cache key must\n    invalidate every shadow written before D-008 \u2014 otherwise truncated imports\n    are served forever while G7's uncached rebuild mismatches forever (W7).",
+   "kind": "function",
+   "name": "test_v2_shadow_is_rebuilt_not_served",
+   "signature": "def test_v2_shadow_is_rebuilt_not_served(toy)",
+   "span": [
+    223,
+    224
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`docs/src/conf.py` is not a source root: only an anchored match strips.",
+   "kind": "function",
+   "name": "test_src_root_glob_is_anchored_at_the_repo_root",
+   "signature": "def test_src_root_glob_is_anchored_at_the_repo_root(toy)",
+   "span": [
+    247,
+    248
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Only a missing `extractor` key defaults; a malformed block is loud.",
+   "kind": "function",
+   "name": "test_malformed_extractor_block_fails_loud",
+   "signature": "def test_malformed_extractor_block_fails_loud(toy, bad)",
+   "span": [
+    257,
+    258
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_absent_extractor_block_uses_the_defaults",
+   "signature": "def test_absent_extractor_block_uses_the_defaults(toy)",
+   "span": [
+    266,
+    267
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Layer 0 is the fourth consumer of shadow imports: a dotted import must\n    still find the registry entry whose id/module_id is its prefix.",
+   "kind": "function",
+   "name": "test_layer0_imported_shadows_follow_dotted_prefix",
+   "signature": "def test_layer0_imported_shadows_follow_dotted_prefix(toy)",
+   "span": [
+    273,
+    274
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -10,7 +10,7 @@
   "test_non_goal_boundary_denied",
   "test_pi_extension_parses_as_typescript"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "json",
   "os",

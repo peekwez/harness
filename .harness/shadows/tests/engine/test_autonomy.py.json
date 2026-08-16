@@ -7,11 +7,14 @@
   "test_init_autonomy_refreshes_its_own_stale_profile",
   "test_init_gitignores_the_worktrees_dir"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
-  "importlib",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.graph",
+  "importlib.util",
   "json"
  ],
  "language": "python",

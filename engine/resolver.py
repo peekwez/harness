@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import (get_slice, harness_dir, load_decisions, read_jsonl,
                token_estimate)
+from .extractor.modules import RegistryIndex
 from .registry import load_registry
 
 RANK_DIRECT, RANK_ONEHOP, RANK_MEMORY = 0, 1, 2
@@ -162,7 +163,9 @@ def resolve(root, slice_id: str, config: dict) -> dict:
     """Assemble injection blocks + the context_loaded manifest they represent."""
     budget = int(config["resolver"]["budget_tokens"])
     sl = get_slice(root, slice_id)
-    registry = {e["id"]: e for e in load_registry(root)}
+    entries = load_registry(root)
+    registry = {e["id"]: e for e in entries}
+    index = RegistryIndex(entries)
 
     # (1) declares_dep closure -> registry entries (missing dep = hard error).
     direct_ids = list(dict.fromkeys(sl.get("declares_dep", [])))
@@ -194,7 +197,8 @@ def resolve(root, slice_id: str, config: dict) -> dict:
                                full, degraded, [f"shadow:{did}"]))
             # (5) one-hop type closure from shadow imports (depth-limited to 1)
             for imp in shadow.get("imports", []):
-                hop = registry.get(imp)
+                # dotted imports resolve by longest registry prefix (D-008)
+                hop = index.match(imp)
                 if hop is None or hop["id"] in onehop_seen:
                     continue
                 onehop_seen.add(hop["id"])

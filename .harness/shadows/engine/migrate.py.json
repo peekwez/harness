@@ -3,7 +3,7 @@
   "current_version",
   "migrate"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "pathlib"
  ],

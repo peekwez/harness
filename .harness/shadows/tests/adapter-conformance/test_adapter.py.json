@@ -14,10 +14,10 @@
   "test_stop_maps_to_unit_complete_and_can_block",
   "test_unbound_hook_is_noop"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
-  "engine",
-  "importlib",
+  "engine.gates",
+  "importlib.util",
   "json",
   "os",
   "pathlib",

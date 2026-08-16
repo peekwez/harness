@@ -9,10 +9,11 @@
   "test_repeated_close_failures_auto_park_the_slice",
   "test_verify_lints_contracts"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
   "json"
  ],
  "language": "python",

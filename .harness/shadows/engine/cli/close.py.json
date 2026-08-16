@@ -3,9 +3,14 @@
   "cmd_close_slice",
   "cmd_merge_slice"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.ceremony",
+  "engine.cli.common",
+  "engine.cli.slice",
+  "engine.events",
+  "engine.extractor.engine",
   "json",
   "subprocess",
   "sys"

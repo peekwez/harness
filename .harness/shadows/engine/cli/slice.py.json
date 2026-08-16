@@ -3,9 +3,16 @@
   "cmd_permit",
   "cmd_start"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.common",
+  "engine.cli.init",
+  "engine.events",
+  "engine.graph",
+  "engine.permits",
+  "engine.registry",
+  "engine.resolver",
   "os",
   "pathlib",
   "subprocess",

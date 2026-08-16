@@ -28,9 +28,9 @@
   "validate_finding",
   "verdict_for"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
-  "extractor",
+  "extractor.engine",
   "gates",
   "graph",
   "hashlib",
@@ -42,7 +42,7 @@
  ],
  "language": "python",
  "module_id": "engine.events",
- "source_hash": "sha256:6174e1f265d0fe5ee5ec454c17a4713c8b73623feb79a893653836836e21f167",
+ "source_hash": "sha256:400a2cd538a61aed6e063ff38185b128821ce834b75a5a503afdbe8da39c3b78",
  "source_path": "engine/events.py",
  "symbols": [
   {
@@ -359,8 +359,8 @@
    "name": "add_once",
    "signature": "def add_once(etype, frm, to)",
    "span": [
-    416,
-    417
+    415,
+    416
    ],
    "visibility": "public"
   },
@@ -370,8 +370,8 @@
    "name": "run_stdin",
    "signature": "def run_stdin(root, stdin_text: str) -> tuple",
    "span": [
-    439,
-    440
+    438,
+    439
    ],
    "visibility": "public"
   }

@@ -13,10 +13,11 @@
   "test_verify_green_on_harness_repo_itself",
   "verify"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.graph",
   "json"
  ],
  "language": "python",

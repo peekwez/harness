@@ -11,9 +11,10 @@
   "test_same_slice_same_substrate_byte_identical",
   "test_superseded_guidance_absent_surviving_present"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.resolver",
   "json",
   "pytest"
  ],

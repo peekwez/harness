@@ -8,7 +8,7 @@
   "test_run_parks_a_failing_slice_and_stops_loudly",
   "test_run_requires_a_builder_command"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",

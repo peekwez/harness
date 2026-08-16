@@ -3,10 +3,10 @@
   "check",
   "record_override"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "events",
-  "extractor",
+  "extractor.engine",
   "graph",
   "json",
   "pathlib",
@@ -14,7 +14,7 @@
  ],
  "language": "python",
  "module_id": "engine.gates.g5_conformance",
- "source_hash": "sha256:37bfd15b41725ac549eae8c1d735022b89018dd9c25af8651d9c21ca02957790",
+ "source_hash": "sha256:2371b6c543a8c61d9aa58dcaefb6f5af2e3c5200724d4a274b2bec0ded60c073",
  "source_path": "engine/gates/g5_conformance.py",
  "symbols": [
   {
@@ -23,8 +23,8 @@
    "name": "_severity",
    "signature": "def _severity(ctx) -> str",
    "span": [
-    20,
-    21
+    21,
+    22
    ],
    "visibility": "private"
   },
@@ -34,8 +34,8 @@
    "name": "_override_targets",
    "signature": "def _override_targets(ctx) -> set",
    "span": [
-    29,
-    30
+    30,
+    31
    ],
    "visibility": "private"
   },
@@ -45,8 +45,8 @@
    "name": "_shadow_for_touched",
    "signature": "def _shadow_for_touched(ctx, rel)",
    "span": [
-    37,
-    38
+    38,
+    39
    ],
    "visibility": "private"
   },
@@ -56,8 +56,8 @@
    "name": "check",
    "signature": "def check(ctx) -> list",
    "span": [
-    48,
-    49
+    49,
+    50
    ],
    "visibility": "public"
   },
@@ -67,8 +67,8 @@
    "name": "record_override",
    "signature": "def record_override(root, slice_id: str, target: str, justification: str, finding_id: str | None = None, rule_ref: str = \"gate:G5\") -> dict",
    "span": [
-    114,
-    117
+    116,
+    119
    ],
    "visibility": "public"
   }

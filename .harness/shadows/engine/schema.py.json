@@ -3,7 +3,7 @@
   "validate_rows",
   "validate_substrate"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "registry"
  ],

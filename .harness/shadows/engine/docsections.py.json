@@ -6,7 +6,7 @@
   "parse_doc_blocks",
   "seed_doc_from_spec"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "pathlib",
   "re"

@@ -1,0 +1,26 @@
+{
+ "exports": [
+  "get_setting"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "kente.core"
+ ],
+ "language": "python",
+ "module_id": "tests.fixtures.ns_monorepo.packages.kente-config.src.kente.config",
+ "source_hash": "sha256:08054ea79273cef6541b5f8bcb4fcb1f71f1912ff2d594fa2bdebd57f78cc12c",
+ "source_path": "tests/fixtures/ns_monorepo/packages/kente-config/src/kente/config/__init__.py",
+ "symbols": [
+  {
+   "doc": "Look up a setting value.\n\n    Args:\n        name: Dotted setting name.\n        default: Value returned when the setting is unset.\n\n    Returns:\n        The configured value, or ``default``.\n\n    Raises:\n        KenteError: If ``name`` is empty.",
+   "kind": "function",
+   "name": "get_setting",
+   "signature": "def get_setting(name: str, default=None)",
+   "span": [
+    8,
+    9
+   ],
+   "visibility": "public"
+  }
+ ]
+}

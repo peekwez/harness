@@ -2,9 +2,11 @@
  "exports": [
   "cmd_init"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.common",
+  "engine.migrate",
   "os",
   "pathlib",
   "shutil",

@@ -6,10 +6,12 @@
   "test_close_runs_the_review_stack_and_records_its_verdict",
   "test_review_at_close_can_be_disabled_by_config"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.graph",
   "json",
   "yaml"
  ],

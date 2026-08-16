@@ -6,7 +6,7 @@
   "extract_non_goals",
   "parse_frontmatter"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "docsections",
   "hashlib",

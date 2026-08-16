@@ -5,10 +5,11 @@
   "test_record_fork_requires_slice",
   "test_security_slice_blocks_close_until_fork_review_pass"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
   "json"
  ],
  "language": "python",

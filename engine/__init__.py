@@ -6,6 +6,7 @@ Fail closed, fail loud: missing required artifacts are hard errors.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -174,6 +175,12 @@ def load_boundaries(root) -> list:
     return read_jsonl(harness_dir(root) / "boundaries.jsonl")
 
 
+# Source roots stripped from a source path to make a module id (ADR-002 /
+# D-008): `packages/kente-config/src/kente/config/__init__.py` -> the module
+# id `kente.config`. A repo matching none of these keeps the dotted relative
+# path it always had.
+DEFAULT_SRC_ROOTS = ["src", "packages/*/src"]
+
 DEFAULT_CONFIG = {
     "schema": 1,
     "resolver": {
@@ -190,6 +197,7 @@ DEFAULT_CONFIG = {
     },
     "ensemble": {"trigger_confidence_below": 0.7, "samples": 3},
     "review": {"fork_for_security_rows": True},   # ADR-001
+    "extractor": {"src_roots": list(DEFAULT_SRC_ROOTS)},
     "languages": {"python": True, "typescript": True, "rust": True,
                   "go": True, "yaml": True, "hcl": True},
     "telemetry": {"compaction_is_defect": True},
@@ -217,4 +225,8 @@ def load_config(root) -> dict:
         raise HarnessError("PyYAML required: pip install pyyaml") from exc
     if not isinstance(loaded, dict):
         raise SchemaError(f"{cfg_path}: expected a mapping")
-    return _deep_merge(DEFAULT_CONFIG, loaded)
+    # deep-copied: nested defaults the repo does not override would
+    # otherwise be shared with DEFAULT_CONFIG, and one caller mutating
+    # `config["extractor"]["src_roots"]` would move every module id in the
+    # process (fail loud, never quietly global)
+    return _deep_merge(copy.deepcopy(DEFAULT_CONFIG), loaded)

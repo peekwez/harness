@@ -12,10 +12,14 @@
   "test_override_records_the_actual_rule_ref",
   "test_registry_refresh_cli"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.gates.g7_derivation",
+  "engine.graph",
   "json"
  ],
  "language": "python",

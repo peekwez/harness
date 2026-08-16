@@ -157,6 +157,14 @@ Language packs: Python, TypeScript/TSX, Rust, Go, YAML, HCL/Terraform —
 detected at `init`, toggled in `.harness/config.yaml`. Anything else is
 enumerated by G8 as unenforced surface, never silently skipped.
 
+Python namespace packages are first class: shadows keep the whole dotted
+import (`kente.telemetry.decorators`), and a module id strips the first
+matching `extractor.src_roots` glob (default `["src", "packages/*/src"]`),
+so `packages/kente-config/src/kente/config/__init__.py` is `kente.config`.
+G5 and the resolver match registry entries by longest dotted prefix; a repo
+with no source root keeps the dotted relative path it always had (ADR-002 /
+D-008).
+
 `docs/SPEC.md` defines every `§`/`C`/`T`/`M` marker the skills cite.
 
 Five events: `session_start`, `pre_context`, `pre_change`, `post_change`,

@@ -8,10 +8,10 @@
   "test_unknown_edge_type_fails_loud",
   "test_uses_vs_declares_diff"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
-  "engine",
+  "engine.graph",
   "json",
   "pytest",
   "subprocess",

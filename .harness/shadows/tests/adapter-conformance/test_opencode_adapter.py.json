@@ -5,7 +5,7 @@
   "test_opencode_plugin_full_flow",
   "test_opencode_plugin_inert_without_bin"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "json",
   "os",

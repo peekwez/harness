@@ -9,10 +9,11 @@
   "test_merge_slice_finishes_the_mechanical_tail",
   "test_merge_slice_refuses_an_unclosed_slice"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
   "json"
  ],
  "language": "python",

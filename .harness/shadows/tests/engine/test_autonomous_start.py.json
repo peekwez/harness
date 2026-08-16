@@ -13,10 +13,11 @@
   "test_start_without_worktree_binds_in_place",
   "test_undeclared_file_still_prompts"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
   "json",
   "subprocess",
   "sys"

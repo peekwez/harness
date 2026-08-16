@@ -13,10 +13,13 @@
   "test_telemetry_buffers_in_the_sidecar_and_flushes_at_close",
   "test_the_same_question_never_parks_twice"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.gates.g5_conformance",
+  "engine.graph",
   "json",
   "os",
   "re",

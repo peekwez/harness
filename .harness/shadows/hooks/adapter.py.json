@@ -7,7 +7,7 @@
   "permit",
   "resolve_root"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "json",
   "os",

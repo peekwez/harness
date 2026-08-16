@@ -3,17 +3,17 @@
   "check",
   "derivation_findings"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "events",
-  "extractor",
+  "extractor.engine",
   "json",
   "pathlib",
   "time"
  ],
  "language": "python",
  "module_id": "engine.gates.g7_derivation",
- "source_hash": "sha256:ebb2b71e0808358dc69370180eab5fb9df9e04e2c8375f988c069fdb329b712c",
+ "source_hash": "sha256:bb44d50810537faffce922b688bf17871704548f52f99856fdf313a4b69f6649",
  "source_path": "engine/gates/g7_derivation.py",
  "symbols": [
   {

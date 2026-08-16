@@ -1,8 +1,17 @@
 {
  "exports": [],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.common",
+  "engine.cli.slice",
+  "engine.compiler",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.gates.g3_scope",
+  "engine.graph",
+  "engine.registry",
+  "engine.review",
   "json",
   "pathlib",
   "subprocess",

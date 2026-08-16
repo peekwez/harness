@@ -12,10 +12,12 @@
   "test_verify_validates_backlog_rows",
   "test_verify_validates_registry_and_decision_rows"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.graph",
   "json"
  ],
  "language": "python",

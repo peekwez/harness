@@ -15,14 +15,14 @@
   "slice",
   "touched_files"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "extra",
   "pathlib",
   "registry"
  ],
  "language": "python",
- "module_id": "engine.gates.__init__",
+ "module_id": "engine.gates",
  "source_hash": "sha256:b7794b4d1859ee25ae9487bb85b7de741b3c44d54c543c904cc5efa6a9c78209",
  "source_path": "engine/gates/__init__.py",
  "symbols": [

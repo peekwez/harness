@@ -16,17 +16,18 @@
   "shadow_path_for",
   "write_shadow"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "events",
   "json",
+  "modules",
   "pathlib",
   "tree_sitter",
   "tree_sitter_language_pack"
  ],
  "language": "python",
  "module_id": "engine.extractor.engine",
- "source_hash": "sha256:2230cb5c1652116726b836a745df635bc7a4136649510e68ccdd3a4afec62edc",
+ "source_hash": "sha256:6b1c18f54e0c28b9db25b3d99b64c44ef50b74c963f28fcf50a2bb045bc9d38a",
  "source_path": "engine/extractor/engine.py",
  "symbols": [
   {
@@ -35,8 +36,8 @@
    "name": "deps_available",
    "signature": "def deps_available() -> bool",
    "span": [
-    38,
-    39
+    45,
+    46
    ],
    "visibility": "public"
   },
@@ -46,8 +47,8 @@
    "name": "_get_parser",
    "signature": "def _get_parser(lang: str)",
    "span": [
-    53,
-    54
+    60,
+    61
    ],
    "visibility": "private"
   },
@@ -57,8 +58,8 @@
    "name": "_get_query",
    "signature": "def _get_query(lang: str, name: str)",
    "span": [
-    65,
-    66
+    72,
+    73
    ],
    "visibility": "private"
   },
@@ -68,8 +69,8 @@
    "name": "_captures",
    "signature": "def _captures(query, node) -> dict",
    "span": [
-    80,
-    81
+    87,
+    88
    ],
    "visibility": "private"
   },
@@ -79,8 +80,8 @@
    "name": "_text",
    "signature": "def _text(node, src: bytes) -> str",
    "span": [
-    95,
-    96
+    102,
+    103
    ],
    "visibility": "private"
   },
@@ -90,8 +91,8 @@
    "name": "_py_visibility",
    "signature": "def _py_visibility(name: str) -> str",
    "span": [
-    100,
-    101
+    107,
+    108
    ],
    "visibility": "private"
   },
@@ -101,8 +102,8 @@
    "name": "_python_symbols",
    "signature": "def _python_symbols(tree, src)",
    "span": [
-    104,
-    105
+    111,
+    112
    ],
    "visibility": "private"
   },
@@ -112,8 +113,8 @@
    "name": "_python_imports",
    "signature": "def _python_imports(tree, src)",
    "span": [
-    170,
-    171
+    177,
+    178
    ],
    "visibility": "private"
   },
@@ -123,8 +124,8 @@
    "name": "_python_exports",
    "signature": "def _python_exports(tree, src, symbols)",
    "span": [
-    189,
-    190
+    198,
+    199
    ],
    "visibility": "private"
   },
@@ -134,8 +135,8 @@
    "name": "_ts_symbols",
    "signature": "def _ts_symbols(tree, src)",
    "span": [
-    202,
-    203
+    211,
+    212
    ],
    "visibility": "private"
   },
@@ -145,8 +146,8 @@
    "name": "is_exported",
    "signature": "def is_exported(node)",
    "span": [
-    210,
-    211
+    219,
+    220
    ],
    "visibility": "public"
   },
@@ -156,8 +157,8 @@
    "name": "_ts_imports",
    "signature": "def _ts_imports(tree, src)",
    "span": [
-    244,
-    245
+    253,
+    254
    ],
    "visibility": "private"
   },
@@ -167,8 +168,8 @@
    "name": "_rust_doc",
    "signature": "def _rust_doc(node, src) -> str | None",
    "span": [
-    253,
-    254
+    262,
+    263
    ],
    "visibility": "private"
   },
@@ -178,8 +179,8 @@
    "name": "_rust_visibility",
    "signature": "def _rust_visibility(node) -> str",
    "span": [
-    266,
-    267
+    275,
+    276
    ],
    "visibility": "private"
   },
@@ -189,8 +190,8 @@
    "name": "_rust_header",
    "signature": "def _rust_header(node, src, body_types) -> tuple",
    "span": [
-    272,
-    273
+    281,
+    282
    ],
    "visibility": "private"
   },
@@ -200,8 +201,8 @@
    "name": "_rust_symbols",
    "signature": "def _rust_symbols(tree, src)",
    "span": [
-    287,
-    288
+    296,
+    297
    ],
    "visibility": "private"
   },
@@ -211,8 +212,8 @@
    "name": "add",
    "signature": "def add(node, kind, name)",
    "span": [
-    291,
-    292
+    300,
+    301
    ],
    "visibility": "public"
   },
@@ -222,8 +223,8 @@
    "name": "name_of",
    "signature": "def name_of(node)",
    "span": [
-    300,
-    301
+    309,
+    310
    ],
    "visibility": "public"
   },
@@ -233,8 +234,8 @@
    "name": "_rust_imports",
    "signature": "def _rust_imports(tree, src)",
    "span": [
-    354,
-    355
+    363,
+    364
    ],
    "visibility": "private"
   },
@@ -244,8 +245,8 @@
    "name": "_go_visibility",
    "signature": "def _go_visibility(name: str) -> str",
    "span": [
-    373,
-    374
+    382,
+    383
    ],
    "visibility": "private"
   },
@@ -255,8 +256,8 @@
    "name": "_go_doc",
    "signature": "def _go_doc(node, src) -> str | None",
    "span": [
-    378,
-    379
+    387,
+    388
    ],
    "visibility": "private"
   },
@@ -266,8 +267,8 @@
    "name": "_go_symbols",
    "signature": "def _go_symbols(tree, src)",
    "span": [
-    389,
-    390
+    398,
+    399
    ],
    "visibility": "private"
   },
@@ -277,8 +278,8 @@
    "name": "header",
    "signature": "def header(node, doc_node=None)",
    "span": [
-    393,
-    394
+    402,
+    403
    ],
    "visibility": "public"
   },
@@ -288,8 +289,8 @@
    "name": "_go_imports",
    "signature": "def _go_imports(tree, src)",
    "span": [
-    460,
-    461
+    469,
+    470
    ],
    "visibility": "private"
   },
@@ -299,8 +300,8 @@
    "name": "_yaml_symbols",
    "signature": "def _yaml_symbols(tree, src)",
    "span": [
-    472,
-    473
+    481,
+    482
    ],
    "visibility": "private"
   },
@@ -310,8 +311,8 @@
    "name": "_hcl_symbols",
    "signature": "def _hcl_symbols(tree, src)",
    "span": [
-    492,
-    493
+    501,
+    502
    ],
    "visibility": "private"
   },
@@ -321,8 +322,8 @@
    "name": "rel_to_root",
    "signature": "def rel_to_root(root, path)",
    "span": [
-    512,
-    513
+    521,
+    522
    ],
    "visibility": "public"
   },
@@ -332,19 +333,19 @@
    "name": "in_root",
    "signature": "def in_root(root, path) -> bool",
    "span": [
-    523,
-    524
+    532,
+    533
    ],
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "Dotted module id for a source file (ADR-002 / D-008).\n\n    Args:\n        root: Repo root.\n        path: Source file, inside the root.\n        config: Loaded engine config; None uses the default `src_roots`.\n\n    Returns:\n        The source path relative to the first matching `extractor.src_roots`\n        glob, dotted, with a trailing `__init__` dropped. A repo with no\n        matching source root keeps the dotted relative path it always had.\n\n    Raises:\n        HarnessError: If the path is out of root or `src_roots` is malformed.",
    "kind": "function",
    "name": "module_id_for",
-   "signature": "def module_id_for(root, path: Path) -> str",
+   "signature": "def module_id_for(root, path: Path, config=None) -> str",
    "span": [
-    531,
-    532
+    540,
+    541
    ],
    "visibility": "public"
   },
@@ -354,8 +355,8 @@
    "name": "shadow_path_for",
    "signature": "def shadow_path_for(root, path: Path) -> Path",
    "span": [
-    536,
-    537
+    560,
+    561
    ],
    "visibility": "public"
   },
@@ -363,10 +364,10 @@
    "doc": null,
    "kind": "function",
    "name": "_degenerate_shadow",
-   "signature": "def _degenerate_shadow(root, path: Path, source: bytes) -> dict",
+   "signature": "def _degenerate_shadow(root, path: Path, source: bytes, config=None) -> dict",
    "span": [
-    541,
-    542
+    565,
+    566
    ],
    "visibility": "private"
   },
@@ -374,10 +375,10 @@
    "doc": null,
    "kind": "function",
    "name": "build_shadow",
-   "signature": "def build_shadow(root, path: Path, source: bytes, lang: str) -> dict",
+   "signature": "def build_shadow(root, path: Path, source: bytes, lang: str, config=None) -> dict",
    "span": [
-    556,
-    557
+    580,
+    581
    ],
    "visibility": "public"
   },
@@ -387,8 +388,8 @@
    "name": "write_shadow",
    "signature": "def write_shadow(root, path: Path, shadow: dict) -> Path",
    "span": [
-    600,
-    601
+    624,
+    625
    ],
    "visibility": "public"
   },
@@ -398,8 +399,8 @@
    "name": "load_shadow_file",
    "signature": "def load_shadow_file(sp: Path) -> dict",
    "span": [
-    607,
-    608
+    631,
+    632
    ],
    "visibility": "public"
   },
@@ -409,8 +410,8 @@
    "name": "extract_path",
    "signature": "def extract_path(root, path, config=None, force=False) -> tuple",
    "span": [
-    611,
-    612
+    635,
+    636
    ],
    "visibility": "public"
   },
@@ -420,8 +421,8 @@
    "name": "extract_all",
    "signature": "def extract_all(root, config=None, force=False) -> dict",
    "span": [
-    675,
-    676
+    699,
+    700
    ],
    "visibility": "public"
   },
@@ -431,8 +432,8 @@
    "name": "one",
    "signature": "def one(p)",
    "span": [
-    684,
-    685
+    708,
+    709
    ],
    "visibility": "public"
   }

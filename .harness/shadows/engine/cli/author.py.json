@@ -6,9 +6,17 @@
   "cmd_compile",
   "cmd_slice"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.common",
+  "engine.cli.slice",
+  "engine.compiler",
+  "engine.docsections",
+  "engine.events",
+  "engine.graph",
+  "engine.registry",
+  "engine.resolver",
   "pathlib",
   "sys"
  ],

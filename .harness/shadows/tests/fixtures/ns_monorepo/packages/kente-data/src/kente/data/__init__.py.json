@@ -1,0 +1,27 @@
+{
+ "exports": [
+  "cache_url"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "kente.config",
+  "kente.service"
+ ],
+ "language": "python",
+ "module_id": "tests.fixtures.ns_monorepo.packages.kente-data.src.kente.data",
+ "source_hash": "sha256:9352b983767a293df730fcb301787acccba49a1edcddcc86454bb828262cc6e4",
+ "source_path": "tests/fixtures/ns_monorepo/packages/kente-data/src/kente/data/__init__.py",
+ "symbols": [
+  {
+   "doc": "Return the configured cache URL.\n\n    Returns:\n        The cache URL, defaulting to an in-memory one.",
+   "kind": "function",
+   "name": "cache_url",
+   "signature": "def cache_url() -> str",
+   "span": [
+    9,
+    10
+   ],
+   "visibility": "public"
+  }
+ ]
+}

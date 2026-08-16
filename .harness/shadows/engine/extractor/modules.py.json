@@ -1,0 +1,99 @@
+{
+ "exports": [
+  "RegistryIndex",
+  "__init__",
+  "match",
+  "match_registry_module",
+  "module_id_for_rel",
+  "src_roots",
+  "strip_src_root"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "fnmatch",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.extractor.modules",
+ "source_hash": "sha256:b8f75543198334a735a2b5870d209df294d4af79bd70fe8164b2a43ca8be02df",
+ "source_path": "engine/extractor/modules.py",
+ "symbols": [
+  {
+   "doc": "Configured source roots, validated.\n\n    Args:\n        config: Loaded engine config, or None for the defaults.\n\n    Returns:\n        The glob patterns to strip, in the order they are tried.\n\n    Raises:\n        HarnessError: If `extractor.src_roots` is not a list of strings \u2014 a\n            malformed key silently falling back to the defaults would move\n            every module id in the repo without saying so.",
+   "kind": "function",
+   "name": "src_roots",
+   "signature": "def src_roots(config: dict | None = None) -> list",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Path segments left after removing the first matching source root.\n\n    A pattern only matches ANCHORED at the repo root: `docs/src/conf.py` keeps\n    the id `docs.src.conf` rather than colliding with the real `src/conf.py`.\n\n    Args:\n        rel_posix: Repo-relative POSIX path, extension already dropped.\n        roots: Glob patterns from `src_roots`.\n\n    Returns:\n        The remaining segments; the input segments when nothing matches (and\n        always at least one segment \u2014 a source root never eats the module).",
+   "kind": "function",
+   "name": "strip_src_root",
+   "signature": "def strip_src_root(rel_posix: str, roots: list) -> list",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Module id for a repo-relative source path.\n\n    `packages/kente-config/src/kente/config/__init__.py` -> `kente.config`;\n    `src/app/orders.py` -> `app.orders`; `telemetry.py` -> `telemetry`.\n\n    Args:\n        rel_posix: Repo-relative POSIX path of the source file.\n        config: Loaded engine config, or None for the default source roots.\n\n    Returns:\n        The dotted module id.\n\n    Raises:\n        HarnessError: If `extractor.src_roots` is malformed.",
+   "kind": "function",
+   "name": "module_id_for_rel",
+   "signature": "def module_id_for_rel(rel_posix: str, config: dict | None = None) -> str",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Longest-dotted-prefix lookup over registry entries (D-008).\n\n    Built once per gate run / resolve / review pass and reused across the\n    imports of every shadow: the maps are O(registry) to build and the\n    callers loop over O(files x imports).",
+   "kind": "class",
+   "name": "RegistryIndex",
+   "signature": "class RegistryIndex",
+   "span": [
+    100,
+    101
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Index registry entries by `id` and by `module_id`.\n\n        Args:\n            entries: Registry entries (dicts with `id` and optional\n                `module_id`). First entry wins on a duplicate key.",
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, entries)",
+   "span": [
+    108,
+    109
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Entry an import refers to, by longest dotted prefix.\n\n        `kente.config.secrets` matches the entry whose `module_id` (or `id`,\n        for entries still `planned`) is `kente.config` before the one that is\n        bare `kente`. An exact match on the whole import name is just the\n        longest prefix, so flat repos resolve exactly as before D-008.\n\n        Args:\n            import_name: Import as recorded in a shadow (`kente.config`).\n\n        Returns:\n            The matching entry, or None when the import is not a registry\n            abstraction (third-party and stdlib imports land here).",
+   "kind": "method",
+   "name": "match",
+   "signature": "def match(self, import_name: str) -> dict | None",
+   "span": [
+    125,
+    126
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "One-shot longest-dotted-prefix lookup (see `RegistryIndex.match`).\n\n    Args:\n        import_name: Import as recorded in a shadow.\n        entries: Registry entries.\n\n    Returns:\n        The matching entry, or None.",
+   "kind": "function",
+   "name": "match_registry_module",
+   "signature": "def match_registry_module(import_name: str, entries) -> dict | None",
+   "span": [
+    151,
+    152
+   ],
+   "visibility": "public"
+  }
+ ]
+}

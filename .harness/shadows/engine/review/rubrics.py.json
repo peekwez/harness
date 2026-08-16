@@ -5,7 +5,7 @@
   "run_review",
   "uses_reconciled"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "ensemble",
   "events",

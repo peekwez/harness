@@ -9,11 +9,12 @@
   "run_gate",
   "verify_extra_findings"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "events",
   "hashlib",
   "importlib",
+  "importlib.util",
   "os",
   "pathlib",
   "sys",

@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 
 from ..events import make_finding
-from ..extractor.engine import LANG_BY_EXT, shadow_path_for
+from ..extractor.engine import (LANG_BY_EXT, RegistryIndex,
+                                shadow_path_for)
 from ..registry import digest_tokens, signature_digest, similarity
 
 GATE = {"id": "G5", "rule_ref": "gate:G5",
@@ -52,8 +53,7 @@ def check(ctx) -> list:
     sl = ctx.slice
     declared = set(sl.get("declares_dep", []))
     overridden = _override_targets(ctx)
-    registry = {e["id"]: e for e in ctx.registry}
-    by_module = {e.get("module_id"): e for e in ctx.registry if e.get("module_id")}
+    index = RegistryIndex(ctx.registry)
     threshold = float(ctx.config["gates"].get("g5_similarity_threshold", 0.6))
     sev = _severity(ctx)
 
@@ -74,7 +74,9 @@ def check(ctx) -> list:
 
         # uses ⊆ declares ∪ flagged
         for imp in shadow.get("imports", []):
-            target = registry.get(imp) or by_module.get(imp)
+            # longest dotted prefix: `kente.config.secrets` is the
+            # `kente.config` entry, never the bare `kente` one (D-008)
+            target = index.match(imp)
             if target is None:
                 continue  # not a registry abstraction; G8 owns coverage
             tid = target["id"]

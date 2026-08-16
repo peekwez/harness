@@ -1,0 +1,24 @@
+{
+ "exports": [
+  "KenteError"
+ ],
+ "extractor_version": 3,
+ "imports": [],
+ "language": "python",
+ "module_id": "tests.fixtures.ns_monorepo.packages.kente-core.src.kente.core",
+ "source_hash": "sha256:015bbaffb1618ab64140178b2b8688f35443ced987b2c31895cdfff326122f55",
+ "source_path": "tests/fixtures/ns_monorepo/packages/kente-core/src/kente/core/__init__.py",
+ "symbols": [
+  {
+   "doc": "Root error type every fixture package raises.",
+   "kind": "class",
+   "name": "KenteError",
+   "signature": "class KenteError(Exception)",
+   "span": [
+    6,
+    7
+   ],
+   "visibility": "public"
+  }
+ ]
+}

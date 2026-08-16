@@ -1,6 +1,6 @@
 {
  "exports": "unknown",
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [],
  "language": "unknown",
  "module_id": "templates.claude-builder",

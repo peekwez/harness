@@ -11,10 +11,12 @@
   "test_typescript_shadow_regenerates_identically",
   "test_yaml_shadow_extracts_top_level_keys"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.extractor.engine",
+  "engine.gates.g7_derivation",
   "json",
   "subprocess",
   "sys",

@@ -9,9 +9,12 @@
   "run_cli",
   "toy"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.registry",
   "json",
   "os",
   "pathlib",

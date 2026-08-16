@@ -9,10 +9,12 @@
   "test_review_diff_with_missing_file_errors_cleanly",
   "test_session_defaults_to_claude_session_id_env"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.gates.g7_derivation",
   "json"
  ],
  "language": "python",

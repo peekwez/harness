@@ -2,9 +2,10 @@
  "exports": [
   "__init__"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.events",
   "json",
   "os",
   "pathlib",

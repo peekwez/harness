@@ -33,6 +33,16 @@ gates:
 # registry:
 #   # widen the registry `kind` enum with this repo's own abstraction kinds
 #   kinds_extra: [package, protocol]
+# extractor:
+#   # Source roots stripped from a source path to make a module id, tried in
+#   # order (ADR-002 / D-008). The remainder is dotted and a trailing
+#   # `__init__` dropped, so under the default globs
+#   # `packages/kente-config/src/kente/config/__init__.py` is the module
+#   # `kente.config`. A repo matching none of them keeps the dotted relative
+#   # path (`engine/resolver.py` -> `engine.resolver`). Python imports are
+#   # always shadowed whole (`kente.telemetry.decorators`), and G5 + the
+#   # resolver match those ids by longest dotted prefix.
+#   src_roots: ["src", "packages/*/src"]
 ensemble:
   trigger_confidence_below: 0.7
   samples: 3

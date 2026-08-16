@@ -3,15 +3,23 @@
   "COMMANDS",
   "main"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "argparse",
   "engine",
+  "engine.cli.author",
+  "engine.cli.close",
+  "engine.cli.init",
+  "engine.cli.review",
+  "engine.cli.run",
+  "engine.cli.slice",
+  "engine.cli.substrate",
+  "engine.cli.verify",
   "json",
   "sys"
  ],
  "language": "python",
- "module_id": "engine.cli.__init__",
+ "module_id": "engine.cli",
  "source_hash": "sha256:54951b0a2ab257ab37e004c49d2d0976bd78b132805630fd11d12ec4612137ff",
  "source_path": "engine/cli/__init__.py",
  "symbols": [

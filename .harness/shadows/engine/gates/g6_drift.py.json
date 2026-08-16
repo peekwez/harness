@@ -3,7 +3,7 @@
   "acknowledge",
   "check"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "events",
   "graph",

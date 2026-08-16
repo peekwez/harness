@@ -7,10 +7,11 @@
   "test_unknown_extension_degenerate_shadow_plus_finding",
   "test_visibility_mapping_per_language"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.extractor.engine",
   "json",
   "time"
  ],

@@ -5,9 +5,9 @@
   "test_every_subcommand_has_a_cli_module",
   "test_help_still_lists_all_subcommands"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
-  "engine",
+  "engine.cli",
   "pathlib",
   "subprocess",
   "sys"

@@ -13,6 +13,10 @@ from pathlib import Path
 from .. import (IGNORED_DIRS, IGNORED_EXTS, HarnessError, harness_dir,
                 sha256_bytes)
 from ..events import make_finding
+from .modules import module_id_for_rel
+# re-exported: the gates and the event pipeline reach the matcher through
+# the extractor's public surface (ADR-002 / D-008)
+from .modules import RegistryIndex, match_registry_module  # noqa: F401
 
 # Bump whenever the shadow FORMAT changes (new symbol kinds, new keys…).
 # The cache keys on (source_hash, extractor_version): without the version
@@ -20,7 +24,10 @@ from ..events import make_finding
 # while G7's uncached rebuild permanently mismatches — extract --all
 # becomes a no-op exactly when it is the named fix (field report W7).
 # v2 = class field symbols + this stamp (0.3.5).
-EXTRACTOR_VERSION = 2
+# v3 = dotted Python imports + src-root-stripped module ids (0.8, D-008):
+# without this bump every committed shadow stays a cache HIT with its
+# truncated imports while G7's uncached rebuild mismatches forever.
+EXTRACTOR_VERSION = 3
 
 LANG_BY_EXT = {
     ".py": "python",
@@ -174,15 +181,17 @@ def _python_imports(tree, src):
         if node.type == "import_from_statement":
             mod = node.child_by_field_name("module_name")
             if mod is not None:
+                # the WHOLE dotted path (D-008): truncating to the top-level
+                # segment makes every namespace package one opaque node
                 t = _text(mod, src).lstrip(".")
                 if t:
-                    imports.add(t.split(".")[0])
+                    imports.add(t)
         else:  # import_statement
             for child in node.named_children:
                 if child.type in ("dotted_name", "aliased_import"):
                     t = _text(child, src).split(" as ")[0].strip()
                     if t:
-                        imports.add(t.split(".")[0])
+                        imports.add(t)
     return sorted(imports)
 
 
@@ -528,9 +537,24 @@ def in_root(root, path) -> bool:
         return False
 
 
-def module_id_for(root, path: Path) -> str:
+def module_id_for(root, path: Path, config=None) -> str:
+    """Dotted module id for a source file (ADR-002 / D-008).
+
+    Args:
+        root: Repo root.
+        path: Source file, inside the root.
+        config: Loaded engine config; None uses the default `src_roots`.
+
+    Returns:
+        The source path relative to the first matching `extractor.src_roots`
+        glob, dotted, with a trailing `__init__` dropped. A repo with no
+        matching source root keeps the dotted relative path it always had.
+
+    Raises:
+        HarnessError: If the path is out of root or `src_roots` is malformed.
+    """
     rel = rel_to_root(root, path)
-    return rel.with_suffix("").as_posix().replace("/", ".")
+    return module_id_for_rel(rel.as_posix(), config)
 
 
 def shadow_path_for(root, path: Path) -> Path:
@@ -538,10 +562,10 @@ def shadow_path_for(root, path: Path) -> Path:
     return harness_dir(root) / "shadows" / rel.parent / (rel.name + ".json")
 
 
-def _degenerate_shadow(root, path: Path, source: bytes) -> dict:
+def _degenerate_shadow(root, path: Path, source: bytes, config=None) -> dict:
     head = source.decode("utf-8", "replace").splitlines()[:40]
     return {
-        "module_id": module_id_for(root, path),
+        "module_id": module_id_for(root, path, config),
         "language": "unknown",
         "source_path": str(Path(path).resolve().relative_to(Path(root).resolve())),
         "source_hash": sha256_bytes(source),
@@ -553,7 +577,7 @@ def _degenerate_shadow(root, path: Path, source: bytes) -> dict:
     }
 
 
-def build_shadow(root, path: Path, source: bytes, lang: str) -> dict:
+def build_shadow(root, path: Path, source: bytes, lang: str, config=None) -> dict:
     parser, _ = _get_parser(lang)
     tree = parser.parse(source)
     if lang == "python":
@@ -586,7 +610,7 @@ def build_shadow(root, path: Path, source: bytes, lang: str) -> dict:
         raise HarnessError(f"no builder for language {lang}")
     symbols.sort(key=lambda s: (s["span"][0], s["name"]))
     return {
-        "module_id": module_id_for(root, path),
+        "module_id": module_id_for(root, path, config),
         "language": lang,
         "source_path": str(Path(path).resolve().relative_to(Path(root).resolve())),
         "source_hash": sha256_bytes(source),
@@ -650,7 +674,7 @@ def extract_path(root, path, config=None, force=False) -> tuple:
         except (json.JSONDecodeError, OSError):
             pass
     if lang is None or not enabled.get(lang, True):
-        shadow = _degenerate_shadow(root, path, source)
+        shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
             "UNKNOWN_LANGUAGE", "gate:G8",
             f"{shadow['source_path']}: language for {ext!r} not enforced; "
@@ -659,7 +683,7 @@ def extract_path(root, path, config=None, force=False) -> tuple:
     elif not deps_available():
         # Degrade loudly, never crash the session: the exact failure mode the
         # premortem skill hunts is a missing dep turning into a hard block.
-        shadow = _degenerate_shadow(root, path, source)
+        shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
             "MISSING_DEPENDENCY", "gate:G8",
             f"{shadow['source_path']}: tree-sitter stack unavailable — "
@@ -667,7 +691,7 @@ def extract_path(root, path, config=None, force=False) -> tuple:
             f"degraded until you run `{DEP_INSTALL_HINT}`",
             severity="advisory", key="deps|" + shadow["source_path"]))
     else:
-        shadow = build_shadow(root, path, source, lang)
+        shadow = build_shadow(root, path, source, lang, config)
     write_shadow(root, path, shadow)
     return shadow, findings
 

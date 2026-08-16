@@ -18,10 +18,14 @@
   "test_g7_catches_hand_edited_shadow",
   "test_g8_coverage_advisory_always_emitted"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.gates.g5_conformance",
+  "engine.gates.g6_drift",
+  "engine.graph",
   "json",
   "pytest"
  ],

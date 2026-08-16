@@ -21,8 +21,9 @@
   "token_estimate",
   "write_jsonl"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
+  "copy",
   "hashlib",
   "json",
   "os",
@@ -31,8 +32,8 @@
   "yaml"
  ],
  "language": "python",
- "module_id": "engine.__init__",
- "source_hash": "sha256:d64ba48cd5af7c5a2e8a0bf754bfc112b54776042833e801532e00984d8c3b95",
+ "module_id": "engine",
+ "source_hash": "sha256:e508a556b07fb4465585f327330b81229990ac0d4a7b656c48c4e8c4a3939336",
  "source_path": "engine/__init__.py",
  "symbols": [
   {
@@ -41,8 +42,8 @@
    "name": "HarnessError",
    "signature": "class HarnessError(Exception)",
    "span": [
-    30,
-    31
+    31,
+    32
    ],
    "visibility": "public"
   },
@@ -52,8 +53,8 @@
    "name": "SubstrateMissing",
    "signature": "class SubstrateMissing(HarnessError)",
    "span": [
-    34,
-    35
+    35,
+    36
    ],
    "visibility": "public"
   },
@@ -63,8 +64,8 @@
    "name": "SchemaError",
    "signature": "class SchemaError(HarnessError)",
    "span": [
-    38,
-    39
+    39,
+    40
    ],
    "visibility": "public"
   },
@@ -74,8 +75,8 @@
    "name": "sha256_bytes",
    "signature": "def sha256_bytes(data: bytes) -> str",
    "span": [
-    42,
-    43
+    43,
+    44
    ],
    "visibility": "public"
   },
@@ -85,8 +86,8 @@
    "name": "sha256_text",
    "signature": "def sha256_text(text: str) -> str",
    "span": [
-    46,
-    47
+    47,
+    48
    ],
    "visibility": "public"
   },
@@ -96,8 +97,8 @@
    "name": "sha256_file",
    "signature": "def sha256_file(path) -> str",
    "span": [
-    50,
-    51
+    51,
+    52
    ],
    "visibility": "public"
   },
@@ -107,8 +108,8 @@
    "name": "token_estimate",
    "signature": "def token_estimate(text: str) -> int",
    "span": [
-    54,
-    55
+    55,
+    56
    ],
    "visibility": "public"
   },
@@ -118,8 +119,8 @@
    "name": "now_iso",
    "signature": "def now_iso() -> str",
    "span": [
-    59,
-    60
+    60,
+    61
    ],
    "visibility": "public"
   },
@@ -129,8 +130,8 @@
    "name": "find_root",
    "signature": "def find_root(start=None) -> Path",
    "span": [
-    63,
-    64
+    64,
+    65
    ],
    "visibility": "public"
   },
@@ -140,8 +141,8 @@
    "name": "harness_dir",
    "signature": "def harness_dir(root) -> Path",
    "span": [
-    74,
-    75
+    75,
+    76
    ],
    "visibility": "public"
   },
@@ -151,8 +152,8 @@
    "name": "check_schema_version",
    "signature": "def check_schema_version(root) -> None",
    "span": [
-    78,
-    79
+    79,
+    80
    ],
    "visibility": "public"
   },
@@ -162,8 +163,8 @@
    "name": "read_jsonl",
    "signature": "def read_jsonl(path) -> list",
    "span": [
-    90,
-    91
+    91,
+    92
    ],
    "visibility": "public"
   },
@@ -173,8 +174,8 @@
    "name": "append_jsonl",
    "signature": "def append_jsonl(path, obj: dict) -> None",
    "span": [
-    106,
-    107
+    107,
+    108
    ],
    "visibility": "public"
   },
@@ -184,8 +185,8 @@
    "name": "write_jsonl",
    "signature": "def write_jsonl(path, rows: list) -> None",
    "span": [
-    118,
-    119
+    119,
+    120
    ],
    "visibility": "public"
   },
@@ -195,8 +196,8 @@
    "name": "load_backlog",
    "signature": "def load_backlog(root) -> list",
    "span": [
-    140,
-    141
+    141,
+    142
    ],
    "visibility": "public"
   },
@@ -206,8 +207,8 @@
    "name": "get_slice",
    "signature": "def get_slice(root, slice_id: str) -> dict",
    "span": [
-    147,
-    148
+    148,
+    149
    ],
    "visibility": "public"
   },
@@ -217,8 +218,8 @@
    "name": "save_slice",
    "signature": "def save_slice(root, row: dict) -> None",
    "span": [
-    154,
-    155
+    155,
+    156
    ],
    "visibility": "public"
   },
@@ -228,8 +229,8 @@
    "name": "load_decisions",
    "signature": "def load_decisions(root) -> list",
    "span": [
-    165,
-    166
+    166,
+    167
    ],
    "visibility": "public"
   },
@@ -239,8 +240,8 @@
    "name": "load_boundaries",
    "signature": "def load_boundaries(root) -> list",
    "span": [
-    172,
-    173
+    173,
+    174
    ],
    "visibility": "public"
   },
@@ -250,8 +251,8 @@
    "name": "_deep_merge",
    "signature": "def _deep_merge(base: dict, over: dict) -> dict",
    "span": [
-    199,
-    200
+    207,
+    208
    ],
    "visibility": "private"
   },
@@ -261,8 +262,8 @@
    "name": "load_config",
    "signature": "def load_config(root) -> dict",
    "span": [
-    209,
-    210
+    217,
+    218
    ],
    "visibility": "public"
   }

@@ -12,7 +12,7 @@
   "uses_vs_declares",
   "write_note"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "json",
   "pathlib",

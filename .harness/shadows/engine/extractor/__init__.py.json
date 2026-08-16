@@ -1,11 +1,11 @@
 {
  "exports": [],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine"
  ],
  "language": "python",
- "module_id": "engine.extractor.__init__",
+ "module_id": "engine.extractor",
  "source_hash": "sha256:df1e2913a6db58e569cecc1d1b882cd5b7a31697965d1a16e0308f1848c8a8ff",
  "source_path": "engine/extractor/__init__.py",
  "symbols": []

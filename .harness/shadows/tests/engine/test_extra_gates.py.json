@@ -28,10 +28,16 @@
   "test_verify_runs_extra_gates_over_closed_slices",
   "test_verify_skips_pre_change_only_extra_gates"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.compiler",
+  "engine.events",
+  "engine.gates",
+  "engine.gates.extra",
+  "engine.registry",
+  "engine.schema",
   "json",
   "os",
   "pathlib",

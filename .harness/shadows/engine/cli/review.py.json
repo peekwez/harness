@@ -3,9 +3,13 @@
   "cmd_adjudicate",
   "cmd_review"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.common",
+  "engine.events",
+  "engine.graph",
+  "engine.review",
   "pathlib",
   "sys"
  ],

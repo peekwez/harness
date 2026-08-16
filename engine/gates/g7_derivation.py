@@ -77,9 +77,9 @@ def derivation_findings(root, config, paths=None, since_ns=None) -> list:
         source = src.read_bytes()
         if lang is None or not (config or {}).get("languages", {}).get(lang, True):
             from ..extractor.engine import _degenerate_shadow
-            regen = _degenerate_shadow(root, src, source)
+            regen = _degenerate_shadow(root, src, source, config)
         else:
-            regen = build_shadow(root, src, source, lang)
+            regen = build_shadow(root, src, source, lang, config)
         # byte-level: "regenerates identically" includes formatting — a
         # reformatted shadow is still a hand-edited derived artifact
         stored_bytes = sp.read_bytes()

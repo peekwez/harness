@@ -10,10 +10,13 @@
   "test_missing_decision_row_fields_fail_loud",
   "test_parse_frontmatter_shapes"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.compiler",
+  "engine.events",
+  "engine.resolver",
   "pytest"
  ],
  "language": "python",

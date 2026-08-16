@@ -23,10 +23,16 @@
   "test_replaces_prunes_scaffolded_planned_entries",
   "test_template_adrs_never_compile"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.compiler",
+  "engine.events",
+  "engine.extractor",
+  "engine.gates.g6_drift",
+  "engine.gates.g7_derivation",
+  "engine.resolver",
   "json",
   "pytest",
   "subprocess",

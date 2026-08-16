@@ -4,9 +4,10 @@
   "render_shadow",
   "resolve"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "compiler",
+  "extractor.modules",
   "json",
   "pathlib",
   "re",
@@ -14,7 +15,7 @@
  ],
  "language": "python",
  "module_id": "engine.resolver",
- "source_hash": "sha256:b37728f7650dfc70e4667718dbd3b6db0b163fb2c7c7f9c6992424f2ba174a75",
+ "source_hash": "sha256:cf05c39f650ac15f68f1d0848c158cc615f3df9ca6e167436a408f0ed4262ec9",
  "source_path": "engine/resolver.py",
  "symbols": [
   {
@@ -23,8 +24,8 @@
    "name": "_adr_id",
    "signature": "def _adr_id(ref: str) -> str",
    "span": [
-    20,
-    21
+    21,
+    22
    ],
    "visibility": "private"
   },
@@ -34,8 +35,8 @@
    "name": "_load_shadow",
    "signature": "def _load_shadow(root, entry)",
    "span": [
-    26,
-    27
+    27,
+    28
    ],
    "visibility": "private"
   },
@@ -45,8 +46,8 @@
    "name": "render_shadow",
    "signature": "def render_shadow(shadow: dict, with_docs: bool = True) -> str",
    "span": [
-    47,
-    48
+    48,
+    49
    ],
    "visibility": "public"
   },
@@ -56,8 +57,8 @@
    "name": "_adr_superseded_ids",
    "signature": "def _adr_superseded_ids(root) -> set",
    "span": [
-    63,
-    64
+    64,
+    65
    ],
    "visibility": "private"
   },
@@ -67,8 +68,8 @@
    "name": "_render_guidance",
    "signature": "def _render_guidance(root, entry, superseded: set, dropped=None, loaded_adr_files=None) -> list",
    "span": [
-    90,
-    92
+    91,
+    93
    ],
    "visibility": "private"
   },
@@ -78,8 +79,8 @@
    "name": "_ref_superseded",
    "signature": "def _ref_superseded(ref: str, superseded: set) -> bool",
    "span": [
-    128,
-    129
+    129,
+    130
    ],
    "visibility": "private"
   },
@@ -89,8 +90,8 @@
    "name": "_extract_section",
    "signature": "def _extract_section(text: str, anchor: str)",
    "span": [
-    140,
-    141
+    141,
+    142
    ],
    "visibility": "private"
   },
@@ -100,8 +101,8 @@
    "name": "_durable_memories",
    "signature": "def _durable_memories(root, module_ids: set) -> list",
    "span": [
-    149,
-    150
+    150,
+    151
    ],
    "visibility": "private"
   },
@@ -111,8 +112,8 @@
    "name": "resolve",
    "signature": "def resolve(root, slice_id: str, config: dict) -> dict",
    "span": [
-    161,
-    162
+    162,
+    163
    ],
    "visibility": "public"
   },
@@ -122,8 +123,8 @@
    "name": "context_cost_estimate",
    "signature": "def context_cost_estimate(root, declares_dep: list, config: dict) -> int",
    "span": [
-    277,
-    278
+    281,
+    282
    ],
    "visibility": "public"
   }

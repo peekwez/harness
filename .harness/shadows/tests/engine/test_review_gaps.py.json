@@ -19,10 +19,13 @@
   "test_relative_traversal_paths_never_poison_the_sidecar",
   "test_worktree_close_is_not_vacuous"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.gates.g7_derivation",
   "json",
   "subprocess",
   "sys",

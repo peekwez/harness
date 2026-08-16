@@ -11,10 +11,10 @@
   "test_verdict_merging_property",
   "test_warm_pre_change_under_150ms"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
-  "engine",
+  "engine.events",
   "itertools",
   "json",
   "pytest",

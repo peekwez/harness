@@ -5,9 +5,10 @@
   "test_flush_reports_entries",
   "test_invalid_kind_fails_loud"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.graph",
   "pytest"
  ],
  "language": "python",

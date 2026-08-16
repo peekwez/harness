@@ -6,7 +6,7 @@
   "test_the_composition_is_actually_wired_into_the_loop_skills",
   "test_the_three_attempts_debugging_rule_is_gone"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "conftest",
   "re",

@@ -4,10 +4,10 @@
   "declared_set",
   "paths_in_scope"
  ],
- "extractor_version": 2,
+ "extractor_version": 3,
  "imports": [
   "fnmatch",
-  "gates",
+  "gates.g3_scope",
   "re",
   "shlex"
  ],
