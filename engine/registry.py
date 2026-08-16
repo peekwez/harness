@@ -22,6 +22,38 @@ class RegistryError(HarnessError):
     pass
 
 
+def registry_kinds(config=None) -> set:
+    """The registry `kind` enum in force for this repo.
+
+    `registry.kinds_extra` widens the builtin enum so a consumer repo can
+    name its own abstraction kinds (`package`, `protocol`, ...) without the
+    compiler coercing them to `other` (ADR-002 / D-007).
+
+    Args:
+        config: Loaded engine config, or None for the builtin enum only.
+
+    Returns:
+        Every accepted `kind` string.
+
+    Raises:
+        RegistryError: `kinds_extra` is not a list of strings — silently
+            stringifying a typo would widen the enum with garbage.
+    """
+    extra = ((config or {}).get("registry") or {}).get("kinds_extra") or []
+    if isinstance(extra, str):
+        extra = [extra]
+    if not isinstance(extra, (list, tuple)):
+        raise RegistryError(
+            f"registry.kinds_extra must be a list of strings, got "
+            f"{type(extra).__name__}")
+    bad = [k for k in extra if not isinstance(k, str) or not k.strip()]
+    if bad:
+        raise RegistryError(
+            f"registry.kinds_extra must be a list of non-empty strings; "
+            f"got {bad!r}")
+    return set(REGISTRY_KINDS) | set(extra)
+
+
 def registry_path(root) -> Path:
     return harness_dir(root) / "registry.jsonl"
 

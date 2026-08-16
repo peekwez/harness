@@ -1,0 +1,24 @@
+{
+ "exports": [
+  "run"
+ ],
+ "extractor_version": 2,
+ "imports": [],
+ "language": "python",
+ "module_id": "tests.fixtures.extra_gates.bad_gate",
+ "source_hash": "sha256:91a330ad654f8640b439ef9de1a328d32d93a919ce93f75052dbde952d3c1817",
+ "source_path": "tests/fixtures/extra_gates/bad_gate.py",
+ "symbols": [
+  {
+   "doc": "Never reached \u2014 the module raises above.",
+   "kind": "function",
+   "name": "run",
+   "signature": "def run(ctx) -> list",
+   "span": [
+    14,
+    15
+   ],
+   "visibility": "public"
+  }
+ ]
+}

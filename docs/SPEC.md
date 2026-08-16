@@ -57,3 +57,18 @@ fails otherwise.
 | §7.5 | Close preconditions, engine-enforced: acceptance green, gates pass, uses ⊆ declares reconciled. |
 | §7.7 | Park-once: a question already adjudicated surfaces its precedent instead of re-parking. |
 | §8 | Memory model: session memory (working, compacted at close) vs durable memory (survives, edged to modules). |
+
+## Finding codes raised outside the gate pack
+
+Most finding codes are named by the gate that raises them (`gate:G1` …
+`gate:G8`). These are raised by the engine itself and carry a non-gate
+`rule_ref`:
+
+| Code | Raised by | Meaning |
+|---|---|---|
+| `EXTRA_GATE_LOAD_ERROR` | `engine/gates/extra.py` (event dispatch and `harness verify`) | A `gates.extra` entry could not be loaded: it does not exist, is an absolute path or resolves outside the repo (path entries are repo-relative and contained — they name code the engine executes), fails to import, declares no valid `GATE` (`id` + `preferred`, known event names, an id unique across the pack), or exposes no callable `run(ctx)`. |
+| `EXTRA_GATE_RUN_ERROR` | `engine/gates/extra.py` (event dispatch and `harness verify`) | A loaded repo-local gate misbehaved: it raised (the message carries the last traceback frame), returned a non-list, or emitted a finding `engine.events.validate_finding` rejects — notably a `block` with no `rule_ref`, which §5.2 forbids for every gate. |
+
+Both carry `severity: block` and `rule_ref: adr:002`: repo-local gates fail
+closed and loud, never as a silent skip (ADR-002 / D-007), and the builtin
+pack still runs.

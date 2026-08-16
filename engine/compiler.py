@@ -13,13 +13,25 @@ import hashlib
 import re
 from pathlib import Path
 
-from . import (HarnessError, SubstrateMissing, harness_dir, now_iso,
-               read_jsonl, write_jsonl)
-from .registry import REGISTRY_KINDS
+from . import (HarnessError, SubstrateMissing, harness_dir, load_config,
+               now_iso, read_jsonl, write_jsonl)
+from .registry import registry_kinds
 
 _CODE_SPAN = re.compile(r"`[^`]*`")
 _EPOCH_PREFIX = "1970-"
 PLACEHOLDER_SENTINEL = "EDIT ME"
+
+
+def _config(root) -> dict:
+    """The repo's engine config, or {} outside an initialised repo.
+
+    Only a MISSING config is tolerated: a malformed one must fail loud
+    rather than silently compile against engine defaults.
+    """
+    try:
+        return load_config(root)
+    except SubstrateMissing:
+        return {}
 
 
 def parse_frontmatter(text: str) -> tuple:
@@ -108,12 +120,16 @@ def _out_of_force(root) -> set:
     return out
 
 
-def compile_substrate(root, working_doc=None) -> dict:
+def compile_substrate(root, working_doc=None, config=None) -> dict:
     """Idempotent: recompiling the same sources produces the same substrate.
     Planned registry entries are RECONCILED against the ADRs currently in
     force — kind/domain/guidance_refs are rebuilt, not appended, so a
-    superseded ADR's refs never linger (field report #14/#15)."""
+    superseded ADR's refs never linger (field report #14/#15).
+
+    `config` (loaded from the repo when omitted) supplies
+    `registry.kinds_extra`, the repo's own abstraction kinds."""
     root = Path(root)
+    kinds = registry_kinds(config if config is not None else _config(root))
     decisions = {d["id"]: d for d in read_jsonl(harness_dir(root) / "decisions.jsonl")}
     registry = {e["id"]: e for e in read_jsonl(harness_dir(root) / "registry.jsonl")}
     boundaries: dict = {}  # regenerated from scratch: derived files never accumulate
@@ -174,10 +190,10 @@ def compile_substrate(root, working_doc=None) -> dict:
                 raise HarnessError(f"{adr}: abstraction without id: {ab}")
             requested_kind = ab.get("kind", "other")
             kind = requested_kind
-            if kind not in REGISTRY_KINDS:
+            if kind not in kinds:
                 report["warnings"].append(
                     f"{adr_ref}: abstraction {aid!r} kind {requested_kind!r} is "
-                    f"not in the registry enum {sorted(REGISTRY_KINDS)}; coerced "
+                    f"not in the registry enum {sorted(kinds)}; coerced "
                     f"to 'other' but preserved as domain {requested_kind!r} for "
                     f"decision-row matching and author-gate coverage")
                 kind = "other"

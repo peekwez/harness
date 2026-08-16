@@ -8,6 +8,31 @@ gates:
   g3_mode: allow_with_findings      # or: block | radius
   g5_override: recorded_justification  # or: advisory | park
   g5_similarity_threshold: 0.6
+  # Repo-local gates (ADR-002 / D-007). Each entry is a repo-relative .py
+  # path or a dotted module name, either optionally suffixed `:ATTR` to name
+  # the declaration attribute (default `GATE`). A path entry names code the
+  # engine EXECUTES, so it must resolve inside the repo: absolute paths,
+  # `../` traversal and escaping symlinks are rejected. A gate module exposes:
+  #
+  #   GATE = {"id": "K1", "rule_ref": "adr:002",
+  #           "preferred": ["pre_change"], "fallback": ["post_change"]}
+  #
+  #   def run(ctx) -> list[finding]
+  #       # ctx is engine.gates.GateContext:
+  #       #   .root .config .slice .payload .touched_files() .rel(path)
+  #       # build findings with engine.events.make_finding; a blocking
+  #       # finding MUST carry a rule_ref, like every builtin gate.
+  #
+  # An entry that is uncontained, fails to import or declares no valid GATE
+  # becomes a blocking EXTRA_GATE_LOAD_ERROR finding; a gate that raises,
+  # returns a non-list or emits an invalid finding (e.g. a `block` with no
+  # rule_ref) becomes a blocking EXTRA_GATE_RUN_ERROR. Never a silent skip.
+  # Only gates that declare `unit_complete` also run in `harness verify`;
+  # a pre_change-only gate does not run in CI (no edit to intercept).
+  # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+# registry:
+#   # widen the registry `kind` enum with this repo's own abstraction kinds
+#   kinds_extra: [package, protocol]
 ensemble:
   trigger_confidence_below: 0.7
   samples: 3

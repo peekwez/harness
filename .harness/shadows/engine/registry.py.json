@@ -8,6 +8,7 @@
   "load_registry",
   "public_symbols",
   "refresh_built",
+  "registry_kinds",
   "registry_path",
   "save_registry",
   "signature_digest",
@@ -24,7 +25,7 @@
  ],
  "language": "python",
  "module_id": "engine.registry",
- "source_hash": "sha256:40524cc254d229915276f59ac9f92d2315f276c593a3f2c1031ca386c3137735",
+ "source_hash": "sha256:3f7e5ee63b13552fd571b8a10375ada062380af30402b47a4c7d04a6c21a2de9",
  "source_path": "engine/registry.py",
  "symbols": [
   {
@@ -39,10 +40,10 @@
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "The registry `kind` enum in force for this repo.\n\n    `registry.kinds_extra` widens the builtin enum so a consumer repo can\n    name its own abstraction kinds (`package`, `protocol`, ...) without the\n    compiler coercing them to `other` (ADR-002 / D-007).\n\n    Args:\n        config: Loaded engine config, or None for the builtin enum only.\n\n    Returns:\n        Every accepted `kind` string.\n\n    Raises:\n        RegistryError: `kinds_extra` is not a list of strings \u2014 silently\n            stringifying a typo would widen the enum with garbage.",
    "kind": "function",
-   "name": "registry_path",
-   "signature": "def registry_path(root) -> Path",
+   "name": "registry_kinds",
+   "signature": "def registry_kinds(config=None) -> set",
    "span": [
     25,
     26
@@ -52,11 +53,22 @@
   {
    "doc": null,
    "kind": "function",
+   "name": "registry_path",
+   "signature": "def registry_path(root) -> Path",
+   "span": [
+    57,
+    58
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
    "name": "load_registry",
    "signature": "def load_registry(root) -> list",
    "span": [
-    29,
-    30
+    61,
+    62
    ],
    "visibility": "public"
   },
@@ -66,8 +78,8 @@
    "name": "save_registry",
    "signature": "def save_registry(root, entries: list) -> None",
    "span": [
-    46,
-    47
+    78,
+    79
    ],
    "visibility": "public"
   },
@@ -77,8 +89,8 @@
    "name": "get_entry",
    "signature": "def get_entry(root, entry_id: str) -> dict",
    "span": [
-    50,
-    51
+    82,
+    83
    ],
    "visibility": "public"
   },
@@ -88,8 +100,8 @@
    "name": "entry_for_source",
    "signature": "def entry_for_source(entries: list, rel_path: str)",
    "span": [
-    57,
-    58
+    89,
+    90
    ],
    "visibility": "public"
   },
@@ -99,8 +111,8 @@
    "name": "validate_manifests",
    "signature": "def validate_manifests(root, entries=None, base=None, pending=None) -> list",
    "span": [
-    64,
-    65
+    96,
+    97
    ],
    "visibility": "public"
   },
@@ -110,8 +122,8 @@
    "name": "_tokenize_sig",
    "signature": "def _tokenize_sig(sig: str) -> set",
    "span": [
-    95,
-    96
+    127,
+    128
    ],
    "visibility": "private"
   },
@@ -121,8 +133,8 @@
    "name": "signature_digest",
    "signature": "def signature_digest(shadow: dict) -> str",
    "span": [
-    104,
-    105
+    136,
+    137
    ],
    "visibility": "public"
   },
@@ -132,8 +144,8 @@
    "name": "digest_tokens",
    "signature": "def digest_tokens(digest: str) -> set",
    "span": [
-    111,
-    112
+    143,
+    144
    ],
    "visibility": "public"
   },
@@ -143,8 +155,8 @@
    "name": "similarity",
    "signature": "def similarity(tokens_a: set, tokens_b: set) -> float",
    "span": [
-    122,
-    123
+    154,
+    155
    ],
    "visibility": "public"
   },
@@ -154,8 +166,8 @@
    "name": "public_symbols",
    "signature": "def public_symbols(root, entry) -> list | None",
    "span": [
-    128,
-    129
+    160,
+    161
    ],
    "visibility": "public"
   },
@@ -165,8 +177,8 @@
    "name": "refresh_built",
    "signature": "def refresh_built(root, entry_id: str) -> dict",
    "span": [
-    140,
-    141
+    172,
+    173
    ],
    "visibility": "public"
   },
@@ -176,8 +188,8 @@
    "name": "flip_status",
    "signature": "def flip_status(root, entry_id: str) -> dict",
    "span": [
-    167,
-    168
+    199,
+    200
    ],
    "visibility": "public"
   }

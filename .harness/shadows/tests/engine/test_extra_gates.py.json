@@ -1,0 +1,444 @@
+{
+ "exports": [
+  "test_absent_keys_keep_previous_behaviour",
+  "test_absolute_path_entry_is_rejected",
+  "test_absolute_path_inside_the_repo_is_still_rejected",
+  "test_bad_gate_is_one_loud_blocking_finding",
+  "test_block_without_rule_ref_becomes_a_run_error",
+  "test_compile_keeps_an_extra_kind",
+  "test_compile_still_coerces_an_unknown_kind",
+  "test_finding_without_severity_does_not_crash_verify",
+  "test_gate_missing_required_declaration_fields_is_a_load_error",
+  "test_gate_raising_in_run_is_a_run_error_with_a_frame",
+  "test_gate_returning_a_non_list_is_a_run_error",
+  "test_good_gate_blocks_a_namespace_capturing_pre_change",
+  "test_good_gate_is_selected_for_its_declared_events",
+  "test_id_colliding_with_a_builtin_gate_is_a_load_error",
+  "test_id_colliding_with_a_builtin_is_caught_on_dispatch",
+  "test_kinds_extra_must_be_strings",
+  "test_missing_entry_file_is_a_load_error",
+  "test_module_attr_entry_form_loads",
+  "test_registry_kinds_extra_widens_the_enum",
+  "test_symlink_escaping_the_repo_is_rejected",
+  "test_traversal_path_entry_is_rejected",
+  "test_unknown_event_name_is_a_load_error",
+  "test_verify_fails_on_a_bad_extra_gate_entry",
+  "test_verify_ignores_escaping_declared_paths_on_a_closed_slice",
+  "test_verify_rejects_a_rule_ref_less_block_from_an_extra_gate",
+  "test_verify_runs_extra_gates_over_closed_slices",
+  "test_verify_skips_pre_change_only_extra_gates"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "os",
+  "pathlib",
+  "pytest",
+  "shutil",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_extra_gates",
+ "source_hash": "sha256:66061dc8cfb4a765f7bb2e96553505e3611338a9a033696a4365b155b3c65469",
+ "source_path": "tests/engine/test_extra_gates.py",
+ "symbols": [
+  {
+   "doc": "Copy a fixture gate into the toy repo; return its config entry.",
+   "kind": "function",
+   "name": "_install",
+   "signature": "def _install(toy, name)",
+   "span": [
+    170,
+    171
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_write_gate",
+   "signature": "def _write_gate(toy, name, text)",
+   "span": [
+    178,
+    179
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Set gates.extra / registry.kinds_extra on the toy config.",
+   "kind": "function",
+   "name": "_configure",
+   "signature": "def _configure(toy, extra=None, kinds_extra=None)",
+   "span": [
+    185,
+    186
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_close_slice",
+   "signature": "def _close_slice(toy, predicted)",
+   "span": [
+    198,
+    199
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_verify",
+   "signature": "def _verify(toy)",
+   "span": [
+    206,
+    207
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_codes",
+   "signature": "def _codes(out)",
+   "span": [
+    211,
+    212
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A GateContext for calling a single gate directly.",
+   "kind": "function",
+   "name": "_ctx",
+   "signature": "def _ctx(toy, config, event=\"pre_change\", files=(\"orders.py\",))",
+   "span": [
+    215,
+    216
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_absent_keys_keep_previous_behaviour",
+   "signature": "def test_absent_keys_keep_previous_behaviour(toy)",
+   "span": [
+    223,
+    224
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_good_gate_is_selected_for_its_declared_events",
+   "signature": "def test_good_gate_is_selected_for_its_declared_events(toy)",
+   "span": [
+    235,
+    236
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_module_attr_entry_form_loads",
+   "signature": "def test_module_attr_entry_form_loads(toy)",
+   "span": [
+    246,
+    247
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_good_gate_blocks_a_namespace_capturing_pre_change",
+   "signature": "def test_good_gate_blocks_a_namespace_capturing_pre_change(toy)",
+   "span": [
+    253,
+    254
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_bad_gate_is_one_loud_blocking_finding",
+   "signature": "def test_bad_gate_is_one_loud_blocking_finding(toy)",
+   "span": [
+    266,
+    267
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_entry_file_is_a_load_error",
+   "signature": "def test_missing_entry_file_is_a_load_error(toy)",
+   "span": [
+    290,
+    291
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gate_missing_required_declaration_fields_is_a_load_error",
+   "signature": "def test_gate_missing_required_declaration_fields_is_a_load_error(toy)",
+   "span": [
+    299,
+    300
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_fails_on_a_bad_extra_gate_entry",
+   "signature": "def test_verify_fails_on_a_bad_extra_gate_entry(toy)",
+   "span": [
+    309,
+    310
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_runs_extra_gates_over_closed_slices",
+   "signature": "def test_verify_runs_extra_gates_over_closed_slices(toy)",
+   "span": [
+    316,
+    317
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_skips_pre_change_only_extra_gates",
+   "signature": "def test_verify_skips_pre_change_only_extra_gates(toy)",
+   "span": [
+    326,
+    327
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_registry_kinds_extra_widens_the_enum",
+   "signature": "def test_registry_kinds_extra_widens_the_enum()",
+   "span": [
+    336,
+    337
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_keeps_an_extra_kind",
+   "signature": "def test_compile_keeps_an_extra_kind(toy)",
+   "span": [
+    342,
+    343
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_still_coerces_an_unknown_kind",
+   "signature": "def test_compile_still_coerces_an_unknown_kind(toy)",
+   "span": [
+    353,
+    354
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Write a repo-escaping gate module; return (path, marker path).",
+   "kind": "function",
+   "name": "_outside_gate",
+   "signature": "def _outside_gate(tmp_path, name=\"evil.py\")",
+   "span": [
+    363,
+    364
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_assert_rejected_uncontained",
+   "signature": "def _assert_rejected_uncontained(toy, entry, marker)",
+   "span": [
+    371,
+    372
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`../` out of the repo is arbitrary code execution, not a gate.",
+   "kind": "function",
+   "name": "test_traversal_path_entry_is_rejected",
+   "signature": "def test_traversal_path_entry_is_rejected(toy, tmp_path)",
+   "span": [
+    383,
+    384
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Entries are repo-relative; the absolute form is not accepted at all.",
+   "kind": "function",
+   "name": "test_absolute_path_entry_is_rejected",
+   "signature": "def test_absolute_path_entry_is_rejected(toy, tmp_path)",
+   "span": [
+    391,
+    392
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Even a contained absolute path is rejected \u2014 the form is gone.",
+   "kind": "function",
+   "name": "test_absolute_path_inside_the_repo_is_still_rejected",
+   "signature": "def test_absolute_path_inside_the_repo_is_still_rejected(toy)",
+   "span": [
+    397,
+    398
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Containment is checked after resolution, so symlinks cannot escape.",
+   "kind": "function",
+   "name": "test_symlink_escaping_the_repo_is_rejected",
+   "signature": "def test_symlink_escaping_the_repo_is_rejected(toy, tmp_path)",
+   "span": [
+    407,
+    408
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "D-003/D-007: a blocking finding with no rule_ref never reaches a\n    verdict \u2014 not even from a repo-local gate.",
+   "kind": "function",
+   "name": "test_block_without_rule_ref_becomes_a_run_error",
+   "signature": "def test_block_without_rule_ref_becomes_a_run_error(toy)",
+   "span": [
+    417,
+    418
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_verify_rejects_a_rule_ref_less_block_from_an_extra_gate",
+   "signature": "def test_verify_rejects_a_rule_ref_less_block_from_an_extra_gate(toy)",
+   "span": [
+    433,
+    434
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A missing `severity` used to KeyError out of `harness verify`.",
+   "kind": "function",
+   "name": "test_finding_without_severity_does_not_crash_verify",
+   "signature": "def test_finding_without_severity_does_not_crash_verify(toy)",
+   "span": [
+    444,
+    445
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gate_raising_in_run_is_a_run_error_with_a_frame",
+   "signature": "def test_gate_raising_in_run_is_a_run_error_with_a_frame(toy)",
+   "span": [
+    457,
+    458
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gate_returning_a_non_list_is_a_run_error",
+   "signature": "def test_gate_returning_a_non_list_is_a_run_error(toy)",
+   "span": [
+    471,
+    472
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_id_colliding_with_a_builtin_gate_is_a_load_error",
+   "signature": "def test_id_colliding_with_a_builtin_gate_is_a_load_error(toy)",
+   "span": [
+    482,
+    483
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "all_gates()/run_gates supply the builtin ids themselves.",
+   "kind": "function",
+   "name": "test_id_colliding_with_a_builtin_is_caught_on_dispatch",
+   "signature": "def test_id_colliding_with_a_builtin_is_caught_on_dispatch(toy)",
+   "span": [
+    491,
+    492
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_unknown_event_name_is_a_load_error",
+   "signature": "def test_unknown_event_name_is_a_load_error(toy)",
+   "span": [
+    502,
+    503
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A backlog row naming `../x` or an absolute glob must not crash CI.",
+   "kind": "function",
+   "name": "test_verify_ignores_escaping_declared_paths_on_a_closed_slice",
+   "signature": "def test_verify_ignores_escaping_declared_paths_on_a_closed_slice(toy)",
+   "span": [
+    511,
+    512
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_kinds_extra_must_be_strings",
+   "signature": "def test_kinds_extra_must_be_strings()",
+   "span": [
+    524,
+    525
+   ],
+   "visibility": "public"
+  }
+ ]
+}

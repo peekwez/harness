@@ -247,6 +247,14 @@ def cmd_verify(args):
         noted = {p.get("slice_id") for n in read_notes(root)
                  for p in n["payloads"]}
 
+    # repo-local gates (ADR-002 / D-007): a `gates.extra` entry that fails to
+    # load is a blocking finding here too, and every CLOSED slice is replayed
+    # through a synthetic unit_complete event so repo invariants are enforced
+    # on landed work — including diffs no hook ever saw. Gates that declare
+    # only pre_change do not run in CI: there is no edit to intercept.
+    from engine.gates.extra import verify_extra_findings
+    findings.extend(verify_extra_findings(root, config, backlog))
+
     for s in backlog:
         if s.get("status") != "closed":
             continue

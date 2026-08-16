@@ -179,6 +179,80 @@ rule does not apply (the sandbox and the gates are the permission layer);
 `harness start` provisioned. `superpowers:requesting-code-review` runs only
 as review Layer 3, advisory — anything blocking still cites a `rule_ref`.
 
+## Repo-local gates (`gates.extra`)
+
+The eight builtin gates enforce the *method*. A repo's own invariants — "no
+distribution ships `src/<ns>/__init__.py`", "nothing imports upward across
+the package DAG" — are deterministic too, so they belong in gates, not in
+prose an agent may skim. List them in `.harness/config.yaml`:
+
+```yaml
+gates:
+  extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+registry:
+  kinds_extra: [package, protocol]   # widen the registry `kind` enum
+```
+
+An entry is a **repo-relative `.py` path** or a **dotted module name**, either
+optionally suffixed `:ATTR` to name the declaration attribute (default
+`GATE`). A path entry names code the engine will *execute*, so it is
+**contained**: the path is resolved and must land under the repo root.
+Absolute paths are rejected outright, and `../` traversal or a symlink
+pointing outside the repo is rejected before the module runs. A gate module
+exposes exactly what G1–G8 expose:
+
+```python
+GATE = {"id": "K1", "rule_ref": "adr:002",
+        "preferred": ["pre_change", "unit_complete"],
+        "fallback": ["post_change"]}
+
+
+def run(ctx) -> list:
+    from engine.events import make_finding
+    return [make_finding("NAMESPACE_CAPTURE", GATE["rule_ref"],
+                         f"{ctx.rel(p)} captures the namespace package",
+                         severity="block", key=ctx.rel(p))
+            for p in ctx.touched_files()
+            if ctx.rel(p).endswith("src/kente/__init__.py")]
+```
+
+`ctx` is an `engine.gates.GateContext`: `root` (repo root `Path`), `config`
+(the loaded engine config), `slice` (the active backlog row, or `None`),
+`payload` (the event's `files` / `context_loaded` / `diff` / `prompt`),
+`touched_files()` (the paths this event carries) and `rel(path)`
+(root-relative form). Richer substrate — `registry`, `decisions`,
+`boundaries`, `context_loaded` — is available on the same object. A blocking
+finding **must** carry a `rule_ref`, exactly like a builtin gate; the engine
+rejects blocks without one.
+
+`preferred`/`fallback` name events from the five-event contract, and the
+`fallback` list is only consulted under `gates.degraded_mode` (T1), just as
+for the builtin pack.
+
+**Fail closed and loud**, in two named codes — never a silent skip, and the
+builtin gates keep running either way:
+
+- `EXTRA_GATE_LOAD_ERROR` — the entry does not exist, is absolute or escapes
+  the repo, fails to import, declares no valid `GATE` (`id` + `preferred`,
+  known event names, an id that does not collide with another gate), or
+  exposes no callable `run(ctx)`.
+- `EXTRA_GATE_RUN_ERROR` — the gate raised (the message carries the last
+  traceback frame, `file:line`), returned something that is not a list, or
+  produced a finding the engine rejects. That last case is the one to know:
+  a **blocking finding with no `rule_ref` never reaches a verdict**, from a
+  repo-local gate exactly as from a builtin one.
+
+**CI caveat.** `harness verify` replays every **closed** slice through a
+synthetic `unit_complete` event whose files are that slice's
+`predicted_files ∪ acceptance` (the ones that exist), so repo invariants are
+enforced on landed work — including diffs no hook ever saw. A gate that
+declares only `pre_change` therefore **does not run in CI**: there is no edit
+to intercept. Give a gate `unit_complete` in `preferred` if you want it
+checked there.
+
+Both keys are optional and default to absent: a repo that sets neither
+behaves exactly as it did before.
+
 ## Porting to another agent framework
 
 Write one file like `hooks/adapter.py` (~130 lines): translate your

@@ -40,11 +40,24 @@ SCHEMAS = {
 }
 
 
-def validate_rows(filename: str, rows: list) -> list:
-    """Returns a list of human-readable problems (empty = valid)."""
+def validate_rows(filename: str, rows: list, kinds=None) -> list:
+    """Validate rows of one substrate file.
+
+    Args:
+        filename: Substrate file name, e.g. `registry.jsonl`.
+        rows: Parsed JSONL rows.
+        kinds: The registry `kind` enum in force (`registry.kinds_extra`
+            widens it); None keeps the builtin enum.
+
+    Returns:
+        Human-readable problems (empty = valid).
+    """
     spec = SCHEMAS.get(filename)
     if spec is None:
         return []
+    enums = dict(spec["enums"])
+    if kinds and "kind" in enums:
+        enums["kind"] = tuple(sorted(kinds))
     problems, seen = [], set()
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
@@ -66,7 +79,7 @@ def validate_rows(filename: str, rows: list) -> list:
                 problems.append(
                     f"{filename}: row {rid!r} field {field!r} must be "
                     f"{typ.__name__}, got {type(row[field]).__name__}")
-        for field, allowed in spec["enums"].items():
+        for field, allowed in enums.items():
             value = row.get(field)
             if value is not None and value not in allowed:
                 problems.append(
@@ -75,10 +88,22 @@ def validate_rows(filename: str, rows: list) -> list:
     return problems
 
 
-def validate_substrate(root) -> list:
+def validate_substrate(root, config=None) -> list:
     """Every known substrate file. Unreadable files are reported by the
-    caller's own loud-failure path, not swallowed here."""
-    from . import HarnessError, harness_dir, read_jsonl
+    caller's own loud-failure path, not swallowed here.
+
+    `config` (loaded from the repo when omitted) supplies
+    `registry.kinds_extra` so a repo's own abstraction kinds validate. Only a
+    MISSING config is tolerated there; a malformed one fails loud."""
+    from . import HarnessError, SubstrateMissing, harness_dir, load_config, \
+        read_jsonl
+    from .registry import registry_kinds
+    if config is None:
+        try:
+            config = load_config(root)
+        except SubstrateMissing:
+            config = {}
+    kinds = registry_kinds(config)
     problems = []
     for filename in SCHEMAS:
         path = harness_dir(root) / filename
@@ -89,5 +114,5 @@ def validate_substrate(root) -> list:
         except HarnessError as exc:
             problems.append(str(exc))
             continue
-        problems.extend(validate_rows(filename, rows))
+        problems.extend(validate_rows(filename, rows, kinds=kinds))
     return problems

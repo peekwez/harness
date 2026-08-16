@@ -4,23 +4,26 @@
   "__init__",
   "all_gates",
   "boundaries",
+  "builtin_gates",
   "context_loaded",
   "decisions",
   "gates_for_event",
   "registry",
   "rel",
   "run_gates",
+  "select_gates",
   "slice",
   "touched_files"
  ],
  "extractor_version": 2,
  "imports": [
+  "extra",
   "pathlib",
   "registry"
  ],
  "language": "python",
  "module_id": "engine.gates.__init__",
- "source_hash": "sha256:58739fc5bcbdbd11125d27196b7ac2351ced9b5918eb939f5ef78f4ca13c7a3d",
+ "source_hash": "sha256:b7794b4d1859ee25ae9487bb85b7de741b3c44d54c543c904cc5efa6a9c78209",
  "source_path": "engine/gates/__init__.py",
  "symbols": [
   {
@@ -29,8 +32,8 @@
    "name": "GateContext",
    "signature": "class GateContext",
    "span": [
-    15,
-    16
+    19,
+    20
    ],
    "visibility": "public"
   },
@@ -40,8 +43,8 @@
    "name": "__init__",
    "signature": "def __init__(self, root, event: dict, config: dict, sidecar)",
    "span": [
-    18,
-    19
+    22,
+    23
    ],
    "visibility": "public"
   },
@@ -51,8 +54,8 @@
    "name": "registry",
    "signature": "def registry(self)",
    "span": [
-    33,
-    34
+    37,
+    38
    ],
    "visibility": "public"
   },
@@ -62,8 +65,8 @@
    "name": "slice",
    "signature": "def slice(self)",
    "span": [
-    39,
-    40
+    43,
+    44
    ],
    "visibility": "public"
   },
@@ -73,8 +76,8 @@
    "name": "decisions",
    "signature": "def decisions(self)",
    "span": [
-    45,
-    46
+    49,
+    50
    ],
    "visibility": "public"
   },
@@ -84,8 +87,8 @@
    "name": "boundaries",
    "signature": "def boundaries(self)",
    "span": [
-    51,
-    52
+    55,
+    56
    ],
    "visibility": "public"
   },
@@ -95,8 +98,8 @@
    "name": "context_loaded",
    "signature": "def context_loaded(self) -> set",
    "span": [
-    57,
-    58
+    61,
+    62
    ],
    "visibility": "public"
   },
@@ -106,8 +109,8 @@
    "name": "touched_files",
    "signature": "def touched_files(self) -> list",
    "span": [
-    63,
-    64
+    67,
+    68
    ],
    "visibility": "public"
   },
@@ -117,41 +120,63 @@
    "name": "rel",
    "signature": "def rel(self, path: str) -> str",
    "span": [
-    66,
-    67
+    70,
+    71
    ],
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "The eight gates that ship with the engine, in G1..G8 order.",
+   "kind": "function",
+   "name": "builtin_gates",
+   "signature": "def builtin_gates() -> list",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Builtin gates plus every repo-local `gates.extra` gate.\n\n    Entries that fail to load are dropped here \u2014 they are findings, not\n    gates. Callers that must REPORT them (`run_gates`, `harness verify`)\n    call `engine.gates.extra.load_extra_gates` directly.\n\n    Args:\n        root: Repo root; relative `gates.extra` paths resolve against it.\n        config: Loaded engine config. Absent, only the builtin pack is\n            returned (pre-0.8 behaviour).\n\n    Returns:\n        The gate objects, builtins first, extras in config order.",
    "kind": "function",
    "name": "all_gates",
-   "signature": "def all_gates()",
+   "signature": "def all_gates(root=None, config=None) -> list",
    "span": [
-    76,
-    77
+    88,
+    89
    ],
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "Filter a gate list to those bound to `event` (T1 fallback aware).",
+   "kind": "function",
+   "name": "select_gates",
+   "signature": "def select_gates(gates: list, event: str, degraded: bool = False) -> list",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The gate pack for one event.\n\n    Args:\n        event: One of the five engine events.\n        degraded: Host has no pre-change interception (T1).\n        root: Repo root, for repo-local gates.\n        config: Loaded engine config, for repo-local gates.\n\n    Returns:\n        The gates bound to that event.",
    "kind": "function",
    "name": "gates_for_event",
-   "signature": "def gates_for_event(event: str, degraded: bool = False)",
+   "signature": "def gates_for_event(event: str, degraded: bool = False, root=None, config=None) -> list",
    "span": [
-    83,
-    84
+    120,
+    122
    ],
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "Dispatch one event to its gate pack and collect the findings.\n\n    Repo-local gate load failures are prepended as blocking findings so a\n    broken `gates.extra` entry can never be a silent skip (D-007).",
    "kind": "function",
    "name": "run_gates",
    "signature": "def run_gates(root, event: dict, config: dict, sidecar) -> list",
    "span": [
-    93,
-    94
+    136,
+    137
    ],
    "visibility": "public"
   }

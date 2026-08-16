@@ -1,0 +1,26 @@
+{
+ "exports": [
+  "run"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "engine"
+ ],
+ "language": "python",
+ "module_id": "tests.fixtures.extra_gates.good_gate",
+ "source_hash": "sha256:f08944370b040e504422c69ac690507004d24f4f1abdeef089132ef5cb363650",
+ "source_path": "tests/fixtures/extra_gates/good_gate.py",
+ "symbols": [
+  {
+   "doc": "Block any touched path that captures the `kente` namespace.\n\n    Args:\n        ctx: The engine's GateContext for this event.\n\n    Returns:\n        One blocking finding per offending path.",
+   "kind": "function",
+   "name": "run",
+   "signature": "def run(ctx) -> list",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  }
+ ]
+}

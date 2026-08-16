@@ -4,17 +4,19 @@
   "validate_substrate"
  ],
  "extractor_version": 2,
- "imports": [],
+ "imports": [
+  "registry"
+ ],
  "language": "python",
  "module_id": "engine.schema",
- "source_hash": "sha256:e4ca64029bbebe3a6dbaebc4c4e2be18aad6e9276d1417c6a2b592e5781a03de",
+ "source_hash": "sha256:238e9f02ab2bdd73e6878016e0f21ae3b8eabe56c3a99310aa0bdc04704e0003",
  "source_path": "engine/schema.py",
  "symbols": [
   {
-   "doc": "Returns a list of human-readable problems (empty = valid).",
+   "doc": "Validate rows of one substrate file.\n\n    Args:\n        filename: Substrate file name, e.g. `registry.jsonl`.\n        rows: Parsed JSONL rows.\n        kinds: The registry `kind` enum in force (`registry.kinds_extra`\n            widens it); None keeps the builtin enum.\n\n    Returns:\n        Human-readable problems (empty = valid).",
    "kind": "function",
    "name": "validate_rows",
-   "signature": "def validate_rows(filename: str, rows: list) -> list",
+   "signature": "def validate_rows(filename: str, rows: list, kinds=None) -> list",
    "span": [
     43,
     44
@@ -22,13 +24,13 @@
    "visibility": "public"
   },
   {
-   "doc": "Every known substrate file. Unreadable files are reported by the\n    caller's own loud-failure path, not swallowed here.",
+   "doc": "Every known substrate file. Unreadable files are reported by the\n    caller's own loud-failure path, not swallowed here.\n\n    `config` (loaded from the repo when omitted) supplies\n    `registry.kinds_extra` so a repo's own abstraction kinds validate. Only a\n    MISSING config is tolerated there; a malformed one fails loud.",
    "kind": "function",
    "name": "validate_substrate",
-   "signature": "def validate_substrate(root) -> list",
+   "signature": "def validate_substrate(root, config=None) -> list",
    "span": [
-    78,
-    79
+    91,
+    92
    ],
    "visibility": "public"
   }

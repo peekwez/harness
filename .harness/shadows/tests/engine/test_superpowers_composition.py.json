@@ -1,0 +1,98 @@
+{
+ "exports": [
+  "test_agents_md_template_carries_the_precedence_section",
+  "test_every_superpowers_skill_reference_names_a_real_skill",
+  "test_precedence_section_states_the_d014_decision_verbatim",
+  "test_the_composition_is_actually_wired_into_the_loop_skills",
+  "test_the_three_attempts_debugging_rule_is_gone"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "conftest",
+  "re",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_superpowers_composition",
+ "source_hash": "sha256:b3ab4d53fe076db225e8f0dc314b14ead7f7a04113f632ffdb5691ce30056d25",
+ "source_path": "tests/engine/test_superpowers_composition.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_prose_files",
+   "signature": "def _prose_files()",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_norm",
+   "signature": "def _norm(text)",
+   "span": [
+    43,
+    44
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_agents_md_template_carries_the_precedence_section",
+   "signature": "def test_agents_md_template_carries_the_precedence_section()",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The working agreement must not paraphrase the decision row \u2014 a\n    paraphrase is how the two plugins drift back into contradiction.",
+   "kind": "function",
+   "name": "test_precedence_section_states_the_d014_decision_verbatim",
+   "signature": "def test_precedence_section_states_the_d014_decision_verbatim()",
+   "span": [
+    54,
+    55
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_every_superpowers_skill_reference_names_a_real_skill",
+   "signature": "def test_every_superpowers_skill_reference_names_a_real_skill()",
+   "span": [
+    66,
+    67
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "D-014 is only real if the skills an agent actually reads name the\n    inner-loop skills at the points they apply.",
+   "kind": "function",
+   "name": "test_the_composition_is_actually_wired_into_the_loop_skills",
+   "signature": "def test_the_composition_is_actually_wired_into_the_loop_skills()",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "It told the agent to retry blind twice before thinking; D-014 replaces\n    it with systematic-debugging on the FIRST red.",
+   "kind": "function",
+   "name": "test_the_three_attempts_debugging_rule_is_gone",
+   "signature": "def test_the_three_attempts_debugging_rule_is_gone()",
+   "span": [
+    103,
+    104
+   ],
+   "visibility": "public"
+  }
+ ]
+}

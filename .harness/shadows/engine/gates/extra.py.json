@@ -1,0 +1,237 @@
+{
+ "exports": [
+  "ExtraGate",
+  "__init__",
+  "check",
+  "context_get",
+  "extra_entries",
+  "load_extra_gates",
+  "run_gate",
+  "verify_extra_findings"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "events",
+  "hashlib",
+  "importlib",
+  "os",
+  "pathlib",
+  "sys",
+  "traceback"
+ ],
+ "language": "python",
+ "module_id": "engine.gates.extra",
+ "source_hash": "sha256:83c39ffdc482c740734074a2ad05a3260cf048f242416989dd8e48549d144d89",
+ "source_path": "engine/gates/extra.py",
+ "symbols": [
+  {
+   "doc": "Module-like adapter presenting a repo-local gate as a builtin gate.\n\n    Builtin gates are modules carrying `GATE` and `check(ctx)`. Repo-local\n    gates may name their declaration with the `module:ATTR` entry form and\n    expose `run(ctx)` (the D-007 contract) instead of `check`; this wrapper\n    normalises both so every caller can treat gates uniformly.\n\n    Attributes:\n        entry: The `gates.extra` entry string this gate was loaded from.\n        module: The imported module object.\n        GATE: The gate declaration dict (id / preferred / fallback / rule_ref).",
+   "kind": "class",
+   "name": "ExtraGate",
+   "signature": "class ExtraGate",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__init__",
+   "signature": "def __init__(self, entry: str, module, gate: dict, fn)",
+   "span": [
+    59,
+    60
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Run the gate against one event.\n\n        Args:\n            ctx: The engine's GateContext for the event being dispatched.\n\n        Returns:\n            The findings the gate produced.",
+   "kind": "method",
+   "name": "check",
+   "signature": "def check(self, ctx) -> list",
+   "span": [
+    65,
+    66
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "__repr__",
+   "signature": "def __repr__(self) -> str",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The raw `gates.extra` list from a loaded engine config.\n\n    Args:\n        config: Loaded engine config, or None.\n\n    Returns:\n        The configured entries (a lone string is treated as a one-item list).\n\n    Raises:\n        TypeError: The key is present but is neither a string nor a sequence.",
+   "kind": "function",
+   "name": "extra_entries",
+   "signature": "def extra_entries(config) -> list",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Load every gate listed under `gates.extra`.\n\n    Args:\n        root: Repo root; a relative path entry resolves against it.\n        config: Loaded engine config (`engine.load_config`).\n        reserved_ids: Gate ids already taken \u2014 the builtin pack \u2014 so a\n            repo-local gate cannot shadow G1-G8.\n\n    Returns:\n        A `(gates, findings)` pair: the successfully loaded gates in config\n        order, and one blocking `EXTRA_GATE_LOAD_ERROR` finding per entry\n        that failed to load or failed validation.",
+   "kind": "function",
+   "name": "load_extra_gates",
+   "signature": "def load_extra_gates(root, config, reserved_ids=None) -> tuple",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Run one repo-local gate, converting any misbehaviour into a finding.\n\n    A third-party gate must never take the engine down with it, and must not\n    smuggle a malformed finding into a verdict. An exception, a non-list\n    return, or a finding the engine's own `validate_finding` rejects is\n    reported as a blocking `EXTRA_GATE_RUN_ERROR` naming the entry, so the\n    event still yields a verdict and the failure is visible.\n\n    Args:\n        gate: The loaded gate.\n        ctx: The engine's GateContext for the event being dispatched.\n\n    Returns:\n        The gate's validated findings, or a single blocking run-error finding.",
+   "kind": "function",
+   "name": "run_gate",
+   "signature": "def run_gate(gate: ExtraGate, ctx) -> list",
+   "span": [
+    135,
+    136
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The reason a gate's finding is unusable, or None if it is valid.\n\n    Args:\n        finding: One item from a gate's return value.\n\n    Returns:\n        An exception describing the problem, or None.",
+   "kind": "function",
+   "name": "_finding_problem",
+   "signature": "def _finding_problem(finding)",
+   "span": [
+    166,
+    167
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Repo-local gate findings for `harness verify` (the CI entry point).\n\n    Load errors are always reported. Loaded gates then run once per **closed**\n    slice against a synthetic `unit_complete` event whose `payload.files` is\n    that slice's `predicted_files` union `acceptance` (existing files only),\n    so repo invariants are enforced on landed work even when the edits came\n    from a tool the hooks never saw.\n\n    A gate that declares only `pre_change` therefore does not run in CI \u2014\n    there is no edit to intercept. Give a gate `unit_complete` in `preferred`\n    (or in `fallback` with `gates.degraded_mode`) to have it checked here.\n\n    Args:\n        root: Repo root.\n        config: Loaded engine config.\n        slices: Backlog rows; only rows with `status: closed` are checked.\n\n    Returns:\n        Load errors plus every finding the selected gates produced.",
+   "kind": "function",
+   "name": "verify_extra_findings",
+   "signature": "def verify_extra_findings(root, config, slices) -> list",
+   "span": [
+    185,
+    186
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Read-only stand-in for the sidecar.\n\n    `harness verify` runs in CI with no session state and must not create the\n    gitignored SQLite file as a side effect of a read-only check.",
+   "kind": "class",
+   "name": "_NullSidecar",
+   "signature": "class _NullSidecar",
+   "span": [
+    242,
+    243
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "No session ever loaded context in a CI verifier.",
+   "kind": "method",
+   "name": "context_get",
+   "signature": "def context_get(self, session_id) -> set",
+   "span": [
+    249,
+    250
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Existing repo-relative files a closed slice declared.\n\n    Declared paths are substrate rows, so they can be absolute or contain\n    `../` \u2014 `engine.events.rel_in_root` screens both out before any glob,\n    because `Path.glob` on an absolute pattern raises on 3.12 and an escaping\n    path has no business reaching a repo-local gate.\n\n    Args:\n        root: Repo root.\n        sl: A backlog row.\n\n    Returns:\n        Sorted relative paths from `predicted_files` + `acceptance` that\n        exist on disk; glob patterns in `acceptance` are expanded.",
+   "kind": "function",
+   "name": "_slice_files",
+   "signature": "def _slice_files(root: Path, sl: dict) -> list",
+   "span": [
+    254,
+    255
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Import and validate one `gates.extra` entry.\n\n    Args:\n        root: Repo root, or None when only module entries are resolvable.\n        entry: The config entry string.\n        taken: Gate ids already claimed.\n\n    Returns:\n        `(ExtraGate, None)` on success, `(None, finding)` on any failure.",
+   "kind": "function",
+   "name": "_load_one",
+   "signature": "def _load_one(root, entry, taken: set) -> tuple",
+   "span": [
+    286,
+    287
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Resolve an entry to `(module, gate_attr_name)`.\n\n    A `.py` path (or anything containing a path separator) is loaded from\n    file and must be repo-relative and contained; anything else is a dotted\n    module name. Either form may name the declaration attribute with a\n    trailing `:ATTR` (default `GATE`).\n\n    Args:\n        root: Repo root for path entries, or None.\n        entry: The config entry string.\n\n    Returns:\n        The imported module and the attribute holding its GATE dict.\n\n    Raises:\n        TypeError: The entry is not a non-empty string.\n        ValueError: A path entry is absolute or escapes the repo.\n        FileNotFoundError: A path entry does not exist.\n        ImportError: The module could not be imported.",
+   "kind": "function",
+   "name": "_import_entry",
+   "signature": "def _import_entry(root, entry)",
+   "span": [
+    311,
+    312
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Load a gate module from a contained, repo-relative `.py` path.\n\n    Containment is the security boundary: a `gates.extra` entry names code\n    the engine will EXECUTE, so the resolved path must stay under the repo\n    root. Absolute paths are rejected outright, and resolution happens before\n    the containment check so `../` traversal and escaping symlinks are caught\n    before the module is executed.\n\n    Args:\n        root: Repo root.\n        spec: The path portion of the config entry.\n\n    Returns:\n        The executed module.\n\n    Raises:\n        ImportError: No root was supplied, or the module could not be loaded.\n        ValueError: The entry is absolute or resolves outside the repo.\n        FileNotFoundError: The path does not exist.",
+   "kind": "function",
+   "name": "_import_path",
+   "signature": "def _import_path(root, spec: str)",
+   "span": [
+    342,
+    343
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Reject a declaration the dispatcher could not honour.\n\n    Args:\n        gate: The candidate GATE dict.\n        taken: Gate ids already claimed by builtin or earlier extra gates.\n\n    Raises:\n        TypeError: Wrong shape for the dict or one of its fields.\n        ValueError: Missing required field, unknown event, or duplicate id.",
+   "kind": "function",
+   "name": "_validate_gate",
+   "signature": "def _validate_gate(gate, taken: set) -> None",
+   "span": [
+    392,
+    393
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Build the blocking finding for an entry that could not be loaded.",
+   "kind": "function",
+   "name": "_load_error",
+   "signature": "def _load_error(entry, exc: BaseException) -> dict",
+   "span": [
+    425,
+    426
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Build the blocking finding for a gate that misbehaved while running.",
+   "kind": "function",
+   "name": "_run_error",
+   "signature": "def _run_error(entry, exc: BaseException) -> dict",
+   "span": [
+    433,
+    434
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`file:line` of the deepest traceback frame, or None if there is none.",
+   "kind": "function",
+   "name": "_last_frame",
+   "signature": "def _last_frame(exc: BaseException)",
+   "span": [
+    443,
+    444
+   ],
+   "visibility": "private"
+  }
+ ]
+}
