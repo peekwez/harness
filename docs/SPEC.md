@@ -51,7 +51,7 @@ fails otherwise.
 | §1.4 | Gates live in the CLI, not in prompts — enforcement is engine-side or it does not exist. |
 | §1.5 | Compaction is a defect signal, not a feature: session cycling is the strategy. |
 | §5.2 | Findings contract: `{finding_id, layer, severity, code, rule_ref, message, inject[], precedents[]}`. Every blocking finding cites a `rule_ref`; the engine rejects those without one. |
-| §5.5 | Decision row schema: `{id: D-NNN, domain, question, answer, adr_ref, origin: phase0\|adjudication, created}` (+ optional `security: true`, see ADR-001). |
+| §5.5 | Decision row schema: `{id: D-NNN, domain, question, answer, adr_ref, origin: phase0\|adjudication, created}` (+ optional `security: true`, see ADR-001). Rows are authored in ADR frontmatter `decision_table_rows` **or** in the working document's fenced ` ```harness-decisions ` pipe table (`id \| domain \| question \| answer \| adr_ref \| security`, ADR-002 D-013); abstractions likewise in ` ```harness-abstractions ` (`id \| kind \| guidance_ref`). Both compile to `origin: phase0`; one id belongs to exactly one source. |
 | §5.6 | Slice schema: `{id, spec, title, status, declares_dep[], acceptance[], predicted_files[], context_cost_estimate, depends_on[], worktree}` (+ `started_at_commit`, recorded at bind). |
 | §5.7 | Node IDs in the graph are stable logical ids (`slice:`, `module:`, `file:`, `finding:`, `decision:`), never machine-specific absolute paths. |
 | §7.5 | Close preconditions, engine-enforced: acceptance green, gates pass, uses ⊆ declares reconciled. |

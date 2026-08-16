@@ -12,6 +12,22 @@ You drive Phase 0 in five stages. The working document is
 blocks to that document as it goes: long architecting is multiple short
 sessions over a durable artifact — never rely on transcript survival.
 
+**If the repo already has a spec** (a design doc, an RFC, a platform spec),
+do not re-derive it Socratically. Seed the working document from it first —
+the model's own first action, once the human names the path:
+
+```
+"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-spec <path to the spec>
+```
+
+That writes `docs/architecture.md` at `<!-- stage: 3 -->` (converge): every
+`##`/`###` heading becomes a `[constraint]` block with its first paragraph,
+every `TODO`/`TBD`/`Open:` line becomes an `[open-question]`, and the doc
+ends with an empty ```` ```harness-decisions ```` table. It refuses to
+overwrite an existing working document without `--force`. Then read the
+seeded blocks WITH the human — a seeded constraint is a claim to confirm,
+not a ratified decision — and continue at stage 3 below.
+
 Determine the current stage by reading the working document's `<!-- stage: N -->`
 marker (default 1 if absent), then follow the matching protocol file:
 

@@ -117,7 +117,10 @@ compiled G3 boundaries and the adjudication queue respectively.
 ```
 /harness:init          # scaffold substrate, detect languages, wire hooks
 /harness:architect     # Phase 0: brainstorm -> red-team -> converge ->
-                       #   compile -> author-gate (the human signs here)
+                       #   compile -> author-gate (the human signs here).
+                       #   Already have a spec? `harness architect
+                       #   --from-spec docs/spec.md` seeds the working
+                       #   document at stage 3 instead of re-deriving it.
 /harness:backlog       # spec + ADRs -> dependency-ordered slices, cost-split
 /harness:build slice-001   # worktree + sandbox + binding + context, then
                        #   the slice runs to close uninterrupted
@@ -132,6 +135,10 @@ compiled G3 boundaries and the adjudication queue respectively.
 
 `bin/harness` subcommands: `event` (stdin EnforcementEvent -> stdout
 Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
+`architect` (`--from-spec <path>`: seeds the working document
+`docs/architecture.md` from an existing spec — headings become
+`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, at
+`<!-- stage: 3 -->`; refuses to overwrite without `--force`),
 `compile`, `author-gate`, `resolve`, `extract`,
 `gates`, `verify` (the CI entry), `backlog` (+ `add`), `slice`, `start`,
 `run` (campaign dispatcher: builds every ready slice via `run.builder_cmd`

@@ -10,6 +10,11 @@ extrapolation; the compiled form is what gates read:
 - ADR frontmatter `decision_table_rows` -> `.harness/decisions.jsonl`
 - ADR frontmatter `abstractions` -> `.harness/registry.jsonl` skeleton
   (all `status: planned`; `replaces:` prunes merged-away planned entries)
+- the working document's fenced ```` ```harness-decisions ```` /
+  ```` ```harness-abstractions ```` pipe tables -> the SAME two files, rows
+  landing as `origin: phase0` (ADR-002 D-013, schema §5.5). An id claimed by
+  both an ADR and the doc is a hard error naming both sources; a malformed
+  row names the document and the line. Fix the source and re-run
 - ADR frontmatter `api_surface` -> `contracts/*.yaml` stubs for NEW
   contracts only. Existing contracts are authored and never rewritten:
   compile reports uncovered surface as `contract_gaps` (and author-gate

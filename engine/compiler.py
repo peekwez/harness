@@ -3,6 +3,10 @@ substrate. ADR frontmatter -> decision rows; abstraction mentions -> registry
 skeleton (all planned); API surface -> contract stubs; [non-goal]s -> G3
 scope boundaries. Prose is for extrapolation; compiled form is what gates read.
 
+Rows and abstractions may also be authored in the working document's typed
+fenced tables (ADR-002 row D-013, parsed in `docsections`); one id may be
+claimed by exactly one source.
+
 Boundaries are fully derived: compile REGENERATES boundaries.jsonl from its
 sources on every run (same-source-same-output). Decisions and registry merge,
 because adjudicated rows and built statuses must survive recompiles.
@@ -15,10 +19,12 @@ from pathlib import Path
 
 from . import (HarnessError, SubstrateMissing, harness_dir, load_config,
                now_iso, read_jsonl, write_jsonl)
+from .docsections import EPOCH_PREFIX as _EPOCH_PREFIX
+from .docsections import (doc_ref_for, merge_doc_blocks,  # noqa: F401
+                          parse_doc_blocks, seed_doc_from_spec)
 from .registry import registry_kinds
 
 _CODE_SPAN = re.compile(r"`[^`]*`")
-_EPOCH_PREFIX = "1970-"
 PLACEHOLDER_SENTINEL = "EDIT ME"
 
 
@@ -140,6 +146,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     superseded_adrs = _out_of_force(root)
     # per-compile authored view of each abstraction, rebuilt from in-force ADRs
     authored: dict = {}  # aid -> {"kind":…, "domain":…, "refs":[…]}
+    # which ADR claimed each id: a doc row claiming it too is a hard error
+    adr_sources: dict = {"decisions": {}, "abstractions": {}}
 
     for adr in _adr_files(root):
         fm, body = parse_frontmatter(adr.read_text(encoding="utf-8"))
@@ -159,6 +167,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 if not row.get(req):
                     raise HarnessError(f"{adr}: decision row missing {req!r}: {row}")
             rid = row["id"]
+            adr_sources["decisions"][rid] = adr_ref
             existing = decisions.get(rid)
             if existing and existing.get("origin") == "adjudication":
                 continue  # adjudicated rows outrank recompiled phase0 rows
@@ -188,6 +197,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
             aid = ab.get("id")
             if not aid:
                 raise HarnessError(f"{adr}: abstraction without id: {ab}")
+            adr_sources["abstractions"][aid] = adr_ref
             requested_kind = ab.get("kind", "other")
             kind = requested_kind
             if kind not in kinds:
@@ -300,6 +310,18 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                         report["contract_gaps"].append(gap)
                         report["warnings"].append(gap)
 
+    # typed fenced tables in the working document (ADR-002 D-013) are a
+    # second authoring surface for the SAME rows — merged before reconcile
+    # so doc-declared abstractions get the same guidance-ref treatment
+    doc_text = None
+    if working_doc:
+        doc_ref = doc_ref_for(root, working_doc)
+        doc_text = Path(working_doc).read_text(encoding="utf-8")
+        merge_doc_blocks(parse_doc_blocks(doc_text, source=doc_ref), doc_ref,
+                         decisions=decisions, registry=registry,
+                         authored=authored, report=report, now=now,
+                         adr_sources=adr_sources, kinds=kinds)
+
     # reconcile planned entries against the ADRs currently in force:
     # kind/domain/guidance_refs are REPLACED, so superseded or no-longer-
     # declaring ADRs drop off instead of lingering (field report #14)
@@ -324,9 +346,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                     f"registry {aid!r}: dropped guidance_refs into superseded "
                     f"ADRs: {stale}")
 
-    if working_doc:
-        body = Path(working_doc).read_text(encoding="utf-8")
-        for text_block, patterns, descriptive in extract_non_goals(body):
+    if doc_text is not None:
+        for text_block, patterns, descriptive in extract_non_goals(doc_text):
             b = _boundary(text_block, patterns, "working-doc", "adr:phase0")
             if b["id"] in boundaries:
                 continue  # same rule already compiled from an ADR: ADR provenance wins

@@ -1,4 +1,4 @@
-"""Phase-0 authoring commands: compile, author-gate, backlog, slice.
+"""Phase-0 authoring commands: architect, compile, author-gate, backlog, slice.
 
 Authored artifacts (ADRs, contracts, the working document) become substrate
 here, and slice rows are appended through `backlog add` rather than
@@ -9,15 +9,89 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from engine import harness_dir, load_backlog, load_config, write_jsonl
+from engine import (HarnessError, harness_dir, load_backlog, load_config,
+                    write_jsonl)
 from engine.cli.common import _print, _root, _session
 from engine.cli.slice import _bind_slice
 
 
+DEFAULT_WORKING_DOC = "docs/architecture.md"
+
+
+# ------------------------------------------------------------------ architect
+def _under_root(root, path) -> Path:
+    """Resolves a CLI path argument relative to the substrate root."""
+    p = Path(path)
+    return p if p.is_absolute() else Path(root) / p
+
+
+def _rel(root, path) -> str:
+    try:
+        return str(Path(path).resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        return str(path)
+
+
+def cmd_architect(args):
+    """Seeds the Phase-0 working document from an existing spec (D-013).
+
+    A repo that already owns a spec must not have it re-derived Socratically:
+    headings become `[constraint]` blocks, TODO/TBD/Open lines become
+    `[open-question]`s, and the document opens at stage 3 (converge) with an
+    empty `harness-decisions` table to fill in.
+
+    Args:
+        args: Parsed CLI args (`from_spec`, `doc`, `force`, `root`).
+
+    Returns:
+        Process exit code (0).
+
+    Raises:
+        HarnessError: The spec is missing, or the working document exists
+            and `--force` was not given.
+    """
+    from engine.compiler import seed_doc_from_spec
+    root = _root(args)
+    spec = _under_root(root, args.from_spec)
+    if not spec.is_file():
+        raise HarnessError(f"--from-spec {args.from_spec!r} is not a readable "
+                           f"file — nothing to seed the working document from")
+    doc = _under_root(root, args.doc)
+    if doc.exists() and not args.force:
+        raise HarnessError(
+            f"working document {_rel(root, doc)} already exists — edit it in "
+            f"place (stage marker decides the stage), or re-run with --force "
+            f"to overwrite it from {args.from_spec}")
+    body = seed_doc_from_spec(spec.read_text(encoding="utf-8"),
+                              _rel(root, spec))
+    doc.parent.mkdir(parents=True, exist_ok=True)
+    doc.write_text(body, encoding="utf-8")
+    lines = body.splitlines()
+    _print({"doc": str(doc), "spec": str(spec), "stage": 3,
+            "constraints": sum(1 for ln in lines
+                               if ln.startswith("[constraint] ")),
+            "open_questions": sum(1 for ln in lines
+                                  if ln.startswith("[open-question] "))})
+    return 0
+
+
 # ------------------------------------------------------------------ compile / author-gate
 def cmd_compile(args):
+    """Compiles authored artifacts into substrate.
+
+    Warns (never silently skips) when the repo's working document carries
+    typed `harness-*` tables but `--doc` was omitted: rows nobody compiled
+    are exactly the silent degradation this engine exists to refuse.
+    """
     from engine.compiler import compile_substrate
+    from engine.docsections import mentions_typed_blocks
     root = _root(args)
+    if not args.doc:
+        doc = Path(root) / DEFAULT_WORKING_DOC
+        if doc.exists() and mentions_typed_blocks(doc.read_text(encoding="utf-8")):
+            print(f"warning: {DEFAULT_WORKING_DOC} carries harness-decisions/"
+                  f"harness-abstractions tables that this run did NOT compile "
+                  f"— re-run with --doc {DEFAULT_WORKING_DOC}", file=sys.stderr)
     _print(compile_substrate(root, working_doc=args.doc))
     return 0
 

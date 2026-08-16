@@ -11,6 +11,29 @@ For each `[open-question]` in the working document:
    `decision_table_rows` (lookup, never interpret); one-off architecture
    stays prose.
 
+A row whose decision needs no ADR prose (a convention, a naming rule, the
+rows a `--from-spec` seed is waiting for) may instead be written straight
+into the working document's fenced tables, which compile identically
+(ADR-002 D-013):
+
+````
+```harness-decisions
+| id | domain | question | answer | adr_ref | security |
+| --- | --- | --- | --- | --- | --- |
+| D-020 | config | Where do defaults live? | In config.yaml, never in code. | | |
+```
+
+```harness-abstractions
+| id | kind | guidance_ref |
+| --- | --- | --- |
+| config | config | docs/architecture.md |
+```
+````
+
+`adr_ref` and `security` may be left empty. One id belongs to exactly one
+source: an id in both an ADR and this document is a hard compile error
+naming both.
+
 Mark each resolved question `[resolved: adr/NNN]` in the working document.
 
 Exit criteria: no unresolved `[open-question]` blocks remain (deferred ones

@@ -11,7 +11,8 @@ import json
 import sys
 
 from engine import HarnessError
-from engine.cli.author import (cmd_author_gate, cmd_backlog, cmd_compile,
+from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
+                               cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
 from engine.cli.init import cmd_init
@@ -31,6 +32,7 @@ COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
     "extract": cmd_extract,
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
+    "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
     "backlog": cmd_backlog, "slice": cmd_slice,
     "start": cmd_start, "run": cmd_run, "permit": cmd_permit,
@@ -105,8 +107,22 @@ def main(argv=None):
     sp = sub.add_parser("verify", help="full CI check (no plugin required)")
     sp.add_argument("--built-artifact", help="validate manifests against this tree")
 
+    sp = sub.add_parser("architect",
+                        help="seed the Phase-0 working document from an "
+                             "existing spec (--from-spec)")
+    sp.add_argument("--from-spec", dest="from_spec", required=True,
+                    help="existing spec/design markdown (root-relative); its "
+                         "headings become [constraint] blocks and its "
+                         "TODO/TBD/Open lines [open-question]s")
+    sp.add_argument("--doc", default=DEFAULT_WORKING_DOC,
+                    help="working document to write (default: %(default)s)")
+    sp.add_argument("--force", action="store_true",
+                    help="overwrite an existing working document")
+
     sp = sub.add_parser("compile", help="authored artifacts -> substrate")
-    sp.add_argument("--doc", help="working document (for [non-goal] blocks)")
+    sp.add_argument("--doc", help="working document: [non-goal] blocks plus "
+                                  "the typed harness-decisions / "
+                                  "harness-abstractions tables (D-013)")
 
     sp = sub.add_parser("author-gate", help="Day-0 completeness check")
     sp.add_argument("--doc")

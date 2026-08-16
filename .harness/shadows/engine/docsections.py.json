@@ -1,0 +1,108 @@
+{
+ "exports": [
+  "doc_ref_for",
+  "mentions_typed_blocks",
+  "merge_doc_blocks",
+  "parse_doc_blocks",
+  "seed_doc_from_spec"
+ ],
+ "extractor_version": 2,
+ "imports": [
+  "pathlib",
+  "re"
+ ],
+ "language": "python",
+ "module_id": "engine.docsections",
+ "source_hash": "sha256:d3fb7afb3a72ef4c7e7b11f77858f15c17e06e66a89501d159850a8cba23b0ee",
+ "source_path": "engine/docsections.py",
+ "symbols": [
+  {
+   "doc": "True if the text opens a `harness-decisions`/`-abstractions` fence.\n\n    A lexical scan, never a parse: `compile` uses it only to warn that\n    `--doc` was omitted, and a malformed table must not turn that warning\n    into an error.",
+   "kind": "function",
+   "name": "mentions_typed_blocks",
+   "signature": "def mentions_typed_blocks(text: str) -> bool",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Root-relative label for the working document, quoted in every error.",
+   "kind": "function",
+   "name": "doc_ref_for",
+   "signature": "def doc_ref_for(root, working_doc) -> str",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Splits one pipe-table row into stripped cells (`\\\\|` is a literal).",
+   "kind": "function",
+   "name": "_cells",
+   "signature": "def _cells(line: str) -> list",
+   "span": [
+    71,
+    72
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Validates one table row against a block's column spec.\n\n    Args:\n        cells: The row's stripped cell values.\n        spec: The `(key, columns, required)` triple for the block.\n        where: `\"<doc>:<line>\"`, quoted in every error.\n\n    Returns:\n        The row as a dict keyed by column name.\n\n    Raises:\n        HarnessError: Wrong column count, or a required cell left empty.",
+   "kind": "function",
+   "name": "_row",
+   "signature": "def _row(cells: list, spec, where: str) -> dict",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Reads the working document's typed fenced tables.\n\n    Tables nested inside a wider code fence are prose (a document may show\n    the syntax without compiling it), and a `harness-*` block that is never\n    closed is an error rather than a silently truncated table.\n\n    Args:\n        text: The whole working document.\n        source: Path quoted in errors (default: a generic label).\n\n    Returns:\n        `{\"decisions\": [row, ...], \"abstractions\": [row, ...]}`; decision\n        rows carry `adr_ref` (None when the cell is empty) and a boolean\n        `security`.\n\n    Raises:\n        HarnessError: Malformed row, unknown header, or unterminated block.",
+   "kind": "function",
+   "name": "parse_doc_blocks",
+   "signature": "def parse_doc_blocks(text: str, source=None) -> dict",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Folds doc-authored rows into the compiler's in-flight substrate.\n\n    Doc rows are `origin: phase0` exactly like ADR rows: adjudicated rows\n    still outrank them, and `adr_ref` comes from the table (may be null).\n\n    Args:\n        blocks: `parse_doc_blocks` output.\n        doc_ref: Root-relative path of the working document.\n        decisions: id -> decision row, mutated in place.\n        registry: id -> registry entry, mutated in place.\n        authored: id -> per-compile authored view, mutated in place.\n        report: The compile report, appended to.\n        now: Compile timestamp.\n        adr_sources: `{\"decisions\": {id: adr_ref}, \"abstractions\": {...}}`.\n        kinds: The registry `kind` enum in force (`registry_kinds`).\n\n    Raises:\n        HarnessError: An id is claimed by both an ADR and the document, or\n            twice by the document.",
+   "kind": "function",
+   "name": "merge_doc_blocks",
+   "signature": "def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict, registry: dict, authored: dict, report: dict, now: str, adr_sources: dict, kinds: set) -> None",
+   "span": [
+    174,
+    177
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Collapses the first paragraph under a heading to one line.",
+   "kind": "function",
+   "name": "_first_paragraph",
+   "signature": "def _first_paragraph(lines: list, start: int) -> str",
+   "span": [
+    258,
+    259
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Renders a working document from an existing spec (`--from-spec`).\n\n    Every `##`/`###` heading becomes a `[constraint]` block carrying its\n    first paragraph, every `TODO`/`TBD`/`Open:` line (after list markers)\n    becomes an `[open-question]`, and the document ends with an empty\n    `harness-decisions` table so rows are filled in the same file.\n\n    Args:\n        text: The source spec's markdown.\n        spec_ref: Path quoted in the seeded document's header.\n\n    Returns:\n        The document body, staged at `<!-- stage: 3 -->`.",
+   "kind": "function",
+   "name": "seed_doc_from_spec",
+   "signature": "def seed_doc_from_spec(text: str, spec_ref: str) -> str",
+   "span": [
+    274,
+    275
+   ],
+   "visibility": "public"
+  }
+ ]
+}

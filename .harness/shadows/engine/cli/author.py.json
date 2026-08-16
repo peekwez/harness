@@ -1,5 +1,6 @@
 {
  "exports": [
+  "cmd_architect",
   "cmd_author_gate",
   "cmd_backlog",
   "cmd_compile",
@@ -13,17 +14,50 @@
  ],
  "language": "python",
  "module_id": "engine.cli.author",
- "source_hash": "sha256:7a29616aaee051b4eed9acce61ee5a7d066b59103afe3839dbd267f7262dab6e",
+ "source_hash": "sha256:ec737e557c8c94edb5900e686c9d5d4864e4d3fa0ab1608c0621c974754c39e6",
  "source_path": "engine/cli/author.py",
  "symbols": [
   {
+   "doc": "Resolves a CLI path argument relative to the substrate root.",
+   "kind": "function",
+   "name": "_under_root",
+   "signature": "def _under_root(root, path) -> Path",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "private"
+  },
+  {
    "doc": null,
+   "kind": "function",
+   "name": "_rel",
+   "signature": "def _rel(root, path) -> str",
+   "span": [
+    28,
+    29
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Seeds the Phase-0 working document from an existing spec (D-013).\n\n    A repo that already owns a spec must not have it re-derived Socratically:\n    headings become `[constraint]` blocks, TODO/TBD/Open lines become\n    `[open-question]`s, and the document opens at stage 3 (converge) with an\n    empty `harness-decisions` table to fill in.\n\n    Args:\n        args: Parsed CLI args (`from_spec`, `doc`, `force`, `root`).\n\n    Returns:\n        Process exit code (0).\n\n    Raises:\n        HarnessError: The spec is missing, or the working document exists\n            and `--force` was not given.",
+   "kind": "function",
+   "name": "cmd_architect",
+   "signature": "def cmd_architect(args)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Compiles authored artifacts into substrate.\n\n    Warns (never silently skips) when the repo's working document carries\n    typed `harness-*` tables but `--doc` was omitted: rows nobody compiled\n    are exactly the silent degradation this engine exists to refuse.",
    "kind": "function",
    "name": "cmd_compile",
    "signature": "def cmd_compile(args)",
    "span": [
-    18,
-    19
+    79,
+    80
    ],
    "visibility": "public"
   },
@@ -33,8 +67,8 @@
    "name": "cmd_author_gate",
    "signature": "def cmd_author_gate(args)",
    "span": [
-    25,
-    26
+    99,
+    100
    ],
    "visibility": "public"
   },
@@ -44,8 +78,8 @@
    "name": "_backlog_add",
    "signature": "def _backlog_add(args)",
    "span": [
-    39,
-    40
+    113,
+    114
    ],
    "visibility": "private"
   },
@@ -55,8 +89,8 @@
    "name": "cmd_backlog",
    "signature": "def cmd_backlog(args)",
    "span": [
-    73,
-    74
+    147,
+    148
    ],
    "visibility": "public"
   },
@@ -66,8 +100,8 @@
    "name": "cmd_slice",
    "signature": "def cmd_slice(args)",
    "span": [
-    113,
-    114
+    187,
+    188
    ],
    "visibility": "public"
   }
