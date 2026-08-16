@@ -118,7 +118,8 @@ acceptance:
 ```
 
 Backlog slice rows gain an optional `linear: "GOO-NN"` field (schema §5.6);
-`close-slice --land pr` includes it in the PR title and body.
+with `landing.mode: pr` in `.harness/config.yaml`, the close includes it in
+the PR title and body.
 
 ## Consequences
 

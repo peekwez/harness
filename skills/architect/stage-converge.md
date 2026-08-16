@@ -24,15 +24,19 @@ into the working document's fenced tables, which compile identically
 ```
 
 ```harness-abstractions
-| id | kind | guidance_ref |
-| --- | --- | --- |
-| config | config | docs/architecture.md |
+| id | kind | guidance_ref | source | module_id |
+| --- | --- | --- | --- | --- |
+| config | config | docs/architecture.md | src/app/config.py | |
 ```
 ````
 
-`adr_ref` and `security` may be left empty. One id belongs to exactly one
-source: an id in both an ADR and this document is a hard compile error
-naming both.
+`adr_ref` and `security` may be left empty, and the abstraction table's
+three-column form (`id | kind | guidance_ref`) is still accepted.
+Module-level abstractions need `source` (or `module_id`), or the id must
+equal the dotted module id, else G5 and the resolver cannot see them —
+`module_id` is derived from `source` when the cell is blank. One id belongs
+to exactly one source: an id in both an ADR and this document is a hard
+compile error naming both.
 
 Mark each resolved question `[resolved: adr/NNN]` in the working document.
 

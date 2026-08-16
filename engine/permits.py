@@ -45,6 +45,17 @@ FETCH_FLAGS = ("--prune", "--tags")
 # it at any repository the token can reach, --web opens a browser
 GH_REJECTED = ("--repo", "-R", "--web", "-w")
 
+# `git config` writes that arm a LATER egress: an alias or a hook that runs
+# an arbitrary command, an ssh/credential/proxy override that redirects or
+# harvests the transport, a rewritten remote/url. None of them talk to a
+# remote themselves, so `is_egress` cannot see them — in pr mode, where the
+# sandbox has the forge reachable, they are denied outright (D-011).
+GIT_CONFIG_DENIED_PREFIXES = ("alias.", "url.", "remote.", "credential.",
+                              "http.")
+GIT_CONFIG_DENIED_KEYS = ("core.sshcommand", "core.hookspath")
+# scope flags that write outside this repo entirely
+GIT_CONFIG_DENIED_SCOPES = ("--global", "--system")
+
 TEST_RUNNERS = ("pytest", "python -m pytest", "python3 -m pytest",
                 ".venv/bin/pytest", ".venv/bin/python -m pytest",
                 "make test", "make verify", "make replay")
@@ -105,6 +116,59 @@ def _pr_egress_allowed(parts: list, landing: dict, slice_id: str) -> bool:
     return False
 
 
+def _config_escalation_parts(parts: list) -> bool:
+    """True when one `git config` invocation arms a later egress.
+
+    Args:
+        parts: The already-split tokens of one segment.
+
+    Returns:
+        Whether this is a `git config` naming a denied scope or key.
+    """
+    if _program(parts) != "git":
+        return False
+    sub, idx, _opts = git_subcommand(parts)
+    if sub != "config":
+        return False
+    rest = parts[idx + 1:]
+    if any(tok.split("=", 1)[0] in GIT_CONFIG_DENIED_SCOPES for tok in rest):
+        return True
+    for tok in rest:
+        key = tok.split("=", 1)[0].lower()
+        if tok.startswith("-"):
+            continue
+        if key in GIT_CONFIG_DENIED_KEYS or \
+                key.startswith(GIT_CONFIG_DENIED_PREFIXES):
+            return True
+    return False
+
+
+def is_config_escalation(command: str) -> bool:
+    """True when any segment of `command` is an egress-arming `git config`.
+
+    `git config` never talks to a remote, so `is_egress` is blind to it —
+    but `alias.*`, `core.sshCommand`, `core.hooksPath`, `url.*`, `remote.*`,
+    `credential.*`, `http.*` and the `--global`/`--system` scopes all make
+    some LATER command reach one. In pr mode that is a deny, not silence.
+
+    Args:
+        command: The command line the host is asking about.
+
+    Returns:
+        Whether any segment is such a `git config`.
+    """
+    for seg in _SPLIT.split(command or ""):
+        if not seg.strip():
+            continue
+        try:
+            parts = _strip_env(shlex.split(seg))
+        except ValueError:
+            return False          # unparseable is `is_egress`'s call, not ours
+        if parts and _config_escalation_parts(parts):
+            return True
+    return False
+
+
 def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
                      slice_id=None) -> bool:
     seg = seg.strip()
@@ -131,6 +195,9 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
     if landing and _pr_egress_allowed(parts, landing, slice_id):
         return True
     if base == "git":
+        if landing and landing.get("mode") == "pr" \
+                and _config_escalation_parts(_strip_env(parts)):
+            return False
         sub = next((p for p in parts[1:] if not p.startswith("-")), None)
         return sub in GIT_LOCAL and sub not in GIT_EGRESS
     return any(seg.startswith(pfx) for pfx in TEST_RUNNERS)
@@ -342,6 +409,12 @@ def command_decision(command: str, harness_bin: str | None = None,
     allow, reason = command_allowed(command, harness_bin, config, slice_id)
     if allow:
         return "allow", True, reason
+    if landing_config(config)["mode"] == "pr" and is_config_escalation(command):
+        return "deny", False, (
+            "landing.mode: pr denies `git config` of an alias, hook path, "
+            "ssh/credential/proxy override, url/remote rewrite, or a "
+            "--global/--system scope: each one arms a later egress the "
+            "permit layer would never see (ADR-002 / D-011)")
     if landing_config(config)["mode"] == "pr" and is_egress(command):
         return "deny", False, (
             "landing.mode: pr auto-approves only `git push [-u] <remote> "

@@ -24,7 +24,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.verify",
- "source_hash": "sha256:6071d3a3c56eed9e288d828716d06918627797f9ef011ca7736fd882bedc31f4",
+ "source_hash": "sha256:6bc04759ec1a5c86727529af2f2c9f525a9ccd7bf161d82a80547b0ebdc44e1d",
  "source_path": "engine/cli/verify.py",
  "symbols": [
   {
@@ -61,13 +61,35 @@
    "visibility": "private"
   },
   {
+   "doc": "Closed slices whose provenance nothing can resolve.\n\n    The same resolution `verify` performs (ADR-002 / D-010): a git note on a\n    reachable commit, or a `.harness/notes.jsonl` row whose tree hash /\n    source tree a reachable commit carries. A pr-landed slice on a fresh\n    clone has no `refs/notes/*` at all, so consulting git notes alone made\n    every clone look unhealthy.\n\n    Args:\n        root: Substrate root.\n        backlog: `{slice_id: row}`.\n\n    Returns:\n        The ids of closed slices with neither key, in backlog order.",
+   "kind": "function",
+   "name": "_missing_notes",
+   "signature": "def _missing_notes(root, backlog: dict) -> list",
+   "span": [
+    115,
+    116
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_keys",
+   "signature": "def _keys()",
+   "span": [
+    144,
+    145
+   ],
+   "visibility": "private"
+  },
+  {
    "doc": "C9 \u2014 CI verifier: runs with no plugin. Named finding codes.",
    "kind": "function",
    "name": "cmd_verify",
    "signature": "def cmd_verify(args)",
    "span": [
-    118,
-    119
+    156,
+    157
    ],
    "visibility": "public"
   },
@@ -77,8 +99,8 @@
    "name": "_source_keys",
    "signature": "def _source_keys(): # one `git ls-tree` per commit: computed once, and only for a repo # that actually has a note to resolve",
    "span": [
-    232,
-    235
+    270,
+    273
    ],
    "visibility": "private"
   },
@@ -88,8 +110,8 @@
    "name": "_resolves",
    "signature": "def _resolves(slice_id)",
    "span": [
-    239,
-    240
+    277,
+    278
    ],
    "visibility": "private"
   }

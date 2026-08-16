@@ -9,6 +9,7 @@
   "engine.cli.acceptance",
   "engine.cli.common",
   "engine.cli.init",
+  "engine.cli.landing",
   "engine.events",
   "engine.graph",
   "engine.permits",
@@ -20,7 +21,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.slice",
- "source_hash": "sha256:c4af832df48b8d5f62a419b60d9c97db0c9a7b9dc1dd4cad70b30439d8bbefdd",
+ "source_hash": "sha256:b37460a687018acbe2c93f49324dab8cfc17f69139bcffc0bd7b65e92e4c490c",
  "source_path": "engine/cli/slice.py",
  "symbols": [
   {
@@ -29,8 +30,8 @@
    "name": "_bind_slice",
    "signature": "def _bind_slice(root, slice_id: str, session: str) -> dict",
    "span": [
-    19,
-    20
+    20,
+    21
    ],
    "visibility": "private"
   },
@@ -40,8 +41,8 @@
    "name": "_acceptance_green",
    "signature": "def _acceptance_green(root, sl, config)",
    "span": [
-    90,
-    91
+    91,
+    92
    ],
    "visibility": "private"
   },
@@ -51,8 +52,8 @@
    "name": "_regression_suite",
    "signature": "def _regression_suite(root, config, exclude=None, interpreter=None, env=None)",
    "span": [
-    99,
-    100
+    100,
+    101
    ],
    "visibility": "private"
   },
@@ -62,8 +63,8 @@
    "name": "cmd_start",
    "signature": "def cmd_start(args)",
    "span": [
-    108,
-    109
+    109,
+    110
    ],
    "visibility": "public"
   },
@@ -73,8 +74,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    156,
-    157
+    167,
+    168
    ],
    "visibility": "private"
   },
@@ -84,8 +85,8 @@
    "name": "cmd_permit",
    "signature": "def cmd_permit(args)",
    "span": [
-    188,
-    189
+    199,
+    200
    ],
    "visibility": "public"
   }

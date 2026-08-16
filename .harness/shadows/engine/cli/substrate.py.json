@@ -25,7 +25,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.substrate",
- "source_hash": "sha256:65dc5960779ea9fb2a386ec7a0c842268e106d24a1a1f7228d447fd435d2669f",
+ "source_hash": "sha256:ea7072b9883f7f77932316b1406e49c0f83427682de0877c9bc3c3a31ee6697e",
  "source_path": "engine/cli/substrate.py",
  "symbols": [
   {
@@ -100,8 +100,8 @@
    "name": "cmd_memory",
    "signature": "def cmd_memory(args)",
    "span": [
-    215,
-    216
+    219,
+    220
    ],
    "visibility": "public"
   },
@@ -111,8 +111,8 @@
    "name": "cmd_status",
    "signature": "def cmd_status(args)",
    "span": [
-    247,
-    248
+    251,
+    252
    ],
    "visibility": "public"
   }

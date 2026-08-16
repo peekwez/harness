@@ -1,0 +1,380 @@
+{
+ "exports": [
+  "test_a_doc_abstraction_may_name_its_module_id_directly",
+  "test_a_doc_abstraction_with_source_derives_its_module_id",
+  "test_a_malformed_linear_id_is_a_harness_error",
+  "test_author_gate_names_a_missing_doc_without_a_traceback",
+  "test_author_gate_resolves_the_doc_under_root",
+  "test_backlog_add_records_a_linear_id",
+  "test_backlog_add_rejects_a_malformed_linear_id",
+  "test_backlog_add_without_linear_writes_no_key",
+  "test_close_reports_a_passed_acceptance_gate",
+  "test_close_reports_a_skipped_acceptance_gate",
+  "test_compile_names_a_missing_doc_without_a_traceback",
+  "test_compile_resolves_the_doc_under_root",
+  "test_doctor_still_reports_a_slice_with_no_provenance_at_all",
+  "test_doctor_uses_verifys_note_resolution",
+  "test_graph_note_rejects_an_unresolvable_commit",
+  "test_graph_note_resolves_a_symbolic_commit",
+  "test_local_mode_git_config_is_unchanged",
+  "test_pr_mode_denies_config_that_enables_later_egress",
+  "test_pr_mode_leaves_harmless_git_config_alone",
+  "test_registry_index_matches_a_doc_authored_namespace_module",
+  "test_start_refuses_no_worktree_in_pr_mode",
+  "test_start_with_a_worktree_still_works_in_pr_mode",
+  "test_the_abstraction_table_accepts_source_and_module_id",
+  "test_the_readme_changelogs_the_release",
+  "test_the_three_column_abstraction_table_still_compiles",
+  "test_the_three_declared_versions_agree"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.cli.author",
+  "engine.docsections",
+  "engine.events",
+  "engine.extractor.modules",
+  "engine.permits",
+  "json",
+  "pathlib",
+  "pytest",
+  "test_landing_pr"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_final_review_wave",
+ "source_hash": "sha256:843927d6c176df8d1b2744250bcb74b6e897f2ab4fe61f9458d5c1bc62de64ae",
+ "source_path": "tests/engine/test_final_review_wave.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_write_doc",
+   "signature": "def _write_doc(root, body)",
+   "span": [
+    45,
+    46
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_entry",
+   "signature": "def _entry(root, entry_id)",
+   "span": [
+    52,
+    53
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A doc-authored abstraction with no `source` can never flip to built:\n    the resolver never injects its shadow and G5 never matches its imports.",
+   "kind": "function",
+   "name": "test_the_abstraction_table_accepts_source_and_module_id",
+   "signature": "def test_the_abstraction_table_accepts_source_and_module_id(toy)",
+   "span": [
+    58,
+    59
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backward compatibility: the 0.7 header stays legal, unchanged.",
+   "kind": "function",
+   "name": "test_the_three_column_abstraction_table_still_compiles",
+   "signature": "def test_the_three_column_abstraction_table_still_compiles(toy)",
+   "span": [
+    68,
+    69
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_doc_abstraction_with_source_derives_its_module_id",
+   "signature": "def test_a_doc_abstraction_with_source_derives_its_module_id(toy)",
+   "span": [
+    75,
+    76
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_doc_abstraction_may_name_its_module_id_directly",
+   "signature": "def test_a_doc_abstraction_may_name_its_module_id_directly(toy)",
+   "span": [
+    85,
+    86
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`id: config` + `module_id: kente.config` must answer for every import\n    under it \u2014 the whole point of carrying the module id.",
+   "kind": "function",
+   "name": "test_registry_index_matches_a_doc_authored_namespace_module",
+   "signature": "def test_registry_index_matches_a_doc_authored_namespace_module()",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_add_records_a_linear_id",
+   "signature": "def test_backlog_add_records_a_linear_id(toy)",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_add_without_linear_writes_no_key",
+   "signature": "def test_backlog_add_without_linear_writes_no_key(toy)",
+   "span": [
+    111,
+    112
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_add_rejects_a_malformed_linear_id",
+   "signature": "def test_backlog_add_rejects_a_malformed_linear_id(toy, bad)",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "pr landing pushes the slice's own branch \u2014 a close in the main tree\n    would push whatever `slice/<id>` points at, or nothing at all.",
+   "kind": "function",
+   "name": "test_start_refuses_no_worktree_in_pr_mode",
+   "signature": "def test_start_refuses_no_worktree_in_pr_mode(tmp_path)",
+   "span": [
+    129,
+    130
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_with_a_worktree_still_works_in_pr_mode",
+   "signature": "def test_start_with_a_worktree_still_works_in_pr_mode(tmp_path)",
+   "span": [
+    142,
+    143
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`--doc docs/architecture.md` must mean the same thing `architect`\n    means: root-relative, not cwd-relative.",
+   "kind": "function",
+   "name": "test_compile_resolves_the_doc_under_root",
+   "signature": "def test_compile_resolves_the_doc_under_root(tmp_path)",
+   "span": [
+    155,
+    156
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_names_a_missing_doc_without_a_traceback",
+   "signature": "def test_compile_names_a_missing_doc_without_a_traceback(toy)",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_names_a_missing_doc_without_a_traceback",
+   "signature": "def test_author_gate_names_a_missing_doc_without_a_traceback(toy)",
+   "span": [
+    174,
+    175
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_author_gate_resolves_the_doc_under_root",
+   "signature": "def test_author_gate_resolves_the_doc_under_root(tmp_path)",
+   "span": [
+    181,
+    182
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`--commit HEAD` is the permission-auto-approvable spelling; storing\n    the literal 'HEAD' makes the notes row unresolvable forever.",
+   "kind": "function",
+   "name": "test_graph_note_resolves_a_symbolic_commit",
+   "signature": "def test_graph_note_resolves_a_symbolic_commit(toy)",
+   "span": [
+    189,
+    190
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_graph_note_rejects_an_unresolvable_commit",
+   "signature": "def test_graph_note_rejects_an_unresolvable_commit(toy)",
+   "span": [
+    202,
+    203
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_decision",
+   "signature": "def _decision(command, config=None)",
+   "span": [
+    214,
+    215
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_denies_config_that_enables_later_egress",
+   "signature": "def test_pr_mode_denies_config_that_enables_later_egress(command)",
+   "span": [
+    232,
+    233
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_pr_mode_leaves_harmless_git_config_alone",
+   "signature": "def test_pr_mode_leaves_harmless_git_config_alone(command)",
+   "span": [
+    243,
+    244
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_local_mode_git_config_is_unchanged",
+   "signature": "def test_local_mode_git_config_is_unchanged(command)",
+   "span": [
+    252,
+    253
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_close_toy",
+   "signature": "def _close_toy(root, gate_cmd=None)",
+   "span": [
+    262,
+    263
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_reports_a_skipped_acceptance_gate",
+   "signature": "def test_close_reports_a_skipped_acceptance_gate(tmp_path)",
+   "span": [
+    282,
+    283
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_reports_a_passed_acceptance_gate",
+   "signature": "def test_close_reports_a_passed_acceptance_gate(tmp_path)",
+   "span": [
+    289,
+    290
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_three_declared_versions_agree",
+   "signature": "def test_the_three_declared_versions_agree()",
+   "span": [
+    297,
+    298
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_readme_changelogs_the_release",
+   "signature": "def test_the_readme_changelogs_the_release()",
+   "span": [
+    310,
+    311
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A pr-landed slice on a fresh clone has no git note at all \u2014 doctor\n    must resolve it the way verify does, or every clone looks unhealthy.",
+   "kind": "function",
+   "name": "test_doctor_uses_verifys_note_resolution",
+   "signature": "def test_doctor_uses_verifys_note_resolution(tmp_path)",
+   "span": [
+    324,
+    325
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_still_reports_a_slice_with_no_provenance_at_all",
+   "signature": "def test_doctor_still_reports_a_slice_with_no_provenance_at_all(toy)",
+   "span": [
+    339,
+    340
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_malformed_linear_id_is_a_harness_error",
+   "signature": "def test_a_malformed_linear_id_is_a_harness_error()",
+   "span": [
+    360,
+    361
+   ],
+   "visibility": "public"
+  }
+ ]
+}

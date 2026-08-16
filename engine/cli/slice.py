@@ -9,7 +9,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from engine import get_slice, load_backlog, load_config, save_slice
+from engine import (HarnessError, get_slice, load_backlog, load_config,
+                    save_slice)
 from engine.cli.acceptance import run_acceptance, run_regression
 from engine.cli.common import (PLUGIN_ROOT, _acceptance_python,
                                _config_merge_drivers, _print, _root, _session)
@@ -110,8 +111,18 @@ def cmd_start(args):
     + autonomy profile, bound slice, Phase-1 context emitted. Nothing here
     asks a human anything — that is the whole point."""
     import subprocess
+    from engine.cli.landing import landing_config
     root = _root(args)
     sl = get_slice(root, args.slice)     # fail loud before touching git
+
+    # pr landing pushes the slice's OWN branch from the slice's own tree
+    # (D-009): binding in the main tree would leave the close with nothing
+    # to push, or push whatever `slice/<id>` happens to point at.
+    if args.no_worktree and landing_config(load_config(root))["mode"] == "pr":
+        raise HarnessError(
+            "landing.mode: pr requires the slice worktree — the close pushes "
+            "slice/" + str(args.slice) + " from it. Drop --no-worktree, or "
+            "set landing.mode: local in .harness/config.yaml")
 
     # depends_on was recorded, ordered and cost-estimated — but never
     # enforced. Foundations exist so consumers can rely on them: starting

@@ -228,6 +228,66 @@ def _commit_landing(root, sl: dict) -> str | None:
     return _git(root, "rev-parse", "HEAD").stdout.strip() or None
 
 
+def _commit_notes(root, slice_id: str) -> str | None:
+    """Commit a freshly written notes row on the slice branch.
+
+    Args:
+        root: Substrate root (the slice's tree).
+        slice_id: The slice being re-noted, for the commit subject.
+
+    Returns:
+        The commit sha, or None when there was nothing to commit.
+    """
+    if not _git(root, "status", "--porcelain", "--",
+                ".harness").stdout.strip():
+        return None
+    _git(root, "add", "-A", "--", ".harness")
+    done = _git(root, "commit", "-q", "-m",
+                f"harness: re-note {slice_id} after branch update", "--",
+                ".harness")
+    if done.returncode != 0:
+        return None
+    return _git(root, "rev-parse", "HEAD").stdout.strip() or None
+
+
+def ensure_head_note(root, slice_id: str) -> dict:
+    """Note HEAD when the branch moved since the slice's last note (D-010).
+
+    Updating `slice/<id>` from a moved base (the parallel-slice case) gives
+    HEAD a tree no recorded row keys, so after the squash `verify` reported
+    `MISSING_PROVENANCE_NOTE` on work that had landed. Re-noting HEAD before
+    the push closes that hole; the row rides in its own substrate commit,
+    which — touching nothing outside `.harness` — leaves the source tree the
+    squash reproduces unchanged.
+
+    Args:
+        root: Substrate root (the slice's tree).
+        slice_id: The slice whose provenance is being refreshed.
+
+    Returns:
+        `{renoted, note_commit, tree_hash, note_substrate_commit}`.
+    """
+    from engine.graph import (last_note_payload, notes_log, source_key,
+                              tree_hash, write_note)
+    head = _git(root, "rev-parse", "--verify", "--quiet",
+                "HEAD^{commit}").stdout.strip()
+    if not head:
+        return {"renoted": False, "note_commit": None}
+    rows = notes_log(root, slice_id)
+    tree, source = tree_hash(root, head), source_key(root, head)
+    # either key resolving is what `verify` accepts, so either key matching
+    # means there is nothing to repair — and re-landing stays idempotent
+    if any((tree and r.get("tree_hash") == tree)
+           or (source and r.get("source_tree") == source) for r in rows):
+        return {"renoted": False, "note_commit": rows[-1].get("commit")}
+    payload = dict(last_note_payload(root, slice_id))
+    payload["slice_id"] = slice_id
+    row = write_note(root, head, payload)
+    return {"renoted": True, "note_commit": head,
+            "tree_hash": row.get("tree_hash"),
+            "note_substrate_commit": _commit_notes(root, slice_id)}
+
+
 def record_pending(root, sl: dict, error: str) -> None:
     """Persist a closed-but-not-landed slice so it is not lost with the shell.
 
@@ -266,8 +326,16 @@ def land_pr(root, sl: dict, config, note_meta=None) -> dict:
     branch = slice_branch(sl["id"])
     remote = landing["remote"]
     _require_branch(root, branch)
+    # only after the branch check: a re-note is a substrate commit, and
+    # committing one onto whatever branch happens to be checked out is worse
+    # than the error it would paper over
+    renote = ensure_head_note(root, sl["id"])
     out = {"landed": False, "pushed": False, "branch": branch,
-           "remote": redact(remote), "pr_url": None}
+           "remote": redact(remote), "pr_url": None,
+           "renoted": renote["renoted"]}
+    if renote["renoted"]:
+        note_meta = {"commit": renote["note_commit"],
+                     "tree_hash": renote.get("tree_hash")}
     push = _git(root, "push", "-u", remote, branch)
     if push.returncode != 0:
         out["error"] = (f"git push {redact(remote)} {branch} failed: "
@@ -276,11 +344,11 @@ def land_pr(root, sl: dict, config, note_meta=None) -> dict:
         return out
     out["pushed"] = True
 
-    # idempotence: a row that already carries a PR url is being RE-landed
-    # (a failed metadata push, a fixed remote) — running pr_cmd again would
-    # open a second pull request for the same slice
-    if sl.get("pr_url"):
-        out.update({"landed": True, "pr_url": sl["pr_url"],
+    # idempotence: a row that already landed (or carries a PR url) is being
+    # RE-landed — a failed metadata push, a fixed remote, a branch updated
+    # from base. Running pr_cmd again would open a second pull request.
+    if sl.get("pr_url") or sl.get("landed_via") == "pr":
+        out.update({"landed": True, "pr_url": sl.get("pr_url"),
                     "pr_cmd_skipped": True})
         return _finish_landing(root, sl, landing, out)
 
@@ -357,9 +425,22 @@ def _finish_landing(root, sl: dict, landing: dict, out: dict) -> dict:
 
 
 def cmd_land(args):
-    """`harness land` — (re)run the landing for a slice that closed but did
-    not land (`landed_via: pending`). Thin on purpose: the close ceremony is
-    not repeated, only the push and the pr command."""
+    """`harness land` — (re)run the landing for a closed slice.
+
+    Idempotent by design (ADR-002 / D-010): it re-notes HEAD when the branch
+    was updated from base, pushes, and opens the pull request only if the
+    row does not already record one. The close ceremony is never repeated.
+
+    Args:
+        args: Parsed CLI args (`slice`, `root`, `session`).
+
+    Returns:
+        Process exit code (0 when the landing completed).
+
+    Raises:
+        HarnessError: The repo is in `local` mode, or the slice is not
+            closed yet.
+    """
     root = _root(args)
     config = load_config(root)
     landing = landing_config(config)
@@ -370,12 +451,6 @@ def cmd_land(args):
     if sl.get("status") != "closed":
         raise HarnessError(f"slice {args.slice} is {sl.get('status')!r} — land "
                            f"runs after close-slice, not instead of it")
-    if sl.get("landed_via") == "pr":
-        raise HarnessError(
-            f"slice {args.slice} already landed via pr"
-            f"{' (' + sl['pr_url'] + ')' if sl.get('pr_url') else ''} — "
-            f"re-running would open a second pull request; push the branch "
-            f"yourself if the open PR needs updating")
     from engine.graph import notes_log
     rows = notes_log(root, args.slice)
     landed = land_pr(root, sl, config, note_meta=rows[-1] if rows else None)

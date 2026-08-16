@@ -13,7 +13,9 @@
   "test_graph_note_repoints_a_slice_onto_the_squashed_commit",
   "test_harmless_commands_are_never_denied",
   "test_init_creates_an_empty_notes_log",
-  "test_land_refuses_an_already_landed_slice",
+  "test_land_does_not_renote_an_unchanged_branch",
+  "test_land_is_idempotent_on_an_already_landed_slice",
+  "test_land_renotes_after_the_branch_is_updated_from_base",
   "test_landing_refuses_to_push_from_the_wrong_branch",
   "test_local_mode_auto_approves_no_egress_at_all",
   "test_local_mode_close_never_pushes",
@@ -37,6 +39,7 @@
   "test_pr_title_carries_the_linear_id",
   "test_run_refuses_in_pr_mode",
   "test_the_exact_landing_shapes_stay_allowed",
+  "test_verify_flags_a_pr_slice_that_records_no_landing",
   "test_verify_resolves_against_a_remote_tracking_base"
  ],
  "extractor_version": 3,
@@ -54,7 +57,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_landing_pr",
- "source_hash": "sha256:3d40dcb6c209a77902e655e2cf68209beb7def556be87645cfad611db414fffa",
+ "source_hash": "sha256:f364831cd37bfc5445f2cb56051effc5f60524d2850b2639e529af06858aee87",
  "source_path": "tests/engine/test_landing_pr.py",
  "symbols": [
   {
@@ -432,13 +435,57 @@
    "visibility": "public"
   },
   {
-   "doc": null,
+   "doc": "`harness land` is the re-run command (I-2): after the slice branch is\n    updated from base it re-notes and re-pushes. It must never open a second\n    pull request, so `pr_cmd` is skipped once the row landed.",
    "kind": "function",
-   "name": "test_land_refuses_an_already_landed_slice",
-   "signature": "def test_land_refuses_an_already_landed_slice(tmp_path)",
+   "name": "test_land_is_idempotent_on_an_already_landed_slice",
+   "signature": "def test_land_is_idempotent_on_an_already_landed_slice(tmp_path)",
    "span": [
     503,
     504
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Someone else's PR moves the base branch while this slice is open.",
+   "kind": "function",
+   "name": "_other_work_lands_on_main",
+   "signature": "def _other_work_lands_on_main(tmp_path, origin, name=\"other\")",
+   "span": [
+    519,
+    520
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Parallel slices: updating `slice/<id>` from a moved base changes the\n    tree HEAD carries, so no notes.jsonl row matched it any more and verify\n    blocked with MISSING_PROVENANCE_NOTE after the squash.",
+   "kind": "function",
+   "name": "test_land_renotes_after_the_branch_is_updated_from_base",
+   "signature": "def test_land_renotes_after_the_branch_is_updated_from_base(tmp_path)",
+   "span": [
+    532,
+    533
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_land_does_not_renote_an_unchanged_branch",
+   "signature": "def test_land_does_not_renote_an_unchanged_branch(tmp_path)",
+   "span": [
+    570,
+    571
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A closed pr-mode slice with landed_via unset never reached its\n    landing step \u2014 advisory, never silent (M-1).",
+   "kind": "function",
+   "name": "test_verify_flags_a_pr_slice_that_records_no_landing",
+   "signature": "def test_verify_flags_a_pr_slice_that_records_no_landing(tmp_path)",
+   "span": [
+    580,
+    581
    ],
    "visibility": "public"
   },
@@ -448,8 +495,8 @@
    "name": "test_landing_refuses_to_push_from_the_wrong_branch",
    "signature": "def test_landing_refuses_to_push_from_the_wrong_branch(tmp_path)",
    "span": [
-    512,
-    513
+    598,
+    599
    ],
    "visibility": "public"
   },
@@ -459,8 +506,8 @@
    "name": "test_an_unknown_pr_cmd_placeholder_fails_loud",
    "signature": "def test_an_unknown_pr_cmd_placeholder_fails_loud()",
    "span": [
-    530,
-    531
+    616,
+    617
    ],
    "visibility": "public"
   },
@@ -470,8 +517,8 @@
    "name": "test_pr_mode_profile_opens_the_forge_and_fetch",
    "signature": "def test_pr_mode_profile_opens_the_forge_and_fetch(tmp_path)",
    "span": [
-    537,
-    538
+    623,
+    624
    ],
    "visibility": "public"
   },
@@ -481,8 +528,8 @@
    "name": "test_pr_mode_profile_derives_the_forge_host_from_the_remote",
    "signature": "def test_pr_mode_profile_derives_the_forge_host_from_the_remote(tmp_path)",
    "span": [
-    548,
-    549
+    634,
+    635
    ],
    "visibility": "public"
   },
@@ -492,8 +539,8 @@
    "name": "test_local_mode_profile_keeps_every_egress_denied",
    "signature": "def test_local_mode_profile_keeps_every_egress_denied(tmp_path)",
    "span": [
-    555,
-    556
+    641,
+    642
    ],
    "visibility": "public"
   },
@@ -503,8 +550,8 @@
    "name": "test_verify_resolves_against_a_remote_tracking_base",
    "signature": "def test_verify_resolves_against_a_remote_tracking_base(tmp_path)",
    "span": [
-    562,
-    563
+    648,
+    649
    ],
    "visibility": "public"
   },
@@ -514,8 +561,8 @@
    "name": "test_init_creates_an_empty_notes_log",
    "signature": "def test_init_creates_an_empty_notes_log(tmp_path)",
    "span": [
-    572,
-    573
+    658,
+    659
    ],
    "visibility": "public"
   },
@@ -525,8 +572,8 @@
    "name": "test_a_failed_metadata_push_is_a_failed_landing",
    "signature": "def test_a_failed_metadata_push_is_a_failed_landing(tmp_path)",
    "span": [
-    582,
-    583
+    668,
+    669
    ],
    "visibility": "public"
   },
@@ -536,8 +583,8 @@
    "name": "_decision",
    "signature": "def _decision(command, config=PR_CFG, slice_id=\"slice-042\")",
    "span": [
-    622,
-    623
+    708,
+    709
    ],
    "visibility": "private"
   },
@@ -547,8 +594,8 @@
    "name": "test_pr_mode_denies_every_spelling_of_egress",
    "signature": "def test_pr_mode_denies_every_spelling_of_egress(command)",
    "span": [
-    675,
-    676
+    761,
+    762
    ],
    "visibility": "public"
   },
@@ -558,8 +605,8 @@
    "name": "test_the_exact_landing_shapes_stay_allowed",
    "signature": "def test_the_exact_landing_shapes_stay_allowed(command)",
    "span": [
-    688,
-    689
+    774,
+    775
    ],
    "visibility": "public"
   },
@@ -569,8 +616,8 @@
    "name": "test_normalized_spellings_do_not_widen_the_allow_list",
    "signature": "def test_normalized_spellings_do_not_widen_the_allow_list(command)",
    "span": [
-    697,
-    698
+    783,
+    784
    ],
    "visibility": "public"
   },
@@ -580,8 +627,8 @@
    "name": "test_harmless_commands_are_never_denied",
    "signature": "def test_harmless_commands_are_never_denied(command)",
    "span": [
-    714,
-    715
+    800,
+    801
    ],
    "visibility": "public"
   },
@@ -591,8 +638,8 @@
    "name": "test_local_mode_never_denies_anything",
    "signature": "def test_local_mode_never_denies_anything(command)",
    "span": [
-    721,
-    722
+    807,
+    808
    ],
    "visibility": "public"
   }

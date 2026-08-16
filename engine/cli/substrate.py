@@ -192,17 +192,21 @@ def cmd_graph(args):
         # whose commit a squash/rebase merge replaced (--repoint, D-010).
         if args.repoint:
             slice_id, commit = args.repoint
-            _print(graph.repoint_note(root, slice_id, commit))
+            _print(graph.repoint_note(root, slice_id,
+                                      graph.resolve_commit(root, commit)))
             return 0
         if not (args.slice and args.commit):
             print("error: graph note needs --slice and --commit, or "
                   "--repoint <slice-id> <sha>", file=sys.stderr)
             return 2
-        # rebuilt from substrate — the same source close-slice used
+        # rebuilt from substrate — the same source close-slice used.
+        # A symbolic ref resolves to its sha first: a notes row keyed to the
+        # literal "HEAD" resolves to nothing forever.
         payload = graph.slice_note_payload(root, args.slice)
-        graph.write_note(root, args.commit, payload)
+        commit = graph.resolve_commit(root, args.commit)
+        graph.write_note(root, commit, payload)
         _print({"note_written": True, "slice": args.slice,
-                "commit": args.commit,
+                "commit": commit,
                 "modules_touched": payload["modules_touched"]})
     elif args.graph_cmd == "edge":
         _print(graph.append_edge(root, args.type, args.frm, args.to,

@@ -1,5 +1,6 @@
 {
  "exports": [
+  "gate_configured",
   "gate_finding",
   "run_acceptance",
   "run_gate_cmd",
@@ -17,7 +18,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.acceptance",
- "source_hash": "sha256:ab441512ba1fc3e0b8b12f9ecbc35d12c67c65cc8da677b4faf649503f057a5c",
+ "source_hash": "sha256:2503796c28b9926fb74f075585b69cae249f54607f864145b1c009885fb02b10",
  "source_path": "engine/cli/acceptance.py",
  "symbols": [
   {
@@ -120,13 +121,24 @@
    "visibility": "public"
   },
   {
+   "doc": "Whether the repo declares an `acceptance.gate_cmd` at all.\n\n    Args:\n        config: The merged engine config.\n\n    Returns:\n        True when a gate command is configured, so a ceremony can report\n        `passed` versus `skipped` instead of leaving the reader guessing.",
+   "kind": "function",
+   "name": "gate_configured",
+   "signature": "def gate_configured(config) -> bool",
+   "span": [
+    286,
+    287
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": "(finding, tail): the blocking gate finding, or `(None, \"\")` when green.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n\n    Returns:\n        A `(finding, output_tail)` pair. The finding is a blocking\n        `ACCEPTANCE_GATE_FAILED` (rule_ref `adr:002`) when the configured\n        gate command exits non-zero \u2014 or could not be spawned at all \u2014 and\n        None otherwise. The tail is returned separately so callers report\n        it as `evidence`: the ceremony's `reason` is persisted into\n        `parked_reason`, and raw command output does not belong there.",
    "kind": "function",
    "name": "gate_finding",
    "signature": "def gate_finding(root, config)",
    "span": [
-    286,
-    287
+    299,
+    300
    ],
    "visibility": "public"
   }

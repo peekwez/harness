@@ -27,8 +27,9 @@ gates:
   # becomes a blocking EXTRA_GATE_LOAD_ERROR finding; a gate that raises,
   # returns a non-list or emits an invalid finding (e.g. a `block` with no
   # rule_ref) becomes a blocking EXTRA_GATE_RUN_ERROR. Never a silent skip.
-  # Only gates that declare `unit_complete` also run in `harness verify`;
-  # a pre_change-only gate does not run in CI (no edit to intercept).
+  # Only gates with `unit_complete` in `preferred` also run in `harness
+  # verify` (a `fallback` entry does not qualify): a pre_change-only gate
+  # has no edit to intercept in CI.
   # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
 # acceptance:
 #   # The command that decides a slice is green (ADR-002 / D-012). Omit the

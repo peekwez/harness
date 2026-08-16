@@ -146,7 +146,28 @@ failure to push the metadata counts as a failed landing too: the PR is open
 but its branch does not carry the row, so the slice goes `pending` with its
 `pr_url` kept.
 `merge-slice` refuses with the blocking finding `LANDING_MODE_PR`, and
-`harness run` refuses up front: a campaign cannot merge PRs for you.
+`harness run` refuses up front: a campaign cannot merge PRs for you. A
+closed slice in pr mode that records no landing at all (`landed_via` unset)
+also gets the advisory `LANDING_PENDING` — the state is never silent.
+
+**Updating a slice branch from a moved base.** With slices landing in
+parallel the base moves under an open PR. Do the update **locally** —
+`git fetch <remote> && git merge <remote>/<base>` (or rebase) in the slice's
+worktree — and then re-land:
+
+```
+harness land --slice <id>
+```
+
+Never GitHub's "Update branch" button: a server-side merge cannot run the
+`harness-substrate` merge driver, so it conflicts inside
+`.harness/backlog.jsonl` (and every other keyed log) instead of resolving
+row by row. `harness land` is idempotent — it re-notes HEAD when the update
+changed the tree no recorded note keyed (`renoted: true` in its output,
+riding in its own `.harness` commit), pushes again, and skips `pr_cmd`
+whenever the row already landed, so it never opens a second pull request.
+Without that re-note the squash merge would leave `verify` reporting
+`MISSING_PROVENANCE_NOTE` on work that had landed.
 
 Two things follow from pushing inside a sandboxed slice:
 
@@ -227,15 +248,18 @@ Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
 `[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, at
 `<!-- stage: 3 -->`; refuses to overwrite without `--force`),
 `compile`, `author-gate`, `resolve`, `extract`,
-`gates`, `verify` (the CI entry), `backlog` (+ `add`), `slice`, `start`,
+`gates`, `verify` (the CI entry),
+`backlog` (+ `add`, which takes `--linear GOO-NN`), `slice`,
+`start` (worktree + sandbox + binding + context, no prompts),
 `run` (campaign dispatcher: builds every ready slice via `run.builder_cmd`
 until the backlog is empty or a park needs a human — reference builders in
 `templates/claude-builder.sh` (headless `claude -p`) and
 `templates/claude-builder-sdk.py` (Claude Agent SDK); any CLI that closes
-the slice works)
-(worktree + sandbox + binding, no prompts), `permit` (host permission
-query), `close-slice`, `merge-slice`, `land` (`landing.mode: pr` — re-push a
-closed slice's branch and re-open its PR after a failed landing),
+the slice works),
+`permit` (host permission query),
+`close-slice`, `merge-slice`,
+`land` (`landing.mode: pr` — re-note HEAD, re-push a closed slice's branch
+and open its PR if it has none; idempotent),
 `registry`, `merge-substrate`,
 `review` (+ `--replay`, `--record-finding`, `--park`, `--record-fork`),
 `graph` (`neighbors`, `provenance`, `uses-declares`, `note` — `--slice/--commit`
@@ -444,3 +468,41 @@ make replay    # reviewer regression against the golden set
 Two of those tests keep the docs honest: every CLI subcommand must appear in
 this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
+
+## Changelog
+
+### 0.8.0
+
+Makes harness kente-capable and superpowers-composable (ADR-002, Linear
+GOO-72). Every 0.7.1 repo keeps its behaviour: each addition below is
+opt-in through `.harness/config.yaml`.
+
+- **GOO-73 — repo-local gates (`gates.extra`, D-007).** A consumer repo
+  loads its own deterministic gates into `all_gates()` and `harness verify`;
+  an entry that fails to import is a blocking `EXTRA_GATE_LOAD_ERROR`, one
+  that raises is `EXTRA_GATE_RUN_ERROR`, never a silent skip.
+- **GOO-74 — namespace-package awareness (`extractor.src_roots`, D-008).**
+  Shadows keep the whole dotted import, `module_id` strips the matching
+  source root, and G5/the resolver match registry entries by longest dotted
+  prefix — so PEP 420 packages are enforced, not invisible.
+- **GOO-75 — pr landing (`landing.mode: pr`, D-009/D-010/D-011).**
+  `close-slice` pushes `slice/<id>` and opens the PR, `merge-slice` refuses,
+  provenance is keyed twice so a squash merge keeps `verify` green, and the
+  permit layer auto-approves exactly the slice's own egress.
+- **GOO-76 — `compile --doc` / `architect --from-spec` (D-013).** Decision
+  rows and abstractions are authored in `docs/architecture.md`'s fenced
+  `harness-decisions` / `harness-abstractions` tables; an existing spec is
+  compiled instead of re-derived.
+- **GOO-77 — configurable acceptance (`acceptance.cmd`/`gate_cmd`, D-012).**
+  The command that decides a slice is green is the repo's, and its
+  whole-tree gate runs once per ceremony (`ACCEPTANCE_GATE_FAILED`).
+- **GOO-78 — superpowers composition (D-014).** One working agreement says
+  which plugin owns the outer loop and which the inner one.
+- **GOO-79 — plugin-root-agnostic rules + private-engine CI.**
+  `allowed-tools` and generated settings resolve `*/bin/harness` at runtime;
+  the CI template clones a private engine with `HARNESS_TOKEN`.
+
+Also in this release: `harness land` (re-note + re-push + re-open a failed
+landing, idempotent), the advisory `LANDING_PENDING` finding,
+`backlog add --linear`, and abstraction tables that carry `source` /
+`module_id`.

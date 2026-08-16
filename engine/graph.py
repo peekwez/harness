@@ -134,6 +134,32 @@ def notes_log_path(root) -> Path:
     return harness_dir(root) / NOTES_LOG
 
 
+def resolve_commit(root, commit: str) -> str:
+    """The sha a commit-ish names, so no substrate row stores a moving ref.
+
+    `--commit HEAD` is the spelling the skills use (a `$(git rev-parse …)`
+    substitution can never be permission-auto-approved), and a notes row
+    keyed to the literal string "HEAD" resolves to nothing forever.
+
+    Args:
+        root: Substrate root.
+        commit: Any commit-ish (`HEAD`, a branch, a sha).
+
+    Returns:
+        The full commit sha.
+
+    Raises:
+        GraphError: The ref does not resolve to a commit in this repo.
+    """
+    sha = _git(root, "rev-parse", "--verify", "--quiet", f"{commit}^{{commit}}",
+               check=False).strip()
+    if not sha:
+        raise GraphError(
+            f"{commit!r} does not name a commit in {root} — provenance must "
+            f"point at a real commit, never a ref that may move or vanish")
+    return sha
+
+
 def tree_hash(root, commit: str):
     """The tree a commit points at, or None when it cannot be resolved."""
     out = _git(root, "rev-parse", f"{commit}^{{tree}}", check=False).strip()
@@ -204,7 +230,11 @@ def write_note(root, commit, payload: dict) -> dict:
 
     Returns:
         The notes-log row `{ts, slice_id, commit, tree_hash}`.
+
+    Raises:
+        GraphError: `commit` does not resolve to a commit in this repo.
     """
+    commit = resolve_commit(root, commit)
     existing = _git(root, "notes", f"--ref={NOTES_REF}", "show", commit,
                     check=False).strip()
     payloads = [p for p in (_note_payloads(existing) if existing else [])

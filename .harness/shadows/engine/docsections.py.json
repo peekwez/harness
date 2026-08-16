@@ -8,12 +8,13 @@
  ],
  "extractor_version": 3,
  "imports": [
+  "extractor.engine",
   "pathlib",
   "re"
  ],
  "language": "python",
  "module_id": "engine.docsections",
- "source_hash": "sha256:d3fb7afb3a72ef4c7e7b11f77858f15c17e06e66a89501d159850a8cba23b0ee",
+ "source_hash": "sha256:37c5649a2cc116fddaf24614e71cd879427f3ee5ba38f158d147003bf42481b7",
  "source_path": "engine/docsections.py",
  "symbols": [
   {
@@ -22,8 +23,8 @@
    "name": "mentions_typed_blocks",
    "signature": "def mentions_typed_blocks(text: str) -> bool",
    "span": [
-    53,
-    54
+    62,
+    63
    ],
    "visibility": "public"
   },
@@ -33,10 +34,21 @@
    "name": "doc_ref_for",
    "signature": "def doc_ref_for(root, working_doc) -> str",
    "span": [
-    63,
-    64
+    72,
+    73
    ],
    "visibility": "public"
+  },
+  {
+   "doc": "Human-readable list of the header rows a block accepts.",
+   "kind": "function",
+   "name": "_headers",
+   "signature": "def _headers(variants) -> str",
+   "span": [
+    80,
+    81
+   ],
+   "visibility": "private"
   },
   {
    "doc": "Splits one pipe-table row into stripped cells (`\\\\|` is a literal).",
@@ -44,19 +56,19 @@
    "name": "_cells",
    "signature": "def _cells(line: str) -> list",
    "span": [
-    71,
-    72
+    85,
+    86
    ],
    "visibility": "private"
   },
   {
-   "doc": "Validates one table row against a block's column spec.\n\n    Args:\n        cells: The row's stripped cell values.\n        spec: The `(key, columns, required)` triple for the block.\n        where: `\"<doc>:<line>\"`, quoted in every error.\n\n    Returns:\n        The row as a dict keyed by column name.\n\n    Raises:\n        HarnessError: Wrong column count, or a required cell left empty.",
+   "doc": "Validates one table row against a block's column spec.\n\n    A block may accept more than one header (the abstraction table grew\n    `source`/`module_id` in 0.8); the row is matched to the variant with its\n    column count, so a three-column row keeps exactly the three keys it\n    always had.\n\n    Args:\n        cells: The row's stripped cell values.\n        spec: The `(key, variants, required)` triple for the block.\n        where: `\"<doc>:<line>\"`, quoted in every error.\n\n    Returns:\n        The row as a dict keyed by column name.\n\n    Raises:\n        HarnessError: No accepted header has this column count, or a\n            required cell was left empty.",
    "kind": "function",
    "name": "_row",
    "signature": "def _row(cells: list, spec, where: str) -> dict",
    "span": [
-    81,
-    82
+    95,
+    96
    ],
    "visibility": "private"
   },
@@ -66,19 +78,30 @@
    "name": "parse_doc_blocks",
    "signature": "def parse_doc_blocks(text: str, source=None) -> dict",
    "span": [
-    109,
-    110
+    131,
+    132
    ],
    "visibility": "public"
   },
   {
-   "doc": "Folds doc-authored rows into the compiler's in-flight substrate.\n\n    Doc rows are `origin: phase0` exactly like ADR rows: adjudicated rows\n    still outrank them, and `adr_ref` comes from the table (may be null).\n\n    Args:\n        blocks: `parse_doc_blocks` output.\n        doc_ref: Root-relative path of the working document.\n        decisions: id -> decision row, mutated in place.\n        registry: id -> registry entry, mutated in place.\n        authored: id -> per-compile authored view, mutated in place.\n        report: The compile report, appended to.\n        now: Compile timestamp.\n        adr_sources: `{\"decisions\": {id: adr_ref}, \"abstractions\": {...}}`.\n        kinds: The registry `kind` enum in force (`registry_kinds`).\n\n    Raises:\n        HarnessError: An id is claimed by both an ADR and the document, or\n            twice by the document.",
+   "doc": "Resolve an abstraction row's `(source, module_id)` pair.\n\n    A module-level abstraction is only visible to G5 and the resolver when\n    the registry entry carries the dotted module id of its source, so the\n    id is derived from `source` exactly as the extractor derives it\n    (ADR-002 / D-008) unless the row states it outright.\n\n    Args:\n        root: Substrate root, or None when the caller has no repo context.\n        source: The row's `source` cell (already normalized to None/str).\n        module_id: The row's `module_id` cell (None/str).\n        config: Loaded engine config (supplies `extractor.src_roots`).\n        aid: The abstraction id, quoted in the warning.\n        doc_ref: The working document, quoted in the warning.\n        report: The compile report, appended to on a failed derivation.\n\n    Returns:\n        `(source, module_id)` with the id derived when it can be.",
+   "kind": "function",
+   "name": "_doc_module",
+   "signature": "def _doc_module(root, source, module_id, config, aid, doc_ref, report)",
+   "span": [
+    195,
+    196
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Folds doc-authored rows into the compiler's in-flight substrate.\n\n    Doc rows are `origin: phase0` exactly like ADR rows: adjudicated rows\n    still outrank them, and `adr_ref` comes from the table (may be null).\n\n    Args:\n        blocks: `parse_doc_blocks` output.\n        doc_ref: Root-relative path of the working document.\n        decisions: id -> decision row, mutated in place.\n        registry: id -> registry entry, mutated in place.\n        authored: id -> per-compile authored view, mutated in place.\n        report: The compile report, appended to.\n        now: Compile timestamp.\n        adr_sources: `{\"decisions\": {id: adr_ref}, \"abstractions\": {...}}`.\n        kinds: The registry `kind` enum in force (`registry_kinds`).\n        root: Substrate root, for deriving `module_id` from `source`.\n        config: Loaded engine config (`extractor.src_roots`).\n\n    Raises:\n        HarnessError: An id is claimed by both an ADR and the document, or\n            twice by the document.",
    "kind": "function",
    "name": "merge_doc_blocks",
-   "signature": "def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict, registry: dict, authored: dict, report: dict, now: str, adr_sources: dict, kinds: set) -> None",
+   "signature": "def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict, registry: dict, authored: dict, report: dict, now: str, adr_sources: dict, kinds: set, root=None, config=None) -> None",
    "span": [
-    174,
-    177
+    230,
+    234
    ],
    "visibility": "public"
   },
@@ -88,8 +111,8 @@
    "name": "_first_paragraph",
    "signature": "def _first_paragraph(lines: list, start: int) -> str",
    "span": [
-    258,
-    259
+    330,
+    331
    ],
    "visibility": "private"
   },
@@ -99,8 +122,8 @@
    "name": "seed_doc_from_spec",
    "signature": "def seed_doc_from_spec(text: str, spec_ref: str) -> str",
    "span": [
-    274,
-    275
+    346,
+    347
    ],
    "visibility": "public"
   }

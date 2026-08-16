@@ -1,6 +1,7 @@
 {
  "exports": [
   "cmd_land",
+  "ensure_head_note",
   "forge_hosts",
   "land_pr",
   "landing_config",
@@ -23,7 +24,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.landing",
- "source_hash": "sha256:df026c18586c3ca1c10e797fc64b976b9c1042d18d73ac925c18dfcec429d9bc",
+ "source_hash": "sha256:bba6e7aaa3df6b445864b6adc4925d0624e6f6afef83f848d0ec252bf07aa95a",
  "source_path": "engine/cli/landing.py",
  "symbols": [
   {
@@ -137,13 +138,35 @@
    "visibility": "private"
   },
   {
+   "doc": "Commit a freshly written notes row on the slice branch.\n\n    Args:\n        root: Substrate root (the slice's tree).\n        slice_id: The slice being re-noted, for the commit subject.\n\n    Returns:\n        The commit sha, or None when there was nothing to commit.",
+   "kind": "function",
+   "name": "_commit_notes",
+   "signature": "def _commit_notes(root, slice_id: str) -> str | None",
+   "span": [
+    231,
+    232
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Note HEAD when the branch moved since the slice's last note (D-010).\n\n    Updating `slice/<id>` from a moved base (the parallel-slice case) gives\n    HEAD a tree no recorded row keys, so after the squash `verify` reported\n    `MISSING_PROVENANCE_NOTE` on work that had landed. Re-noting HEAD before\n    the push closes that hole; the row rides in its own substrate commit,\n    which \u2014 touching nothing outside `.harness` \u2014 leaves the source tree the\n    squash reproduces unchanged.\n\n    Args:\n        root: Substrate root (the slice's tree).\n        slice_id: The slice whose provenance is being refreshed.\n\n    Returns:\n        `{renoted, note_commit, tree_hash, note_substrate_commit}`.",
+   "kind": "function",
+   "name": "ensure_head_note",
+   "signature": "def ensure_head_note(root, slice_id: str) -> dict",
+   "span": [
+    253,
+    254
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": "Persist a closed-but-not-landed slice so it is not lost with the shell.\n\n    Args:\n        root: Substrate root.\n        sl: The backlog row.\n        error: The redacted failure tail.",
    "kind": "function",
    "name": "record_pending",
    "signature": "def record_pending(root, sl: dict, error: str) -> None",
    "span": [
-    231,
-    232
+    291,
+    292
    ],
    "visibility": "public"
   },
@@ -153,8 +176,8 @@
    "name": "land_pr",
    "signature": "def land_pr(root, sl: dict, config, note_meta=None) -> dict",
    "span": [
-    245,
-    246
+    305,
+    306
    ],
    "visibility": "public"
   },
@@ -164,19 +187,19 @@
    "name": "_finish_landing",
    "signature": "def _finish_landing(root, sl: dict, landing: dict, out: dict) -> dict",
    "span": [
-    319,
-    320
+    387,
+    388
    ],
    "visibility": "private"
   },
   {
-   "doc": "`harness land` \u2014 (re)run the landing for a slice that closed but did\n    not land (`landed_via: pending`). Thin on purpose: the close ceremony is\n    not repeated, only the push and the pr command.",
+   "doc": "`harness land` \u2014 (re)run the landing for a closed slice.\n\n    Idempotent by design (ADR-002 / D-010): it re-notes HEAD when the branch\n    was updated from base, pushes, and opens the pull request only if the\n    row does not already record one. The close ceremony is never repeated.\n\n    Args:\n        args: Parsed CLI args (`slice`, `root`, `session`).\n\n    Returns:\n        Process exit code (0 when the landing completed).\n\n    Raises:\n        HarnessError: The repo is in `local` mode, or the slice is not\n            closed yet.",
    "kind": "function",
    "name": "cmd_land",
    "signature": "def cmd_land(args)",
    "span": [
-    359,
-    360
+    427,
+    428
    ],
    "visibility": "public"
   }

@@ -75,12 +75,7 @@ def _substrate_health(root, fix=False) -> dict:
                     "remove_with": f"git worktree remove --force {child}"})
 
     parked = read_jsonl(harness_dir(root) / "parked.jsonl")
-    missing_notes = []
-    if (root / ".git").exists():
-        from engine.graph import read_notes
-        noted = {p.get("slice_id") for n in read_notes(root) for p in n["payloads"]}
-        missing_notes = [sid for sid, s in backlog.items()
-                         if s.get("status") == "closed" and sid not in noted]
+    missing_notes = _missing_notes(root, backlog)
 
     fixed = {"bindings_released": 0, "telemetry_flushed": 0}
     if fix:
@@ -109,9 +104,52 @@ def _substrate_health(root, fix=False) -> dict:
         "missing_notes": missing_notes,
         "fixed": fixed if fix else None,
         "next": ("harness adjudicate --list" if parked else
-                 "harness graph note --slice <id> --commit <sha>"
+                 (f"harness land --slice {missing_notes[0]} (landing.mode: "
+                  f"pr, re-notes HEAD and re-pushes), or `harness graph note "
+                  f"--repoint {missing_notes[0]} <sha>` once you know the "
+                  f"commit that carries the slice's content")
                  if missing_notes else None),
     }
+
+
+def _missing_notes(root, backlog: dict) -> list:
+    """Closed slices whose provenance nothing can resolve.
+
+    The same resolution `verify` performs (ADR-002 / D-010): a git note on a
+    reachable commit, or a `.harness/notes.jsonl` row whose tree hash /
+    source tree a reachable commit carries. A pr-landed slice on a fresh
+    clone has no `refs/notes/*` at all, so consulting git notes alone made
+    every clone look unhealthy.
+
+    Args:
+        root: Substrate root.
+        backlog: `{slice_id: row}`.
+
+    Returns:
+        The ids of closed slices with neither key, in backlog order.
+    """
+    if not (root / ".git").exists():
+        return []
+    from engine.cli.landing import landing_config
+    from engine.graph import (reachable_source_keys, reachable_trees,
+                              read_notes, resolve_note)
+    try:
+        landing = landing_config(load_config(root))
+    except HarnessError:
+        landing = {"base": "main", "remote": "origin"}
+    noted = {p.get("slice_id") for n in read_notes(root) for p in n["payloads"]}
+    trees = reachable_trees(root, landing["base"], remote=landing["remote"])
+    cache: dict = {}
+
+    def _keys():
+        if "keys" not in cache:
+            cache["keys"] = reachable_source_keys(root, landing["base"],
+                                                  remote=landing["remote"])
+        return cache["keys"]
+
+    return [sid for sid, s in backlog.items()
+            if s.get("status") == "closed" and sid not in noted
+            and not resolve_note(root, sid, trees, _keys)]
 
 
 # ------------------------------------------------------------------ verify
@@ -299,6 +337,18 @@ def cmd_verify(args):
                 f"travel with the repo — repair with `harness graph note "
                 f"--slice {s['id']} --commit <sha>`",
                 severity="block", key=s["id"] + "|note"))
+        if landing["mode"] == "pr" and not s.get("landed_via"):
+            # closed in pr mode with no landing recorded at all: the close
+            # never reached its landing step (an older close, a crash, a
+            # hand-flipped row). Same code, same advisory severity — the one
+            # thing it must not be is silent.
+            findings.append(make_finding(
+                "LANDING_PENDING", "adr:002",
+                f"slice {s['id']} is closed but records no landing "
+                f"(landed_via is unset) while landing.mode is pr — land it "
+                f"with `harness land --slice {s['id']}` from the slice's "
+                f"worktree, or record how it landed",
+                severity="advisory", key=s["id"] + "|landing"))
         if s.get("landed_via") == "pending":
             # closed, but the push or the PR command did not go through: not
             # a block (the work IS closed and committed), and not silence

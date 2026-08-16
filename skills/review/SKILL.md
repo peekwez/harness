@@ -2,7 +2,7 @@
 name: review
 description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory.
 disable-model-invocation: true
-allowed-tools: Bash(*/bin/harness *) Bash(git diff *)
+allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *)
 context: fork
 agent: reviewer
 argument-hint: "<slice-id>"
@@ -22,8 +22,12 @@ candidates, decision rows in scope, shadows of everything the diff imports).
 argument, so this is your first command):
 
 ```
-git diff main...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
+git diff <landing.base>...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
 ```
+
+`<landing.base>` is `landing.base` from `.harness/config.yaml` (default
+`main`) — a repo that ships from `develop` must not be reviewed against a
+branch its slices never leave.
 
 Layers 1–3 — rubric-bound checks over those facts:
 

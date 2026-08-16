@@ -500,13 +500,99 @@ def test_a_failed_landing_is_recorded_and_re_landable(tmp_path):
         run_cli("verify", root=toy).stdout)["findings"].__str__()
 
 
-def test_land_refuses_an_already_landed_slice(tmp_path):
+def test_land_is_idempotent_on_an_already_landed_slice(tmp_path):
+    """`harness land` is the re-run command (I-2): after the slice branch is
+    updated from base it re-notes and re-pushes. It must never open a second
+    pull request, so `pr_cmd` is skipped once the row landed."""
+    script, _args, _body = _fake_gh(tmp_path)
+    toy, _ = _pr_repo(tmp_path, pr_cmd=_pr_cmd(script))
+    _work_and_commit(toy)
+    assert _close(toy).returncode == 0
+    assert _gh_calls(tmp_path) == 1
+    proc = run_cli("land", "--slice", "slice-042", root=toy, env=NO_ENV)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["landed"] is True and out["pr_cmd_skipped"] is True
+    assert _gh_calls(tmp_path) == 1, "a re-land must never open a second PR"
+
+
+def _other_work_lands_on_main(tmp_path, origin, name="other"):
+    """Someone else's PR moves the base branch while this slice is open."""
+    clone = tmp_path / name
+    git(tmp_path, "clone", "-q", str(origin), str(clone))
+    git(clone, "config", "user.email", "t@t")
+    git(clone, "config", "user.name", "t")
+    (clone / "unrelated.py").write_text("x = 1\n")
+    git(clone, "add", "-A")
+    git(clone, "commit", "-qm", "other work")
+    assert git(clone, "push", "-q", "origin", "main").returncode == 0
+    return clone
+
+
+def test_land_renotes_after_the_branch_is_updated_from_base(tmp_path):
+    """Parallel slices: updating `slice/<id>` from a moved base changes the
+    tree HEAD carries, so no notes.jsonl row matched it any more and verify
+    blocked with MISSING_PROVENANCE_NOTE after the squash."""
+    toy, origin = _pr_repo(tmp_path, pr_cmd="true")
+    _work_and_commit(toy)
+    assert _close(toy).returncode == 0
+    _other_work_lands_on_main(tmp_path, origin)
+
+    # the update happens LOCALLY — the repo's merge drivers handle
+    # .harness/*.jsonl, GitHub's "Update branch" button cannot
+    git(toy, "fetch", "-q", "origin")
+    assert git(toy, "merge", "--no-edit", "-q", "origin/main").returncode == 0
+    before = len(read_jsonl(toy / ".harness" / "notes.jsonl"))
+
+    proc = run_cli("land", "--slice", "slice-042", root=toy, env=NO_ENV)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["renoted"] is True and out["landed"] is True
+    rows = read_jsonl(toy / ".harness" / "notes.jsonl")
+    assert len(rows) == before + 1
+    assert not git(toy, "status", "--porcelain").stdout.strip(), \
+        "the re-note rides in its own substrate commit"
+
+    # squash-merge the updated branch the way the forge does, on a clone
+    clone = tmp_path / "merger"
+    git(tmp_path, "clone", "-q", str(origin), str(clone))
+    git(clone, "config", "user.email", "t@t")
+    git(clone, "config", "user.name", "t")
+    assert git(clone, "merge", "--squash",
+               "origin/slice/slice-042").returncode == 0
+    git(clone, "commit", "-qm", "squash: slice-042 (#2)")
+    check = run_cli("verify", root=clone)
+    assert check.returncode == 0, check.stdout + check.stderr
+    report = json.loads(check.stdout)
+    assert report["resolved_via"]["slice-042"] == "tree_hash"
+
+
+def test_land_does_not_renote_an_unchanged_branch(tmp_path):
     toy, _ = _pr_repo(tmp_path, pr_cmd="true")
     _work_and_commit(toy)
     assert _close(toy).returncode == 0
+    before = len(read_jsonl(toy / ".harness" / "notes.jsonl"))
     proc = run_cli("land", "--slice", "slice-042", root=toy, env=NO_ENV)
-    assert proc.returncode == 1
-    assert "landed" in (proc.stdout + proc.stderr)
+    assert json.loads(proc.stdout)["renoted"] is False
+    assert len(read_jsonl(toy / ".harness" / "notes.jsonl")) == before
+
+
+def test_verify_flags_a_pr_slice_that_records_no_landing(tmp_path):
+    """A closed pr-mode slice with landed_via unset never reached its
+    landing step — advisory, never silent (M-1)."""
+    toy, _ = _pr_repo(tmp_path, pr_cmd="true")
+    _work_and_commit(toy)
+    assert _close(toy).returncode == 0
+    from engine import write_jsonl
+    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
+    for r in rows:
+        r.pop("landed_via", None)
+    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
+    proc = run_cli("verify", root=toy)
+    out = json.loads(proc.stdout)
+    pending = [f for f in out["findings"] if f["code"] == "LANDING_PENDING"]
+    assert pending and pending[0]["severity"] == "advisory"
+    assert proc.returncode == 0
 
 
 def test_landing_refuses_to_push_from_the_wrong_branch(tmp_path):

@@ -20,7 +20,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.ceremony",
- "source_hash": "sha256:392350302be18adc3e6e59100ff4a0fed27f81b63a9f087694f6a0da5ef0741e",
+ "source_hash": "sha256:02538eeccbae9d12f6d6cbb4d95a34c598e94fb20146dba20f72ff974cf7230e",
  "source_path": "engine/cli/ceremony.py",
  "symbols": [
   {
@@ -29,8 +29,8 @@
    "name": "_added_dependency_lines",
    "signature": "def _added_dependency_lines(root, sl, commit) -> dict",
    "span": [
-    24,
-    25
+    25,
+    26
    ],
    "visibility": "private"
   },
@@ -40,8 +40,8 @@
    "name": "_security_rows_for_slice",
    "signature": "def _security_rows_for_slice(root, sl)",
    "span": [
-    48,
-    49
+    49,
+    50
    ],
    "visibility": "private"
   },
@@ -51,8 +51,8 @@
    "name": "_close_ceremony",
    "signature": "def _close_ceremony(args)",
    "span": [
-    63,
-    64
+    64,
+    65
    ],
    "visibility": "private"
   },
@@ -62,8 +62,8 @@
    "name": "_enforceable",
    "signature": "def _enforceable(rel): # build artifacts and vendored trees are not slice scope: # a repo without a tidy .gitignore would otherwise get G3 # blocks for __pycache__/node_modules churn",
    "span": [
-    243,
-    247
+    246,
+    250
    ],
    "visibility": "private"
   },
@@ -73,8 +73,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    458,
-    459
+    461,
+    462
    ],
    "visibility": "private"
   }

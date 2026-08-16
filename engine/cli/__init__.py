@@ -147,6 +147,10 @@ def main(argv=None):
                     help="red acceptance test path(s) — required; slices "
                          "start from red tests")
     ba.add_argument("--depends", nargs="*", default=[])
+    ba.add_argument("--linear",
+                    help="tracker id for this slice (e.g. GOO-73): quoted in "
+                         "the PR title and linked in its body under "
+                         "landing.mode: pr")
 
     sp = sub.add_parser("slice", help="bind a slice (repo default + session)")
     sp.add_argument("--slice")

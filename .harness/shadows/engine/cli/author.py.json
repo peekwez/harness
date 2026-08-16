@@ -4,7 +4,8 @@
   "cmd_author_gate",
   "cmd_backlog",
   "cmd_compile",
-  "cmd_slice"
+  "cmd_slice",
+  "validate_linear"
  ],
  "extractor_version": 3,
  "imports": [
@@ -18,11 +19,12 @@
   "engine.registry",
   "engine.resolver",
   "pathlib",
+  "re",
   "sys"
  ],
  "language": "python",
  "module_id": "engine.cli.author",
- "source_hash": "sha256:ec737e557c8c94edb5900e686c9d5d4864e4d3fa0ab1608c0621c974754c39e6",
+ "source_hash": "sha256:b39f7562ba7ea86afd30d72bdf8653b9f4de6b0764ba256fecce66ca52bb9708",
  "source_path": "engine/cli/author.py",
  "symbols": [
   {
@@ -31,10 +33,32 @@
    "name": "_under_root",
    "signature": "def _under_root(root, path) -> Path",
    "span": [
-    22,
-    23
+    27,
+    28
    ],
    "visibility": "private"
+  },
+  {
+   "doc": "Resolve a `--doc` argument under the substrate root, fail loud if absent.\n\n    Args:\n        root: Substrate root.\n        doc: The path as typed on the command line.\n\n    Returns:\n        The resolved path.\n\n    Raises:\n        HarnessError: The document does not exist \u2014 a typo must never\n            silently skip the rows it was supposed to compile.",
+   "kind": "function",
+   "name": "_require_doc",
+   "signature": "def _require_doc(root, doc) -> Path",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Validate a tracker id for a slice row's `linear` field.\n\n    Args:\n        value: The id as typed (`GOO-73`).\n\n    Returns:\n        The stripped id.\n\n    Raises:\n        HarnessError: The id is not `<PROJECT>-<number>`.",
+   "kind": "function",
+   "name": "validate_linear",
+   "signature": "def validate_linear(value: str) -> str",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
   },
   {
    "doc": null,
@@ -42,8 +66,8 @@
    "name": "_rel",
    "signature": "def _rel(root, path) -> str",
    "span": [
-    28,
-    29
+    77,
+    78
    ],
    "visibility": "private"
   },
@@ -53,8 +77,8 @@
    "name": "cmd_architect",
    "signature": "def cmd_architect(args)",
    "span": [
-    35,
-    36
+    84,
+    85
    ],
    "visibility": "public"
   },
@@ -64,8 +88,8 @@
    "name": "cmd_compile",
    "signature": "def cmd_compile(args)",
    "span": [
-    79,
-    80
+    128,
+    129
    ],
    "visibility": "public"
   },
@@ -75,8 +99,8 @@
    "name": "cmd_author_gate",
    "signature": "def cmd_author_gate(args)",
    "span": [
-    99,
-    100
+    152,
+    153
    ],
    "visibility": "public"
   },
@@ -86,8 +110,8 @@
    "name": "_backlog_add",
    "signature": "def _backlog_add(args)",
    "span": [
-    113,
-    114
+    163,
+    164
    ],
    "visibility": "private"
   },
@@ -97,8 +121,8 @@
    "name": "cmd_backlog",
    "signature": "def cmd_backlog(args)",
    "span": [
-    147,
-    148
+    199,
+    200
    ],
    "visibility": "public"
   },
@@ -108,8 +132,8 @@
    "name": "cmd_slice",
    "signature": "def cmd_slice(args)",
    "span": [
-    187,
-    188
+    239,
+    240
    ],
    "visibility": "public"
   }

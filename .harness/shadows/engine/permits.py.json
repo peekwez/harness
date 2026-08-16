@@ -4,6 +4,7 @@
   "command_decision",
   "declared_set",
   "git_subcommand",
+  "is_config_escalation",
   "is_egress",
   "paths_in_scope"
  ],
@@ -17,7 +18,7 @@
  ],
  "language": "python",
  "module_id": "engine.permits",
- "source_hash": "sha256:7d3069e6bd7becf7f151a82b3e4a36169ae6a414e924d80274184154b5567dc0",
+ "source_hash": "sha256:7712d39f74bb96e125bec33f73cc2d1a43a962482fe701163db7d6b747f741f9",
  "source_path": "engine/permits.py",
  "symbols": [
   {
@@ -26,10 +27,32 @@
    "name": "_pr_egress_allowed",
    "signature": "def _pr_egress_allowed(parts: list, landing: dict, slice_id: str) -> bool",
    "span": [
-    60,
-    61
+    71,
+    72
    ],
    "visibility": "private"
+  },
+  {
+   "doc": "True when one `git config` invocation arms a later egress.\n\n    Args:\n        parts: The already-split tokens of one segment.\n\n    Returns:\n        Whether this is a `git config` naming a denied scope or key.",
+   "kind": "function",
+   "name": "_config_escalation_parts",
+   "signature": "def _config_escalation_parts(parts: list) -> bool",
+   "span": [
+    119,
+    120
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "True when any segment of `command` is an egress-arming `git config`.\n\n    `git config` never talks to a remote, so `is_egress` is blind to it \u2014\n    but `alias.*`, `core.sshCommand`, `core.hooksPath`, `url.*`, `remote.*`,\n    `credential.*`, `http.*` and the `--global`/`--system` scopes all make\n    some LATER command reach one. In pr mode that is a deny, not silence.\n\n    Args:\n        command: The command line the host is asking about.\n\n    Returns:\n        Whether any segment is such a `git config`.",
+   "kind": "function",
+   "name": "is_config_escalation",
+   "signature": "def is_config_escalation(command: str) -> bool",
+   "span": [
+    146,
+    147
+   ],
+   "visibility": "public"
   },
   {
    "doc": null,
@@ -37,8 +60,8 @@
    "name": "_segment_allowed",
    "signature": "def _segment_allowed(seg: str, harness_bin: str | None, landing=None, slice_id=None) -> bool",
    "span": [
-    108,
-    110
+    172,
+    174
    ],
    "visibility": "private"
   },
@@ -48,8 +71,8 @@
    "name": "_strip_env",
    "signature": "def _strip_env(parts: list) -> list",
    "span": [
-    158,
-    159
+    225,
+    226
    ],
    "visibility": "private"
   },
@@ -59,8 +82,8 @@
    "name": "_program",
    "signature": "def _program(parts: list) -> str",
    "span": [
-    166,
-    167
+    233,
+    234
    ],
    "visibility": "private"
   },
@@ -70,8 +93,8 @@
    "name": "git_subcommand",
    "signature": "def git_subcommand(parts: list) -> tuple",
    "span": [
-    171,
-    172
+    238,
+    239
    ],
    "visibility": "public"
   },
@@ -81,8 +104,8 @@
    "name": "_shell_script",
    "signature": "def _shell_script(args: list)",
    "span": [
-    213,
-    214
+    280,
+    281
    ],
    "visibility": "private"
   },
@@ -92,8 +115,8 @@
    "name": "_wrapper_egress",
    "signature": "def _wrapper_egress(args: list, depth: int) -> bool",
    "span": [
-    248,
-    249
+    315,
+    316
    ],
    "visibility": "private"
   },
@@ -103,8 +126,8 @@
    "name": "_segment_egress",
    "signature": "def _segment_egress(parts: list, depth: int = 0) -> bool",
    "span": [
-    263,
-    264
+    330,
+    331
    ],
    "visibility": "private"
   },
@@ -114,8 +137,8 @@
    "name": "_text_egress",
    "signature": "def _text_egress(command: str, depth: int = 0) -> bool",
    "span": [
-    290,
-    291
+    357,
+    358
    ],
    "visibility": "private"
   },
@@ -125,8 +148,8 @@
    "name": "is_egress",
    "signature": "def is_egress(command: str) -> bool",
    "span": [
-    304,
-    305
+    371,
+    372
    ],
    "visibility": "public"
   },
@@ -136,8 +159,8 @@
    "name": "command_decision",
    "signature": "def command_decision(command: str, harness_bin: str | None = None, config=None, slice_id=None) -> tuple",
    "span": [
-    322,
-    324
+    389,
+    391
    ],
    "visibility": "public"
   },
@@ -147,8 +170,8 @@
    "name": "command_allowed",
    "signature": "def command_allowed(command: str, harness_bin: str | None = None, config=None, slice_id=None) -> tuple",
    "span": [
-    354,
-    356
+    427,
+    429
    ],
    "visibility": "public"
   },
@@ -158,8 +181,8 @@
    "name": "declared_set",
    "signature": "def declared_set(slice_row: dict, registry: list) -> set",
    "span": [
-    388,
-    389
+    461,
+    462
    ],
    "visibility": "public"
   },
@@ -169,8 +192,8 @@
    "name": "paths_in_scope",
    "signature": "def paths_in_scope(slice_row: dict, registry: list, rels) -> bool",
    "span": [
-    399,
-    400
+    472,
+    473
    ],
    "visibility": "public"
   }

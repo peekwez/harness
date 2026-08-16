@@ -2,9 +2,11 @@
  "exports": [
   "call_engine",
   "clip",
+  "egress_shaped",
   "files_from_tool_input",
   "main",
   "permit",
+  "pr_landing",
   "resolve_root"
  ],
  "extractor_version": 3,
@@ -12,22 +14,45 @@
   "json",
   "os",
   "pathlib",
+  "re",
   "subprocess",
   "sys"
  ],
  "language": "python",
  "module_id": "hooks.adapter",
- "source_hash": "sha256:0aa2ca2487bd89ccd64cbb18f10672e69519aadf71d60e53341a4a225b539882",
+ "source_hash": "sha256:7ecc1c3d63a1cadc9fa213b29207f6cb9a472b0c3fa55b8794e7baa52563189d",
  "source_path": "hooks/adapter.py",
  "symbols": [
+  {
+   "doc": "Whether `.harness/config.yaml` sets `landing.mode: pr`.\n\n    A minimal text read, not a YAML parse: the adapter must keep working\n    with no third-party import available, and the only decision it drives\n    is a refusal.\n\n    Args:\n        root: The substrate root the event routed to; None walks up from the\n            process cwd, the way the engine itself resolves a root (a Bash\n            permission question carries no file to route on).\n\n    Returns:\n        True when the config declares pr landing.",
+   "kind": "function",
+   "name": "pr_landing",
+   "signature": "def pr_landing(root)",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Whether a command looks like it talks to a remote.\n\n    Used only when the engine could not answer (`engine/permits.py` owns the\n    real classification): over-refusing here costs a prompt, under-refusing\n    costs an unreviewed push.\n\n    Args:\n        command: The command line the host asked about.\n\n    Returns:\n        True when the command mentions a remote-talking program.",
+   "kind": "function",
+   "name": "egress_shaped",
+   "signature": "def egress_shaped(command)",
+   "span": [
+    90,
+    91
+   ],
+   "visibility": "public"
+  },
   {
    "doc": null,
    "kind": "function",
    "name": "clip",
    "signature": "def clip(text, slice_id=None)",
    "span": [
-    35,
-    36
+    106,
+    107
    ],
    "visibility": "public"
   },
@@ -37,8 +62,8 @@
    "name": "files_from_tool_input",
    "signature": "def files_from_tool_input(tool_input)",
    "span": [
-    45,
-    46
+    116,
+    117
    ],
    "visibility": "public"
   },
@@ -48,21 +73,32 @@
    "name": "resolve_root",
    "signature": "def resolve_root(files, hook_cwd)",
    "span": [
-    57,
-    58
+    128,
+    129
    ],
    "visibility": "public"
   },
   {
-   "doc": "Ask the engine whether the bound slice's gates approve this tool call.\n\n    A separate question from the enforcement verdict (which never grows\n    fields): policy lives in engine/permits.py, the adapter only translates.\n\n    Returns:\n        `(decision, reason)` where decision is `allow` (auto-approve),\n        `deny` (pr-mode egress outside D-011's surface \u2014 the settings profile\n        cannot express \"this slice's branch\", so the hook is the decider) or\n        `defer` (stay silent; the host's own flow decides).",
+   "doc": "Ask the engine whether the bound slice's gates approve this tool call.\n\n    A separate question from the enforcement verdict (which never grows\n    fields): policy lives in engine/permits.py, the adapter only translates.\n\n    Returns:\n        `(decision, reason)` where decision is `allow` (auto-approve),\n        `deny` (pr-mode egress outside D-011's surface \u2014 the settings profile\n        cannot express \"this slice's branch\", so the hook is the decider) or\n        `defer` (stay silent; the host's own flow decides).\n\n        When the engine itself fails, a pr-mode repo denies anything\n        egress-shaped rather than deferring: the profile has dropped its\n        blanket push/fetch denies precisely because the hook decides, so\n        silence there is an auto-approved push. The bound slice cannot be\n        read with the engine down, so the repo-level mode is the fact used.",
    "kind": "function",
    "name": "permit",
    "signature": "def permit(session, root=None, command=None, paths=None)",
    "span": [
-    80,
-    81
+    151,
+    152
    ],
    "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_engine_down",
+   "signature": "def _engine_down()",
+   "span": [
+    169,
+    170
+   ],
+   "visibility": "private"
   },
   {
    "doc": null,
@@ -70,8 +106,8 @@
    "name": "call_engine",
    "signature": "def call_engine(event, root=None)",
    "span": [
-    113,
-    114
+    195,
+    196
    ],
    "visibility": "public"
   },
@@ -81,8 +117,8 @@
    "name": "main",
    "signature": "def main()",
    "span": [
-    132,
-    133
+    214,
+    215
    ],
    "visibility": "public"
   }

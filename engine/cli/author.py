@@ -6,6 +6,7 @@ hand-edited.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -16,6 +17,10 @@ from engine.cli.slice import _bind_slice
 
 
 DEFAULT_WORKING_DOC = "docs/architecture.md"
+#: tracker ids a slice row may carry (`linear`, schema §5.6). Deliberately
+#: narrow: the id is interpolated into a PR title and a Linear URL, so a
+#: free-form string would produce a dead link nobody notices.
+LINEAR_ID = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
 
 
 # ------------------------------------------------------------------ architect
@@ -23,6 +28,50 @@ def _under_root(root, path) -> Path:
     """Resolves a CLI path argument relative to the substrate root."""
     p = Path(path)
     return p if p.is_absolute() else Path(root) / p
+
+
+def _require_doc(root, doc) -> Path:
+    """Resolve a `--doc` argument under the substrate root, fail loud if absent.
+
+    Args:
+        root: Substrate root.
+        doc: The path as typed on the command line.
+
+    Returns:
+        The resolved path.
+
+    Raises:
+        HarnessError: The document does not exist — a typo must never
+            silently skip the rows it was supposed to compile.
+    """
+    path = _under_root(root, doc)
+    if not path.is_file():
+        raise HarnessError(
+            f"--doc {doc!r} does not exist (looked in {path}) — a working "
+            f"document nobody compiled is exactly the silent degradation "
+            f"this engine refuses")
+    return path
+
+
+def validate_linear(value: str) -> str:
+    """Validate a tracker id for a slice row's `linear` field.
+
+    Args:
+        value: The id as typed (`GOO-73`).
+
+    Returns:
+        The stripped id.
+
+    Raises:
+        HarnessError: The id is not `<PROJECT>-<number>`.
+    """
+    linear = (value or "").strip()
+    if not LINEAR_ID.match(linear):
+        raise HarnessError(
+            f"--linear {value!r} is not a tracker id like 'GOO-73' "
+            f"(uppercase project key, dash, digits) — it is interpolated "
+            f"into the PR title and the issue URL")
+    return linear
 
 
 def _rel(root, path) -> str:
@@ -86,25 +135,26 @@ def cmd_compile(args):
     from engine.compiler import compile_substrate
     from engine.docsections import mentions_typed_blocks
     root = _root(args)
-    if not args.doc:
-        doc = Path(root) / DEFAULT_WORKING_DOC
-        if doc.exists() and mentions_typed_blocks(doc.read_text(encoding="utf-8")):
+    doc = None
+    if args.doc:
+        doc = _require_doc(root, args.doc)
+    else:
+        default = Path(root) / DEFAULT_WORKING_DOC
+        if default.exists() and mentions_typed_blocks(
+                default.read_text(encoding="utf-8")):
             print(f"warning: {DEFAULT_WORKING_DOC} carries harness-decisions/"
                   f"harness-abstractions tables that this run did NOT compile "
                   f"— re-run with --doc {DEFAULT_WORKING_DOC}", file=sys.stderr)
-    _print(compile_substrate(root, working_doc=args.doc))
+    _print(compile_substrate(root, working_doc=doc))
     return 0
 
 
 def cmd_author_gate(args):
     from engine.compiler import author_gate
     root = _root(args)
-    if args.doc and not Path(args.doc).exists():
-        # a typo'd doc path must not silently skip the open-question check
-        _print({"passed": False,
-                "gaps": [f"working document {args.doc!r} does not exist"]})
-        return 1
-    result = author_gate(root, working_doc=args.doc)
+    # a typo'd doc path must not silently skip the open-question check
+    doc = _require_doc(root, args.doc) if args.doc else None
+    result = author_gate(root, working_doc=doc)
     _print(result)
     return 0 if result["passed"] else 1
 
@@ -136,6 +186,8 @@ def _backlog_add(args):
            "predicted_files": list(dict.fromkeys(
                (args.predicts or []) + list(args.acceptance))),
            "depends_on": list(args.depends or []), "worktree": None}
+    if getattr(args, "linear", None):
+        row["linear"] = validate_linear(args.linear)
     row["context_cost_estimate"] = context_cost_estimate(
         root, row["declares_dep"], config)
     rows.append(row)

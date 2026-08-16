@@ -17,7 +17,7 @@
  ],
  "language": "python",
  "module_id": "engine.compiler",
- "source_hash": "sha256:03a65dc3486535913b17364fc274ae757f58d7589d8cd612feb7b84214e16273",
+ "source_hash": "sha256:e5c071f1902520391927922366f6ab47fe609f05309bd60f4d06851f98c42d7f",
  "source_path": "engine/compiler.py",
  "symbols": [
   {
@@ -103,8 +103,8 @@
    "name": "adr_ref_sec",
    "signature": "def adr_ref_sec(adr_ref: str, ab: dict) -> str",
    "span": [
-    375,
-    376
+    377,
+    378
    ],
    "visibility": "public"
   },
@@ -114,8 +114,8 @@
    "name": "_unresolved_open_questions",
    "signature": "def _unresolved_open_questions(body: str) -> list",
    "span": [
-    380,
-    381
+    382,
+    383
    ],
    "visibility": "private"
   },
@@ -125,8 +125,8 @@
    "name": "author_gate",
    "signature": "def author_gate(root, working_doc=None) -> dict",
    "span": [
-    405,
-    406
+    407,
+    408
    ],
    "visibility": "public"
   }

@@ -67,8 +67,19 @@ command, which re-runs ONLY the push and the PR:
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" land --slice $1`
 Do NOT re-run close-slice — the slice is already closed. Then watch the PR:
 `gh pr checks`. After it merges, provenance survives the squash by
-tree hash; if `harness verify` ever reports an orphan, repair it with
+tree hash; if `harness verify` ever reports `ORPHANED_NOTE` or
+`MISSING_PROVENANCE_NOTE`, repair it with
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" graph note --repoint $1 <merged-sha>`.
+
+If the base branch moves while the PR is open, update the branch LOCALLY
+from the slice's worktree (`git fetch <remote> && git merge <remote>/<base>`)
+— never GitHub's "Update branch" button, whose server-side merge cannot run
+the repo's `harness-substrate` merge driver and conflicts inside
+`.harness/backlog.jsonl`. Then re-land:
+`"${CLAUDE_PLUGIN_ROOT}/bin/harness" land --slice $1`
+It is idempotent: it re-notes HEAD (the update gave it a tree no recorded
+note keyed, which would otherwise be `MISSING_PROVENANCE_NOTE` after the
+squash), pushes, and skips the PR command because the row already has one.
 
 **`landing.mode: local`** (the default) — merge, one command, run from the
 MAIN tree:

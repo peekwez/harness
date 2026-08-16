@@ -1,6 +1,9 @@
 {
  "exports": [
   "run_adapter",
+  "test_engine_error_denies_egress_in_pr_mode",
+  "test_engine_error_in_local_mode_stays_silent",
+  "test_engine_error_still_defers_a_harmless_command",
   "test_gates_declare_preferred_and_fallback_events",
   "test_hooks_json_binds_all_required_events",
   "test_injection_clipped_under_hook_output_cap",
@@ -29,14 +32,14 @@
  ],
  "language": "python",
  "module_id": "tests.adapter-conformance.test_adapter",
- "source_hash": "sha256:778add57c1bd8fa7b6b44f73779db98c107a2b82fb1fd888cbe93e55f197c4f7",
+ "source_hash": "sha256:2afd52cdc2f74fc75e0dce5d6a7351436be08bec585d1fa463026ad074dcc2b3",
  "source_path": "tests/adapter-conformance/test_adapter.py",
  "symbols": [
   {
    "doc": null,
    "kind": "function",
    "name": "run_adapter",
-   "signature": "def run_adapter(hook_json, cwd, slice_id=None)",
+   "signature": "def run_adapter(hook_json, cwd, slice_id=None, harness_bin=None)",
    "span": [
     17,
     18
@@ -190,10 +193,21 @@
    "doc": null,
    "kind": "function",
    "name": "_bash",
-   "signature": "def _bash(root, command, session=\"eg-1\")",
+   "signature": "def _bash(root, command, session=\"eg-1\", harness_bin=None)",
    "span": [
     197,
     198
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "An engine binary that fails: the adapter must still fail CLOSED.",
+   "kind": "function",
+   "name": "_broken_engine",
+   "signature": "def _broken_engine(tmp_path)",
+   "span": [
+    204,
+    205
    ],
    "visibility": "private"
   },
@@ -203,8 +217,8 @@
    "name": "test_pr_mode_denies_egress_the_permit_refuses",
    "signature": "def test_pr_mode_denies_egress_the_permit_refuses(toy)",
    "span": [
-    203,
-    204
+    213,
+    214
    ],
    "visibility": "public"
   },
@@ -214,8 +228,8 @@
    "name": "test_pr_mode_allows_the_slices_own_landing_commands",
    "signature": "def test_pr_mode_allows_the_slices_own_landing_commands(toy)",
    "span": [
-    224,
-    225
+    234,
+    235
    ],
    "visibility": "public"
   },
@@ -225,8 +239,41 @@
    "name": "test_local_mode_never_decides_an_egress_command",
    "signature": "def test_local_mode_never_decides_an_egress_command(toy)",
    "span": [
-    234,
-    235
+    244,
+    245
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A broken engine used to mean silence, and silence in pr mode is the\n    sandboxed host auto-running whatever it likes with the forge reachable.",
+   "kind": "function",
+   "name": "test_engine_error_denies_egress_in_pr_mode",
+   "signature": "def test_engine_error_denies_egress_in_pr_mode(toy, tmp_path)",
+   "span": [
+    260,
+    261
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Fail closed on egress only: a broken engine must not brick the loop.",
+   "kind": "function",
+   "name": "test_engine_error_still_defers_a_harmless_command",
+   "signature": "def test_engine_error_still_defers_a_harmless_command(toy, tmp_path)",
+   "span": [
+    275,
+    276
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_engine_error_in_local_mode_stays_silent",
+   "signature": "def test_engine_error_in_local_mode_stays_silent(toy, tmp_path)",
+   "span": [
+    285,
+    286
    ],
    "visibility": "public"
   }

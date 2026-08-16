@@ -16,6 +16,7 @@
   "rebuild",
   "record_tree",
   "repoint_note",
+  "resolve_commit",
   "resolve_note",
   "slice_note_payload",
   "source_key",
@@ -31,7 +32,7 @@
  ],
  "language": "python",
  "module_id": "engine.graph",
- "source_hash": "sha256:cc9d87db0d7a05c23d9a19a3544c222e603b06f6a909248ecd4a13926a95ce43",
+ "source_hash": "sha256:461e7cc36231834023fc7ca12c914bd7b66b61040dde9d08f7017819b41b09a4",
  "source_path": "engine/graph.py",
  "symbols": [
   {
@@ -167,13 +168,24 @@
    "visibility": "public"
   },
   {
+   "doc": "The sha a commit-ish names, so no substrate row stores a moving ref.\n\n    `--commit HEAD` is the spelling the skills use (a `$(git rev-parse \u2026)`\n    substitution can never be permission-auto-approved), and a notes row\n    keyed to the literal string \"HEAD\" resolves to nothing forever.\n\n    Args:\n        root: Substrate root.\n        commit: Any commit-ish (`HEAD`, a branch, a sha).\n\n    Returns:\n        The full commit sha.\n\n    Raises:\n        GraphError: The ref does not resolve to a commit in this repo.",
+   "kind": "function",
+   "name": "resolve_commit",
+   "signature": "def resolve_commit(root, commit: str) -> str",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": "The tree a commit points at, or None when it cannot be resolved.",
    "kind": "function",
    "name": "tree_hash",
    "signature": "def tree_hash(root, commit: str)",
    "span": [
-    137,
-    138
+    163,
+    164
    ],
    "visibility": "public"
   },
@@ -183,8 +195,8 @@
    "name": "source_key",
    "signature": "def source_key(root, commit: str)",
    "span": [
-    143,
-    144
+    169,
+    170
    ],
    "visibility": "public"
   },
@@ -194,8 +206,8 @@
    "name": "record_tree",
    "signature": "def record_tree(root, slice_id: str, commit: str) -> dict",
    "span": [
-    168,
-    169
+    194,
+    195
    ],
    "visibility": "public"
   },
@@ -205,19 +217,19 @@
    "name": "notes_log",
    "signature": "def notes_log(root, slice_id=None) -> list",
    "span": [
-    186,
-    187
+    212,
+    213
    ],
    "visibility": "public"
   },
   {
-   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo. Additive: a second slice on\n    the same commit joins the note instead of overwriting it (`notes add -f`\n    silently erased the first one); re-noting the same slice replaces its\n    own entry. The same write is keyed a second time into the derived notes\n    log by tree hash (D-010), which is what survives a squash merge.\n\n    Args:\n        root: Substrate root.\n        commit: The commit to annotate.\n        payload: The slice's provenance payload.\n\n    Returns:\n        The notes-log row `{ts, slice_id, commit, tree_hash}`.",
+   "doc": "Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the\n    commit so provenance travels with the repo. Additive: a second slice on\n    the same commit joins the note instead of overwriting it (`notes add -f`\n    silently erased the first one); re-noting the same slice replaces its\n    own entry. The same write is keyed a second time into the derived notes\n    log by tree hash (D-010), which is what survives a squash merge.\n\n    Args:\n        root: Substrate root.\n        commit: The commit to annotate.\n        payload: The slice's provenance payload.\n\n    Returns:\n        The notes-log row `{ts, slice_id, commit, tree_hash}`.\n\n    Raises:\n        GraphError: `commit` does not resolve to a commit in this repo.",
    "kind": "function",
    "name": "write_note",
    "signature": "def write_note(root, commit, payload: dict) -> dict",
    "span": [
-    192,
-    193
+    218,
+    219
    ],
    "visibility": "public"
   },
@@ -227,8 +239,8 @@
    "name": "slice_note_payload",
    "signature": "def slice_note_payload(root, slice_id: str) -> dict",
    "span": [
-    219,
-    220
+    249,
+    250
    ],
    "visibility": "public"
   },
@@ -238,8 +250,8 @@
    "name": "last_note_payload",
    "signature": "def last_note_payload(root, slice_id: str) -> dict",
    "span": [
-    244,
-    245
+    274,
+    275
    ],
    "visibility": "public"
   },
@@ -249,8 +261,8 @@
    "name": "repoint_note",
    "signature": "def repoint_note(root, slice_id: str, commit: str) -> dict",
    "span": [
-    266,
-    267
+    296,
+    297
    ],
    "visibility": "public"
   },
@@ -260,8 +272,8 @@
    "name": "read_notes",
    "signature": "def read_notes(root) -> list",
    "span": [
-    288,
-    289
+    318,
+    319
    ],
    "visibility": "public"
   },
@@ -271,8 +283,8 @@
    "name": "orphaned_notes",
    "signature": "def orphaned_notes(root) -> list",
    "span": [
-    304,
-    305
+    334,
+    335
    ],
    "visibility": "public"
   },
@@ -282,8 +294,8 @@
    "name": "_walk_revs",
    "signature": "def _walk_revs(root, base=None, remote=None) -> list",
    "span": [
-    321,
-    322
+    351,
+    352
    ],
    "visibility": "private"
   },
@@ -293,8 +305,8 @@
    "name": "reachable_trees",
    "signature": "def reachable_trees(root, base=None, max_count=TREE_WALK_LIMIT, remote=None) -> dict",
    "span": [
-    346,
-    348
+    376,
+    378
    ],
    "visibility": "public"
   },
@@ -304,8 +316,8 @@
    "name": "reachable_source_keys",
    "signature": "def reachable_source_keys(root, base=None, max_count=SOURCE_WALK_LIMIT, remote=None) -> dict",
    "span": [
-    373,
-    375
+    403,
+    405
    ],
    "visibility": "public"
   },
@@ -315,8 +327,8 @@
    "name": "resolve_note",
    "signature": "def resolve_note(root, slice_id: str, trees: dict, source_keys=None)",
    "span": [
-    399,
-    400
+    429,
+    430
    ],
    "visibility": "public"
   }

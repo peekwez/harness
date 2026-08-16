@@ -11,6 +11,7 @@ ONLY (no re-injection: session cycling, not compaction, is the strategy).
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +31,76 @@ EVENT_MAP = {
 # characters; beyond that the text is dumped to a file with a preview, which
 # would silently degrade Phase-1 injection. Clip with a pointer instead.
 MAX_HOOK_OUTPUT_CHARS = 9500
+
+# Fail-closed fallback for the one case the engine cannot answer: it is
+# down. The adapter stays dependency-free (no yaml, no engine import — the
+# engine being broken is exactly when importing it is a bad idea), so both
+# checks below are deliberately crude text scans, and both only ever DENY.
+_LANDING_LINE = re.compile(r"^landing:\s*$")
+_MODE_PR = re.compile(r"^\s+mode:\s*[\"']?pr[\"']?\s*(#.*)?$")
+_EGRESS_SHAPE = re.compile(
+    r"(^|[\s;|&(`$])(gh|curl|wget|ssh|scp|sftp|rsync|nc|telnet)\b"
+    r"|\bgit\b[^;|&]*?\b(push|fetch|pull|clone|remote|ls-remote|submodule"
+    r"|send-email|request-pull)\b")
+ENGINE_ERROR_DENY = ("harness engine error — egress refused, see the engine "
+                     "output; run `harness doctor` (landing.mode: pr fails "
+                     "closed on anything that talks to a remote)")
+
+
+def pr_landing(root):
+    """Whether `.harness/config.yaml` sets `landing.mode: pr`.
+
+    A minimal text read, not a YAML parse: the adapter must keep working
+    with no third-party import available, and the only decision it drives
+    is a refusal.
+
+    Args:
+        root: The substrate root the event routed to; None walks up from the
+            process cwd, the way the engine itself resolves a root (a Bash
+            permission question carries no file to route on).
+
+    Returns:
+        True when the config declares pr landing.
+    """
+    start = Path(root) if root else Path(os.getcwd())
+    config = None
+    for cand in (start, *start.parents):
+        if (cand / ".harness" / "config.yaml").is_file():
+            config = cand / ".harness" / "config.yaml"
+            break
+    if config is None:
+        return False
+    try:
+        lines = config.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    inside = False
+    for line in lines:
+        if _LANDING_LINE.match(line):
+            inside = True
+            continue
+        if inside:
+            if _MODE_PR.match(line):
+                return True
+            if line.strip() and not line[:1].isspace():
+                inside = False
+    return False
+
+
+def egress_shaped(command):
+    """Whether a command looks like it talks to a remote.
+
+    Used only when the engine could not answer (`engine/permits.py` owns the
+    real classification): over-refusing here costs a prompt, under-refusing
+    costs an unreviewed push.
+
+    Args:
+        command: The command line the host asked about.
+
+    Returns:
+        True when the command mentions a remote-talking program.
+    """
+    return bool(_EGRESS_SHAPE.search(command or ""))
 
 
 def clip(text, slice_id=None):
@@ -88,7 +159,18 @@ def permit(session, root=None, command=None, paths=None):
         `deny` (pr-mode egress outside D-011's surface — the settings profile
         cannot express "this slice's branch", so the hook is the decider) or
         `defer` (stay silent; the host's own flow decides).
+
+        When the engine itself fails, a pr-mode repo denies anything
+        egress-shaped rather than deferring: the profile has dropped its
+        blanket push/fetch denies precisely because the hook decides, so
+        silence there is an auto-approved push. The bound slice cannot be
+        read with the engine down, so the repo-level mode is the fact used.
     """
+    def _engine_down():
+        if command and pr_landing(root) and egress_shaped(command):
+            return "deny", ENGINE_ERROR_DENY
+        return "defer", ""
+
     cmd = [sys.executable, HARNESS]
     if root:
         cmd += ["--root", str(root)]
@@ -101,11 +183,11 @@ def permit(session, root=None, command=None, paths=None):
         cmd += ["--session", session]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        return "defer", ""
+        return _engine_down()
     try:
         out = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return "defer", ""
+        return _engine_down()
     return (out.get("decision") or ("allow" if out.get("allow") else "defer"),
             out.get("reason", ""))
 

@@ -283,6 +283,19 @@ def run_gate_cmd(root, config):
     return proc.returncode == 0, tail
 
 
+def gate_configured(config) -> bool:
+    """Whether the repo declares an `acceptance.gate_cmd` at all.
+
+    Args:
+        config: The merged engine config.
+
+    Returns:
+        True when a gate command is configured, so a ceremony can report
+        `passed` versus `skipped` instead of leaving the reader guessing.
+    """
+    return bool(_acceptance_block(config).get("gate_cmd"))
+
+
 def gate_finding(root, config):
     """(finding, tail): the blocking gate finding, or `(None, "")` when green.
 

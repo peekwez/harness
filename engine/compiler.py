@@ -135,7 +135,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     `config` (loaded from the repo when omitted) supplies
     `registry.kinds_extra`, the repo's own abstraction kinds."""
     root = Path(root)
-    kinds = registry_kinds(config if config is not None else _config(root))
+    config = config if config is not None else _config(root)
+    kinds = registry_kinds(config)
     decisions = {d["id"]: d for d in read_jsonl(harness_dir(root) / "decisions.jsonl")}
     registry = {e["id"]: e for e in read_jsonl(harness_dir(root) / "registry.jsonl")}
     boundaries: dict = {}  # regenerated from scratch: derived files never accumulate
@@ -320,7 +321,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
         merge_doc_blocks(parse_doc_blocks(doc_text, source=doc_ref), doc_ref,
                          decisions=decisions, registry=registry,
                          authored=authored, report=report, now=now,
-                         adr_sources=adr_sources, kinds=kinds)
+                         adr_sources=adr_sources, kinds=kinds, root=root,
+                         config=config)
 
     # reconcile planned entries against the ADRs currently in force:
     # kind/domain/guidance_refs are REPLACED, so superseded or no-longer-

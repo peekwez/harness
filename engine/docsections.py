@@ -25,12 +25,21 @@ from . import HarnessError
 EPOCH_PREFIX = "1970-"
 
 DECISION_COLUMNS = ("id", "domain", "question", "answer", "adr_ref", "security")
-ABSTRACTION_COLUMNS = ("id", "kind", "guidance_ref")
-#: fence info string -> (result key, columns, required columns)
+#: the canonical abstraction header. `source`/`module_id` are what let a
+#: doc-authored abstraction ever flip planned -> built: without one of them
+#: the resolver never injects its shadow and G5 only matches an import whose
+#: dotted name happens to equal the entry id (ADR-002 / D-013, D-008).
+ABSTRACTION_COLUMNS = ("id", "kind", "guidance_ref", "source", "module_id")
+#: the 0.7 three-column header, still accepted verbatim
+ABSTRACTION_COLUMNS_V1 = ("id", "kind", "guidance_ref")
+#: fence info string -> (result key, accepted column tuples, required columns).
+#: The first tuple is canonical; the rest are back-compatible headers, and a
+#: row is matched to the variant with its column count.
 BLOCKS = {
-    "harness-decisions": ("decisions", DECISION_COLUMNS,
+    "harness-decisions": ("decisions", (DECISION_COLUMNS,),
                           ("id", "domain", "answer")),
-    "harness-abstractions": ("abstractions", ABSTRACTION_COLUMNS,
+    "harness-abstractions": ("abstractions",
+                             (ABSTRACTION_COLUMNS, ABSTRACTION_COLUMNS_V1),
                              ("id", "kind")),
 }
 DECISIONS_TABLE_HEADER = ("| " + " | ".join(DECISION_COLUMNS) + " |",
@@ -68,6 +77,11 @@ def doc_ref_for(root, working_doc) -> str:
         return str(working_doc)
 
 
+def _headers(variants) -> str:
+    """Human-readable list of the header rows a block accepts."""
+    return " or ".join("'| " + " | ".join(v) + " |'" for v in variants)
+
+
 def _cells(line: str) -> list:
     """Splits one pipe-table row into stripped cells (`\\|` is a literal)."""
     body = line.strip()
@@ -81,22 +95,30 @@ def _cells(line: str) -> list:
 def _row(cells: list, spec, where: str) -> dict:
     """Validates one table row against a block's column spec.
 
+    A block may accept more than one header (the abstraction table grew
+    `source`/`module_id` in 0.8); the row is matched to the variant with its
+    column count, so a three-column row keeps exactly the three keys it
+    always had.
+
     Args:
         cells: The row's stripped cell values.
-        spec: The `(key, columns, required)` triple for the block.
+        spec: The `(key, variants, required)` triple for the block.
         where: `"<doc>:<line>"`, quoted in every error.
 
     Returns:
         The row as a dict keyed by column name.
 
     Raises:
-        HarnessError: Wrong column count, or a required cell left empty.
+        HarnessError: No accepted header has this column count, or a
+            required cell was left empty.
     """
-    _key, columns, required = spec
-    if len(cells) != len(columns):
+    _key, variants, required = spec
+    columns = next((v for v in variants if len(v) == len(cells)), None)
+    if columns is None:
+        expected = " or ".join(f"{len(v)} ({' | '.join(v)})" for v in variants)
         raise HarnessError(
             f"{where}: table row has {len(cells)} columns, expected "
-            f"{len(columns)} ({' | '.join(columns)}) — escape any literal "
+            f"{expected} — escape any literal "
             f"pipe in a cell as \\|: {' | '.join(cells)}")
     row = dict(zip(columns, cells))
     for col in required:
@@ -153,12 +175,11 @@ def parse_doc_blocks(text: str, source=None) -> dict:
         cells = _cells(line)
         if any(cells) and all(_SEPARATOR_CELL.match(c) for c in cells if c):
             continue                      # | --- | --- | alignment row
-        if [c.lower() for c in cells] == list(spec[1]):
-            continue                      # header row
+        if any([c.lower() for c in cells] == list(v) for v in spec[1]):
+            continue                      # header row (any accepted variant)
         if cells and cells[0].lower() == "id":
-            raise HarnessError(
-                f"{where}: {info} header must be "
-                f"'| {' | '.join(spec[1])} |', got: {body}")
+            raise HarnessError(f"{where}: {info} header must be "
+                               f"{_headers(spec[1])}, got: {body}")
         row = _row(cells, spec, where)
         if spec[0] == "decisions":
             row["adr_ref"] = row["adr_ref"] or None
@@ -171,9 +192,45 @@ def parse_doc_blocks(text: str, source=None) -> dict:
     return out
 
 
+def _doc_module(root, source, module_id, config, aid, doc_ref, report):
+    """Resolve an abstraction row's `(source, module_id)` pair.
+
+    A module-level abstraction is only visible to G5 and the resolver when
+    the registry entry carries the dotted module id of its source, so the
+    id is derived from `source` exactly as the extractor derives it
+    (ADR-002 / D-008) unless the row states it outright.
+
+    Args:
+        root: Substrate root, or None when the caller has no repo context.
+        source: The row's `source` cell (already normalized to None/str).
+        module_id: The row's `module_id` cell (None/str).
+        config: Loaded engine config (supplies `extractor.src_roots`).
+        aid: The abstraction id, quoted in the warning.
+        doc_ref: The working document, quoted in the warning.
+        report: The compile report, appended to on a failed derivation.
+
+    Returns:
+        `(source, module_id)` with the id derived when it can be.
+    """
+    if module_id or not source:
+        return source, module_id
+    if root is None:
+        return source, None
+    from .extractor.engine import module_id_for
+    try:
+        return source, module_id_for(root, Path(root) / source, config)
+    except HarnessError as exc:
+        report["warnings"].append(
+            f"{doc_ref}: abstraction {aid!r} names source {source!r} whose "
+            f"module id could not be derived ({exc}) — give the row an "
+            f"explicit module_id or G5/the resolver cannot see it")
+        return source, None
+
+
 def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict,
                      registry: dict, authored: dict, report: dict, now: str,
-                     adr_sources: dict, kinds: set) -> None:
+                     adr_sources: dict, kinds: set, root=None,
+                     config=None) -> None:
     """Folds doc-authored rows into the compiler's in-flight substrate.
 
     Doc rows are `origin: phase0` exactly like ADR rows: adjudicated rows
@@ -189,6 +246,8 @@ def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict,
         now: Compile timestamp.
         adr_sources: `{"decisions": {id: adr_ref}, "abstractions": {...}}`.
         kinds: The registry `kind` enum in force (`registry_kinds`).
+        root: Substrate root, for deriving `module_id` from `source`.
+        config: Loaded engine config (`extractor.src_roots`).
 
     Raises:
         HarnessError: An id is claimed by both an ADR and the document, or
@@ -238,7 +297,11 @@ def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict,
                 f"to 'other' but preserved as domain {requested_kind!r} for "
                 f"decision-row matching and author-gate coverage")
             kind = "other"
-        ref = ab["guidance_ref"] or doc_ref
+        ref = ab.get("guidance_ref") or doc_ref
+        source = (ab.get("source") or "").strip() or None
+        module_id = (ab.get("module_id") or "").strip() or None
+        source, module_id = _doc_module(root, source, module_id, config, aid,
+                                        doc_ref, report)
         auth = authored.setdefault(aid, {"kind": kind,
                                          "domain": requested_kind, "refs": []})
         auth["kind"], auth["domain"] = kind, requested_kind
@@ -247,12 +310,21 @@ def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict,
         if aid not in registry:
             registry[aid] = {
                 "id": aid, "kind": kind, "domain": requested_kind,
-                "status": "planned", "module_id": None, "source": None,
+                "status": "planned", "module_id": module_id, "source": source,
                 "source_hash": None, "shadow": None, "guidance_refs": [ref],
                 "supersedes_guidance": [], "manifest": [],
                 "signature_digest": None,
             }
             report["registry"].append(aid)
+        elif registry[aid].get("status") == "planned":
+            # a planned entry adopts what the doc now states, exactly as the
+            # ADR path does — a seed with source: null would otherwise never
+            # qualify for the planned->built flip at close-slice
+            entry = registry[aid]
+            if source and not entry.get("source"):
+                entry["source"] = source
+            if module_id and not entry.get("module_id"):
+                entry["module_id"] = module_id
 
 
 def _first_paragraph(lines: list, start: int) -> str:
