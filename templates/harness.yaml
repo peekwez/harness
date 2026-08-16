@@ -30,6 +30,23 @@ gates:
   # Only gates that declare `unit_complete` also run in `harness verify`;
   # a pre_change-only gate does not run in CI (no edit to intercept).
   # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+# acceptance:
+#   # The command that decides a slice is green (ADR-002 / D-012). Omit the
+#   # whole block and the engine runs the historical
+#   # `<python> -m pytest <paths> -q` — existing repos are unchanged.
+#   # `{paths}` is substituted with the shell-quoted acceptance paths and the
+#   # command is split with shlex (no shell); a cmd without `{paths}` gets
+#   # them appended. The same runner runs the cumulative regression suite at
+#   # close and at merge-slice.
+#   cmd: "uv run pytest {paths} -q"
+#   cwd: "."                        # repo-root-relative
+#   env: {PYTHONHASHSEED: "0"}      # overlaid on os.environ; values must be strings
+#   # The repo's own whole-tree gate. Runs ONCE per ceremony: at close (after
+#   # acceptance is green, before the substrate commit) and on the merged
+#   # tree in merge-slice — never on every event. A non-zero exit is the
+#   # blocking finding ACCEPTANCE_GATE_FAILED (rule_ref adr:002) carrying the
+#   # last 20 lines of combined stdout/stderr; merge-slice rolls the merge back.
+#   gate_cmd: "make check"
 # registry:
 #   # widen the registry `kind` enum with this repo's own abstraction kinds
 #   kinds_extra: [package, protocol]

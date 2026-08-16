@@ -194,6 +194,42 @@ rule does not apply (the sandbox and the gates are the permission layer);
 `harness start` provisioned. `superpowers:requesting-code-review` runs only
 as review Layer 3, advisory — anything blocking still cites a `rule_ref`.
 
+## The acceptance command (`acceptance.*`)
+
+Acceptance is decided by a command, and that command is yours (ADR-002,
+D-012). Nothing configured means nothing changes: the engine runs the
+historical `<python> -m pytest <paths> -q` with the project's own venv
+interpreter. Override it per repo:
+
+```yaml
+# .harness/config.yaml
+acceptance:
+  cmd: "uv run pytest {paths} -q"   # {paths} = the slice's acceptance paths
+  cwd: "."                          # run from here (repo-root-relative)
+  env: {PYTHONHASHSEED: "0"}        # overlaid on the environment; values are strings
+  gate_cmd: "make check"            # whole-tree gate, once per close/merge
+```
+
+`{paths}` is substituted with the shell-quoted, glob-expanded acceptance
+paths and the command is split with `shlex` (no shell); a `cmd` that never
+names `{paths}` gets them appended. The same runner decides the cumulative
+regression suite at close and at `merge-slice`, so one repo has one way of
+running tests.
+
+`gate_cmd` is the repo's own whole-tree gate — `make check`, `npm run
+verify`. It runs **once per ceremony**, after acceptance is green and
+before the substrate commit at close, and again on the merged tree in
+`merge-slice`; never on every event. A non-zero exit is the blocking
+finding `ACCEPTANCE_GATE_FAILED` (`rule_ref: adr:002`) whose message
+carries the last 20 lines of combined stdout/stderr, and in `merge-slice`
+the merge is rolled back. A command that cannot even be spawned (missing
+binary, typo, nonexistent `cwd`) is an ordinary red result carrying
+`cannot run …` — never an exception that escapes the rollback. At merge
+the gate runs on the merged tree but reads the config of the tree you
+merge *into*, so a slice that introduces `gate_cmd` on its own branch is
+honoured from the next merge on. `cwd` must be repo-relative and stay
+inside the repo (the containment rule `gates.extra` uses).
+
 ## Repo-local gates (`gates.extra`)
 
 The eight builtin gates enforce the *method*. A repo's own invariants — "no

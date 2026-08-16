@@ -6,6 +6,7 @@
  "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.acceptance",
   "engine.cli.common",
   "engine.cli.init",
   "engine.events",
@@ -13,14 +14,13 @@
   "engine.permits",
   "engine.registry",
   "engine.resolver",
-  "os",
   "pathlib",
   "subprocess",
   "sys"
  ],
  "language": "python",
  "module_id": "engine.cli.slice",
- "source_hash": "sha256:792ff2e74378c49ec8b1124970e44c6ec111efcd6cc739a106a4aa3015957b38",
+ "source_hash": "sha256:d86a1b3ca412d0aaf43e584d33fe715405832a41bfb3911749b29a11fffdee56",
  "source_path": "engine/cli/slice.py",
  "symbols": [
   {
@@ -35,7 +35,7 @@
    "visibility": "private"
   },
   {
-   "doc": "\u00a77.5 precondition, engine-enforced: gates live in CLI, not in prompts.",
+   "doc": "\u00a77.5 precondition, engine-enforced: gates live in CLI, not in prompts.\n\n    Kept as the ceremony's entry point; the runner itself (D-012) lives in\n    `engine.cli.acceptance`.",
    "kind": "function",
    "name": "_acceptance_green",
    "signature": "def _acceptance_green(root, sl, config)",
@@ -51,8 +51,8 @@
    "name": "_regression_suite",
    "signature": "def _regression_suite(root, config, exclude=None, interpreter=None, env=None)",
    "span": [
-    131,
-    132
+    99,
+    100
    ],
    "visibility": "private"
   },
@@ -62,8 +62,8 @@
    "name": "cmd_start",
    "signature": "def cmd_start(args)",
    "span": [
-    165,
-    166
+    108,
+    109
    ],
    "visibility": "public"
   },
@@ -73,8 +73,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    213,
-    214
+    156,
+    157
    ],
    "visibility": "private"
   },
@@ -84,8 +84,8 @@
    "name": "cmd_permit",
    "signature": "def cmd_permit(args)",
    "span": [
-    245,
-    246
+    188,
+    189
    ],
    "visibility": "public"
   }

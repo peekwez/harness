@@ -1,0 +1,285 @@
+{
+ "exports": [
+  "test_a_gate_cmd_that_cannot_be_spawned_blocks_the_close",
+  "test_a_missing_default_interpreter_still_fails_loud",
+  "test_a_non_mapping_acceptance_block_fails_loud",
+  "test_a_non_string_cwd_fails_loud",
+  "test_a_nonexistent_acceptance_cwd_is_a_red_result_not_a_crash",
+  "test_a_red_custom_cmd_fails_acceptance",
+  "test_an_escaping_or_absolute_cwd_is_rejected",
+  "test_cmd_without_the_placeholder_gets_the_paths_appended",
+  "test_custom_cmd_substitutes_paths_including_ones_with_spaces",
+  "test_default_command_is_byte_identical_to_the_historical_one",
+  "test_env_and_cwd_are_applied_to_the_acceptance_command",
+  "test_gate_cmd_failure_blocks_the_close",
+  "test_gate_cmd_output_tail_is_reported",
+  "test_gate_cmd_success_closes_the_slice",
+  "test_merge_slice_blocks_when_the_gate_cmd_fails",
+  "test_merge_slice_rolls_back_when_the_gate_cmd_cannot_be_spawned",
+  "test_no_gate_cmd_configured_is_a_no_op",
+  "test_non_string_env_value_fails_loud_naming_the_key",
+  "test_the_gate_tail_is_truncated_to_twenty_lines",
+  "test_the_persisted_reason_never_carries_raw_gate_output"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.cli.acceptance",
+  "engine.cli.slice",
+  "engine.events",
+  "json",
+  "os",
+  "pytest",
+  "sys",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_acceptance_runner",
+ "source_hash": "sha256:8730096e292e2d98a18142b89a5e567d420c7135463d0fc635a142786db220ad",
+ "source_path": "tests/engine/test_acceptance_runner.py",
+ "symbols": [
+  {
+   "doc": "Merge an `acceptance:` block into the toy repo's config.",
+   "kind": "function",
+   "name": "_set_acceptance",
+   "signature": "def _set_acceptance(root, **keys)",
+   "span": [
+    25,
+    26
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_work_and_commit",
+   "signature": "def _work_and_commit(toy, session=\"ar\")",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "No `acceptance` key in config \u2192 exactly what the engine always ran.",
+   "kind": "function",
+   "name": "test_default_command_is_byte_identical_to_the_historical_one",
+   "signature": "def test_default_command_is_byte_identical_to_the_historical_one(toy)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_custom_cmd_substitutes_paths_including_ones_with_spaces",
+   "signature": "def test_custom_cmd_substitutes_paths_including_ones_with_spaces(toy)",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cmd_without_the_placeholder_gets_the_paths_appended",
+   "signature": "def test_cmd_without_the_placeholder_gets_the_paths_appended(toy)",
+   "span": [
+    64,
+    65
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_non_string_env_value_fails_loud_naming_the_key",
+   "signature": "def test_non_string_env_value_fails_loud_naming_the_key(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "cwd is root-relative; env overlays os.environ.",
+   "kind": "function",
+   "name": "test_env_and_cwd_are_applied_to_the_acceptance_command",
+   "signature": "def test_env_and_cwd_are_applied_to_the_acceptance_command(toy)",
+   "span": [
+    81,
+    82
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_red_custom_cmd_fails_acceptance",
+   "signature": "def test_a_red_custom_cmd_fails_acceptance(toy)",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backward compatibility: the historical fail-loud path is untouched.",
+   "kind": "function",
+   "name": "test_a_missing_default_interpreter_still_fails_loud",
+   "signature": "def test_a_missing_default_interpreter_still_fails_loud(toy)",
+   "span": [
+    111,
+    112
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gate_cmd_failure_blocks_the_close",
+   "signature": "def test_gate_cmd_failure_blocks_the_close(toy)",
+   "span": [
+    122,
+    123
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gate_cmd_success_closes_the_slice",
+   "signature": "def test_gate_cmd_success_closes_the_slice(toy)",
+   "span": [
+    134,
+    135
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The message carries the last lines of combined stdout/stderr \u2014 a\n    silent 'gate failed' is unfixable.",
+   "kind": "function",
+   "name": "test_gate_cmd_output_tail_is_reported",
+   "signature": "def test_gate_cmd_output_tail_is_reported(toy)",
+   "span": [
+    143,
+    144
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_no_gate_cmd_configured_is_a_no_op",
+   "signature": "def test_no_gate_cmd_configured_is_a_no_op(toy)",
+   "span": [
+    156,
+    157
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "D-012: the same code blocks the merged tree, and the merge rolls\n    back \u2014 the gate protects `main`, not just the worktree.",
+   "kind": "function",
+   "name": "test_merge_slice_blocks_when_the_gate_cmd_fails",
+   "signature": "def test_merge_slice_blocks_when_the_gate_cmd_fails(toy)",
+   "span": [
+    163,
+    164
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A missing binary must be an ordinary red result, not a traceback:\n    an escaping OSError sails past every rollback branch.",
+   "kind": "function",
+   "name": "test_a_gate_cmd_that_cannot_be_spawned_blocks_the_close",
+   "signature": "def test_a_gate_cmd_that_cannot_be_spawned_blocks_the_close(toy)",
+   "span": [
+    190,
+    191
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_nonexistent_acceptance_cwd_is_a_red_result_not_a_crash",
+   "signature": "def test_a_nonexistent_acceptance_cwd_is_a_red_result_not_a_crash(toy)",
+   "span": [
+    204,
+    205
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The failure mode that left `main` merged but unvalidated.",
+   "kind": "function",
+   "name": "test_merge_slice_rolls_back_when_the_gate_cmd_cannot_be_spawned",
+   "signature": "def test_merge_slice_rolls_back_when_the_gate_cmd_cannot_be_spawned(toy)",
+   "span": [
+    216,
+    217
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`reason` is written into parked_reason in the COMMITTED backlog.",
+   "kind": "function",
+   "name": "test_the_persisted_reason_never_carries_raw_gate_output",
+   "signature": "def test_the_persisted_reason_never_carries_raw_gate_output(toy)",
+   "span": [
+    245,
+    246
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_an_escaping_or_absolute_cwd_is_rejected",
+   "signature": "def test_an_escaping_or_absolute_cwd_is_rejected(toy)",
+   "span": [
+    261,
+    262
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_non_string_cwd_fails_loud",
+   "signature": "def test_a_non_string_cwd_fails_loud(toy)",
+   "span": [
+    271,
+    272
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_non_mapping_acceptance_block_fails_loud",
+   "signature": "def test_a_non_mapping_acceptance_block_fails_loud(toy)",
+   "span": [
+    280,
+    281
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_the_gate_tail_is_truncated_to_twenty_lines",
+   "signature": "def test_the_gate_tail_is_truncated_to_twenty_lines(toy)",
+   "span": [
+    289,
+    290
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -10,6 +10,7 @@ import json
 import sys
 
 from engine import get_slice, load_config, save_slice
+from engine.cli.acceptance import GATE_REASON, gate_finding
 from engine.cli.ceremony import _close_ceremony
 from engine.cli.common import (_CeremonyFail, _config_merge_drivers, _print,
                                _reset_close_attempts, _root, _session)
@@ -131,12 +132,22 @@ def cmd_merge_slice(args):
     # the combination — on red, the merge is rolled back, loudly, and the
     # branch/worktree stay put for fixing.
     ok, detail = _regression_suite(root, config)
-    if not ok:
+    # the gate runs on the MERGED tree but with the config as it stands in
+    # this (pre-merge) tree — a slice that introduces `gate_cmd` on its own
+    # branch is honoured from the next merge on
+    gate, gate_tail = gate_finding(root, config) if ok else (None, "")
+    if not ok or gate is not None:
         rolled = _git("reset", "--hard", "ORIG_HEAD")
-        _print({"merged": False, "rolled_back": rolled.returncode == 0,
-                "reason": f"merged tree fails the accumulated acceptance "
-                          f"suite — merge rolled back; fix on branch "
-                          f"{branch} and re-run merge-slice.\n{detail}"})
+        payload = {"merged": False, "rolled_back": rolled.returncode == 0,
+                   "reason": (f"merged tree fails the accumulated acceptance "
+                              f"suite — merge rolled back; fix on branch "
+                              f"{branch} and re-run merge-slice.\n{detail}")
+                             if not ok else GATE_REASON}
+        if gate is not None:
+            payload["rule_ref"] = gate["rule_ref"]
+            payload["evidence"] = gate_tail
+            payload["findings"] = [gate]
+        _print(payload)
         return 1
 
     # shadows never content-merge (W10): regenerate from the merged tree,

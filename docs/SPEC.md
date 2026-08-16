@@ -69,7 +69,8 @@ Most finding codes are named by the gate that raises them (`gate:G1` …
 |---|---|---|
 | `EXTRA_GATE_LOAD_ERROR` | `engine/gates/extra.py` (event dispatch and `harness verify`) | A `gates.extra` entry could not be loaded: it does not exist, is an absolute path or resolves outside the repo (path entries are repo-relative and contained — they name code the engine executes), fails to import, declares no valid `GATE` (`id` + `preferred`, known event names, an id unique across the pack), or exposes no callable `run(ctx)`. |
 | `EXTRA_GATE_RUN_ERROR` | `engine/gates/extra.py` (event dispatch and `harness verify`) | A loaded repo-local gate misbehaved: it raised (the message carries the last traceback frame), returned a non-list, or emitted a finding `engine.events.validate_finding` rejects — notably a `block` with no `rule_ref`, which §5.2 forbids for every gate. |
+| `ACCEPTANCE_GATE_FAILED` | `engine/cli/acceptance.py` (close ceremony and `merge-slice`) | The repo's configured `acceptance.gate_cmd` (e.g. `make check`) exited non-zero. It runs once per ceremony — after acceptance is green and before the substrate commit at close, and on the merged tree at merge, where the merge is rolled back. The message carries the last 20 lines of combined stdout/stderr (ADR-002 / D-012). |
 
-Both carry `severity: block` and `rule_ref: adr:002`: repo-local gates fail
+All three carry `severity: block` and `rule_ref: adr:002`: repo-local gates fail
 closed and loud, never as a silent skip (ADR-002 / D-007), and the builtin
 pack still runs.

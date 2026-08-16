@@ -10,7 +10,7 @@
  "imports": [],
  "language": "yaml",
  "module_id": "templates.harness",
- "source_hash": "sha256:1a54eedd3deb533d961f2b7442fa207f8b08d350e50390387a5324c3d6540df0",
+ "source_hash": "sha256:f8d1abad241b882c8b2b6f32e0bde77818b430c4311285d7bc8c5b8704244785",
  "source_path": "templates/harness.yaml",
  "symbols": [
   {
@@ -52,8 +52,8 @@
    "name": "ensemble",
    "signature": "ensemble",
    "span": [
-    46,
-    46
+    63,
+    63
    ],
    "visibility": "public"
   },
@@ -63,8 +63,8 @@
    "name": "languages",
    "signature": "languages",
    "span": [
-    49,
-    49
+    66,
+    66
    ],
    "visibility": "public"
   }

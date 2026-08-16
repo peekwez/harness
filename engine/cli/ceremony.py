@@ -11,6 +11,7 @@ from pathlib import Path
 
 from engine import (HarnessError, get_slice, harness_dir, load_config,
                     save_slice)
+from engine.cli.acceptance import GATE_REASON, gate_finding
 from engine.cli.common import _fail, _reset_close_attempts, _root, _session
 from engine.cli.slice import _acceptance_green
 
@@ -112,6 +113,15 @@ def _close_ceremony(args):
         if str(evidence).startswith("cumulative regression"):
             reason = str(evidence).splitlines()[0]
         _fail({"closed": False, "reason": reason, "evidence": evidence})
+
+    # Precondition 1.1 (D-012): the repo's own whole-tree gate (`make check`
+    # and friends) runs ONCE here — acceptance green, substrate not yet
+    # committed — and its non-zero exit blocks the close.
+    gate, gate_tail = gate_finding(root, config)
+    if gate is not None:
+        _fail({"closed": False, "rule_ref": gate["rule_ref"],
+                "reason": GATE_REASON, "evidence": gate_tail,
+                "findings": [gate]})
 
     # Precondition 1.5 — ADR-001: a slice resolving any security-marked
     # decision row needs an INDEPENDENT forked reviewer's pass verdict.

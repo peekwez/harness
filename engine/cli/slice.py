@@ -6,11 +6,11 @@
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 from engine import get_slice, load_backlog, load_config, save_slice
+from engine.cli.acceptance import run_acceptance, run_regression
 from engine.cli.common import (PLUGIN_ROOT, _acceptance_python,
                                _config_merge_drivers, _print, _root, _session)
 from engine.cli.init import _write_autonomy_settings
@@ -88,77 +88,20 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
 
 
 def _acceptance_green(root, sl, config):
-    """§7.5 precondition, engine-enforced: gates live in CLI, not in prompts."""
-    runner = config["gates"].get("acceptance_runner", "pytest")
-    declared = sl.get("acceptance", [])
-    if runner == "none" or not declared:
-        return True, "acceptance runner disabled or no acceptance paths"
-    # expand globs OURSELVES: pytest gets literal paths, and a pattern with
-    # zero matches fails loud instead of "no tests ran" ambiguity (S7)
-    paths = []
-    for pat in declared:
-        if "*" in pat:
-            matches = sorted(str(p.relative_to(root))
-                             for p in Path(root).glob(pat))
-            if not matches:
-                return False, (f"acceptance pattern {pat!r} matches no files "
-                               f"— red-test-first requires at least one")
-            paths.extend(matches)
-        else:
-            paths.append(pat)
-    interpreter = _acceptance_python(root, config)
-    if not Path(interpreter).exists():
-        return False, (f"acceptance interpreter {interpreter!r} does not exist "
-                       f"(gates.acceptance_python) — fail loud, not skip")
-    import subprocess
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(root) + os.pathsep + env.get("PYTHONPATH", "")
-    proc = subprocess.run([interpreter, "-m", "pytest", *paths, "-q"],
-                          cwd=str(root), capture_output=True, text=True, env=env)
-    tail = (proc.stdout or proc.stderr).strip().splitlines()[-5:]
-    if proc.returncode != 0:
-        return False, "\n".join(tail)
-    # cumulative ratchet: a slice must not close green while breaking an
-    # EARLIER slice's acceptance tests — the merged tree is what ships
-    if config["gates"].get("regression_at_close", True):
-        ok, detail = _regression_suite(root, config, exclude=sl.get("id"),
-                                       interpreter=interpreter, env=env)
-        if not ok:
-            return False, detail
-    return True, "\n".join(tail)
+    """§7.5 precondition, engine-enforced: gates live in CLI, not in prompts.
+
+    Kept as the ceremony's entry point; the runner itself (D-012) lives in
+    `engine.cli.acceptance`.
+    """
+    return run_acceptance(root, sl, config)
 
 
 def _regression_suite(root, config, exclude=None, interpreter=None, env=None):
     """(ok, detail): run every CLOSED slice's acceptance paths. Shared by
     close (pre-close, in the slice tree) and merge-slice (post-merge, with
     rollback)."""
-    import subprocess
-    regression = []
-    for s in load_backlog(root):
-        if s.get("status") != "closed" or s.get("id") == exclude:
-            continue
-        for pat in s.get("acceptance", []):
-            if "*" in pat:
-                regression.extend(sorted(str(p.relative_to(root))
-                                         for p in Path(root).glob(pat)))
-            elif (Path(root) / pat).exists():
-                regression.append(pat)
-    regression = sorted(set(regression))
-    if not regression:
-        return True, "no closed-slice acceptance tests to protect"
-    if interpreter is None:
-        interpreter = _acceptance_python(root, config)
-    if env is None:
-        env = dict(os.environ)
-        env["PYTHONPATH"] = str(root) + os.pathsep + env.get("PYTHONPATH", "")
-    proc = subprocess.run([interpreter, "-m", "pytest", *regression, "-q"],
-                          cwd=str(root), capture_output=True, text=True, env=env)
-    if proc.returncode == 0:
-        return True, f"regression suite green ({len(regression)} paths)"
-    tail = "\n".join((proc.stdout or proc.stderr).strip().splitlines()[-6:])
-    return False, (f"cumulative regression: earlier slices' acceptance tests "
-                   f"are now red ({regression}) — this change breaks closed "
-                   f"work.\n{tail}")
+    return run_regression(root, config, exclude=exclude,
+                          interpreter=interpreter, env=env)
 
 
 # ------------------------------------------------------------------ start

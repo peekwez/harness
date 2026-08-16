@@ -6,6 +6,7 @@
  "extractor_version": 3,
  "imports": [
   "engine",
+  "engine.cli.acceptance",
   "engine.cli.ceremony",
   "engine.cli.common",
   "engine.cli.slice",
@@ -17,7 +18,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.close",
- "source_hash": "sha256:7621d3115cc96f58384b56e3a62435a0d973948737fa41490079fabc6536f7be",
+ "source_hash": "sha256:af405f51e88e24b963345c46e3aa3bcc4ce6805626f12ad15ada2e9c4f021484",
  "source_path": "engine/cli/close.py",
  "symbols": [
   {
@@ -26,8 +27,8 @@
    "name": "_bump_close_attempts",
    "signature": "def _bump_close_attempts(root, slice_id, config, payload) -> bool",
    "span": [
-    19,
-    20
+    20,
+    21
    ],
    "visibility": "private"
   },
@@ -37,8 +38,8 @@
    "name": "cmd_close_slice",
    "signature": "def cmd_close_slice(args)",
    "span": [
-    46,
-    47
+    47,
+    48
    ],
    "visibility": "public"
   },
@@ -48,8 +49,8 @@
    "name": "cmd_merge_slice",
    "signature": "def cmd_merge_slice(args)",
    "span": [
-    64,
-    65
+    65,
+    66
    ],
    "visibility": "public"
   },
@@ -59,8 +60,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    74,
-    75
+    75,
+    76
    ],
    "visibility": "private"
   }

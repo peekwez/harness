@@ -1,0 +1,134 @@
+{
+ "exports": [
+  "gate_finding",
+  "run_acceptance",
+  "run_gate_cmd",
+  "run_regression"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "engine",
+  "engine.cli.common",
+  "engine.events",
+  "os",
+  "pathlib",
+  "shlex",
+  "subprocess"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.acceptance",
+ "source_hash": "sha256:ab441512ba1fc3e0b8b12f9ecbc35d12c67c65cc8da677b4faf649503f057a5c",
+ "source_path": "engine/cli/acceptance.py",
+ "symbols": [
+  {
+   "doc": "The `acceptance:` config block, always a mapping.\n\n    Args:\n        config: The merged engine config.\n\n    Returns:\n        The block, or an empty mapping when the repo declares none.\n\n    Raises:\n        HarnessError: If `acceptance` is present but not a mapping.",
+   "kind": "function",
+   "name": "_acceptance_block",
+   "signature": "def _acceptance_block(config) -> dict",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The argv that decides acceptance for the given paths.\n\n    `{paths}` is substituted with the shell-quoted paths and the result\n    split with `shlex`; a custom command that never names `{paths}` gets\n    them appended, so a bare `uv run pytest -q` still receives its targets.\n\n    Args:\n        config: The merged engine config.\n        paths: Repo-relative acceptance paths, already glob-expanded.\n        interpreter: Python used by the default command.\n\n    Returns:\n        The argv list to execute (no shell is involved).",
+   "kind": "function",
+   "name": "_acceptance_cmd",
+   "signature": "def _acceptance_cmd(config, paths, interpreter) -> list[str]",
+   "span": [
+    54,
+    55
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "The directory acceptance runs from: `root / acceptance.cwd`.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n\n    Returns:\n        The absolute working directory for acceptance and gate commands.\n\n    Raises:\n        HarnessError: If `acceptance.cwd` is not a string, is absolute, or\n            escapes the repo \u2014 the same containment rule `gates.extra`\n            applies to code the engine executes.",
+   "kind": "function",
+   "name": "_acceptance_cwd",
+   "signature": "def _acceptance_cwd(root, config) -> str",
+   "span": [
+    79,
+    80
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`os.environ | acceptance.env`, with the repo root on PYTHONPATH.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n        base: Environment to overlay onto (default: a fresh `os.environ`\n            copy with the repo root prepended to PYTHONPATH).\n\n    Returns:\n        The environment mapping for the acceptance/gate subprocess.\n\n    Raises:\n        HarnessError: If any `acceptance.env` value is not a string \u2014 a\n            YAML `true`/`3` would crash `subprocess` far from its cause.",
+   "kind": "function",
+   "name": "_acceptance_env",
+   "signature": "def _acceptance_env(root, config, base=None) -> dict",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Run `argv` under the acceptance cwd/env; returns a CompletedProcess.\n\n    stderr is folded into stdout so evidence tails read in the order the\n    command actually printed them. A command that cannot even be SPAWNED\n    (missing binary, typo, nonexistent `acceptance.cwd`) comes back as an\n    ordinary non-zero result rather than an exception: callers roll merges\n    back and raise blocking findings on a red result, and an escaping\n    `OSError` would sail past that and leave a merged-but-unvalidated tree.",
+   "kind": "function",
+   "name": "_run",
+   "signature": "def _run(argv, root, config, env=None)",
+   "span": [
+    143,
+    144
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "(paths, error): glob patterns expanded against the repo root.\n\n    Globs are expanded here rather than by the runner so a pattern matching\n    nothing fails loud instead of arriving as a \"no tests ran\" ambiguity.",
+   "kind": "function",
+   "name": "_expand",
+   "signature": "def _expand(root, patterns)",
+   "span": [
+    166,
+    167
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "(ok, evidence): the \u00a77.5 precondition, engine-enforced.\n\n    Runs the slice's acceptance command and then \u2014 unless\n    `gates.regression_at_close` is off \u2014 the cumulative regression suite,\n    so a slice cannot close green while breaking an earlier slice's tests.\n\n    Args:\n        root: Repo root.\n        sl: The slice row (its `acceptance` patterns and `id`).\n        config: The merged engine config.\n\n    Returns:\n        A `(ok, evidence)` pair; evidence is the output tail or the reason.",
+   "kind": "function",
+   "name": "run_acceptance",
+   "signature": "def run_acceptance(root, sl, config)",
+   "span": [
+    186,
+    187
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "(ok, detail): every CLOSED slice's acceptance paths, one run.\n\n    Shared by close (pre-close, in the slice tree) and `merge-slice`\n    (post-merge, with rollback) \u2014 the merged tree is what ships.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n        exclude: Slice id to leave out (the one being closed).\n        interpreter: Python for the default command; discovered if omitted.\n        env: Prepared environment; built from config if omitted.\n\n    Returns:\n        A `(ok, detail)` pair.",
+   "kind": "function",
+   "name": "run_regression",
+   "signature": "def run_regression(root, config, exclude=None, interpreter=None, env=None)",
+   "span": [
+    226,
+    227
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "(ok, output_tail): the repo's whole-tree gate, once per ceremony.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n\n    Returns:\n        `(True, \"\")` when no `acceptance.gate_cmd` is configured, otherwise\n        `(exit == 0, last 20 lines of combined stdout/stderr)`.",
+   "kind": "function",
+   "name": "run_gate_cmd",
+   "signature": "def run_gate_cmd(root, config)",
+   "span": [
+    267,
+    268
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "(finding, tail): the blocking gate finding, or `(None, \"\")` when green.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n\n    Returns:\n        A `(finding, output_tail)` pair. The finding is a blocking\n        `ACCEPTANCE_GATE_FAILED` (rule_ref `adr:002`) when the configured\n        gate command exits non-zero \u2014 or could not be spawned at all \u2014 and\n        None otherwise. The tail is returned separately so callers report\n        it as `evidence`: the ceremony's `reason` is persisted into\n        `parked_reason`, and raw command output does not belong there.",
+   "kind": "function",
+   "name": "gate_finding",
+   "signature": "def gate_finding(root, config)",
+   "span": [
+    286,
+    287
+   ],
+   "visibility": "public"
+  }
+ ]
+}
