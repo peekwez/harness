@@ -1,5 +1,14 @@
 # Stage 1 — Brainstorm protocol
 
+**When superpowers is installed, run `superpowers:brainstorming` for this
+stage**, bound to harness's artifacts: its spec file IS `docs/architecture.md`
+(never `docs/superpowers/specs/…`), its output lands as the typed blocks
+below, and the next step after your human partner approves the design is
+architect **stage 2 (red-team)** — do NOT invoke `superpowers:writing-plans`.
+`/harness:backlog` is this repo's plan. The coverage map below still governs
+the questions and the exit criteria. Without superpowers, follow this
+protocol as written.
+
 Socratic elicitation. One question at a time; multiple-choice preferred (2–4
 options plus "other"). No solutioning until the problem space is mapped —
 if you catch yourself proposing architecture, stop and ask instead.

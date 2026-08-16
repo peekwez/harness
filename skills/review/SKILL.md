@@ -37,6 +37,12 @@ Layers 1–3 — rubric-bound checks over those facts:
 - If your confidence on a would-block finding is below the ensemble
   threshold, say so explicitly and mark the finding `uncertain` — it parks
   for adjudication rather than blocking on a coin flip.
+- Layer 3 only: run `superpowers:requesting-code-review` when it is
+  installed and treat everything it returns as ADVISORY input. Its
+  Critical/Important/Minor severities carry no blocking power here. Promote
+  one of its findings to a blocking finding ONLY when you can cite a
+  `rule_ref` for it; otherwise record it as a Layer-3 advisory plus a
+  proposed rule.
 
 Output: findings list (§5.2 schema), verdict, and any Layer-3 proposals.
 Blocking findings gate the merge; disputes park via `/harness:adjudicate`.

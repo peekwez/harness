@@ -32,18 +32,23 @@ trees splits substrate state.
 Loop discipline — in order:
 
 1. **Work the red tests.** The slice's `acceptance` tests define done. Run
-   them first; they must fail before you write implementation.
-2. **Amend declarations before touching undeclared files.** If you need a
+   them first; they must fail before you write implementation. Inside them,
+   drive every unit with `superpowers:test-driven-development`: one failing
+   unit test, watch it fail, minimal code to green, repeat.
+2. **Root cause before retry.** On ANY red test or gate block, run
+   `superpowers:systematic-debugging` and name the cause before you change
+   anything. Never re-run a fix you cannot explain.
+3. **Amend declarations before touching undeclared files.** If you need a
    file outside `predicted_files`, update the slice row in
    `.harness/backlog.jsonl` first — G3 findings must be reconciled before
    close-slice, and wandering is how context dies. (It is also why an
    undeclared edit is the one file operation that still prompts: declared
    work is auto-approved, wandering is not.)
-3. **Log abandoned approaches.** Whenever you abandon an approach mid-slice,
+4. **Log abandoned approaches.** Whenever you abandon an approach mid-slice,
    record it before moving on (mandatory, not optional):
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory write --slice $1 --kind attempt --content "<what>"
    --approach "<what you tried>" --outcome abandoned --why "<why>"`
-4. **Session cycling, not compaction.** When context nears its limit:
+5. **Session cycling, not compaction.** When context nears its limit:
    checkpoint at a Stop boundary, end the session, start fresh — `harness
    start --slice $1` resumes from substrate. If compaction fires, that is a
    defect signal in telemetry, not a convenience.
@@ -61,22 +66,42 @@ EVERY segment is in the loop's surface, and command substitution `$(...)`
 never auto-approves — run plain commands and use symbolic refs the engine
 resolves (`close-slice --commit HEAD`), never `$(git rev-parse HEAD)`.
 
-5. **When acceptance is green, immediately self-review**: run the review
+6. **When acceptance is green, immediately self-review**: run the review
    stack (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff
    <diff-file>`), fix every blocking finding (each names its rule and fix),
    re-run until clean. Do not present findings to the user — resolve them.
+   Apply `superpowers:receiving-code-review` to every finding, whichever
+   layer it came from: verify it against the substrate and the diff first,
+   then fix it or rebut it with technical reasoning — never apply a finding
+   blindly and never agree performatively.
    Record what your review concluded so it becomes substrate:
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --record-finding ...` (and
    `--park` anything you are genuinely uncertain about).
-6. **Then close without asking**: commit and run close-slice. If it blocks,
+7. **Then close without asking**: run
+   `superpowers:verification-before-completion` — run the acceptance command
+   fresh and read its output — then commit and run close-slice. If it blocks,
    the reason names the mechanical fix (amend declaration, ack-drift,
-   extract, override-with-justification) — apply it and re-close. Budget up
-   to 3 fix-and-retry iterations per gate. One block is NOT yours to fix
+   extract, override-with-justification); debug the block per step 2, apply
+   the fix, and re-close. One block is NOT yours to fix
    directly: `adr:001` (security-relevant slice) means dispatch the
    harness:reviewer agent with fresh context; IT records the fork verdict.
-7. **The ONLY reasons to stop and involve the human**: a parked review
+8. **The ONLY reasons to stop and involve the human**: a parked review
    finding (adjudication is theirs by design), an author-gate gap (substrate
-   authoring is theirs), or the same gate blocking after 3 honest fix
-   attempts (log an attempt memory first, then report the finding verbatim).
-8. Close releases the binding; then `/harness:close-slice` finishes the
+   authoring is theirs), or a gate still blocking after
+   `superpowers:systematic-debugging` named a root cause you cannot fix
+   inside this slice's declared scope (log an attempt memory first, then
+   report the finding verbatim).
+9. Close releases the binding; then `/harness:close-slice` finishes the
    merge with `harness merge-slice --slice $1` from the main tree.
+
+## Composing with superpowers
+
+`AGENTS.md` carries the full precedence rule (ADR-002, D-014). The three that
+bite inside a bound slice:
+
+- `superpowers:using-git-worktrees`: `harness start` already provisioned
+  `.worktrees/$1` — detect it and work there; never create a second worktree.
+- `superpowers:finishing-a-development-branch`: not used here. `close-slice`
+  is the finish and `merge-slice` (or the PR) is the landing — no menu.
+- `superpowers:subagent-driven-development`: its stop-for-side-effects rule
+  does not apply. The sandbox and the gates are the permission layer.

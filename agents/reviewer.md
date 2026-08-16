@@ -23,6 +23,9 @@ Discipline:
 - Every blocking finding cites a rule_ref (gate:GN / decision:D-NNN /
   adr:NNN). The engine rejects anything else. Taste goes to Layer 3 as a
   proposal, never a block.
+- `superpowers:requesting-code-review` is Layer 3 and advisory only. Its
+  Critical/Important/Minor findings never block; promote one to a blocking
+  finding only with a rule_ref, else file it as a Layer-3 proposal.
 - Low confidence on a would-block finding -> mark it uncertain and let it
   park. A parked dispute that adjudicates into a decision row makes every
   future review more deterministic; a bluffed block teaches nothing.

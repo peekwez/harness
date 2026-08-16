@@ -27,9 +27,56 @@ shell out) operates under the harness substrate. Read this before editing.
 A bound slice is yours to finish: implement → acceptance green → self-review
 → fix findings → close-slice, with no human in the loop. Stop only for:
 a parked (uncertain) review finding, an author-gate gap, or a gate that
-still blocks after 3 honest fix attempts. Gate blocks name their own fix —
+still blocks after a root-cause investigation named a cause you cannot fix
+inside the slice's declared scope. Gate blocks name their own fix —
 apply it, don't ask. Closing a slice releases its binding; bind the next
 slice or run `harness slice --release` before Phase-0 edits.
+
+## Precedence when superpowers is installed
+
+harness and superpowers compose; they never compete. Decision row **D-014**
+(ADR-002) is the precedence rule. Verbatim:
+
+harness owns the outer loop: session start, slice bind/scope/declarations,
+attempts memory, review contract (`rule_ref`), close and landing.
+superpowers owns the inner loop: `brainstorming` (as architect stage 1,
+writing `docs/architecture.md`), `test-driven-development` per unit,
+`systematic-debugging` on any red test or gate block,
+`verification-before-completion` before close.
+`finishing-a-development-branch` and `subagent-driven-development`'s
+stop-for-side-effects rule are not used inside a bound slice;
+`using-git-worktrees` must detect and reuse `.worktrees/<slice>`.
+`requesting-code-review` runs only as review Layer 3 (advisory).
+
+Read that as these obligations:
+
+- **Phase 0.** `/harness:architect` stage 1 runs `superpowers:brainstorming`.
+  The spec file it writes IS `docs/architecture.md` — never
+  `docs/superpowers/specs/…` — and the step after your human partner approves
+  the design is architect stage 2 (red-team), never
+  `superpowers:writing-plans`. `/harness:backlog` is the plan; write no other.
+- **Worktrees.** `superpowers:using-git-worktrees` must detect the worktree
+  `harness start` already provisioned (`.worktrees/<slice>`) and work there.
+  Never create a second worktree for a bound slice.
+- **Inside a bound slice.** Drive each unit with
+  `superpowers:test-driven-development`. On ANY red test or gate block run
+  `superpowers:systematic-debugging` and name the root cause before retrying.
+  Run `superpowers:verification-before-completion` immediately before
+  `close-slice`.
+- **Do not stop for side effects.**
+  `superpowers:subagent-driven-development`'s stop-for-side-effects rule does
+  not apply inside a bound slice: the sandbox and the gates are the permission
+  layer, and declared work is already approved. Stop only for the three
+  reasons in the autonomy contract above.
+- **Finishing.** `superpowers:finishing-a-development-branch` is not used
+  inside a bound slice. `close-slice` is the finish, and `merge-slice` (or the
+  PR, in `landing.mode: pr`) is the landing. Present no 3-option menu.
+- **Review.** `superpowers:requesting-code-review` runs only as review
+  Layer 3, advisory. Its Critical/Important/Minor findings never block on
+  their own; a blocking finding must cite a `rule_ref` (gate:GN,
+  decision:D-NNN, adr:NNN). Apply `superpowers:receiving-code-review` to every
+  finding you receive — verify it against the substrate, then fix it or rebut
+  it with technical reasoning.
 
 ## Workflow (in order)
 

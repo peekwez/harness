@@ -41,7 +41,11 @@ merge, never touch the main tree.
    and treat its injections as your Phase-1 context. Read this slice's row
    in .harness/backlog.jsonl (acceptance tests, predicted_files, declares).
 2. Red first: run the slice's acceptance tests with the acceptance_python
-   that resolve reported; they must fail before you implement.
+   that resolve reported; they must fail before you implement. Drive every
+   unit inside them with the superpowers:test-driven-development skill when
+   it is installed. On ANY red test or gate block, run
+   superpowers:systematic-debugging and name the root cause before you
+   retry — never re-run a fix you cannot explain.
 3. Implement inside predicted_files. If you genuinely need another file,
    amend this slice's row in .harness/backlog.jsonl FIRST. A permission
    denial means you wandered outside the declaration — amend it.
@@ -50,13 +54,25 @@ merge, never touch the main tree.
    so the interface shadows stay current.
 5. When acceptance is green, self-review: git diff > /tmp/slice.diff, then
    "{harness_bin}" --root . review --slice {slice_id} --diff /tmp/slice.diff
-   Fix every blocking finding and re-run until clean.
-6. Commit everything (git add -A; git commit), then close:
+   Fix every blocking finding and re-run until clean. Verify each finding
+   against the substrate before applying it
+   (superpowers:receiving-code-review); rebut the wrong ones with reasoning.
+6. Run superpowers:verification-before-completion — a fresh acceptance run
+   whose output you read — then commit everything (git add -A; git commit)
+   and close:
    "{harness_bin}" --root . close-slice --slice {slice_id} --commit HEAD
    Use the symbolic HEAD — $(...) substitution is never auto-approved.
-7. If close-slice blocks, apply the mechanical fix its reason names and
-   re-close; budget 3 fix-and-retry iterations, then stop and report the
-   blocking finding verbatim.
+7. If close-slice blocks, debug it with superpowers:systematic-debugging,
+   apply the mechanical fix its reason names, and re-close. Stop and report
+   the blocking finding verbatim only when the root cause is one you cannot
+   fix inside this slice's declared scope.
+
+Composing with superpowers (ADR-002, D-014): you are already inside the
+worktree the dispatcher provisioned — never create another;
+superpowers:finishing-a-development-branch is NOT used here (close-slice is
+the finish, and the dispatcher owns the merge); and
+superpowers:subagent-driven-development's stop-for-side-effects rule does not
+apply — the sandbox and the gates are the permission layer.
 
 Done means close-slice printed {{"closed": true}}. Nothing else counts."""
 

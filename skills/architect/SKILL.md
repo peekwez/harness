@@ -15,7 +15,10 @@ sessions over a durable artifact — never rely on transcript survival.
 Determine the current stage by reading the working document's `<!-- stage: N -->`
 marker (default 1 if absent), then follow the matching protocol file:
 
-1. Brainstorm — `stage-brainstorm.md` (with `coverage-map.md`)
+1. Brainstorm — `stage-brainstorm.md` (with `coverage-map.md`). When
+   superpowers is installed, `superpowers:brainstorming` drives this stage;
+   the spec file it writes IS `docs/architecture.md` and the step after the
+   design is approved is stage 2 below, never `superpowers:writing-plans`.
 2. Red-team — `stage-redteam.md`
 3. Converge — `stage-converge.md`
 4. Compile — `stage-compile.md`

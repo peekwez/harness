@@ -158,6 +158,27 @@ G3 spec-bound, G4 shadow-fresh, G5 registry-conform, G6 interface-drift,
 G7 derivation-integrity, G8 coverage-boundary. Every blocking finding cites
 a `rule_ref`; the engine rejects blocks without one.
 
+## Composing with superpowers
+
+With the superpowers plugin installed, the two compose on a fixed boundary
+(ADR-002, decision row **D-014**), and `harness init` writes it into the
+repo's `AGENTS.md` so both plugins' agents read the same rule. **harness owns
+the outer loop** — session start, slice bind/scope/declarations, attempts
+memory, the review contract (`rule_ref`), close and landing. **superpowers
+owns the inner loop** — `superpowers:brainstorming` runs as architect stage 1
+(its spec file IS `docs/architecture.md`, and the next step is stage 2
+red-team, not `superpowers:writing-plans`),
+`superpowers:test-driven-development` per unit,
+`superpowers:systematic-debugging` on any red test or gate block, and
+`superpowers:verification-before-completion` immediately before
+`close-slice`. Inside a bound slice
+`superpowers:finishing-a-development-branch` is not used (close-slice is the
+finish) and `superpowers:subagent-driven-development`'s stop-for-side-effects
+rule does not apply (the sandbox and the gates are the permission layer);
+`superpowers:using-git-worktrees` reuses the `.worktrees/<slice>` that
+`harness start` provisioned. `superpowers:requesting-code-review` runs only
+as review Layer 3, advisory — anything blocking still cites a `rule_ref`.
+
 ## Porting to another agent framework
 
 Write one file like `hooks/adapter.py` (~130 lines): translate your
