@@ -1,6 +1,7 @@
 {
  "exports": [
   "test_a_blocking_review_finding_blocks_the_close",
+  "test_a_recorded_g5_override_satisfies_r_uses",
   "test_agent_recorded_findings_are_surfaced_at_close",
   "test_an_unadjudicated_park_blocks_the_close",
   "test_close_runs_the_review_stack_and_records_its_verdict",
@@ -17,7 +18,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_review_at_close",
- "source_hash": "sha256:9b2a9ae20ade6d28216c7594ae7c983f379151eac9cb139e0d185cf244a725d1",
+ "source_hash": "sha256:e60c33cf635ab280e56326bbfdd36d1016c2b913705e03b511a4fa6e4622445d",
  "source_path": "tests/engine/test_review_at_close.py",
  "symbols": [
   {
@@ -83,6 +84,17 @@
    "span": [
     93,
     94
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`g5_override: recorded_justification` is a first-class resolution: an\n    undeclared use with a recorded override passes the close's own\n    uses \u2286 declares check, so the Layer-1 R-uses rubric must read the same\n    override-aware set (`unresolved`), not `undeclared` \u2014 otherwise the\n    override clears the gate and the review blocks the close anyway.",
+   "kind": "function",
+   "name": "test_a_recorded_g5_override_satisfies_r_uses",
+   "signature": "def test_a_recorded_g5_override_satisfies_r_uses(toy)",
+   "span": [
+    111,
+    112
    ],
    "visibility": "public"
   }

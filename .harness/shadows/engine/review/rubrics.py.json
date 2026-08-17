@@ -15,7 +15,7 @@
  ],
  "language": "python",
  "module_id": "engine.review.rubrics",
- "source_hash": "sha256:7a810b19ed1307b9720dc795e630a7bfe90df0682056ecc39120beda599a61e8",
+ "source_hash": "sha256:fe8cc0f0f87eb420f6fa858f84b97e6c2580c4b2596a8c652ce779569894a0f0",
  "source_path": "engine/review/rubrics.py",
  "symbols": [
   {
@@ -33,10 +33,10 @@
    "doc": null,
    "kind": "function",
    "name": "uses_reconciled",
-   "signature": "def uses_reconciled(facts)",
+   "signature": "def uses_reconciled(facts): # `unresolved` = undeclared uses minus recorded G5 overrides \u2014 the # same set the close ceremony's own uses \u2286 declares check reads. # Reading `undeclared` here made a config-sanctioned override # (g5_override: recorded_justification) pass the gate and then # block at Layer 1 anyway (kente slice 001, 2026-08-17).",
    "span": [
     24,
-    25
+    30
    ],
    "visibility": "public"
   },
@@ -46,8 +46,8 @@
    "name": "no_blocking_gate_findings",
    "signature": "def no_blocking_gate_findings(facts)",
    "span": [
-    29,
-    30
+    38,
+    39
    ],
    "visibility": "public"
   },
@@ -57,8 +57,8 @@
    "name": "duplicates_resolved",
    "signature": "def duplicates_resolved(facts)",
    "span": [
-    35,
-    36
+    44,
+    45
    ],
    "visibility": "public"
   },
@@ -68,8 +68,8 @@
    "name": "_model_rubrics",
    "signature": "def _model_rubrics(root)",
    "span": [
-    53,
-    54
+    62,
+    63
    ],
    "visibility": "private"
   },
@@ -79,8 +79,8 @@
    "name": "_precedents",
    "signature": "def _precedents(root, rubric_id: str, limit: int = 3) -> list",
    "span": [
-    69,
-    70
+    78,
+    79
    ],
    "visibility": "private"
   },
@@ -90,8 +90,8 @@
    "name": "_validate_model_output",
    "signature": "def _validate_model_output(out: dict, rubric_id: str) -> dict",
    "span": [
-    78,
-    79
+    87,
+    88
    ],
    "visibility": "private"
   },
@@ -101,8 +101,8 @@
    "name": "_already_adjudicated",
    "signature": "def _already_adjudicated(root) -> set",
    "span": [
-    91,
-    92
+    100,
+    101
    ],
    "visibility": "private"
   },
@@ -112,8 +112,8 @@
    "name": "_already_parked",
    "signature": "def _already_parked(root) -> set",
    "span": [
-    99,
-    100
+    108,
+    109
    ],
    "visibility": "private"
   },
@@ -123,8 +123,8 @@
    "name": "run_review",
    "signature": "def run_review(root, facts: dict, config: dict, model=None, record_parks: bool = True) -> dict",
    "span": [
-    104,
-    106
+    113,
+    115
    ],
    "visibility": "public"
   }

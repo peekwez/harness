@@ -22,9 +22,18 @@ def _deterministic_rubrics():
     {answer: pass|fail, confidence: 1.0, evidence: str}."""
 
     def uses_reconciled(facts):
-        und = facts["uses_declares"]["undeclared"]
-        return {"answer": "pass" if not und else "fail", "confidence": 1.0,
-                "evidence": f"undeclared uses: {und}"}
+        # `unresolved` = undeclared uses minus recorded G5 overrides — the
+        # same set the close ceremony's own uses ⊆ declares check reads.
+        # Reading `undeclared` here made a config-sanctioned override
+        # (g5_override: recorded_justification) pass the gate and then
+        # block at Layer 1 anyway (kente slice 001, 2026-08-17).
+        ud = facts["uses_declares"]
+        unresolved = ud.get("unresolved", ud["undeclared"])
+        evidence = f"undeclared uses: {ud['undeclared']}"
+        if ud.get("overridden"):
+            evidence += f" (overridden: {ud['overridden']})"
+        return {"answer": "pass" if not unresolved else "fail", "confidence": 1.0,
+                "evidence": evidence}
 
     def no_blocking_gate_findings(facts):
         blocks = [f["code"] for f in facts["gate_findings"]

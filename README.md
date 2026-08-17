@@ -471,6 +471,17 @@ defined in `docs/SPEC.md`.
 
 ## Changelog
 
+### 0.8.1
+
+- **Review Layer 1 honours G5 overrides.** The deterministic `R-uses` rubric
+  read `uses_declares.undeclared`, so a use resolved through
+  `g5_override: recorded_justification` cleared the close ceremony's own
+  uses ⊆ declares check and then blocked the same close at Layer 1 with no
+  adjudicable finding (kente slice 001, GOO-45). It now reads the
+  override-aware `unresolved` set — the one the ceremony reads — and its
+  evidence names the overridden targets. Regression test in
+  `tests/engine/test_review_at_close.py`.
+
 ### 0.8.0
 
 Makes harness kente-capable and superpowers-composable (ADR-002, Linear
