@@ -1,6 +1,8 @@
 {
  "exports": [
   "test_a_blocking_review_finding_blocks_the_close",
+  "test_a_reblock_after_a_fix_blocks_again",
+  "test_a_recorded_fix_clears_an_agent_blocking_finding",
   "test_a_recorded_g5_override_satisfies_r_uses",
   "test_agent_recorded_findings_are_surfaced_at_close",
   "test_an_unadjudicated_park_blocks_the_close",
@@ -18,7 +20,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_review_at_close",
- "source_hash": "sha256:e60c33cf635ab280e56326bbfdd36d1016c2b913705e03b511a4fa6e4622445d",
+ "source_hash": "sha256:2f31a6d2f3bf7c239e7cc15bb17fe35dbf1bac508a88973de04c58ae66df1a94",
  "source_path": "tests/engine/test_review_at_close.py",
  "symbols": [
   {
@@ -66,13 +68,35 @@
    "visibility": "public"
   },
   {
+   "doc": "The close message promises: 'agent-recorded blockers clear by\n    recording the fix'. A LATER record with the same code and a non-block\n    severity is that fix \u2014 the close must proceed (last record per code\n    wins; edges are append-only).",
+   "kind": "function",
+   "name": "test_a_recorded_fix_clears_an_agent_blocking_finding",
+   "signature": "def test_a_recorded_fix_clears_an_agent_blocking_finding(toy)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Ordering is honest both ways: block -> fix -> re-block still blocks.",
+   "kind": "function",
+   "name": "test_a_reblock_after_a_fix_blocks_again",
+   "signature": "def test_a_reblock_after_a_fix_blocks_again(toy)",
+   "span": [
+    92,
+    93
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": "Parking is the reviewer saying 'a human must rule on this' \u2014 closing\n    over it would make parking meaningless.",
    "kind": "function",
    "name": "test_an_unadjudicated_park_blocks_the_close",
    "signature": "def test_an_unadjudicated_park_blocks_the_close(toy)",
    "span": [
-    72,
-    73
+    105,
+    106
    ],
    "visibility": "public"
   },
@@ -82,8 +106,8 @@
    "name": "test_review_at_close_can_be_disabled_by_config",
    "signature": "def test_review_at_close_can_be_disabled_by_config(toy)",
    "span": [
-    93,
-    94
+    126,
+    127
    ],
    "visibility": "public"
   },
@@ -93,8 +117,8 @@
    "name": "test_a_recorded_g5_override_satisfies_r_uses",
    "signature": "def test_a_recorded_g5_override_satisfies_r_uses(toy)",
    "span": [
-    111,
-    112
+    144,
+    145
    ],
    "visibility": "public"
   }

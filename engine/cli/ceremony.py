@@ -173,12 +173,18 @@ def _close_ceremony(args):
             diff_text = dp.stdout if dp.returncode == 0 else ""
         facts = assemble(root, diff_text, args.slice, config)
         result = run_review(root, facts, config, model=None)
-        # findings the reviewer agent recorded for this slice count too
-        recorded = [e for e in _load_edges(root)
-                    if e["type"] == "reviewed_by"
+        # findings the reviewer agent recorded for this slice count too;
+        # edges are append-only, so the LAST record per finding code wins —
+        # "agent-recorded blockers clear by recording the fix" (a later
+        # same-code record with a non-block severity)
+        latest_by_code = {}
+        for e in _load_edges(root):
+            if (e["type"] == "reviewed_by"
                     and e["from"] == f"slice:{args.slice}"
-                    and e.get("meta", {}).get("kind") == "finding"
-                    and e.get("meta", {}).get("severity") == "block"]
+                    and e.get("meta", {}).get("kind") == "finding"):
+                latest_by_code[e["meta"].get("code")] = e
+        recorded = [e for e in latest_by_code.values()
+                    if e.get("meta", {}).get("severity") == "block"]
         review_result = {"ran": True, "verdict": result["verdict"],
                          "findings": [f["code"] for f in result["findings"]],
                          "agent_blocking": [e["meta"]["code"] for e in recorded]}

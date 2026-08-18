@@ -69,6 +69,39 @@ def test_agent_recorded_findings_are_surfaced_at_close(toy):
     assert "D-041" in json.dumps(out) or "free-form" in json.dumps(out)
 
 
+def test_a_recorded_fix_clears_an_agent_blocking_finding(toy):
+    """The close message promises: 'agent-recorded blockers clear by
+    recording the fix'. A LATER record with the same code and a non-block
+    severity is that fix — the close must proceed (last record per code
+    wins; edges are append-only)."""
+    session = _work_and_commit(toy)
+    run_cli("review", "--slice", "slice-042", "--record-finding",
+            "--code", "R-decisions", "--rule-ref", "decision:D-041",
+            "--message", "span name is free-form", "--severity", "block",
+            root=toy)
+    run_cli("review", "--slice", "slice-042", "--record-finding",
+            "--code", "R-decisions", "--rule-ref", "decision:D-041",
+            "--message", "fixed: span names now come from the registry",
+            "--severity", "advisory", root=toy)
+    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
+                   "--commit", "HEAD", root=toy)
+    out = json.loads(proc.stdout)
+    assert proc.returncode == 0 and out.get("closed") is True, proc.stdout
+
+
+def test_a_reblock_after_a_fix_blocks_again(toy):
+    """Ordering is honest both ways: block -> fix -> re-block still blocks."""
+    session = _work_and_commit(toy)
+    for severity in ("block", "advisory", "block"):
+        run_cli("review", "--slice", "slice-042", "--record-finding",
+                "--code", "R-decisions", "--rule-ref", "decision:D-041",
+                "--message", f"state: {severity}", "--severity", severity,
+                root=toy)
+    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
+                   "--commit", "HEAD", root=toy)
+    assert proc.returncode == 1, proc.stdout
+
+
 def test_an_unadjudicated_park_blocks_the_close(toy):
     """Parking is the reviewer saying 'a human must rule on this' — closing
     over it would make parking meaningless."""

@@ -20,7 +20,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.ceremony",
- "source_hash": "sha256:02538eeccbae9d12f6d6cbb4d95a34c598e94fb20146dba20f72ff974cf7230e",
+ "source_hash": "sha256:c6c4503ab0b9c78ad367230b93ce8b10b2cafd8eb727f7934c38f97805eabc3b",
  "source_path": "engine/cli/ceremony.py",
  "symbols": [
   {
@@ -62,8 +62,8 @@
    "name": "_enforceable",
    "signature": "def _enforceable(rel): # build artifacts and vendored trees are not slice scope: # a repo without a tidy .gitignore would otherwise get G3 # blocks for __pycache__/node_modules churn",
    "span": [
-    246,
-    250
+    252,
+    256
    ],
    "visibility": "private"
   },
@@ -73,8 +73,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    461,
-    462
+    467,
+    468
    ],
    "visibility": "private"
   }
