@@ -1,0 +1,53 @@
+{
+ "exports": [
+  "test_author_gate_missing_doc_is_a_gap_not_an_error",
+  "test_fresh_init_gate_reports_domain_gaps_not_edit_me",
+  "test_init_scaffolds_without_placeholder_rows"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.compiler",
+  "json"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_init_ux",
+ "source_hash": "sha256:f3a427fbd4980ceb91272fc654d10440c6041de243d5ab3ee2d5373d4144eb53",
+ "source_path": "tests/engine/test_init_ux.py",
+ "symbols": [
+  {
+   "doc": "First `/harness:architect` on a fresh repo: the preamble author-gate\n    must report the missing working document as a gate gap that names the\n    next action, not raise.",
+   "kind": "function",
+   "name": "test_author_gate_missing_doc_is_a_gap_not_an_error",
+   "signature": "def test_author_gate_missing_doc_is_a_gap_not_an_error(tmp_path)",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_scaffolds_without_placeholder_rows",
+   "signature": "def test_init_scaffolds_without_placeholder_rows(tmp_path)",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The guarantee the seeds provided survives without them: the gate\n    still blocks until every registry domain has a decision row.",
+   "kind": "function",
+   "name": "test_fresh_init_gate_reports_domain_gaps_not_edit_me",
+   "signature": "def test_fresh_init_gate_reports_domain_gaps_not_edit_me(tmp_path)",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  }
+ ]
+}

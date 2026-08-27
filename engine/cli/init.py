@@ -77,12 +77,16 @@ def cmd_init(args):
     cfg = cfg.replace("{{languages}}", langs)
     (hdir / "config.yaml").write_text(cfg)
     (hdir / "schema_version").write_text(f"{SCHEMA_VERSION}\n")
-    for name, dest in (("registry.seed.jsonl", "registry.jsonl"),
-                       ("decisions.seed.jsonl", "decisions.jsonl"),
-                       ("backlog.seed.jsonl", "backlog.jsonl")):
-        shutil.copy(templates / name, hdir / dest)
-    for empty in ("edges.jsonl", "telemetry.jsonl", "boundaries.jsonl",
-                  "notes.jsonl", "memory/durable.jsonl"):
+    # registry ships the planned standard-abstraction slots; decisions and
+    # backlog start EMPTY. The author-gate's domain-coverage check already
+    # blocks until every registry domain has a real decision row — seeding
+    # EDIT-ME placeholder rows was redundant with that guarantee, read as
+    # defects on a fresh init, and (for backlog) invited exactly the
+    # hand-editing the backlog skill forbids.
+    shutil.copy(templates / "registry.seed.jsonl", hdir / "registry.jsonl")
+    for empty in ("decisions.jsonl", "backlog.jsonl", "edges.jsonl",
+                  "telemetry.jsonl", "boundaries.jsonl", "notes.jsonl",
+                  "memory/durable.jsonl"):
         (hdir / empty).touch()
 
     (root / "adr").mkdir(exist_ok=True)

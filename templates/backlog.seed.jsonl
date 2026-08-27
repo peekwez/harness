@@ -1,1 +1,0 @@
-{"id": "slice-001", "spec": "spec-000", "title": "EDIT ME: build the config abstraction", "status": "planned", "declares_dep": ["config"], "acceptance": ["tests/slices/001_config.py"], "predicted_files": ["src/config.py"], "context_cost_estimate": 0, "depends_on": [], "worktree": null}

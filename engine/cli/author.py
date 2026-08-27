@@ -152,8 +152,11 @@ def cmd_compile(args):
 def cmd_author_gate(args):
     from engine.compiler import author_gate
     root = _root(args)
-    # a typo'd doc path must not silently skip the open-question check
-    doc = _require_doc(root, args.doc) if args.doc else None
+    # unlike compile, a missing doc is NOT an error here: the gate itself
+    # reports it as a gap (fresh repos run this before the doc can exist —
+    # the architect/backlog skill preambles). A typo'd path still fails the
+    # gate loudly with the path named; nothing is silently skipped.
+    doc = _under_root(root, args.doc) if args.doc else None
     result = author_gate(root, working_doc=doc)
     _print(result)
     return 0 if result["passed"] else 1

@@ -22,7 +22,10 @@ Rules:
   --migrate`) and only run it on explicit confirmation.
 - After scaffolding, list which language packs were enabled and tell the user
   to edit `.harness/config.yaml` (authored) if the detection missed one.
-- Point the user at the seeded files that need editing before Phase 0:
-  `.harness/decisions.jsonl` (EDIT ME rows) and `.harness/registry.jsonl`
-  (standard abstraction slots, all `planned`).
+- Tell the user what the scaffold contains: `.harness/registry.jsonl` holds
+  the standard abstraction slots (config, logging, errors, telemetry — all
+  `planned`); `.harness/decisions.jsonl` and `.harness/backlog.jsonl` start
+  empty. Nothing needs hand-editing — Phase 0 (`/harness:architect`) fills
+  decisions, and `/harness:backlog` appends slices via the CLI. The
+  author-gate blocks until every registry domain has a decision row.
 - Next step in the workflow: `/harness:architect`.

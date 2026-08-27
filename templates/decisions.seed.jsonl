@@ -1,3 +1,0 @@
-{"id": "D-001", "domain": "errors", "question": "Error propagation style?", "answer": "EDIT ME: raise domain exceptions; never return None/sentinel for failure.", "adr_ref": null, "origin": "phase0", "created": "1970-01-01T00:00:00+00:00"}
-{"id": "D-002", "domain": "logging", "question": "Logging entry point?", "answer": "EDIT ME: one logger factory from the logging registry entry; no bare print().", "adr_ref": null, "origin": "phase0", "created": "1970-01-01T00:00:00+00:00"}
-{"id": "D-003", "domain": "config", "question": "Configuration access pattern?", "answer": "EDIT ME: typed config object from the config registry entry; no os.environ reads outside it.", "adr_ref": null, "origin": "phase0", "created": "1970-01-01T00:00:00+00:00"}

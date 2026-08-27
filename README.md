@@ -471,6 +471,23 @@ defined in `docs/SPEC.md`.
 
 ## Changelog
 
+### 0.8.3
+
+- **Fresh-init UX: no phantom files, no EDIT-ME rows.** `init` no longer
+  seeds `.harness/decisions.jsonl` / `.harness/backlog.jsonl` with EDIT-ME
+  placeholder rows — both start empty. The author-gate's domain-coverage
+  check (every registry domain needs a decision row) already provides the
+  same blocks-until-decided guarantee with a clearer message, and the
+  seeded backlog row invited exactly the hand-editing the backlog skill
+  forbids. `author-gate --doc` on a missing working document now reports a
+  gate gap that names the next action (`/harness:architect` or
+  `architect --from-spec`) instead of erroring — so the architect/backlog
+  skill preambles no longer greet a fresh repo with
+  "docs/architecture.md does not exist". Tests in
+  `tests/engine/test_init_ux.py`.
+- **Version declarations realigned.** 0.8.2 bumped only `plugin.json`;
+  `ENGINE_VERSION` and `marketplace.json` now agree again.
+
 ### 0.8.1
 
 - **Review Layer 1 honours G5 overrides.** The deterministic `R-uses` rubric

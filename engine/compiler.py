@@ -460,7 +460,14 @@ def author_gate(root, working_doc=None) -> dict:
     if working_doc:
         doc = Path(working_doc)
         if not doc.exists():
-            gaps.append(f"working document {working_doc!r} does not exist")
+            try:
+                shown = str(doc.resolve().relative_to(root.resolve()))
+            except ValueError:
+                shown = str(working_doc)
+            gaps.append(f"working document {shown!r} does not exist yet — "
+                        f"start Phase 0 with /harness:architect (stage 1 "
+                        f"creates it), or seed it from an existing spec: "
+                        f"harness architect --from-spec <path>")
         else:
             for q in _unresolved_open_questions(doc.read_text(encoding="utf-8")):
                 gaps.append(f"open question unresolved and not deferred-with-owner: {q}")
