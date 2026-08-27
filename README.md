@@ -471,6 +471,16 @@ defined in `docs/SPEC.md`.
 
 ## Changelog
 
+### 0.8.4
+
+- **`author-gate --report` for skill preambles.** The architect/backlog
+  skills run author-gate at every invocation for workflow-state context;
+  gaps are the normal state through stages 1–4, but the exit-1 rendered as
+  a shell error in the host UI. `--report` always exits 0 once a verdict
+  is emitted (the verdict lives in the JSON `passed` field); the bare
+  command keeps exit 1 for automation. Both skill preambles now use it and
+  explain that gaps before stage 5 are expected.
+
 ### 0.8.3
 
 - **Fresh-init UX: no phantom files, no EDIT-ME rows.** `init` no longer

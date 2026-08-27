@@ -9,9 +9,10 @@ allowed-tools: Bash(*/bin/harness *)
 
 Precondition — the author-gate must have passed:
 
-!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" author-gate --doc docs/architecture.md`
+!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" author-gate --report --doc docs/architecture.md`
 
-If it reports gaps, stop and send the user back to `/harness:architect`.
+If the JSON above has `"passed": false`, stop and send the user back to
+`/harness:architect` with the gap list.
 
 Generate slices via the CLI — never hand-edit `.harness/backlog.jsonl`
 (hand-edited rows are the historical EDIT-ME defect source):

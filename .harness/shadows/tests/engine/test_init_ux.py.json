@@ -1,6 +1,7 @@
 {
  "exports": [
   "test_author_gate_missing_doc_is_a_gap_not_an_error",
+  "test_author_gate_report_mode_exits_zero_on_gaps",
   "test_fresh_init_gate_reports_domain_gaps_not_edit_me",
   "test_init_scaffolds_without_placeholder_rows"
  ],
@@ -13,7 +14,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_init_ux",
- "source_hash": "sha256:f3a427fbd4980ceb91272fc654d10440c6041de243d5ab3ee2d5373d4144eb53",
+ "source_hash": "sha256:7ec02b283598b5925c7ff144e3e03b14609303eecf95b03a53a978eaa354154a",
  "source_path": "tests/engine/test_init_ux.py",
  "symbols": [
   {
@@ -28,13 +29,24 @@
    "visibility": "public"
   },
   {
+   "doc": "`--report` is the skill-preamble spelling: the architect/backlog\n    skills run author-gate at every invocation for workflow-state context,\n    where gaps are the normal Phase-0 state \u2014 a nonzero exit renders as a\n    shell error in the host. The verdict lives in the JSON (`passed`);\n    the bare command keeps exit 1 for automation.",
+   "kind": "function",
+   "name": "test_author_gate_report_mode_exits_zero_on_gaps",
+   "signature": "def test_author_gate_report_mode_exits_zero_on_gaps(tmp_path)",
+   "span": [
+    43,
+    44
+   ],
+   "visibility": "public"
+  },
+  {
    "doc": null,
    "kind": "function",
    "name": "test_init_scaffolds_without_placeholder_rows",
    "signature": "def test_init_scaffolds_without_placeholder_rows(tmp_path)",
    "span": [
-    44,
-    45
+    61,
+    62
    ],
    "visibility": "public"
   },
@@ -44,8 +56,8 @@
    "name": "test_fresh_init_gate_reports_domain_gaps_not_edit_me",
    "signature": "def test_fresh_init_gate_reports_domain_gaps_not_edit_me(tmp_path)",
    "span": [
-    56,
-    57
+    73,
+    74
    ],
    "visibility": "public"
   }

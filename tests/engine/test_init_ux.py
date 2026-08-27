@@ -40,6 +40,23 @@ def test_author_gate_missing_doc_is_a_gap_not_an_error(tmp_path):
     assert "architect" in gap  # points at the command that creates it
 
 
+def test_author_gate_report_mode_exits_zero_on_gaps(tmp_path):
+    """`--report` is the skill-preamble spelling: the architect/backlog
+    skills run author-gate at every invocation for workflow-state context,
+    where gaps are the normal Phase-0 state — a nonzero exit renders as a
+    shell error in the host. The verdict lives in the JSON (`passed`);
+    the bare command keeps exit 1 for automation."""
+    target = tmp_path / "fresh"
+    target.mkdir()
+    (target / "app.py").write_text("x = 1\n")
+    assert run_cli("init", root=target).returncode == 0
+    proc = run_cli("author-gate", "--report", "--doc", "docs/architecture.md",
+                   root=target)
+    assert proc.returncode == 0, proc.stderr
+    result = json.loads(proc.stdout)
+    assert result["passed"] is False and result["gaps"]
+
+
 # ---------------------------------------------------------------- init seeds
 def test_init_scaffolds_without_placeholder_rows(tmp_path):
     target = tmp_path / "fresh"

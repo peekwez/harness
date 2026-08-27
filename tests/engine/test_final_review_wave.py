@@ -304,7 +304,7 @@ def test_the_three_declared_versions_agree():
     versions = {plugin["version"], engine.ENGINE_VERSION,
                 *[p["version"] for p in market["plugins"]
                   if p["name"] == plugin["name"]]}
-    assert versions == {"0.8.3"}, versions
+    assert versions == {"0.8.4"}, versions
 
 
 def test_the_readme_changelogs_the_release():

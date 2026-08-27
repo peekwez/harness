@@ -40,7 +40,11 @@ marker (default 1 if absent), then follow the matching protocol file:
 4. Compile — `stage-compile.md`
 5. Author-gate — run:
 
-!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" author-gate --doc docs/architecture.md`
+!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" author-gate --report --doc docs/architecture.md`
+
+(The `--report` output above is workflow state, not an error: `gaps` are
+expected until stage 5 — read `passed` in the JSON. Before stage 5, use the
+gap list only to see what remains.)
 
 Stage-5 rules: if the gate reports gaps, walk the human through each gap and
 loop back to the stage that owns it (missing decision rows -> converge;

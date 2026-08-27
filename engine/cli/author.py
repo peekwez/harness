@@ -159,6 +159,11 @@ def cmd_author_gate(args):
     doc = _under_root(root, args.doc) if args.doc else None
     result = author_gate(root, working_doc=doc)
     _print(result)
+    # --report: verdict emitted -> exit 0 (semantics in JSON). The skill
+    # preambles use it because gaps are the NORMAL state through stages 1-4
+    # and a nonzero exit renders as a shell error in the host UI.
+    if getattr(args, "report", False):
+        return 0
     return 0 if result["passed"] else 1
 
 

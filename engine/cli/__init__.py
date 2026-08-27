@@ -128,6 +128,11 @@ def main(argv=None):
 
     sp = sub.add_parser("author-gate", help="Day-0 completeness check")
     sp.add_argument("--doc")
+    sp.add_argument("--report", action="store_true",
+                    help="always exit 0 when a verdict was emitted (the "
+                         "verdict lives in the JSON `passed` field) — the "
+                         "skill-preamble spelling, where gaps are workflow "
+                         "state, not an error")
 
     sp = sub.add_parser("backlog",
                         help="estimate context costs; split oversized; "

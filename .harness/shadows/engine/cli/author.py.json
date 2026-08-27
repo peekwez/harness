@@ -24,7 +24,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.author",
- "source_hash": "sha256:39304684583c45b465a9bc681515f5ef5b4aa0535823db99219b4bad004c2d61",
+ "source_hash": "sha256:e523213054220f365ff5ccb4bc704904b9036e498d9471b4b7b76d5c5bb7b8c0",
  "source_path": "engine/cli/author.py",
  "symbols": [
   {
@@ -110,8 +110,8 @@
    "name": "_backlog_add",
    "signature": "def _backlog_add(args)",
    "span": [
-    166,
-    167
+    171,
+    172
    ],
    "visibility": "private"
   },
@@ -121,8 +121,8 @@
    "name": "cmd_backlog",
    "signature": "def cmd_backlog(args)",
    "span": [
-    202,
-    203
+    207,
+    208
    ],
    "visibility": "public"
   },
@@ -132,8 +132,8 @@
    "name": "cmd_slice",
    "signature": "def cmd_slice(args)",
    "span": [
-    242,
-    243
+    247,
+    248
    ],
    "visibility": "public"
   }
