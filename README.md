@@ -89,8 +89,9 @@ framework-agnostic. `harness run --dry-run` prints the waves;
 project state. **The substrate** is scaffolded into each target repo by
 `/harness:init` and holds all of it: `.harness/` (registry, decisions,
 backlog, edges, telemetry, memory, shadows, one gitignored SQLite sidecar),
-`adr/`, `contracts/`, a CI verify workflow, per-commit git notes under
-`refs/notes/harness`, plus agent-facing repo docs: `AGENTS.md` (the working
+`adr/`, `contracts/`, a CI verify workflow and the vendored engine it runs
+(`.harness/engine/`, so CI needs nothing from this repo), per-commit git
+notes under `refs/notes/harness`, plus agent-facing repo docs: `AGENTS.md` (the working
 agreement, cross-tool standard) and `CLAUDE.md` (imports it via `@AGENTS.md`).
 Existing CLAUDE.md/AGENTS.md files are never overwritten.
 
@@ -243,6 +244,10 @@ hand-editing it is a bug like any other derived file.
 
 `bin/harness` subcommands: `event` (stdin EnforcementEvent -> stdout
 Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
+`upgrade` (bring a substrate scaffolded by an older plugin up to the
+installed one: schema migration, merge drivers, the vendored CI engine
+and the `harness-verify` workflow; idempotent — `init --migrate` is its
+alias),
 `architect` (`--from-spec <path>`: seeds the working document
 `docs/architecture.md` from an existing spec — headings become
 `[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, at
@@ -445,17 +450,37 @@ a registry entry whose manifest is validated by the plugin's own engine
 (`harness verify` runs in this repo's CI). `harness verify` green on the
 harness repo itself is the ship gate for every release.
 
-### Private engine repo
+### Self-contained CI: the vendored engine
 
-Consumer repos don't vendor the engine — the scaffolded
-`.github/workflows/harness-verify.yml` clones it. Point at it with the
-`HARNESS_REPO` repository variable (Settings > Secrets and variables >
-Actions > Variables), and if that repo is **private**, add a `HARNESS_TOKEN`
-repository secret: a fine-grained PAT with **Contents: read**, resource owner
-= the org that holds the engine. The workflow injects it into the clone URL
-as `x-access-token` and clones `--quiet`, so the credentialled URL is never
-echoed into the log; without the secret the clone is anonymous, which is all
-a public engine repo needs.
+Consumer repos carry everything their `harness-verify` workflow needs.
+`harness init` copies the engine (`bin/harness` + `engine/`, ~600 KB, no
+tests or templates) into `.harness/engine/` and the scaffolded
+`.github/workflows/harness-verify.yml` runs that copy:
+`python3 .harness/engine/bin/harness verify`. Nothing is cloned from this
+repo, no repository variable or token is needed, and the engine that
+verifies landed work is the same version that scaffolded the substrate.
+Only the PyPI dependencies (`pyyaml`, `tree-sitter`,
+`tree-sitter-language-pack`) are installed in CI. `.harness/engine/` is
+derived: commit it, never edit it.
+
+After upgrading the plugin, run `harness upgrade` in each consumer repo and
+commit the result. It replaces `.harness/engine/` wholesale, refreshes the
+harness-generated workflow (a hand-authored one is kept and the step to add
+is named), runs the schema migration and reinstalls the merge drivers.
+`doctor --substrate` reports the vendored copy as `current`, `stale`
+(unhealthy — CI would enforce different rules than the hooks) or
+`missing` (a substrate scaffolded before 0.8.5; CI still works via the
+clone fallback below), and names `harness upgrade` as the fix.
+
+**Clone fallback (repos that have not run `upgrade`).** When no
+`.harness/engine/` exists the workflow falls back to cloning the engine
+and prints a warning naming `harness upgrade`. Point it at the engine with
+the `harness-repo` workflow input or the `HARNESS_REPO` repository variable
+(Settings > Secrets and variables > Actions > Variables); if that repo is
+**private**, add a `HARNESS_TOKEN` repository secret: a fine-grained PAT
+with **Contents: read**, resource owner = the org that holds the engine.
+The workflow injects it into the clone URL as `x-access-token` and clones
+`--quiet`, so the credentialled URL is never echoed into the log.
 
 ## Tests
 
@@ -470,6 +495,24 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.8.5
+
+- **Self-contained CI verify.** `init` vendors the engine into
+  `.harness/engine/` and the scaffolded `harness-verify.yml` runs that
+  copy, so a consumer repo's workflow no longer depends on cloning this
+  repo (no `HARNESS_REPO` variable, no `HARNESS_TOKEN`). The clone path
+  survives only as a fallback for substrates that have not been upgraded,
+  and warns.
+- **`harness upgrade`.** One command brings a substrate scaffolded by an
+  older plugin up to the installed one: vendors/refreshes the engine,
+  refreshes the harness-generated workflow (hand-authored ones are kept,
+  with the step to add named), runs the schema migration, reinstalls the
+  merge drivers and refreshes a harness-written autonomy profile.
+  Idempotent; `init --migrate` is now its alias. `doctor --substrate`
+  reports the vendored engine as `current` / `stale` / `missing` and
+  names `upgrade` as the fix. Tests in
+  `tests/engine/test_vendored_engine.py`.
 
 ### 0.8.4
 

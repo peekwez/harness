@@ -15,7 +15,7 @@ from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
-from engine.cli.init import cmd_init
+from engine.cli.init import cmd_init, cmd_upgrade
 from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
 from engine.cli.run import cmd_run
@@ -31,7 +31,7 @@ __all__ = ["COMMANDS", "main"]
 # the README-coverage test and any host enumerating the CLI all read it.
 COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
-    "extract": cmd_extract,
+    "upgrade": cmd_upgrade, "extract": cmd_extract,
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
@@ -63,10 +63,17 @@ def main(argv=None):
                          "unflushed telemetry); never removes worktrees")
 
     sp = sub.add_parser("init", help="scaffold substrate")
-    sp.add_argument("--migrate", action="store_true")
+    sp.add_argument("--migrate", action="store_true",
+                    help="alias of `harness upgrade`")
     sp.add_argument("--autonomy", action="store_true",
                     help="also write .claude/settings.json pre-approving the "
                          "slice loop's commands (gates stay the guardrail)")
+
+    sub.add_parser("upgrade",
+                   help="bring a substrate scaffolded by an older plugin up "
+                        "to this one: schema migration, merge drivers, the "
+                        "vendored CI engine (.harness/engine) and the "
+                        "harness-verify workflow; idempotent")
 
     sp = sub.add_parser("extract", help="tree-sitter -> universal shadows")
     sp.add_argument("paths", nargs="*")

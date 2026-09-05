@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-ENGINE_VERSION = "0.8.4"
+ENGINE_VERSION = "0.8.5"
 
 # Extensions we consider "source modules". Anything else in these families is
 # either substrate/docs (ignored) or unknown-language source (degenerate

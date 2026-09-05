@@ -1,6 +1,8 @@
 {
  "exports": [
-  "cmd_init"
+  "cmd_init",
+  "cmd_upgrade",
+  "vendored_engine_status"
  ],
  "extractor_version": 3,
  "imports": [
@@ -17,7 +19,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.init",
- "source_hash": "sha256:8b1c00e7abb48253660e8fbc480c13834c597c109e2529d58063df89f42e83ef",
+ "source_hash": "sha256:ea4709bf9f269a5b1d7aa30601865aa63d3b4300aff08b642d7b41f2cd668cca",
  "source_path": "engine/cli/init.py",
  "symbols": [
   {
@@ -26,8 +28,74 @@
    "name": "cmd_init",
    "signature": "def cmd_init(args)",
    "span": [
-    31,
-    32
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Copy the engine (`bin/harness` + `engine/`) into `.harness/engine/`.\n\n    The scaffolded workflow runs `.harness/engine/bin/harness verify`, so CI\n    needs nothing from the plugin repo \u2014 no clone, no `HARNESS_REPO`\n    variable, no token for a private engine repo. The copy is replaced\n    wholesale (never merged) so a module the plugin deleted cannot linger,\n    and never carries caches. `.harness/` is an ignored dir for extraction,\n    so the vendored .py files are not project source to the consumer's own\n    gates.\n\n    Args:\n        root: Substrate root.\n\n    Returns:\n        `{\"path\", \"version\", \"action\", \"from\"}` \u2014 action is `installed`,\n        `refreshed` (was another version, or damaged) or `unchanged`.",
+   "kind": "function",
+   "name": "_vendor_engine",
+   "signature": "def _vendor_engine(root) -> dict",
+   "span": [
+    188,
+    189
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "True when every engine file in the plugin has an identical vendored\n    copy and nothing extra sits in the vendored tree (a stale module the\n    plugin deleted, a hand edit). Caches are ignored on both sides.",
+   "kind": "function",
+   "name": "_vendored_matches",
+   "signature": "def _vendored_matches(target) -> bool",
+   "span": [
+    232,
+    233
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_files",
+   "signature": "def _files(base)",
+   "span": [
+    238,
+    239
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "What `doctor --substrate` reports about the vendored engine.\n\n    Args:\n        root: Substrate root.\n\n    Returns:\n        `{\"status\", \"version\", \"engine_version\", \"path\"}` with status one of\n        `self-hosted` (this is the plugin repo: the engine lives at its\n        root), `current`, `stale` (another version, or drifted) or\n        `missing` (scaffolded by a plugin that predates vendoring).",
+   "kind": "function",
+   "name": "vendored_engine_status",
+   "signature": "def vendored_engine_status(root) -> dict",
+   "span": [
+    254,
+    255
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Scaffold or refresh the CI workflow; never clobber a hand-authored one.\n\n    Args:\n        root: Substrate root.\n\n    Returns:\n        `{\"path\", \"action\"}` with action `written` (absent before),\n        `refreshed` (harness-generated and out of date), `unchanged`, or\n        `kept` (not harness-generated; a `note` names what to add by hand).",
+   "kind": "function",
+   "name": "_write_workflow",
+   "signature": "def _write_workflow(root) -> dict",
+   "span": [
+    283,
+    284
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Bring a substrate scaffolded by an older plugin up to the installed\n    one: schema migration, merge drivers, the vendored engine and the CI\n    workflow. Idempotent; hand-authored files are never touched.",
+   "kind": "function",
+   "name": "cmd_upgrade",
+   "signature": "def cmd_upgrade(args)",
+   "span": [
+    319,
+    320
    ],
    "visibility": "public"
   },
@@ -37,8 +105,8 @@
    "name": "_pr_landing_rules",
    "signature": "def _pr_landing_rules(text, landing) -> str",
    "span": [
-    178,
-    179
+    342,
+    343
    ],
    "visibility": "private"
   },
@@ -48,8 +116,8 @@
    "name": "_write_autonomy_settings",
    "signature": "def _write_autonomy_settings(root, quiet=False, local=False, config=None)",
    "span": [
-    222,
-    223
+    386,
+    387
    ],
    "visibility": "private"
   }

@@ -149,7 +149,17 @@ def test_ci_engine_resolution_step_runs(tmp_path):
                   if "harness engine" in s.get("name", ""))["run"]
     env_file = root / "gh_env"
 
-    # (a) vendored engine present -> chosen, no clone attempted
+    # (a0) init vendored the engine under .harness/engine -> chosen first
+    proc = subprocess.run(["bash", "-c", script], cwd=root, capture_output=True,
+                          text=True, env={"GITHUB_ENV": str(env_file),
+                                          "PATH": "/usr/bin:/bin"})
+    assert proc.returncode == 0, proc.stderr
+    assert "HARNESS_BIN=.harness/engine/bin/harness" in env_file.read_text()
+    import shutil
+    shutil.rmtree(root / ".harness" / "engine")
+    env_file.write_text("")
+
+    # (a) root-level engine present (self-hosted) -> chosen, no clone attempted
     (root / "bin").mkdir(parents=True, exist_ok=True)
     (root / "bin" / "harness").write_text("#!/bin/sh\n")
     (root / "bin" / "harness").chmod(0o755)

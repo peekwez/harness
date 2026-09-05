@@ -76,6 +76,13 @@ def _substrate_health(root, fix=False) -> dict:
 
     parked = read_jsonl(harness_dir(root) / "parked.jsonl")
     missing_notes = _missing_notes(root, backlog)
+    # the CI verifier is the vendored engine: a copy that disagrees with the
+    # plugin the hooks run enforces different rules on landed work than on
+    # edits (stale = unhealthy). A repo scaffolded before vendoring has no
+    # copy at all: CI falls back to the clone, so it still runs — but the
+    # fix is named.
+    from engine.cli.init import vendored_engine_status
+    vendored = vendored_engine_status(root)
 
     fixed = {"bindings_released": 0, "telemetry_flushed": 0}
     if fix:
@@ -93,9 +100,16 @@ def _substrate_health(root, fix=False) -> dict:
         stale_bindings, buffered = [], 0
 
     healthy = not (problems["schema"] or stale_bindings or stale_worktrees
-                   or parked or missing_notes)
+                   or parked or missing_notes
+                   or vendored["status"] == "stale")
+    upgrade_next = (
+        f"harness upgrade (vendored CI engine is {vendored['status']}: "
+        f"{vendored['version'] or 'none'} vs plugin "
+        f"{vendored['engine_version']})"
+        if vendored["status"] in ("stale", "missing") else None)
     return {
         "substrate_healthy": healthy,
+        "vendored_engine": vendored,
         "schema_problems": problems["schema"],
         "stale_bindings": stale_bindings,
         "stale_worktrees": stale_worktrees,      # never auto-removed: destructive
@@ -108,7 +122,7 @@ def _substrate_health(root, fix=False) -> dict:
                   f"pr, re-notes HEAD and re-pushes), or `harness graph note "
                   f"--repoint {missing_notes[0]} <sha>` once you know the "
                   f"commit that carries the slice's content")
-                 if missing_notes else None),
+                 if missing_notes else upgrade_next),
     }
 
 

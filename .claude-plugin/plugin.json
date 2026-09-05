@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Development enforcement plugin: skills guide the workflow, hooks bind the rules, a framework-agnostic engine decides. Spec-driven development for autonomous coding agents. Composes with the superpowers plugin: harness owns the outer loop (slices, gates, review contract, close and landing), superpowers owns the inner loop (brainstorming, TDD, systematic debugging, verification).",
   "author": {
     "name": "Kwesi P Apponsah",
