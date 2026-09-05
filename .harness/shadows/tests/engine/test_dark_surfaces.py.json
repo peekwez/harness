@@ -18,13 +18,14 @@
   "engine.extractor.engine",
   "engine.gates.g7_derivation",
   "json",
+  "shutil",
   "subprocess",
   "sys",
   "yaml"
  ],
  "language": "python",
  "module_id": "tests.engine.test_dark_surfaces",
- "source_hash": "sha256:97a5367a67ea2c19c1508c04a17ce13758c661001b6bf4314caff12b1914a44f",
+ "source_hash": "sha256:6d679c5fb038c8032518036d633e8dd05f0431f485cab6c41e14b0455cd2ccd6",
  "source_path": "tests/engine/test_dark_surfaces.py",
  "symbols": [
   {
@@ -110,8 +111,8 @@
    "name": "test_non_claude_adapters_auto_approve_declared_work",
    "signature": "def test_non_claude_adapters_auto_approve_declared_work(toy)",
    "span": [
-    173,
-    174
+    183,
+    184
    ],
    "visibility": "public"
   },
@@ -121,8 +122,8 @@
    "name": "test_telemetry_rotates_into_an_archive",
    "signature": "def test_telemetry_rotates_into_an_archive(toy)",
    "span": [
-    198,
-    199
+    208,
+    209
    ],
    "visibility": "public"
   },
@@ -132,8 +133,8 @@
    "name": "test_status_since_filters_the_window",
    "signature": "def test_status_since_filters_the_window(toy)",
    "span": [
-    219,
-    220
+    229,
+    230
    ],
    "visibility": "public"
   }

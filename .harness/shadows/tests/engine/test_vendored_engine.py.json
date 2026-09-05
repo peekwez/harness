@@ -1,0 +1,257 @@
+{
+ "exports": [
+  "test_doctor_flags_a_missing_or_stale_vendored_engine",
+  "test_doctor_on_the_self_hosted_plugin_repo_is_not_stale",
+  "test_init_migrate_is_the_same_as_upgrade",
+  "test_init_vendors_the_engine_into_the_substrate",
+  "test_readme_documents_vendoring_and_upgrade",
+  "test_the_vendored_engine_is_not_extracted_as_project_source",
+  "test_the_vendored_engine_runs_verify_by_itself",
+  "test_toy_repo_doctor_stays_healthy",
+  "test_upgrade_brings_an_older_substrate_up_to_date",
+  "test_upgrade_never_overwrites_a_hand_authored_workflow",
+  "test_upgrade_refuses_a_repo_without_a_substrate",
+  "test_upgrade_replaces_a_stale_vendored_engine_wholesale",
+  "test_upgrade_runs_the_schema_migration_and_merge_drivers",
+  "test_upgrade_writes_the_workflow_when_it_is_missing",
+  "test_workflow_failure_names_upgrade_as_the_fix",
+  "test_workflow_prefers_the_vendored_engine",
+  "test_workflow_verify_step_does_not_need_the_plugin_repo"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "json",
+  "shutil",
+  "subprocess",
+  "sys",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_vendored_engine",
+ "source_hash": "sha256:c4816edaadf1ed4ffcdea2d63082224cfef640906c5e58db394be966bf8e4df9",
+ "source_path": "tests/engine/test_vendored_engine.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_init",
+   "signature": "def _init(tmp_path, name=\"v\")",
+   "span": [
+    20,
+    21
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_locate_step",
+   "signature": "def _locate_step(root)",
+   "span": [
+    30,
+    31
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_run_locate",
+   "signature": "def _run_locate(root)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_vendors_the_engine_into_the_substrate",
+   "signature": "def test_init_vendors_the_engine_into_the_substrate(tmp_path)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The whole point: `python3 .harness/engine/bin/harness verify` with\n    the plugin absent.",
+   "kind": "function",
+   "name": "test_the_vendored_engine_runs_verify_by_itself",
+   "signature": "def test_the_vendored_engine_runs_verify_by_itself(tmp_path)",
+   "span": [
+    67,
+    68
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`.harness/` is substrate; the engine's own .py files must not become\n    shadows, registry gaps or G8 surface in the consumer repo.",
+   "kind": "function",
+   "name": "test_the_vendored_engine_is_not_extracted_as_project_source",
+   "signature": "def test_the_vendored_engine_is_not_extracted_as_project_source(tmp_path)",
+   "span": [
+    87,
+    88
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_workflow_prefers_the_vendored_engine",
+   "signature": "def test_workflow_prefers_the_vendored_engine(tmp_path)",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_workflow_failure_names_upgrade_as_the_fix",
+   "signature": "def test_workflow_failure_names_upgrade_as_the_fix(tmp_path)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "No step may clone or reference the plugin repo when the engine is\n    vendored: the clone is a fallback inside the locate step only.",
+   "kind": "function",
+   "name": "test_workflow_verify_step_does_not_need_the_plugin_repo",
+   "signature": "def test_workflow_verify_step_does_not_need_the_plugin_repo(tmp_path)",
+   "span": [
+    122,
+    123
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A repo scaffolded by an older plugin: no vendored engine, an old\n    workflow that only knows how to clone. One command fixes both.",
+   "kind": "function",
+   "name": "test_upgrade_brings_an_older_substrate_up_to_date",
+   "signature": "def test_upgrade_brings_an_older_substrate_up_to_date(tmp_path)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_upgrade_replaces_a_stale_vendored_engine_wholesale",
+   "signature": "def test_upgrade_replaces_a_stale_vendored_engine_wholesale(tmp_path)",
+   "span": [
+    162,
+    163
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_upgrade_never_overwrites_a_hand_authored_workflow",
+   "signature": "def test_upgrade_never_overwrites_a_hand_authored_workflow(tmp_path)",
+   "span": [
+    176,
+    177
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_upgrade_writes_the_workflow_when_it_is_missing",
+   "signature": "def test_upgrade_writes_the_workflow_when_it_is_missing(tmp_path)",
+   "span": [
+    189,
+    190
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_upgrade_runs_the_schema_migration_and_merge_drivers",
+   "signature": "def test_upgrade_runs_the_schema_migration_and_merge_drivers(tmp_path)",
+   "span": [
+    198,
+    199
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_upgrade_refuses_a_repo_without_a_substrate",
+   "signature": "def test_upgrade_refuses_a_repo_without_a_substrate(tmp_path)",
+   "span": [
+    208,
+    209
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_init_migrate_is_the_same_as_upgrade",
+   "signature": "def test_init_migrate_is_the_same_as_upgrade(tmp_path)",
+   "span": [
+    216,
+    217
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_doctor_flags_a_missing_or_stale_vendored_engine",
+   "signature": "def test_doctor_flags_a_missing_or_stale_vendored_engine(tmp_path)",
+   "span": [
+    226,
+    227
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "This repo carries the engine at its root; nothing to vendor.",
+   "kind": "function",
+   "name": "test_doctor_on_the_self_hosted_plugin_repo_is_not_stale",
+   "signature": "def test_doctor_on_the_self_hosted_plugin_repo_is_not_stale()",
+   "span": [
+    247,
+    248
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Test fixtures built without `init` must not start failing doctor.",
+   "kind": "function",
+   "name": "test_toy_repo_doctor_stays_healthy",
+   "signature": "def test_toy_repo_doctor_stays_healthy(tmp_path)",
+   "span": [
+    254,
+    255
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_readme_documents_vendoring_and_upgrade",
+   "signature": "def test_readme_documents_vendoring_and_upgrade()",
+   "span": [
+    262,
+    263
+   ],
+   "visibility": "public"
+  }
+ ]
+}

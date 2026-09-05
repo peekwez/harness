@@ -8,6 +8,7 @@
  "imports": [
   "engine",
   "engine.cli.common",
+  "engine.cli.init",
   "engine.cli.landing",
   "engine.events",
   "engine.gates.extra",
@@ -24,7 +25,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.verify",
- "source_hash": "sha256:6bc04759ec1a5c86727529af2f2c9f525a9ccd7bf161d82a80547b0ebdc44e1d",
+ "source_hash": "sha256:b5a39959754399a2978e70e33b6fd0bf24226472265b719aa81f5326250f28cc",
  "source_path": "engine/cli/verify.py",
  "symbols": [
   {
@@ -66,8 +67,8 @@
    "name": "_missing_notes",
    "signature": "def _missing_notes(root, backlog: dict) -> list",
    "span": [
-    115,
-    116
+    129,
+    130
    ],
    "visibility": "private"
   },
@@ -77,8 +78,8 @@
    "name": "_keys",
    "signature": "def _keys()",
    "span": [
-    144,
-    145
+    158,
+    159
    ],
    "visibility": "private"
   },
@@ -88,8 +89,8 @@
    "name": "cmd_verify",
    "signature": "def cmd_verify(args)",
    "span": [
-    156,
-    157
+    170,
+    171
    ],
    "visibility": "public"
   },
@@ -99,8 +100,8 @@
    "name": "_source_keys",
    "signature": "def _source_keys(): # one `git ls-tree` per commit: computed once, and only for a repo # that actually has a note to resolve",
    "span": [
-    270,
-    273
+    284,
+    287
    ],
    "visibility": "private"
   },
@@ -110,8 +111,8 @@
    "name": "_resolves",
    "signature": "def _resolves(slice_id)",
    "span": [
-    277,
-    278
+    291,
+    292
    ],
    "visibility": "private"
   }

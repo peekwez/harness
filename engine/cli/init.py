@@ -1,7 +1,9 @@
-"""`harness init` — scaffold (or migrate) a repo's substrate.
+"""`harness init` — scaffold (or migrate) a repo's substrate; `harness
+upgrade` — bring a substrate scaffolded by an older plugin up to this one.
 
-Also owns the autonomy profile writer: `init --autonomy` and `start` both
-pre-approve the slice loop's command surface through it.
+Also owns the autonomy profile writer (`init --autonomy` and `start` both
+pre-approve the slice loop's command surface through it) and the engine
+vendoring that makes the scaffolded CI workflow self-contained.
 """
 from __future__ import annotations
 
@@ -10,9 +12,18 @@ import shutil
 import sys
 from pathlib import Path
 
-from engine import SCHEMA_VERSION
+from engine import ENGINE_VERSION, SCHEMA_VERSION, HarnessError
 from engine.cli.common import (PLUGIN_ROOT, _dep_status, _install_merge_drivers,
                                _print)
+
+# where `init` vendors the engine inside the substrate: the scaffolded CI
+# workflow runs this copy, so a consumer repo verifies with nothing but its
+# own tree (no clone of the plugin repo, no HARNESS_REPO variable)
+VENDOR_DIR = Path(".harness") / "engine"
+WORKFLOW_PATH = Path(".github") / "workflows" / "harness-verify.yml"
+# first line of the scaffolded workflow: the marker that says "harness wrote
+# this" and therefore that `upgrade` may refresh it
+WORKFLOW_MARKER = "# harness verify — CI enforcement"
 
 
 # ------------------------------------------------------------------ init
@@ -49,10 +60,9 @@ def cmd_init(args):
               f"substrate without --migrate", file=sys.stderr)
         return 1
     if hdir.exists() and args.migrate:
-        from engine.migrate import migrate
-        _install_merge_drivers(root)  # existing substrates pick up W5 drivers
-        _print(migrate(root))
-        return 0
+        # `init --migrate` is the historical upgrade entry point; it does
+        # exactly what `upgrade` does
+        return cmd_upgrade(args)
 
     hdir.mkdir(parents=True)
     (hdir / "memory" / "session").mkdir(parents=True)
@@ -94,9 +104,8 @@ def cmd_init(args):
     (root / "contracts").mkdir(exist_ok=True)
     if not any((root / "contracts").glob("*.yaml")):
         shutil.copy(templates / "contract.stub.yaml", root / "contracts" / "api.yaml")
-    wf = root / ".github" / "workflows"
-    wf.mkdir(parents=True, exist_ok=True)
-    shutil.copy(templates / "ci-verify.yml", wf / "harness-verify.yml")
+    _write_workflow(root)
+    _vendor_engine(root)
 
     gi = root / ".gitignore"
     lines = gi.read_text().splitlines() if gi.exists() else []
@@ -172,6 +181,161 @@ def cmd_init(args):
     print(f"substrate scaffolded at {hdir} (schema {SCHEMA_VERSION}); "
           f"languages: {sorted(k for k, v in detected.items() if v)}")
     print(PROVENANCE_RULE)
+    return 0
+
+
+# ------------------------------------------------------------------ vendor
+def _vendor_engine(root) -> dict:
+    """Copy the engine (`bin/harness` + `engine/`) into `.harness/engine/`.
+
+    The scaffolded workflow runs `.harness/engine/bin/harness verify`, so CI
+    needs nothing from the plugin repo — no clone, no `HARNESS_REPO`
+    variable, no token for a private engine repo. The copy is replaced
+    wholesale (never merged) so a module the plugin deleted cannot linger,
+    and never carries caches. `.harness/` is an ignored dir for extraction,
+    so the vendored .py files are not project source to the consumer's own
+    gates.
+
+    Args:
+        root: Substrate root.
+
+    Returns:
+        `{"path", "version", "action", "from"}` — action is `installed`,
+        `refreshed` (was another version, or damaged) or `unchanged`.
+    """
+    target = root / VENDOR_DIR
+    version_file = target / "VERSION"
+    previous = (version_file.read_text().strip()
+                if version_file.exists() else None)
+    if previous == ENGINE_VERSION and _vendored_matches(target):
+        return {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
+                "action": "unchanged", "from": previous}
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
+    shutil.copytree(PLUGIN_ROOT / "engine", target / "engine", ignore=ignore)
+    (target / "bin").mkdir()
+    shutil.copy(PLUGIN_ROOT / "bin" / "harness", target / "bin" / "harness")
+    (target / "bin" / "harness").chmod(0o755)
+    version_file.write_text(f"{ENGINE_VERSION}\n")
+    (target / "README.md").write_text(
+        "# vendored harness engine\n\nDerived: written by `harness init` / "
+        "`harness upgrade`, run by `.github/workflows/harness-verify.yml`. "
+        "Never hand-edit; `harness upgrade` replaces it wholesale after a "
+        "plugin upgrade.\n")
+    return {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
+            "action": "installed" if previous is None else "refreshed",
+            "from": previous}
+
+
+def _vendored_matches(target) -> bool:
+    """True when every engine file in the plugin has an identical vendored
+    copy and nothing extra sits in the vendored tree (a stale module the
+    plugin deleted, a hand edit). Caches are ignored on both sides."""
+    from engine import sha256_file
+
+    def _files(base):
+        out = {}
+        for p in base.rglob("*"):
+            if p.is_dir() or "__pycache__" in p.parts or p.suffix == ".pyc":
+                continue
+            out[p.relative_to(base)] = sha256_file(p)
+        return out
+
+    if not (target / "bin" / "harness").exists():
+        return False
+    if sha256_file(target / "bin" / "harness") != \
+            sha256_file(PLUGIN_ROOT / "bin" / "harness"):
+        return False
+    return _files(PLUGIN_ROOT / "engine") == _files(target / "engine")
+
+
+def vendored_engine_status(root) -> dict:
+    """What `doctor --substrate` reports about the vendored engine.
+
+    Args:
+        root: Substrate root.
+
+    Returns:
+        `{"status", "version", "engine_version", "path"}` with status one of
+        `self-hosted` (this is the plugin repo: the engine lives at its
+        root), `current`, `stale` (another version, or drifted) or
+        `missing` (scaffolded by a plugin that predates vendoring).
+    """
+    root = Path(root).resolve()
+    target = root / VENDOR_DIR
+    report = {"path": str(VENDOR_DIR), "engine_version": ENGINE_VERSION,
+              "version": None}
+    if root == PLUGIN_ROOT:
+        report["status"] = "self-hosted"
+        return report
+    version_file = target / "VERSION"
+    if not version_file.exists():
+        report["status"] = "missing"
+        return report
+    report["version"] = version_file.read_text().strip()
+    ok = report["version"] == ENGINE_VERSION and _vendored_matches(target)
+    report["status"] = "current" if ok else "stale"
+    return report
+
+
+def _write_workflow(root) -> dict:
+    """Scaffold or refresh the CI workflow; never clobber a hand-authored one.
+
+    Args:
+        root: Substrate root.
+
+    Returns:
+        `{"path", "action"}` with action `written` (absent before),
+        `refreshed` (harness-generated and out of date), `unchanged`, or
+        `kept` (not harness-generated; a `note` names what to add by hand).
+    """
+    template = (PLUGIN_ROOT / "templates" / "ci-verify.yml").read_text()
+    target = root / WORKFLOW_PATH
+    report = {"path": str(WORKFLOW_PATH)}
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(template)
+        report["action"] = "written"
+        return report
+    current = target.read_text()
+    if current == template:
+        report["action"] = "unchanged"
+        return report
+    if not current.startswith(WORKFLOW_MARKER):
+        report["action"] = "kept"
+        report["note"] = (
+            f"{WORKFLOW_PATH} is not the harness-generated workflow, so it "
+            f"was not touched. Make its engine step run "
+            f"`python3 .harness/engine/bin/harness verify` (the vendored "
+            f"engine) — see templates/ci-verify.yml for the reference step.")
+        return report
+    target.write_text(template)
+    report["action"] = "refreshed"
+    return report
+
+
+def cmd_upgrade(args):
+    """Bring a substrate scaffolded by an older plugin up to the installed
+    one: schema migration, merge drivers, the vendored engine and the CI
+    workflow. Idempotent; hand-authored files are never touched."""
+    from engine.migrate import migrate
+    root = Path(args.root or os.getcwd()).resolve()
+    if not (root / ".harness").exists():
+        raise HarnessError(
+            f"{root / '.harness'} does not exist — nothing to upgrade; run "
+            f"`harness init` to scaffold a substrate first")
+    _install_merge_drivers(root)  # existing substrates pick up W5 drivers
+    report = {"schema": migrate(root),
+              "vendored_engine": _vendor_engine(root),
+              "workflow": _write_workflow(root),
+              "engine_version": ENGINE_VERSION}
+    profile = root / ".claude" / "settings.json"
+    if profile.exists() and "harness autonomy profile" in profile.read_text():
+        # our own profile: refresh it so new pre-approved shapes land too
+        report["autonomy_profile"] = _write_autonomy_settings(root, quiet=True)
+    _print(report)
     return 0
 
 
