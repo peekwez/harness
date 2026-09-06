@@ -8,7 +8,7 @@
  "imports": [],
  "language": "yaml",
  "module_id": "templates.ci-verify",
- "source_hash": "sha256:fe890769f23f1064dc612ca4e5d72f16456138fd9601214003012e8b561b5456",
+ "source_hash": "sha256:cb5906c0c665f3d43826d7154ecda1c90bc45994150092cf4abe9b9711f3ea35",
  "source_path": "templates/ci-verify.yml",
  "symbols": [
   {
@@ -39,8 +39,8 @@
    "name": "jobs",
    "signature": "jobs",
    "span": [
-    57,
-    57
+    74,
+    74
    ],
    "visibility": "public"
   }

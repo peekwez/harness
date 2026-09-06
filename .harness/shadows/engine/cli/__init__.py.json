@@ -7,6 +7,7 @@
  "imports": [
   "argparse",
   "engine",
+  "engine.cli.acceptance",
   "engine.cli.author",
   "engine.cli.close",
   "engine.cli.init",
@@ -21,7 +22,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli",
- "source_hash": "sha256:f4554a8e96bfb0852beb3b90e2016d3065b276ee1d58047f6f22d6185bb196e3",
+ "source_hash": "sha256:4901c852935e2f863e35d4f88fa67161d1148fd51cf47e293f73bda820388a2b",
  "source_path": "engine/cli/__init__.py",
  "symbols": [
   {
@@ -30,8 +31,8 @@
    "name": "main",
    "signature": "def main(argv=None)",
    "span": [
-    49,
-    50
+    51,
+    52
    ],
    "visibility": "public"
   }

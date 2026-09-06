@@ -24,7 +24,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.author",
- "source_hash": "sha256:e523213054220f365ff5ccb4bc704904b9036e498d9471b4b7b76d5c5bb7b8c0",
+ "source_hash": "sha256:50a059dbbf792864cdee68f0b202ae2b12b73002713510567e83da575d13891a",
  "source_path": "engine/cli/author.py",
  "symbols": [
   {
@@ -132,8 +132,8 @@
    "name": "cmd_slice",
    "signature": "def cmd_slice(args)",
    "span": [
-    247,
-    248
+    274,
+    275
    ],
    "visibility": "public"
   }

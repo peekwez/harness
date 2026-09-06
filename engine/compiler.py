@@ -161,6 +161,16 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
         adr_id = str(fm["id"])
         adr_ref = f"adr/{adr.name}"
         report["adrs"].append(adr_ref)
+        status = str(fm.get("status", "")).lower()
+        if status in ("proposed", "draft") and fm.get("decision_table_rows"):
+            # rows bind on compile whatever the status says; a proposed ADR
+            # whose rows already enforce is a contradiction worth a warning,
+            # not a silent behaviour change (proposed rows belong in prose
+            # until the ADR is accepted)
+            report["warnings"].append(
+                f"{adr_ref}: status is {status!r} but its decision_table_rows "
+                f"bind on compile — set status: accepted, or keep proposed "
+                f"rows in prose until the ADR is accepted")
 
         # frontmatter decision_table_rows -> decisions.jsonl
         for row in fm.get("decision_table_rows", []) or []:
