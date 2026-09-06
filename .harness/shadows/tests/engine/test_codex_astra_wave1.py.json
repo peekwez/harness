@@ -1,0 +1,399 @@
+{
+ "exports": [
+  "test_a_missing_declaration_does_not_go_green_on_another_slices_test",
+  "test_a_missing_literal_is_a_named_problem_not_a_silent_drop",
+  "test_adjudicate_refuses_an_existing_decision_id_before_writing",
+  "test_adjudicate_with_a_fresh_id_still_writes_the_row",
+  "test_an_unmatched_glob_is_a_named_problem",
+  "test_backlog_output_carries_the_breakdown",
+  "test_ci_template_offers_closed_acceptance_opt_in",
+  "test_cli_execution_failure_is_exit_1_with_the_tail",
+  "test_cli_execution_runs_the_same_paths_the_selector_lists",
+  "test_cli_list_mode_never_executes",
+  "test_cli_list_reports_problems_with_exit_1",
+  "test_cli_spawn_failure_is_a_result_not_a_traceback",
+  "test_compile_warns_when_a_proposed_adr_carries_binding_rows",
+  "test_disabled_runner_is_reported_as_disabled_not_run",
+  "test_estimate_and_resolver_share_one_guidance_layer",
+  "test_estimate_is_deterministic",
+  "test_honestly_empty_declarations_are_not_a_problem",
+  "test_missing_anchor_is_a_reported_fallback_with_its_cost",
+  "test_missing_guidance_file_is_reported_by_the_estimate",
+  "test_readme_documents_the_new_surface",
+  "test_repeated_anchor_counted_once_distinct_anchors_kept",
+  "test_selector_names_owners_and_dedupes",
+  "test_split_never_rewrites_a_bound_or_parked_slice",
+  "test_split_never_rewrites_a_closed_slice",
+  "test_split_of_a_free_planned_slice_still_works",
+  "test_split_refuses_a_parent_other_slices_depend_on",
+  "test_the_lifecycle_adr_is_proposed_and_binds_nothing"
+ ],
+ "extractor_version": 3,
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.cli.acceptance",
+  "engine.compiler",
+  "engine.resolver",
+  "json",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_codex_astra_wave1",
+ "source_hash": "sha256:a01ff1f1d42cc499da31725f19b829ab5e2117875a0fe25a1c88ea889d34caee",
+ "source_path": "tests/engine/test_codex_astra_wave1.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_backlog",
+   "signature": "def _backlog(root)",
+   "span": [
+    23,
+    24
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_set_backlog",
+   "signature": "def _set_backlog(root, rows)",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_set_acceptance",
+   "signature": "def _set_acceptance(root, **keys)",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_closed",
+   "signature": "def _closed(sid, acceptance, **extra)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_split_never_rewrites_a_closed_slice",
+   "signature": "def test_split_never_rewrites_a_closed_slice(tmp_path)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_split_never_rewrites_a_bound_or_parked_slice",
+   "signature": "def test_split_never_rewrites_a_bound_or_parked_slice(tmp_path)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Replacing slice-042 with -a/-b would leave slice-043's depends_on\n    pointing at a row that no longer exists.",
+   "kind": "function",
+   "name": "test_split_refuses_a_parent_other_slices_depend_on",
+   "signature": "def test_split_refuses_a_parent_other_slices_depend_on(tmp_path)",
+   "span": [
+    72,
+    73
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_split_of_a_free_planned_slice_still_works",
+   "signature": "def test_split_of_a_free_planned_slice_still_works(tmp_path)",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_park_one",
+   "signature": "def _park_one(toy)",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_adjudicate_refuses_an_existing_decision_id_before_writing",
+   "signature": "def test_adjudicate_refuses_an_existing_decision_id_before_writing(toy)",
+   "span": [
+    109,
+    110
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_adjudicate_with_a_fresh_id_still_writes_the_row",
+   "signature": "def test_adjudicate_with_a_fresh_id_still_writes_the_row(toy)",
+   "span": [
+    125,
+    126
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_selector_names_owners_and_dedupes",
+   "signature": "def test_selector_names_owners_and_dedupes(toy)",
+   "span": [
+    135,
+    136
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_a_missing_literal_is_a_named_problem_not_a_silent_drop",
+   "signature": "def test_a_missing_literal_is_a_named_problem_not_a_silent_drop(toy)",
+   "span": [
+    155,
+    156
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_an_unmatched_glob_is_a_named_problem",
+   "signature": "def test_an_unmatched_glob_is_a_named_problem(toy)",
+   "span": [
+    169,
+    170
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Another closed slice having a valid suite must not mask the hole.",
+   "kind": "function",
+   "name": "test_a_missing_declaration_does_not_go_green_on_another_slices_test",
+   "signature": "def test_a_missing_declaration_does_not_go_green_on_another_slices_test(toy)",
+   "span": [
+    179,
+    180
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_honestly_empty_declarations_are_not_a_problem",
+   "signature": "def test_honestly_empty_declarations_are_not_a_problem(toy)",
+   "span": [
+    192,
+    193
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_disabled_runner_is_reported_as_disabled_not_run",
+   "signature": "def test_disabled_runner_is_reported_as_disabled_not_run(toy)",
+   "span": [
+    203,
+    204
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_list_mode_never_executes",
+   "signature": "def test_cli_list_mode_never_executes(toy)",
+   "span": [
+    220,
+    221
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_execution_runs_the_same_paths_the_selector_lists",
+   "signature": "def test_cli_execution_runs_the_same_paths_the_selector_lists(toy)",
+   "span": [
+    234,
+    235
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_list_reports_problems_with_exit_1",
+   "signature": "def test_cli_list_reports_problems_with_exit_1(toy)",
+   "span": [
+    253,
+    254
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_execution_failure_is_exit_1_with_the_tail",
+   "signature": "def test_cli_execution_failure_is_exit_1_with_the_tail(toy)",
+   "span": [
+    262,
+    263
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_spawn_failure_is_a_result_not_a_traceback",
+   "signature": "def test_cli_spawn_failure_is_a_result_not_a_traceback(toy)",
+   "span": [
+    273,
+    274
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_ci_template_offers_closed_acceptance_opt_in",
+   "signature": "def test_ci_template_offers_closed_acceptance_opt_in()",
+   "span": [
+    283,
+    284
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The number `backlog` writes is the number `resolve` needs for the\n    declared deps' shadows + guidance \u2014 same supersession, same anchors.",
+   "kind": "function",
+   "name": "test_estimate_and_resolver_share_one_guidance_layer",
+   "signature": "def test_estimate_and_resolver_share_one_guidance_layer(toy)",
+   "span": [
+    300,
+    301
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_repeated_anchor_counted_once_distinct_anchors_kept",
+   "signature": "def test_repeated_anchor_counted_once_distinct_anchors_kept(toy)",
+   "span": [
+    319,
+    320
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_anchor_is_a_reported_fallback_with_its_cost",
+   "signature": "def test_missing_anchor_is_a_reported_fallback_with_its_cost(toy)",
+   "span": [
+    347,
+    348
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_missing_guidance_file_is_reported_by_the_estimate",
+   "signature": "def test_missing_guidance_file_is_reported_by_the_estimate(toy)",
+   "span": [
+    381,
+    382
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_backlog_output_carries_the_breakdown",
+   "signature": "def test_backlog_output_carries_the_breakdown(toy)",
+   "span": [
+    393,
+    394
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_estimate_is_deterministic",
+   "signature": "def test_estimate_is_deterministic(toy)",
+   "span": [
+    401,
+    402
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compile_warns_when_a_proposed_adr_carries_binding_rows",
+   "signature": "def test_compile_warns_when_a_proposed_adr_carries_binding_rows(toy)",
+   "span": [
+    410,
+    411
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "ADR-003 gates E2/E3/E4/E5-cancel: its rows live in prose until\n    accepted, so compiling this repo adds no decision row from it.",
+   "kind": "function",
+   "name": "test_the_lifecycle_adr_is_proposed_and_binds_nothing",
+   "signature": "def test_the_lifecycle_adr_is_proposed_and_binds_nothing()",
+   "span": [
+    425,
+    426
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_readme_documents_the_new_surface",
+   "signature": "def test_readme_documents_the_new_surface()",
+   "span": [
+    438,
+    439
+   ],
+   "visibility": "public"
+  }
+ ]
+}

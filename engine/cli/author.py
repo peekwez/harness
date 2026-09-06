@@ -207,21 +207,46 @@ def _backlog_add(args):
 def cmd_backlog(args):
     if getattr(args, "backlog_cmd", None) == "add":
         return _backlog_add(args)
-    from engine.resolver import context_cost_estimate
+    from engine.resolver import context_cost_breakdown
     root = _root(args)
     config = load_config(root)
     budget = int(config["resolver"]["budget_tokens"])
     limit = budget * 0.8
     rows = load_backlog(root)
-    out, split = [], []
+    # who depends on whom: replacing a parent with -a/-b would leave every
+    # dependent's `depends_on` pointing at a row that no longer exists
+    dependents: dict = {}
+    for r in rows:
+        for d in r.get("depends_on") or []:
+            dependents.setdefault(d, []).append(r["id"])
+    out, split, refused, estimates = [], [], [], {}
     for s in rows:
         # acceptance paths are implicitly predicted: every slice writes its
         # own acceptance test — declaring it twice is ceremony, not discipline
         s["predicted_files"] = list(dict.fromkeys(
             s.get("predicted_files", []) + s.get("acceptance", [])))
-        est = context_cost_estimate(root, s.get("declares_dep", []), config)
+        breakdown = context_cost_breakdown(root, s.get("declares_dep", []),
+                                           config)
+        est = breakdown["total"]
         s["context_cost_estimate"] = est
-        if est > limit and len(s.get("declares_dep", [])) > 1 and args.split:
+        estimates[s["id"]] = breakdown
+        oversized = est > limit and len(s.get("declares_dep", [])) > 1
+        if oversized and args.split and s.get("status") != "planned":
+            # closed work is provenance, bound/parked work is someone's
+            # context: neither is rewritten opportunistically
+            refused.append({"id": s["id"],
+                            "reason": f"status {s.get('status')}: only "
+                                      f"planned slices are split"})
+            out.append(s)
+        elif oversized and args.split and dependents.get(s["id"]):
+            refused.append({"id": s["id"],
+                            "reason": f"depended on by "
+                                      f"{sorted(dependents[s['id']])}: "
+                                      f"splitting would dangle their "
+                                      f"depends_on — split by hand and "
+                                      f"repoint them"})
+            out.append(s)
+        elif oversized and args.split:
             deps = s["declares_dep"]
             mid = max(1, len(deps) // 2)
             for suffix, part in (("a", deps[:mid]), ("b", deps[mid:])):
@@ -229,7 +254,8 @@ def cmd_backlog(args):
                 child["id"] = f"{s['id']}-{suffix}"
                 child["title"] = f"{s.get('title', s['id'])} ({suffix})"
                 child["declares_dep"] = part
-                child["context_cost_estimate"] = context_cost_estimate(root, part, config)
+                child["context_cost_estimate"] = context_cost_breakdown(
+                    root, part, config)["total"]
                 if suffix == "b":
                     child["depends_on"] = list(dict.fromkeys(
                         (s.get("depends_on") or []) + [f"{s['id']}-a"]))
@@ -239,6 +265,7 @@ def cmd_backlog(args):
             out.append(s)
     write_jsonl(harness_dir(root) / "backlog.jsonl", out)
     _print({"slices": [s["id"] for s in out], "split": split,
+            "split_refused": refused, "estimates": estimates,
             "budget": budget, "limit": limit})
     return 0
 

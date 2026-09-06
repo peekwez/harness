@@ -1,5 +1,7 @@
 {
  "exports": [
+  "closed_acceptance",
+  "cmd_acceptance",
   "gate_configured",
   "gate_finding",
   "run_acceptance",
@@ -14,11 +16,12 @@
   "os",
   "pathlib",
   "shlex",
-  "subprocess"
+  "subprocess",
+  "sys"
  ],
  "language": "python",
  "module_id": "engine.cli.acceptance",
- "source_hash": "sha256:2503796c28b9926fb74f075585b69cae249f54607f864145b1c009885fb02b10",
+ "source_hash": "sha256:bdd94b23c03574f23aa0f0a1ce415aef066b5af4652a500291885a4fd6a768b0",
  "source_path": "engine/cli/acceptance.py",
  "symbols": [
   {
@@ -27,8 +30,8 @@
    "name": "_acceptance_block",
    "signature": "def _acceptance_block(config) -> dict",
    "span": [
-    32,
-    33
+    33,
+    34
    ],
    "visibility": "private"
   },
@@ -38,8 +41,8 @@
    "name": "_acceptance_cmd",
    "signature": "def _acceptance_cmd(config, paths, interpreter) -> list[str]",
    "span": [
-    54,
-    55
+    55,
+    56
    ],
    "visibility": "private"
   },
@@ -49,8 +52,8 @@
    "name": "_acceptance_cwd",
    "signature": "def _acceptance_cwd(root, config) -> str",
    "span": [
-    79,
-    80
+    80,
+    81
    ],
    "visibility": "private"
   },
@@ -60,8 +63,8 @@
    "name": "_acceptance_env",
    "signature": "def _acceptance_env(root, config, base=None) -> dict",
    "span": [
-    109,
-    110
+    110,
+    111
    ],
    "visibility": "private"
   },
@@ -71,8 +74,8 @@
    "name": "_run",
    "signature": "def _run(argv, root, config, env=None)",
    "span": [
-    143,
-    144
+    144,
+    145
    ],
    "visibility": "private"
   },
@@ -82,8 +85,8 @@
    "name": "_expand",
    "signature": "def _expand(root, patterns)",
    "span": [
-    166,
-    167
+    167,
+    168
    ],
    "visibility": "private"
   },
@@ -93,19 +96,41 @@
    "name": "run_acceptance",
    "signature": "def run_acceptance(root, sl, config)",
    "span": [
-    186,
-    187
+    187,
+    188
    ],
    "visibility": "public"
   },
   {
-   "doc": "(ok, detail): every CLOSED slice's acceptance paths, one run.\n\n    Shared by close (pre-close, in the slice tree) and `merge-slice`\n    (post-merge, with rollback) \u2014 the merged tree is what ships.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n        exclude: Slice id to leave out (the one being closed).\n        interpreter: Python for the default command; discovered if omitted.\n        env: Prepared environment; built from config if omitted.\n\n    Returns:\n        A `(ok, detail)` pair.",
+   "doc": "The one selector of closed-slice acceptance paths (Codex Astra E1).\n\n    Close, merge and `harness acceptance --closed` all read this, so the\n    three can never disagree about what the cumulative suite is. A declared\n    suite that no longer exists is a PROBLEM naming the slice and pattern \u2014\n    never a silent drop: a deleted historical acceptance file must not\n    quietly leave regression coverage, and retirement is an explicit\n    backlog change, never inferred from file absence.\n\n    Args:\n        root: Repo root.\n        exclude: Slice id to leave out (the one being closed).\n\n    Returns:\n        `{\"paths\", \"owners\", \"problems\", \"empty\"}`: sorted deduplicated\n        repo-relative paths; `owners` maps each path to the closed slices\n        declaring it; `problems` is a list of `{slice, pattern, reason}`\n        (`missing file` / `glob matches nothing`); `empty` lists closed\n        slices whose declaration is honestly empty.",
+   "kind": "function",
+   "name": "closed_acceptance",
+   "signature": "def closed_acceptance(root, exclude=None) -> dict",
+   "span": [
+    227,
+    228
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "(ok, detail): every CLOSED slice's acceptance paths, one run.\n\n    Shared by close (pre-close, in the slice tree), `merge-slice`\n    (post-merge, with rollback) and `harness acceptance --closed` \u2014 the\n    merged tree is what ships. A declared suite that disappeared is red,\n    naming the slice and pattern (E1). Honours `gates.acceptance_runner:\n    none` the way the per-slice runner does: reported as disabled, not\n    executed-and-passed.\n\n    Args:\n        root: Repo root.\n        config: The merged engine config.\n        exclude: Slice id to leave out (the one being closed).\n        interpreter: Python for the default command; discovered if omitted.\n        env: Prepared environment; built from config if omitted.\n\n    Returns:\n        A `(ok, detail)` pair.",
    "kind": "function",
    "name": "run_regression",
    "signature": "def run_regression(root, config, exclude=None, interpreter=None, env=None)",
    "span": [
-    226,
-    227
+    277,
+    278
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "`harness acceptance --closed [--list] [--exclude <slice>]` \u2014 the public\n    entry point for the cumulative closed-slice suite (E1). `--list` reports\n    the selection without executing anything or touching project state;\n    without it the suite runs through the configured runner. Consumers\n    provision their environment first: `verify` never runs this.",
+   "kind": "function",
+   "name": "cmd_acceptance",
+   "signature": "def cmd_acceptance(args)",
+   "span": [
+    323,
+    324
    ],
    "visibility": "public"
   },
@@ -115,8 +140,8 @@
    "name": "run_gate_cmd",
    "signature": "def run_gate_cmd(root, config)",
    "span": [
-    267,
-    268
+    354,
+    355
    ],
    "visibility": "public"
   },
@@ -126,8 +151,8 @@
    "name": "gate_configured",
    "signature": "def gate_configured(config) -> bool",
    "span": [
-    286,
-    287
+    373,
+    374
    ],
    "visibility": "public"
   },
@@ -137,8 +162,8 @@
    "name": "gate_finding",
    "signature": "def gate_finding(root, config)",
    "span": [
-    299,
-    300
+    386,
+    387
    ],
    "visibility": "public"
   }

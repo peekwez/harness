@@ -138,6 +138,18 @@ def cmd_adjudicate(args):
     if args.decision_id:
         from engine import load_decisions
         rows = load_decisions(root)
+        clash = next((r for r in rows if r.get("id") == args.decision_id), None)
+        if clash is not None:
+            # validated BEFORE any write: no row, no edge, the park stays
+            # queued. Revising or superseding an existing row is the
+            # decision-lifecycle work proposed in ADR-003, not an adjudication.
+            where = clash.get("adr_ref") or f"origin {clash.get('origin')}"
+            print(f"error: decision {args.decision_id!r} already exists "
+                  f"({where}: {str(clash.get('question', ''))[:80]!r}) — "
+                  f"pick a new id for this adjudication; an existing row is "
+                  f"never overwritten (revision/supersession: ADR-003)",
+                  file=sys.stderr)
+            return 2
         rows.append({"id": args.decision_id, "domain": args.domain,
                      "question": target["finding"]["message"][:200],
                      "answer": args.resolution,

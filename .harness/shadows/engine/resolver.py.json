@@ -1,5 +1,6 @@
 {
  "exports": [
+  "context_cost_breakdown",
   "context_cost_estimate",
   "render_shadow",
   "resolve"
@@ -15,7 +16,7 @@
  ],
  "language": "python",
  "module_id": "engine.resolver",
- "source_hash": "sha256:cf05c39f650ac15f68f1d0848c158cc615f3df9ca6e167436a408f0ed4262ec9",
+ "source_hash": "sha256:db85c2bfe2a3d06e41982f666bb44cc1863c0d2c857e1f388afe50f852440b2e",
  "source_path": "engine/resolver.py",
  "symbols": [
   {
@@ -63,13 +64,24 @@
    "visibility": "private"
   },
   {
-   "doc": "Guidance refs for planned entries; for built entries only the sections\n    NOT listed in supersedes_guidance survive (the shadow replaces the rest).\n    Refs into superseded ADRs are skipped and reported in `dropped`.\n    `loaded_adr_files` collects the ADR file paths that made it in \u2014 decision\n    rows authored by those ADRs join the curated decisions block.",
+   "doc": "The ONE place guidance refs become context candidates (E6).\n\n    Both the resolver (what gets injected) and the backlog estimate (what a\n    slice will cost) read this, so they apply the same supersession\n    filtering, anchor extraction and per-entry dedup, and cannot disagree.\n\n    Planned entries contribute every ref; built entries only the sections\n    NOT listed in `supersedes_guidance` (the shadow replaces the rest). Refs\n    into superseded ADRs are skipped and reported in `dropped`. A ref whose\n    anchor is not found in the file falls back to the WHOLE file \u2014 reported\n    in `dropped` as `anchor-missing`, with its full cost, never silently.\n\n    Args:\n        root: Substrate root.\n        entry: Registry entry.\n        superseded: The entry's own `supersedes_guidance` set.\n        dropped: Optional list collecting `{kind, ids, reason}` diagnostics.\n        loaded_adr_files: Optional set collecting ADR file paths that made\n            it in \u2014 decision rows authored by those ADRs join the decisions\n            block.\n        missing_refs: Optional list; when given, a ref to a missing file is\n            appended there instead of raising (the estimate reports, the\n            resolver fails closed).\n        superseded_out: Optional list collecting the refs skipped as\n            superseded (either by the entry or by ADR status).\n\n    Returns:\n        Candidates `{ref, key, block, anchor_missing}` in ref order, one per\n        distinct `(file, anchor)` key. `block` is the rendered injection.",
+   "kind": "function",
+   "name": "_guidance_candidates",
+   "signature": "def _guidance_candidates(root, entry, superseded: set, dropped=None, loaded_adr_files=None, missing_refs=None, superseded_out=None) -> list",
+   "span": [
+    91,
+    94
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "`(gid, block, key)` triples for the resolver, via the shared candidate\n    layer; `key` lets the caller dedupe one section referenced by several\n    declared deps.",
    "kind": "function",
    "name": "_render_guidance",
    "signature": "def _render_guidance(root, entry, superseded: set, dropped=None, loaded_adr_files=None) -> list",
    "span": [
-    91,
-    93
+    177,
+    179
    ],
    "visibility": "private"
   },
@@ -79,8 +91,8 @@
    "name": "_ref_superseded",
    "signature": "def _ref_superseded(ref: str, superseded: set) -> bool",
    "span": [
-    129,
-    130
+    188,
+    189
    ],
    "visibility": "private"
   },
@@ -90,8 +102,8 @@
    "name": "_extract_section",
    "signature": "def _extract_section(text: str, anchor: str)",
    "span": [
-    141,
-    142
+    200,
+    201
    ],
    "visibility": "private"
   },
@@ -101,8 +113,8 @@
    "name": "_durable_memories",
    "signature": "def _durable_memories(root, module_ids: set) -> list",
    "span": [
-    150,
-    151
+    209,
+    210
    ],
    "visibility": "private"
   },
@@ -112,19 +124,30 @@
    "name": "resolve",
    "signature": "def resolve(root, slice_id: str, config: dict) -> dict",
    "span": [
-    162,
-    163
+    221,
+    222
    ],
    "visibility": "public"
   },
   {
-   "doc": "Backlog-time cost: declared deps -> shadow/guidance sizes through the\n    resolver's own budget logic (spec \u00a75.6).",
+   "doc": "Backlog-time cost of a slice's declared deps, itemised (spec \u00a75.6, E6).\n\n    Built through the same candidate layer the resolver injects from, so\n    the total equals the resolver's `declared_demand` for the same deps:\n    same supersession filtering, same anchor extraction, one count per\n    distinct section across all deps. The estimate never applies the\n    budget \u2014 it is the unbounded demand the budget is compared against.\n\n    Args:\n        root: Substrate root.\n        declares_dep: The slice's declared registry ids.\n        config: The merged engine config (unused today; kept for the\n            resolver's signature symmetry).\n\n    Returns:\n        `{\"total\", \"shadows\", \"guidance\", \"guidance_refs\", \"anchor_fallbacks\",\n        \"missing_refs\", \"superseded\", \"unknown_deps\"}` \u2014 tokens for the\n        first three; the rest are the refs counted, the refs that fell back\n        to a whole file, the refs whose file is missing (cost 0 here; the\n        resolver fails closed on them), the refs skipped as superseded, and\n        declared ids absent from the registry.",
+   "kind": "function",
+   "name": "context_cost_breakdown",
+   "signature": "def context_cost_breakdown(root, declares_dep: list, config: dict) -> dict",
+   "span": [
+    354,
+    355
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Backlog-time cost: the `total` of `context_cost_breakdown`.",
    "kind": "function",
    "name": "context_cost_estimate",
    "signature": "def context_cost_estimate(root, declares_dep: list, config: dict) -> int",
    "span": [
-    281,
-    282
+    407,
+    408
    ],
    "visibility": "public"
   }

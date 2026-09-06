@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 from engine import HarnessError, load_backlog
@@ -223,11 +224,65 @@ def run_acceptance(root, sl, config):
     return True, "\n".join(tail)
 
 
+def closed_acceptance(root, exclude=None) -> dict:
+    """The one selector of closed-slice acceptance paths (Codex Astra E1).
+
+    Close, merge and `harness acceptance --closed` all read this, so the
+    three can never disagree about what the cumulative suite is. A declared
+    suite that no longer exists is a PROBLEM naming the slice and pattern —
+    never a silent drop: a deleted historical acceptance file must not
+    quietly leave regression coverage, and retirement is an explicit
+    backlog change, never inferred from file absence.
+
+    Args:
+        root: Repo root.
+        exclude: Slice id to leave out (the one being closed).
+
+    Returns:
+        `{"paths", "owners", "problems", "empty"}`: sorted deduplicated
+        repo-relative paths; `owners` maps each path to the closed slices
+        declaring it; `problems` is a list of `{slice, pattern, reason}`
+        (`missing file` / `glob matches nothing`); `empty` lists closed
+        slices whose declaration is honestly empty.
+    """
+    owners: dict = {}
+    problems, empty = [], []
+    for s in load_backlog(root):
+        sid = s.get("id")
+        if s.get("status") != "closed" or sid == exclude:
+            continue
+        declared = s.get("acceptance", []) or []
+        if not declared:
+            empty.append(sid)
+            continue
+        for pat in declared:
+            if "*" in pat:
+                matches = sorted(str(p.relative_to(root))
+                                 for p in Path(root).glob(pat))
+                if not matches:
+                    problems.append({"slice": sid, "pattern": pat,
+                                     "reason": "glob matches nothing"})
+                for m in matches:
+                    owners.setdefault(m, set()).add(sid)
+            elif (Path(root) / pat).exists():
+                owners.setdefault(pat, set()).add(sid)
+            else:
+                problems.append({"slice": sid, "pattern": pat,
+                                 "reason": "missing file"})
+    return {"paths": sorted(owners),
+            "owners": {p: sorted(owners[p]) for p in sorted(owners)},
+            "problems": problems, "empty": empty}
+
+
 def run_regression(root, config, exclude=None, interpreter=None, env=None):
     """(ok, detail): every CLOSED slice's acceptance paths, one run.
 
-    Shared by close (pre-close, in the slice tree) and `merge-slice`
-    (post-merge, with rollback) — the merged tree is what ships.
+    Shared by close (pre-close, in the slice tree), `merge-slice`
+    (post-merge, with rollback) and `harness acceptance --closed` — the
+    merged tree is what ships. A declared suite that disappeared is red,
+    naming the slice and pattern (E1). Honours `gates.acceptance_runner:
+    none` the way the per-slice runner does: reported as disabled, not
+    executed-and-passed.
 
     Args:
         root: Repo root.
@@ -239,17 +294,18 @@ def run_regression(root, config, exclude=None, interpreter=None, env=None):
     Returns:
         A `(ok, detail)` pair.
     """
-    regression = []
-    for s in load_backlog(root):
-        if s.get("status") != "closed" or s.get("id") == exclude:
-            continue
-        for pat in s.get("acceptance", []):
-            if "*" in pat:
-                regression.extend(sorted(str(p.relative_to(root))
-                                         for p in Path(root).glob(pat)))
-            elif (Path(root) / pat).exists():
-                regression.append(pat)
-    regression = sorted(set(regression))
+    if config.get("gates", {}).get("acceptance_runner", "pytest") == "none":
+        return True, ("acceptance runner disabled (gates.acceptance_runner: "
+                      "none) — closed-slice regression not run")
+    sel = closed_acceptance(root, exclude=exclude)
+    if sel["problems"]:
+        lines = "\n".join(f"  {p['slice']}: {p['pattern']!r} ({p['reason']})"
+                          for p in sel["problems"])
+        return False, (f"cumulative regression: acceptance declared by closed "
+                       f"slices no longer exists — restore the files, or "
+                       f"retire the declaration explicitly in the backlog "
+                       f"(never silently):\n{lines}")
+    regression = sel["paths"]
     if not regression:
         return True, "no closed-slice acceptance tests to protect"
     if interpreter is None:
@@ -262,6 +318,37 @@ def run_regression(root, config, exclude=None, interpreter=None, env=None):
     return False, (f"cumulative regression: earlier slices' acceptance tests "
                    f"are now red ({regression}) — this change breaks closed "
                    f"work.\n{tail}")
+
+
+def cmd_acceptance(args):
+    """`harness acceptance --closed [--list] [--exclude <slice>]` — the public
+    entry point for the cumulative closed-slice suite (E1). `--list` reports
+    the selection without executing anything or touching project state;
+    without it the suite runs through the configured runner. Consumers
+    provision their environment first: `verify` never runs this."""
+    from engine import load_config
+    from engine.cli.common import _print, _root
+    root = _root(args)
+    config = load_config(root)
+    if not args.closed:
+        print("error: --closed is required (the closed-slice suite is the "
+              "only selection this command offers)", file=sys.stderr)
+        return 2
+    disabled = config.get("gates", {}).get("acceptance_runner",
+                                            "pytest") == "none"
+    sel = closed_acceptance(root, exclude=args.exclude)
+    out = {**sel, "disabled": disabled, "ran": False, "exclude": args.exclude}
+    if args.list or disabled:
+        if disabled:
+            out["detail"] = ("acceptance runner disabled "
+                             "(gates.acceptance_runner: none)")
+        _print(out)
+        return 1 if sel["problems"] else 0
+    ok, detail = run_regression(root, config, exclude=args.exclude)
+    out.update({"ran": bool(sel["paths"]) and not sel["problems"],
+                "ok": ok, "detail": detail})
+    _print(out)
+    return 0 if ok else 1
 
 
 def run_gate_cmd(root, config):

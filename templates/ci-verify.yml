@@ -49,6 +49,23 @@ on:
         required: false
         type: string
         default: ""
+      closed-acceptance:
+        description: >-
+          also run every CLOSED slice's acceptance suite on this tree
+          (`harness acceptance --closed`). Opt-in: verify never runs the
+          application's tests, and the repo owns its dependency setup
+          (see acceptance-setup)
+        required: false
+        type: boolean
+        default: false
+      acceptance-setup:
+        description: >-
+          shell to run before the closed acceptance suite — install the
+          project and its test dependencies (only used with
+          closed-acceptance: true)
+        required: false
+        type: string
+        default: ""
     secrets:
       HARNESS_TOKEN:
         description: read-only token for a private harness engine repo (fallback path only)
@@ -113,3 +130,15 @@ jobs:
           else
             python3 "$HARNESS_BIN" verify
           fi
+
+      - name: Closed-slice acceptance (opt-in)
+        # the cumulative suite every close and merge already protects, on
+        # the landed tree. acceptance-setup is a workflow_call input from
+        # the calling workflow in this same repo, so it runs with the
+        # caller's own trust — never wire it to untrusted event data.
+        if: ${{ inputs.closed-acceptance }}
+        run: |
+          if [ -n "${{ inputs.acceptance-setup }}" ]; then
+            ${{ inputs.acceptance-setup }}
+          fi
+          python3 "$HARNESS_BIN" acceptance --closed

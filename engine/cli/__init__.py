@@ -11,6 +11,7 @@ import json
 import sys
 
 from engine import HarnessError
+from engine.cli.acceptance import cmd_acceptance
 from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
@@ -33,6 +34,7 @@ COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
     "upgrade": cmd_upgrade, "extract": cmd_extract,
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
+    "acceptance": cmd_acceptance,
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
     "backlog": cmd_backlog, "slice": cmd_slice,
@@ -115,6 +117,16 @@ def main(argv=None):
 
     sp = sub.add_parser("verify", help="full CI check (no plugin required)")
     sp.add_argument("--built-artifact", help="validate manifests against this tree")
+
+    sp = sub.add_parser("acceptance",
+                        help="the cumulative closed-slice acceptance suite: "
+                             "--closed --list selects without running; "
+                             "--closed runs it through the configured runner")
+    sp.add_argument("--closed", action="store_true",
+                    help="every CLOSED slice's declared acceptance paths")
+    sp.add_argument("--list", action="store_true",
+                    help="report paths/owners/problems; execute nothing")
+    sp.add_argument("--exclude", help="slice id to leave out")
 
     sp = sub.add_parser("architect",
                         help="seed the Phase-0 working document from an "

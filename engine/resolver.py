@@ -88,17 +88,45 @@ def _adr_superseded_ids(root) -> set:
     return out
 
 
-def _render_guidance(root, entry, superseded: set, dropped=None,
-                     loaded_adr_files=None) -> list:
-    """Guidance refs for planned entries; for built entries only the sections
-    NOT listed in supersedes_guidance survive (the shadow replaces the rest).
-    Refs into superseded ADRs are skipped and reported in `dropped`.
-    `loaded_adr_files` collects the ADR file paths that made it in — decision
-    rows authored by those ADRs join the curated decisions block."""
-    blocks = []
+def _guidance_candidates(root, entry, superseded: set, dropped=None,
+                         loaded_adr_files=None, missing_refs=None,
+                         superseded_out=None) -> list:
+    """The ONE place guidance refs become context candidates (E6).
+
+    Both the resolver (what gets injected) and the backlog estimate (what a
+    slice will cost) read this, so they apply the same supersession
+    filtering, anchor extraction and per-entry dedup, and cannot disagree.
+
+    Planned entries contribute every ref; built entries only the sections
+    NOT listed in `supersedes_guidance` (the shadow replaces the rest). Refs
+    into superseded ADRs are skipped and reported in `dropped`. A ref whose
+    anchor is not found in the file falls back to the WHOLE file — reported
+    in `dropped` as `anchor-missing`, with its full cost, never silently.
+
+    Args:
+        root: Substrate root.
+        entry: Registry entry.
+        superseded: The entry's own `supersedes_guidance` set.
+        dropped: Optional list collecting `{kind, ids, reason}` diagnostics.
+        loaded_adr_files: Optional set collecting ADR file paths that made
+            it in — decision rows authored by those ADRs join the decisions
+            block.
+        missing_refs: Optional list; when given, a ref to a missing file is
+            appended there instead of raising (the estimate reports, the
+            resolver fails closed).
+        superseded_out: Optional list collecting the refs skipped as
+            superseded (either by the entry or by ADR status).
+
+    Returns:
+        Candidates `{ref, key, block, anchor_missing}` in ref order, one per
+        distinct `(file, anchor)` key. `block` is the rendered injection.
+    """
+    out, seen = [], set()
     out_of_force = _adr_superseded_ids(root)
     for ref in entry.get("guidance_refs", []):
         if entry.get("status") == "built" and _ref_superseded(ref, superseded):
+            if superseded_out is not None:
+                superseded_out.append(ref)
             continue
         m = re.search(r"adr/(\d+)", ref)
         if m and (m.group(1) in out_of_force or
@@ -106,24 +134,55 @@ def _render_guidance(root, entry, superseded: set, dropped=None,
             if dropped is not None:
                 dropped.append({"kind": "guidance-superseded", "ids": [ref],
                                 "reason": f"ADR {m.group(1)} is superseded"})
+            if superseded_out is not None:
+                superseded_out.append(ref)
             continue
-        if loaded_adr_files is not None:
-            loaded_adr_files.add(ref.split("#")[0])
-        path = Path(root) / ref.split("#")[0]
+        file = ref.split("#")[0]
+        anchor = ref.split("#")[1] if "#" in ref else None
+        key = (file, anchor)
+        if key in seen:
+            continue                      # the same section twice is one section
+        seen.add(key)
+        path = Path(root) / file
         if not path.exists():
+            if missing_refs is not None:
+                missing_refs.append(ref)
+                continue
             from . import SubstrateMissing
             raise SubstrateMissing(
                 f"registry {entry['id']!r}: guidance_ref {ref!r} points at a "
                 f"missing file — authored substrate is incomplete (fail closed)")
+        if loaded_adr_files is not None:
+            loaded_adr_files.add(file)
         text = path.read_text(encoding="utf-8")
-        anchor = ref.split("#")[1] if "#" in ref else None
+        anchor_missing = False
         if anchor:
             section = _extract_section(text, anchor)
             if section:
                 text = section
-        blocks.append((f"guidance:{ref}",
-                       f"=== guidance {ref} ({_adr_id(ref)}) ===\n{text.strip()}"))
-    return blocks
+            else:
+                anchor_missing = True
+                if dropped is not None:
+                    dropped.append({
+                        "kind": "anchor-missing", "ids": [ref],
+                        "reason": f"anchor #{anchor} not found in {file}; the "
+                                  f"whole file is loaded instead (fallback, "
+                                  f"full cost) — fix the ref or the anchor"})
+        out.append({"ref": ref, "key": key, "anchor_missing": anchor_missing,
+                    "block": f"=== guidance {ref} ({_adr_id(ref)}) ===\n"
+                             f"{text.strip()}"})
+    return out
+
+
+def _render_guidance(root, entry, superseded: set, dropped=None,
+                     loaded_adr_files=None) -> list:
+    """`(gid, block, key)` triples for the resolver, via the shared candidate
+    layer; `key` lets the caller dedupe one section referenced by several
+    declared deps."""
+    return [(f"guidance:{c['ref']}", c["block"], c["key"])
+            for c in _guidance_candidates(root, entry, superseded,
+                                          dropped=dropped,
+                                          loaded_adr_files=loaded_adr_files)]
 
 
 def _ref_superseded(ref: str, superseded: set) -> bool:
@@ -178,6 +237,7 @@ def resolve(root, slice_id: str, config: dict) -> dict:
     candidates = []  # (rank, sort_key, kind, id, render_full, render_degraded, manifest_ids)
     guidance_dropped = []
     loaded_adr_files: set = set()
+    seen_guidance: set = set()   # (file, anchor) already offered by another dep
 
     module_ids, domains = set(), set()
     onehop_seen = set(direct_ids)
@@ -211,9 +271,12 @@ def resolve(root, slice_id: str, config: dict) -> dict:
                                        [f"shadow:{hop['id']}"]))
         # (2) guidance refs: planned entries fully; built entries only
         # non-superseded (non-signature-expressible) sections.
-        for gid, block in _render_guidance(root, entry, superseded,
-                                           dropped=guidance_dropped,
-                                           loaded_adr_files=loaded_adr_files):
+        for gid, block, key in _render_guidance(root, entry, superseded,
+                                                dropped=guidance_dropped,
+                                                loaded_adr_files=loaded_adr_files):
+            if key in seen_guidance:
+                continue          # two deps citing one section inject it once
+            seen_guidance.add(key)
             candidates.append((RANK_DIRECT, did + "|" + gid, "guidance",
                                _adr_id(gid.split(":", 1)[1]), block, block,
                                [_adr_id(gid.split(":", 1)[1])]))
@@ -248,6 +311,14 @@ def resolve(root, slice_id: str, config: dict) -> dict:
 
     # (6) rank direct > one-hop > memories; deterministic within rank.
     candidates.sort(key=lambda c: (c[0], c[1]))
+    # the unbounded demand, reported next to what actually fit: an output
+    # that only ever shows what fits conceals the need to split (E6).
+    # `declared_demand` is exactly the figure `backlog` estimates — the
+    # declared deps' own shadows + guidance.
+    demand = sum(token_estimate(c[4]) for c in candidates)
+    declared_demand = sum(token_estimate(c[4]) for c in candidates
+                          if c[0] == RANK_DIRECT and c[2] in ("shadow",
+                                                              "guidance"))
 
     # (7) cut at budget, degrading per config: docstrings first, then modules.
     chosen, manifest, dropped = [], [], []
@@ -274,24 +345,65 @@ def resolve(root, slice_id: str, config: dict) -> dict:
         "context_loaded": list(dict.fromkeys(manifest)),
         "token_estimate": used,
         "budget": budget,
+        "demand": demand,
+        "declared_demand": declared_demand,
         "dropped": dropped + guidance_dropped,
     }
 
 
-def context_cost_estimate(root, declares_dep: list, config: dict) -> int:
-    """Backlog-time cost: declared deps -> shadow/guidance sizes through the
-    resolver's own budget logic (spec §5.6)."""
+def context_cost_breakdown(root, declares_dep: list, config: dict) -> dict:
+    """Backlog-time cost of a slice's declared deps, itemised (spec §5.6, E6).
+
+    Built through the same candidate layer the resolver injects from, so
+    the total equals the resolver's `declared_demand` for the same deps:
+    same supersession filtering, same anchor extraction, one count per
+    distinct section across all deps. The estimate never applies the
+    budget — it is the unbounded demand the budget is compared against.
+
+    Args:
+        root: Substrate root.
+        declares_dep: The slice's declared registry ids.
+        config: The merged engine config (unused today; kept for the
+            resolver's signature symmetry).
+
+    Returns:
+        `{"total", "shadows", "guidance", "guidance_refs", "anchor_fallbacks",
+        "missing_refs", "superseded", "unknown_deps"}` — tokens for the
+        first three; the rest are the refs counted, the refs that fell back
+        to a whole file, the refs whose file is missing (cost 0 here; the
+        resolver fails closed on them), the refs skipped as superseded, and
+        declared ids absent from the registry.
+    """
     registry = {e["id"]: e for e in load_registry(root)}
-    total = 0
-    for did in declares_dep:
+    shadows = guidance = 0
+    refs, fallbacks, missing, superseded_refs, unknown = [], [], [], [], []
+    seen: set = set()
+    for did in sorted(dict.fromkeys(declares_dep)):
         entry = registry.get(did)
         if entry is None:
+            unknown.append(did)
             continue
-        shadow = _load_shadow(root, entry)
-        if entry.get("status") == "built" and shadow is not None:
-            total += token_estimate(render_shadow(shadow, True))
-        for ref in entry.get("guidance_refs", []):
-            p = Path(root) / ref.split("#")[0]
-            if p.exists():
-                total += token_estimate(p.read_text(encoding="utf-8"))
-    return total
+        if entry.get("status") == "built":
+            shadow = _load_shadow(root, entry)
+            if shadow is not None:
+                shadows += token_estimate(render_shadow(shadow, True))
+        superseded = set(entry.get("supersedes_guidance", []))
+        for c in _guidance_candidates(root, entry, superseded,
+                                      missing_refs=missing,
+                                      superseded_out=superseded_refs):
+            if c["key"] in seen:
+                continue
+            seen.add(c["key"])
+            guidance += token_estimate(c["block"])
+            refs.append(c["ref"])
+            if c["anchor_missing"]:
+                fallbacks.append(c["ref"])
+    return {"total": shadows + guidance, "shadows": shadows,
+            "guidance": guidance, "guidance_refs": refs,
+            "anchor_fallbacks": fallbacks, "missing_refs": missing,
+            "superseded": superseded_refs, "unknown_deps": unknown}
+
+
+def context_cost_estimate(root, declares_dep: list, config: dict) -> int:
+    """Backlog-time cost: the `total` of `context_cost_breakdown`."""
+    return context_cost_breakdown(root, declares_dep, config)["total"]

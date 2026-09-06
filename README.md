@@ -254,6 +254,9 @@ alias),
 `<!-- stage: 3 -->`; refuses to overwrite without `--force`),
 `compile`, `author-gate`, `resolve`, `extract`,
 `gates`, `verify` (the CI entry),
+`acceptance` (`--closed [--list] [--exclude <slice>]`: the cumulative
+closed-slice suite through the configured runner; `--list` selects
+without executing),
 `backlog` (+ `add`, which takes `--linear GOO-NN`), `slice`,
 `start` (worktree + sandbox + binding + context, no prompts),
 `run` (campaign dispatcher: builds every ready slice via `run.builder_cmd`
@@ -355,6 +358,43 @@ the gate runs on the merged tree but reads the config of the tree you
 merge *into*, so a slice that introduces `gate_cmd` on its own branch is
 honoured from the next merge on. `cwd` must be repo-relative and stay
 inside the repo (the containment rule `gates.extra` uses).
+
+### The closed-slice suite
+
+One selector decides what the cumulative suite is, and close,
+`merge-slice` and `harness acceptance --closed` all read it. A closed
+slice whose declared acceptance file is gone, or whose glob matches
+nothing, is a **red** result naming the slice and pattern — never a
+silent drop from coverage. Retiring a suite is an explicit backlog
+change, never inferred from file absence. An honestly empty declaration
+is not a problem. `gates.acceptance_runner: none` is reported as disabled
+at close, merge and in the CLI alike, not executed-and-passed.
+`harness acceptance --closed --list` reports `paths`, `owners` and
+`problems` (exit 1 on problems) and executes nothing; without `--list`
+it runs the suite (exit 1 on red, spawn failures included). `verify`
+never runs it: the scaffolded workflow offers it as the opt-in
+`closed-acceptance` input, with `acceptance-setup` for the caller's own
+dependency installation.
+
+## Backlog estimates and splitting
+
+`harness backlog` writes each slice's `context_cost_estimate` from the
+same candidate layer the resolver injects from — same supersession
+filtering, same `#anchor` extraction, one count per distinct section
+across all declared deps — so the estimate equals the resolver's
+`declared_demand` for the same deps. The output carries the itemised
+breakdown under `estimates` (`shadows`, `guidance`, `guidance_refs`,
+`anchor_fallbacks`, `missing_refs`, `superseded`, `unknown_deps`).
+A guidance ref whose anchor is not found falls back to the whole file at
+full cost and is reported (`anchor-missing` in the resolver's `dropped`,
+`anchor_fallbacks` in the estimate); it is never a silent whole-file
+load. `resolve` also reports `demand` (everything that qualified) next
+to `token_estimate` (what fit the budget).
+
+Oversized slices are split only when they are **planned** and nothing
+depends on them; a closed, bound or parked row, or a parent named in
+another slice's `depends_on`, is never split — it is listed under
+`split_refused` with the reason, and the human splits it by hand.
 
 ## Repo-local gates (`gates.extra`)
 
@@ -495,6 +535,37 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.8.6
+
+Codex Astra handoff, wave 1 — the integrity fixes that need no new rule.
+
+- **`backlog` never rewrites closed, bound or parked slices, nor a parent
+  other slices depend on.** The split loop replaced ANY oversized row
+  with `-a`/`-b` children, which could erase a closed slice's provenance
+  and dangle other slices' `depends_on`. Refusals are reported under
+  `split_refused`.
+- **`adjudicate --decision-id` refuses an existing id** before any write
+  (row, edge, queue). Revision and supersession are lifecycle work
+  proposed in ADR-003.
+- **Closed-slice acceptance has one selector and a public entry point.**
+  `harness acceptance --closed [--list]`; close, merge and the CLI read
+  the same selection; a declared suite that disappeared is red naming
+  the slice and pattern instead of silently leaving coverage;
+  `acceptance_runner: none` is reported as disabled at merge too. The
+  scaffolded workflow gains the opt-in `closed-acceptance` /
+  `acceptance-setup` inputs.
+- **The backlog estimate and the resolver share one guidance layer.**
+  Same supersession, anchors and dedup; `backlog` reports an itemised
+  breakdown; a missing anchor is a reported whole-file fallback;
+  `resolve` reports `demand` and `declared_demand` next to what fit.
+- **`compile` warns when a proposed ADR carries binding frontmatter
+  rows.** Rows still bind (no silent behaviour change).
+- **ADR-003 (proposed)** — finding records, review snapshots,
+  decision-row lifecycle, follow-ups and cancellation of unbuilt work:
+  the contract the remaining Codex Astra items (E2, E3, E4, E5
+  cancellation) wait on. Binds nothing until accepted. Tests in
+  `tests/engine/test_codex_astra_wave1.py`.
 
 ### 0.8.5
 
