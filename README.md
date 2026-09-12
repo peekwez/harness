@@ -633,6 +633,19 @@ defined in `docs/SPEC.md`.
 
 ## Changelog
 
+### 0.9.1 — preserve legacy G5 approvals during upgrade
+
+- Recognize justified `gate:G5` overrides using historical `deps:<registry-id>`
+  targets in graph reconciliation, live gates and closed-slice verification.
+  Known manifest names, file paths, unknown IDs and other gates retain their
+  existing scope.
+- Upgrade appends canonical `registry:` aliases without rewriting old graph
+  records or reopening landed slices. The report and dry-run show
+  `legacy_overrides`; repeated upgrades add no duplicate aliases. Original
+  justifications, finding IDs and commit references remain auditable.
+- Canonicalize new legacy-form inputs and count migration aliases as the
+  original approvals in telemetry, rather than additional override decisions.
+
 ### 0.9.0 — lifecycle integrity and cross-host upgrades
 
 - Validate the committed source at closure, recover interrupted finalization,

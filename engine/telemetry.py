@@ -381,7 +381,10 @@ def aggregate(root, since: str | None = None) -> dict:
     overrides: dict = {}
     reversals: dict = {}
     for edge in edges:
-        if edge.get("type") == "override":
+        if (edge.get("type") == "override"
+                and not edge.get("meta", {}).get("legacy_override")):
+            # A migration alias preserves an existing approval; it is not
+            # another human/builder override or reversal.
             rule = edge.get("meta", {}).get("rule_ref", "unknown")
             overrides[rule] = overrides.get(rule, 0) + 1
             if edge.get("meta", {}).get("reverses"):

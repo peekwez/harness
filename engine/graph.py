@@ -95,11 +95,20 @@ def _bare(node_id: str) -> str:
 
 
 def override_targets(root, slice_id, rule_ref, kinds) -> set:
-    """An exception only authorizes its named rule and target namespace."""
-    return {_bare(e["to"]) for e in load_edges(root)
-            if e["from"] == f"slice:{slice_id}" and e["type"] == "override"
-            and e.get("meta", {}).get("rule_ref") == rule_ref
-            and e["to"].partition(":")[0] in kinds}
+    """Resolve target spelling while retaining the rule and namespace scope."""
+    from .overrides import canonical_target
+    targets = set()
+    for edge in load_edges(root):
+        if edge["from"] != f"slice:{slice_id}" or edge["type"] != "override":
+            continue
+        meta = edge.get("meta", {})
+        if meta.get("rule_ref") != rule_ref:
+            continue
+        target = canonical_target(root, edge["to"], rule_ref,
+                                  meta.get("justification"))
+        if target.partition(":")[0] in kinds:
+            targets.add(_bare(target))
+    return targets
 
 
 def record_dependency_snapshot(root, slice_id, uses, files, commit=None):

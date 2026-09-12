@@ -41,6 +41,7 @@
   "engine.load_config",
   "engine.load_decisions",
   "engine.memory",
+  "engine.overrides.DEP_MANIFESTS",
   "engine.read_jsonl",
   "engine.registry.RegistryError",
   "engine.registry.flip_status",
@@ -53,7 +54,7 @@
   "fnmatch.fnmatch",
   "pathlib.Path"
  ],
- "import_resolution_hash": "sha256:099d5c0ada83f18bf368690a88a3fd433c0e58064eb606625f34ec1522dc89c4",
+ "import_resolution_hash": "sha256:8bf04bf95ca6af12a8a3de1b16dd9df345f49968ee25eb3ead55482e400b521c",
  "imports": [
   "engine",
   "engine.cli.acceptance",
@@ -66,6 +67,7 @@
   "engine.gates.g3_scope",
   "engine.graph",
   "engine.memory",
+  "engine.overrides",
   "engine.registry",
   "engine.review",
   "engine.telemetry",
@@ -77,7 +79,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.ceremony",
- "source_hash": "sha256:1bc7debecd1696dedb14c94fbb01ee5d884c39f7e36ddef7c7f35f9e4f2373c0",
+ "source_hash": "sha256:b52d0e21d354e143833ecf1988c8468da4c4d3882b50922395fb70f8a7ac0fab",
  "source_path": "engine/cli/ceremony.py",
  "symbols": [
   {
@@ -86,8 +88,8 @@
    "name": "_added_dependency_lines",
    "signature": "def _added_dependency_lines(root, sl, commit) -> dict",
    "span": [
-    25,
-    26
+    21,
+    22
    ],
    "visibility": "private"
   },
@@ -97,8 +99,8 @@
    "name": "_security_rows_for_slice",
    "signature": "def _security_rows_for_slice(root, sl)",
    "span": [
-    49,
-    50
+    45,
+    46
    ],
    "visibility": "private"
   },
@@ -108,8 +110,8 @@
    "name": "_close_ceremony",
    "signature": "def _close_ceremony(args)",
    "span": [
-    64,
-    65
+    60,
+    61
    ],
    "visibility": "private"
   },
@@ -119,8 +121,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    434,
-    435
+    430,
+    431
    ],
    "visibility": "private"
   }

@@ -43,7 +43,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_hardening_upgrade",
- "source_hash": "sha256:e75546c16e9a415a30ad0931239aee58c4e2a801568073ddea1738f09fa11a6c",
+ "source_hash": "sha256:6eed0e2734d704d5c0816b12870147dc510228a8f341ffab3b832c4c88003b09",
  "source_path": "tests/engine/test_hardening_upgrade.py",
  "symbols": [
   {
@@ -96,8 +96,8 @@
    "name": "test_claude_plugin_upgrade_uses_scope_and_delegates_to_new_engine",
    "signature": "def test_claude_plugin_upgrade_uses_scope_and_delegates_to_new_engine( tmp_path, monkeypatch)",
    "span": [
-    85,
-    87
+    86,
+    88
    ],
    "visibility": "public"
   },
@@ -107,8 +107,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    98,
-    99
+    99,
+    100
    ],
    "visibility": "public"
   },
@@ -118,8 +118,8 @@
    "name": "test_codex_plugin_upgrade_updates_only_selected_marketplace",
    "signature": "def test_codex_plugin_upgrade_updates_only_selected_marketplace( tmp_path, monkeypatch)",
    "span": [
-    125,
-    127
+    126,
+    128
    ],
    "visibility": "public"
   },
@@ -129,8 +129,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    142,
-    143
+    143,
+    144
    ],
    "visibility": "public"
   },
@@ -140,8 +140,8 @@
    "name": "test_plugin_upgrade_dry_run_lists_exact_commands_without_mutation",
    "signature": "def test_plugin_upgrade_dry_run_lists_exact_commands_without_mutation( tmp_path, monkeypatch)",
    "span": [
-    164,
-    166
+    165,
+    167
    ],
    "visibility": "public"
   },
@@ -151,8 +151,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    174,
-    175
+    175,
+    176
    ],
    "visibility": "public"
   },
@@ -162,8 +162,8 @@
    "name": "test_plugin_selection_rejects_ambiguity_and_unproven_install_path",
    "signature": "def test_plugin_selection_rejects_ambiguity_and_unproven_install_path( tmp_path, monkeypatch)",
    "span": [
-    192,
-    194
+    193,
+    195
    ],
    "visibility": "public"
   },
@@ -173,8 +173,8 @@
    "name": "test_claude_duplicate_id_requires_scope",
    "signature": "def test_claude_duplicate_id_requires_scope(tmp_path, monkeypatch)",
    "span": [
-    219,
-    220
+    220,
+    221
    ],
    "visibility": "public"
   },
@@ -184,8 +184,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    240,
-    241
+    241,
+    242
    ],
    "visibility": "public"
   },
@@ -195,8 +195,8 @@
    "name": "test_codex_discovers_manifest_verified_installed_cache",
    "signature": "def test_codex_discovers_manifest_verified_installed_cache( tmp_path, monkeypatch)",
    "span": [
-    254,
-    256
+    255,
+    257
    ],
    "visibility": "public"
   },
@@ -206,8 +206,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    273,
-    274
+    274,
+    275
    ],
    "visibility": "public"
   },
@@ -217,8 +217,8 @@
    "name": "test_codex_rejects_source_path_without_matching_manifest",
    "signature": "def test_codex_rejects_source_path_without_matching_manifest( tmp_path, monkeypatch)",
    "span": [
-    291,
-    293
+    292,
+    294
    ],
    "visibility": "public"
   },
@@ -228,8 +228,8 @@
    "name": "test_plugin_upgrade_reports_engine_manifest_version_discrepancy",
    "signature": "def test_plugin_upgrade_reports_engine_manifest_version_discrepancy( tmp_path, monkeypatch)",
    "span": [
-    306,
-    308
+    307,
+    309
    ],
    "visibility": "public"
   },
@@ -239,8 +239,8 @@
    "name": "run",
    "signature": "def run(command)",
    "span": [
-    315,
-    316
+    316,
+    317
    ],
    "visibility": "public"
   },
@@ -250,8 +250,8 @@
    "name": "test_mutating_host_runner_inherits_stdin_and_forwards_output_to_stderr",
    "signature": "def test_mutating_host_runner_inherits_stdin_and_forwards_output_to_stderr( monkeypatch)",
    "span": [
-    332,
-    334
+    333,
+    335
    ],
    "visibility": "public"
   },
@@ -261,8 +261,8 @@
    "name": "run",
    "signature": "def run(command, **kwargs)",
    "span": [
-    338,
-    339
+    339,
+    340
    ],
    "visibility": "public"
   },
@@ -272,8 +272,8 @@
    "name": "test_mutating_host_runner_wraps_os_errors_with_command",
    "signature": "def test_mutating_host_runner_wraps_os_errors_with_command(monkeypatch)",
    "span": [
-    353,
-    354
+    354,
+    355
    ],
    "visibility": "public"
   },
@@ -283,8 +283,8 @@
    "name": "fail",
    "signature": "def fail(command)",
    "span": [
-    356,
-    357
+    357,
+    358
    ],
    "visibility": "public"
   },
@@ -294,8 +294,8 @@
    "name": "test_local_upgrade_repoints_only_harness_codex_hooks_to_vendored_adapter",
    "signature": "def test_local_upgrade_repoints_only_harness_codex_hooks_to_vendored_adapter( tmp_path)",
    "span": [
-    365,
-    367
+    366,
+    368
    ],
    "visibility": "public"
   },
@@ -305,8 +305,8 @@
    "name": "test_local_upgrade_preserves_unrecognized_codex_hooks",
    "signature": "def test_local_upgrade_preserves_unrecognized_codex_hooks(tmp_path)",
    "span": [
-    397,
-    398
+    398,
+    399
    ],
    "visibility": "public"
   },
@@ -316,8 +316,8 @@
    "name": "test_upgrade_never_replaces_newer_vendored_engine",
    "signature": "def test_upgrade_never_replaces_newer_vendored_engine(tmp_path)",
    "span": [
-    412,
-    413
+    413,
+    414
    ],
    "visibility": "public"
   },
@@ -327,8 +327,8 @@
    "name": "test_outdated_marketplace_cannot_delegate_an_older_engine",
    "signature": "def test_outdated_marketplace_cannot_delegate_an_older_engine(tmp_path, monkeypatch)",
    "span": [
-    424,
-    425
+    425,
+    426
    ],
    "visibility": "public"
   }

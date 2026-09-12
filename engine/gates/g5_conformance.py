@@ -123,7 +123,11 @@ def record_override(root, slice_id: str, target: str, justification: str,
     if not justification or not justification.strip():
         raise HarnessError("override requires a non-empty justification (fail closed)")
     inferred = "gate:G3" if target.partition(":")[0] in {"file", "boundary"} else "gate:G5"
-    return append_edge(root, "override", f"slice:{slice_id}", target,
-                       meta={"justification": justification.strip(),
-                             "finding_id": finding_id,
-                             "rule_ref": rule_ref or inferred})
+    from ..overrides import canonical_target
+    rule_ref = rule_ref or inferred
+    canonical = canonical_target(root, target, rule_ref, justification)
+    meta = {"justification": justification.strip(), "finding_id": finding_id,
+            "rule_ref": rule_ref}
+    if canonical != target:
+        meta["requested_target"] = target
+    return append_edge(root, "override", f"slice:{slice_id}", canonical, meta=meta)

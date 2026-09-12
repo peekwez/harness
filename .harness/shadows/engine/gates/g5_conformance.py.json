@@ -12,24 +12,26 @@
   "engine.extractor.engine.shadow_path_for",
   "engine.graph.append_edge",
   "engine.graph.override_targets",
+  "engine.overrides.canonical_target",
   "engine.registry.digest_tokens",
   "engine.registry.signature_digest",
   "engine.registry.similarity",
   "pathlib.Path"
  ],
- "import_resolution_hash": "sha256:facbee3a9871fd43a81bdbefb5456a395163c6d0005f3a48688bac1e5548a29d",
+ "import_resolution_hash": "sha256:57f7a4d84ac8fa13950d9da37b235848d4a19c8badd61d503617abd3b1c6607c",
  "imports": [
   "engine",
   "engine.events",
   "engine.extractor.engine",
   "engine.graph",
+  "engine.overrides",
   "engine.registry",
   "json",
   "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g5_conformance",
- "source_hash": "sha256:ec7e11a32e9f4ee83fa08b0c651b4b25ca87e38616ff1becc123226704a1a117",
+ "source_hash": "sha256:5f025ecfbde95968ff6cb0775c8797aa85666a95a628ea649595f9b42bee6988",
  "source_path": "engine/gates/g5_conformance.py",
  "symbols": [
   {
