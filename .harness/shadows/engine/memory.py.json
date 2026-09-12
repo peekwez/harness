@@ -2,22 +2,35 @@
  "exports": [
   "compact_to_durable",
   "durable_path",
+  "ensure_edge",
   "flush",
   "make_entry",
   "read_session",
   "session_path",
   "write_entry"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.append_jsonl",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.harness_dir",
+  "engine.now_iso",
+  "engine.read_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:d52a0bc61d0c43fc31ed74ccfae7b16ed53df5973f1513d8743e7bcf60995287",
  "imports": [
-  "graph",
+  "engine",
+  "engine.graph",
   "hashlib",
   "json",
   "pathlib"
  ],
  "language": "python",
  "module_id": "engine.memory",
- "source_hash": "sha256:5d4deaa1600be16fde892942507e8fc98357ac4e891d5949dd165f3a014e7f49",
+ "source_hash": "sha256:d8b87d630f7c3d3b50e6976e2964456a16a47706a8fac78a8f5f67ca4a105913",
  "source_path": "engine/memory.py",
  "symbols": [
   {
@@ -26,8 +39,8 @@
    "name": "session_path",
    "signature": "def session_path(root, slice_id: str) -> Path",
    "span": [
-    21,
-    22
+    20,
+    21
    ],
    "visibility": "public"
   },
@@ -37,8 +50,8 @@
    "name": "durable_path",
    "signature": "def durable_path(root) -> Path",
    "span": [
-    25,
-    26
+    24,
+    25
    ],
    "visibility": "public"
   },
@@ -48,8 +61,8 @@
    "name": "make_entry",
    "signature": "def make_entry(slice_id, kind, content, attempt=None, edges=None, commit=None) -> dict",
    "span": [
-    29,
-    30
+    28,
+    29
    ],
    "visibility": "public"
   },
@@ -59,8 +72,8 @@
    "name": "write_entry",
    "signature": "def write_entry(root, entry: dict) -> dict",
    "span": [
-    48,
-    49
+    47,
+    48
    ],
    "visibility": "public"
   },
@@ -70,8 +83,8 @@
    "name": "read_session",
    "signature": "def read_session(root, slice_id: str) -> list",
    "span": [
-    53,
-    54
+    52,
+    53
    ],
    "visibility": "public"
   },
@@ -79,10 +92,21 @@
    "doc": "Promote session memory to durable, then delete the session file.\n    Attempts and adjudications always survive; reasoning survives when marked\n    or when it carries module edges.",
    "kind": "function",
    "name": "compact_to_durable",
-   "signature": "def compact_to_durable(root, slice_id: str, commit=None) -> dict",
+   "signature": "def compact_to_durable(root, slice_id: str, commit=None, consume=True) -> dict",
    "span": [
-    57,
-    58
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "ensure_edge",
+   "signature": "def ensure_edge(kind, source, target, revision)",
+   "span": [
+    64,
+    65
    ],
    "visibility": "public"
   },
@@ -92,8 +116,8 @@
    "name": "flush",
    "signature": "def flush(root, slice_id: str | None) -> dict",
    "span": [
-    97,
-    98
+    105,
+    106
    ],
    "visibility": "public"
   }

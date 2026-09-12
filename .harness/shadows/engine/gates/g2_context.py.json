@@ -2,13 +2,22 @@
  "exports": [
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.make_finding",
+  "engine.gates.g3_scope.SUBSTRATE_PREFIXES",
+  "engine.resolver._adr_id",
+  "engine.token_estimate",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:ba20c5fae449a9a62666e4ba72da94c8ca3de7ecd47f91b87a4ee3b820af8d9c",
  "imports": [
-  "events",
-  "g3_scope",
+  "engine",
+  "engine.events",
+  "engine.gates.g3_scope",
+  "engine.resolver",
   "json",
-  "pathlib",
-  "resolver"
+  "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g2_context",

@@ -6,7 +6,11 @@
   "test_the_composition_is_actually_wired_into_the_loop_skills",
   "test_the_three_attempts_debugging_rule_is_gone"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT"
+ ],
+ "import_resolution_hash": "sha256:c782dafee455a7ef071844c6ed9736a3266af290cf9c67898581f1c793ba320b",
  "imports": [
   "conftest",
   "re",

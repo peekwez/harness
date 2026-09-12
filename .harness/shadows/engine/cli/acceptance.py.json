@@ -8,7 +8,18 @@
   "run_gate_cmd",
   "run_regression"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.common._acceptance_python",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.events.make_finding",
+  "engine.load_backlog",
+  "engine.load_config",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:58c5311126e7d11446cdf97a60b9818bcca786fdffc716c6bb4de7a671327f6e",
  "imports": [
   "engine",
   "engine.cli.common",

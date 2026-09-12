@@ -7,7 +7,21 @@
   "test_init_autonomy_refreshes_its_own_stale_profile",
   "test_init_gitignores_the_worktrees_dir"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.extractor.engine.extract_all",
+  "engine.graph.load_edges",
+  "engine.load_config"
+ ],
+ "import_resolution_hash": "sha256:941fcf3c0d2cd5d27ad0c2b433505f417c92d5234624ac833b8ffb1f48afb104",
  "imports": [
   "conftest",
   "engine",

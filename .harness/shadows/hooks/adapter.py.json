@@ -9,7 +9,11 @@
   "pr_landing",
   "resolve_root"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:ff25dea7436bd4ed6c51848861a54c9b103b602ef8f9f2c311383f874cdf9ca8",
  "imports": [
   "json",
   "os",

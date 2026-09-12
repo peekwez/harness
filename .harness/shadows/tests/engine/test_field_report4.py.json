@@ -12,7 +12,22 @@
   "test_override_records_the_actual_rule_ref",
   "test_registry_refresh_cli"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.handle_event",
+  "engine.extractor.engine.extract_path",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.graph.load_edges",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.sha256_file",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:46f4053949ad7619782aafc43d7512ce12154cd97d59bb83d18aca04cb33d61a",
  "imports": [
   "conftest",
   "engine",
@@ -24,7 +39,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_field_report4",
- "source_hash": "sha256:5062f8cfae4f17fcd33db785e775fbe57438545cb81d09313985286c02733385",
+ "source_hash": "sha256:6ab4375d4583a10e5ce4323f018c388c19b82e5db0bd765954669eeb9e2d31df",
  "source_path": "tests/engine/test_field_report4.py",
  "symbols": [
   {

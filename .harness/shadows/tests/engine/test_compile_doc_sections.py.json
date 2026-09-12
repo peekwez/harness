@@ -25,7 +25,17 @@
   "test_unterminated_fenced_block_fails_loud",
   "test_wrong_column_count_names_the_doc_and_the_line"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.HarnessError",
+  "engine.compiler.author_gate",
+  "engine.compiler.compile_substrate",
+  "engine.compiler.parse_doc_blocks",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:15354a413f404ac0c01485d238965c042ebd7e7019de85936bcf16e5e647e0ed",
  "imports": [
   "conftest",
   "engine",

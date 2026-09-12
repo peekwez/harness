@@ -7,7 +7,15 @@
   "test_unknown_extension_degenerate_shadow_plus_finding",
   "test_visibility_mapping_per_language"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "engine.extractor.engine.extract_all",
+  "engine.extractor.engine.extract_path",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.load_config"
+ ],
+ "import_resolution_hash": "sha256:9adc4a558e39b86c581b6bdc076d72f809200cceb02efa2c90e9cc7efd49a87b",
  "imports": [
   "conftest",
   "engine",

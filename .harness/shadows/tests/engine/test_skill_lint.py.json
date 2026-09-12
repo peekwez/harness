@@ -3,7 +3,11 @@
   "test_preflight_commands_never_use_positional_arguments",
   "test_preflights_still_exist_where_no_argument_is_needed"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT"
+ ],
+ "import_resolution_hash": "sha256:c782dafee455a7ef071844c6ed9736a3266af290cf9c67898581f1c793ba320b",
  "imports": [
   "conftest",
   "re"

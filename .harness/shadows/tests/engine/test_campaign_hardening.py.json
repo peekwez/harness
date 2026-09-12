@@ -9,7 +9,18 @@
   "test_repeated_close_failures_auto_park_the_slice",
   "test_verify_lints_contracts"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:0841baa019c19db6587a639b0a49c502636d3ac1bbb0b61ff438f69bc515a03c",
  "imports": [
   "conftest",
   "engine",

@@ -4,7 +4,41 @@
   "cmd_event",
   "cmd_verify"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.SchemaError",
+  "engine.SubstrateMissing",
+  "engine.check_schema_version",
+  "engine.cli.common._dep_status",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.cli.init.vendored_engine_status",
+  "engine.cli.landing.landing_config",
+  "engine.events.Sidecar",
+  "engine.events.make_finding",
+  "engine.events.run_stdin",
+  "engine.gates.extra.verify_extra_findings",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.graph.orphaned_notes",
+  "engine.graph.provenance_gaps",
+  "engine.graph.reachable_source_keys",
+  "engine.graph.reachable_trees",
+  "engine.graph.read_notes",
+  "engine.graph.resolve_note",
+  "engine.graph.uses_vs_declares",
+  "engine.harness_dir",
+  "engine.load_backlog",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.registry.load_registry",
+  "engine.registry.validate_manifests",
+  "engine.schema.validate_substrate",
+  "engine.sha256_file",
+  "engine.telemetry",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:14add93e24dce15e674dd956a450a1c462c006bf2d7b9463d52d3033a2d018df",
  "imports": [
   "engine",
   "engine.cli.common",
@@ -16,6 +50,7 @@
   "engine.graph",
   "engine.registry",
   "engine.schema",
+  "engine.telemetry",
   "json",
   "pathlib",
   "platform",
@@ -25,7 +60,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.verify",
- "source_hash": "sha256:b5a39959754399a2978e70e33b6fd0bf24226472265b719aa81f5326250f28cc",
+ "source_hash": "sha256:124a480c789c809013d2c22f467f5f01f53995217e3cf5994aeed3a4836cab42",
  "source_path": "engine/cli/verify.py",
  "symbols": [
   {
@@ -100,8 +135,8 @@
    "name": "_source_keys",
    "signature": "def _source_keys(): # one `git ls-tree` per commit: computed once, and only for a repo # that actually has a note to resolve",
    "span": [
-    284,
-    287
+    293,
+    296
    ],
    "visibility": "private"
   },
@@ -111,8 +146,8 @@
    "name": "_resolves",
    "signature": "def _resolves(slice_id)",
    "span": [
-    291,
-    292
+    300,
+    301
    ],
    "visibility": "private"
   }

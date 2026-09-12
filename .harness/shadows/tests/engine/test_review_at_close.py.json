@@ -9,7 +9,19 @@
   "test_close_runs_the_review_stack_and_records_its_verdict",
   "test_review_at_close_can_be_disabled_by_config"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.handle_event",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:f4a5614872edb6191426657daf680187f782b1582a655c3a757cd2a9cf97c46d",
  "imports": [
   "conftest",
   "engine",
@@ -20,7 +32,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_review_at_close",
- "source_hash": "sha256:2f31a6d2f3bf7c239e7cc15bb17fe35dbf1bac508a88973de04c58ae66df1a94",
+ "source_hash": "sha256:ecab250836f4998a4d1d91e2c691337687057aa64643851976891ea8f0f06ade",
  "source_path": "tests/engine/test_review_at_close.py",
  "symbols": [
   {
@@ -62,8 +74,8 @@
    "name": "test_agent_recorded_findings_are_surfaced_at_close",
    "signature": "def test_agent_recorded_findings_are_surfaced_at_close(toy)",
    "span": [
-    57,
-    58
+    58,
+    59
    ],
    "visibility": "public"
   },
@@ -73,8 +85,8 @@
    "name": "test_a_recorded_fix_clears_an_agent_blocking_finding",
    "signature": "def test_a_recorded_fix_clears_an_agent_blocking_finding(toy)",
    "span": [
-    72,
-    73
+    73,
+    74
    ],
    "visibility": "public"
   },
@@ -84,8 +96,8 @@
    "name": "test_a_reblock_after_a_fix_blocks_again",
    "signature": "def test_a_reblock_after_a_fix_blocks_again(toy)",
    "span": [
-    92,
-    93
+    93,
+    94
    ],
    "visibility": "public"
   },
@@ -95,8 +107,8 @@
    "name": "test_an_unadjudicated_park_blocks_the_close",
    "signature": "def test_an_unadjudicated_park_blocks_the_close(toy)",
    "span": [
-    105,
-    106
+    106,
+    107
    ],
    "visibility": "public"
   },
@@ -106,8 +118,8 @@
    "name": "test_review_at_close_can_be_disabled_by_config",
    "signature": "def test_review_at_close_can_be_disabled_by_config(toy)",
    "span": [
-    126,
-    127
+    127,
+    128
    ],
    "visibility": "public"
   },
@@ -117,8 +129,8 @@
    "name": "test_a_recorded_g5_override_satisfies_r_uses",
    "signature": "def test_a_recorded_g5_override_satisfies_r_uses(toy)",
    "span": [
-    144,
-    145
+    145,
+    146
    ],
    "visibility": "public"
   }

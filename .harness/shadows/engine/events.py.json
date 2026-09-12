@@ -8,6 +8,7 @@
   "close",
   "context_add",
   "context_get",
+  "context_matches",
   "handle_event",
   "make_finding",
   "merge_verdicts",
@@ -28,21 +29,48 @@
   "validate_finding",
   "verdict_for"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.baseline.ensure_baseline",
+  "engine.check_schema_version",
+  "engine.extractor.engine.RegistryIndex",
+  "engine.extractor.engine.extract_path",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.extractor.modules.python_module_ids",
+  "engine.gates.run_gates",
+  "engine.get_slice",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.graph.record_dependency_snapshot",
+  "engine.harness_dir",
+  "engine.load_config",
+  "engine.now_iso",
+  "engine.registry.load_registry",
+  "engine.resolver.resolve",
+  "engine.telemetry",
+  "engine.token_estimate",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:30a502ccea06bc7e27763cda07d1ea9d11ebbef2d5f5163ad7829b4730d6514e",
  "imports": [
-  "extractor.engine",
-  "gates",
-  "graph",
+  "engine",
+  "engine.baseline",
+  "engine.extractor.engine",
+  "engine.extractor.modules",
+  "engine.gates",
+  "engine.graph",
+  "engine.registry",
+  "engine.resolver",
+  "engine.telemetry",
   "hashlib",
   "json",
   "pathlib",
-  "registry",
-  "resolver",
   "sqlite3"
  ],
  "language": "python",
  "module_id": "engine.events",
- "source_hash": "sha256:400a2cd538a61aed6e063ff38185b128821ce834b75a5a503afdbe8da39c3b78",
+ "source_hash": "sha256:0d8b025b29ee14da2cc595432c66ae6591eca6bd537f244a1f33fbbb121e099d",
  "source_path": "engine/events.py",
  "symbols": [
   {
@@ -123,7 +151,7 @@
    "visibility": "public"
   },
   {
-   "doc": "Gitignored SQLite: session context_loaded state, slice symbol snapshots,\n    touched-file tracking, extractor cache metadata. Fully rebuildable.",
+   "doc": "Gitignored session state, touched files, baseline/cache data and\n    pending telemetry. Git-backed baselines recover after loss; transient\n    session observations and unflushed telemetry do not.",
    "kind": "class",
    "name": "Sidecar",
    "signature": "class Sidecar",
@@ -139,8 +167,8 @@
    "name": "__init__",
    "signature": "def __init__(self, root)",
    "span": [
-    141,
-    142
+    142,
+    143
    ],
    "visibility": "public"
   },
@@ -150,19 +178,41 @@
    "name": "close",
    "signature": "def close(self)",
    "span": [
-    167,
-    168
+    168,
+    169
    ],
    "visibility": "public"
   },
   {
    "doc": null,
    "kind": "method",
-   "name": "context_add",
-   "signature": "def context_add(self, session_id, items)",
+   "name": "_context_stamp",
+   "signature": "def _context_stamp(items, injections)",
    "span": [
-    170,
-    171
+    172,
+    173
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "method",
+   "name": "context_add",
+   "signature": "def context_add(self, session_id, items, *, injections=None)",
+   "span": [
+    176,
+    177
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "IDs certify coverage; the stamp certifies the rendered content.",
+   "kind": "method",
+   "name": "context_matches",
+   "signature": "def context_matches(self, session_id, items, injections)",
+   "span": [
+    188,
+    189
    ],
    "visibility": "public"
   },
@@ -172,8 +222,8 @@
    "name": "context_get",
    "signature": "def context_get(self, session_id) -> set",
    "span": [
-    177,
-    178
+    194,
+    195
    ],
    "visibility": "public"
   },
@@ -183,8 +233,8 @@
    "name": "state_set",
    "signature": "def state_set(self, session_id, key, value)",
    "span": [
-    182,
-    183
+    199,
+    200
    ],
    "visibility": "public"
   },
@@ -194,8 +244,8 @@
    "name": "state_get",
    "signature": "def state_get(self, session_id, key, default=None)",
    "span": [
-    188,
-    189
+    205,
+    206
    ],
    "visibility": "public"
   },
@@ -205,8 +255,8 @@
    "name": "release_slice",
    "signature": "def release_slice(self, slice_id=None) -> int",
    "span": [
-    195,
-    196
+    212,
+    213
    ],
    "visibility": "public"
   },
@@ -216,8 +266,8 @@
    "name": "telemetry_buffer",
    "signature": "def telemetry_buffer(self, row: dict) -> None",
    "span": [
-    208,
-    209
+    225,
+    226
    ],
    "visibility": "public"
   },
@@ -227,8 +277,8 @@
    "name": "telemetry_peek",
    "signature": "def telemetry_peek(self) -> list",
    "span": [
-    215,
-    216
+    232,
+    233
    ],
    "visibility": "public"
   },
@@ -238,8 +288,8 @@
    "name": "telemetry_drain",
    "signature": "def telemetry_drain(self) -> list",
    "span": [
-    219,
-    220
+    236,
+    237
    ],
    "visibility": "public"
   },
@@ -249,8 +299,8 @@
    "name": "release_snapshots",
    "signature": "def release_snapshots(self, slice_id) -> int",
    "span": [
-    225,
-    226
+    242,
+    243
    ],
    "visibility": "public"
   },
@@ -260,8 +310,8 @@
    "name": "snapshot_set",
    "signature": "def snapshot_set(self, slice_id, module_id, symbols)",
    "span": [
-    233,
-    234
+    252,
+    253
    ],
    "visibility": "public"
   },
@@ -271,8 +321,8 @@
    "name": "snapshot_get",
    "signature": "def snapshot_get(self, slice_id) -> dict",
    "span": [
-    239,
-    240
+    258,
+    259
    ],
    "visibility": "public"
   },
@@ -282,8 +332,8 @@
    "name": "touch",
    "signature": "def touch(self, session_id, slice_id, paths)",
    "span": [
-    244,
-    245
+    263,
+    264
    ],
    "visibility": "public"
   },
@@ -293,8 +343,8 @@
    "name": "touched_paths",
    "signature": "def touched_paths(self, slice_id=None, session_id=None) -> set",
    "span": [
-    250,
-    251
+    269,
+    270
    ],
    "visibility": "public"
   },
@@ -304,8 +354,8 @@
    "name": "handle_event",
    "signature": "def handle_event(raw: dict, root) -> dict",
    "span": [
-    260,
-    261
+    279,
+    280
    ],
    "visibility": "public"
   },
@@ -315,8 +365,8 @@
    "name": "rel_in_root",
    "signature": "def rel_in_root(root, rel) -> bool",
    "span": [
-    354,
-    355
+    373,
+    374
    ],
    "visibility": "public"
   },
@@ -326,19 +376,19 @@
    "name": "_normalize_file_paths",
    "signature": "def _normalize_file_paths(root, evt)",
    "span": [
-    369,
-    370
+    388,
+    389
    ],
    "visibility": "private"
   },
   {
-   "doc": "G6 baseline: public symbols per module at slice start (first Phase 1).\n    The source_hash rides along so G6 can tell real drift (source changed)\n    from extractor format skew (symbols changed, bytes did not) \u2014 W8.",
+   "doc": "Snapshot once, with a Git anchor that can recover lost SQLite state.",
    "kind": "function",
    "name": "_snapshot_slice_baseline",
    "signature": "def _snapshot_slice_baseline(root, sidecar, slice_id)",
    "span": [
-    382,
-    383
+    401,
+    402
    ],
    "visibility": "private"
   },
@@ -348,8 +398,8 @@
    "name": "_regenerate_touched",
    "signature": "def _regenerate_touched(root, sidecar, session, slice_id, config)",
    "span": [
-    402,
-    403
+    407,
+    408
    ],
    "visibility": "private"
   },
@@ -359,8 +409,8 @@
    "name": "add_once",
    "signature": "def add_once(etype, frm, to)",
    "span": [
-    415,
-    416
+    435,
+    436
    ],
    "visibility": "public"
   },
@@ -370,8 +420,8 @@
    "name": "run_stdin",
    "signature": "def run_stdin(root, stdin_text: str) -> tuple",
    "span": [
-    438,
-    439
+    464,
+    465
    ],
    "visibility": "public"
   }

@@ -8,7 +8,21 @@
   "test_unknown_edge_type_fails_loud",
   "test_uses_vs_declares_diff"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "engine.graph.GraphError",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.graph.neighbors",
+  "engine.graph.orphaned_notes",
+  "engine.graph.provenance",
+  "engine.graph.read_notes",
+  "engine.graph.rebuild",
+  "engine.graph.uses_vs_declares",
+  "engine.graph.write_note"
+ ],
+ "import_resolution_hash": "sha256:0cf9eee73b8d3b9914570608d06edf4c19ba156443355af6d6aad9cd419a4d24",
  "imports": [
   "conftest",
   "engine.graph",

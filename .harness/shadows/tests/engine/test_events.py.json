@@ -2,19 +2,45 @@
  "exports": [
   "mk",
   "test_blocking_finding_without_rule_ref_rejected",
+  "test_cli_resolve_records_content_for_hook_deduplication",
   "test_context_loaded_persisted_per_session",
   "test_golden_fixture_files",
   "test_golden_round_trip_all_five_events",
+  "test_legacy_context_ids_do_not_certify_content_freshness",
   "test_malformed_input_exit_2",
   "test_phase1_reinjection_deduped_per_session",
+  "test_phase1_reinjects_changed_content_under_existing_ids",
   "test_validate_event_rejects",
   "test_verdict_merging_property",
   "test_warm_pre_change_under_150ms"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.EVENTS",
+  "engine.events.EventError",
+  "engine.events.Sidecar",
+  "engine.events.VerdictError",
+  "engine.events.handle_event",
+  "engine.events.make_finding",
+  "engine.events.merge_verdicts",
+  "engine.events.validate_event",
+  "engine.events.verdict_for",
+  "engine.extractor.engine.extract_path",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.resolver.resolve",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:2542be479c799ba72b044321c32ab025ec80f740fbfdcdaf4589da3d37d26879",
  "imports": [
   "conftest",
+  "engine",
   "engine.events",
+  "engine.extractor.engine",
+  "engine.resolver",
   "itertools",
   "json",
   "pytest",
@@ -22,7 +48,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_events",
- "source_hash": "sha256:b46075efa0e3f482732e1952fd0b50a45b37cbdb59defdfffa9a4c9bc341e2ef",
+ "source_hash": "sha256:c102c336d73aa1435ec1fd8989770e868d433f5dfa23de1c01b145c2b8c9e504",
  "source_path": "tests/engine/test_events.py",
  "symbols": [
   {
@@ -127,11 +153,44 @@
   {
    "doc": null,
    "kind": "function",
+   "name": "test_phase1_reinjects_changed_content_under_existing_ids",
+   "signature": "def test_phase1_reinjects_changed_content_under_existing_ids(toy, changed)",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_legacy_context_ids_do_not_certify_content_freshness",
+   "signature": "def test_legacy_context_ids_do_not_certify_content_freshness(toy)",
+   "span": [
+    156,
+    157
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_cli_resolve_records_content_for_hook_deduplication",
+   "signature": "def test_cli_resolve_records_content_for_hook_deduplication(toy)",
+   "span": [
+    172,
+    173
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
    "name": "test_warm_pre_change_under_150ms",
    "signature": "def test_warm_pre_change_under_150ms(toy)",
    "span": [
-    127,
-    128
+    181,
+    182
    ],
    "visibility": "public"
   }

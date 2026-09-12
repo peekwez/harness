@@ -2,20 +2,34 @@
  "exports": [
   "RegistryIndex",
   "__init__",
+  "add_source",
   "match",
   "match_registry_module",
   "module_id_for_rel",
+  "python_module_ids",
   "src_roots",
   "strip_src_root"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.DEFAULT_SRC_ROOTS",
+  "engine.HarnessError",
+  "engine.IGNORED_DIRS",
+  "engine.harness_dir",
+  "engine.read_jsonl",
+  "fnmatch.fnmatchcase",
+  "pathlib.Path",
+  "pathlib.PurePosixPath"
+ ],
+ "import_resolution_hash": "sha256:b9347eee83d68358a40bd300b6e73770b3c026cf566c9f8c5b038487940d60ee",
  "imports": [
+  "engine",
   "fnmatch",
   "pathlib"
  ],
  "language": "python",
  "module_id": "engine.extractor.modules",
- "source_hash": "sha256:b8f75543198334a735a2b5870d209df294d4af79bd70fe8164b2a43ca8be02df",
+ "source_hash": "sha256:c56ff64cf2b6446edc46272845e38d832df67e3088de99c4df46c50ef43f4e9a",
  "source_path": "engine/extractor/modules.py",
  "symbols": [
   {
@@ -24,8 +38,8 @@
    "name": "src_roots",
    "signature": "def src_roots(config: dict | None = None) -> list",
    "span": [
-    20,
-    21
+    21,
+    22
    ],
    "visibility": "public"
   },
@@ -35,8 +49,8 @@
    "name": "strip_src_root",
    "signature": "def strip_src_root(rel_posix: str, roots: list) -> list",
    "span": [
-    53,
-    54
+    54,
+    55
    ],
    "visibility": "public"
   },
@@ -46,8 +60,30 @@
    "name": "module_id_for_rel",
    "signature": "def module_id_for_rel(rel_posix: str, config: dict | None = None) -> str",
    "span": [
-    77,
-    78
+    78,
+    79
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Known Python module identities from local sources and the registry.\n\n    Python's ``from package import name`` is ambiguous: ``name`` can be an\n    ordinary exported symbol or a submodule.  Only promote it to\n    ``package.name`` when that module identity is present in the repository\n    or registry; otherwise keep the dependency on ``package``.",
+   "kind": "function",
+   "name": "python_module_ids",
+   "signature": "def python_module_ids(root, config: dict | None = None) -> set[str]",
+   "span": [
+    101,
+    102
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Add a concrete module and namespace packages implied by its dirs.",
+   "kind": "function",
+   "name": "add_source",
+   "signature": "def add_source(rel_posix: str)",
+   "span": [
+    112,
+    113
    ],
    "visibility": "public"
   },
@@ -57,8 +93,8 @@
    "name": "RegistryIndex",
    "signature": "class RegistryIndex",
    "span": [
-    100,
-    101
+    148,
+    149
    ],
    "visibility": "public"
   },
@@ -68,8 +104,8 @@
    "name": "__init__",
    "signature": "def __init__(self, entries)",
    "span": [
-    108,
-    109
+    156,
+    157
    ],
    "visibility": "public"
   },
@@ -79,8 +115,8 @@
    "name": "match",
    "signature": "def match(self, import_name: str) -> dict | None",
    "span": [
-    125,
-    126
+    173,
+    174
    ],
    "visibility": "public"
   },
@@ -90,8 +126,8 @@
    "name": "match_registry_module",
    "signature": "def match_registry_module(import_name: str, entries) -> dict | None",
    "span": [
-    151,
-    152
+    199,
+    200
    ],
    "visibility": "public"
   }

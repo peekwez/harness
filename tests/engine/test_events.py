@@ -124,6 +124,60 @@ def test_phase1_reinjection_deduped_per_session(toy):
     assert other["injections"]
 
 
+@pytest.mark.parametrize("changed", ["decision", "guidance", "shadow"])
+def test_phase1_reinjects_changed_content_under_existing_ids(toy, changed):
+    from engine import load_config, read_jsonl, write_jsonl
+    from engine.extractor.engine import extract_path
+
+    event = make_event("pre_context", session="updated-content")
+    first = handle_event(event, toy)
+    assert first["injections"]
+    if changed == "decision":
+        path = toy / ".harness" / "decisions.jsonl"
+        rows = read_jsonl(path)
+        rows[0]["answer"] = "Always include a trace correlation identifier."
+        write_jsonl(path, rows)
+    elif changed == "guidance":
+        path = toy / "adr" / "007-telemetry.md"
+        path.write_text(path.read_text().replace(
+            "Never log PII", "Always redact PII"))
+    else:
+        path = toy / "telemetry.py"
+        path.write_text(path.read_text().replace(
+            "attrs: dict", "attrs: dict | None"))
+        extract_path(toy, path, load_config(toy), force=True)
+
+    updated = handle_event(event, toy)
+    assert updated["injections"], "stable IDs must not hide changed content"
+    assert updated["injections"] != first["injections"]
+    assert handle_event(event, toy)["injections"] == []
+
+
+def test_legacy_context_ids_do_not_certify_content_freshness(toy):
+    from engine import load_config
+    from engine.events import Sidecar
+    from engine.resolver import resolve
+
+    resolved = resolve(toy, "slice-042", load_config(toy))
+    sidecar = Sidecar(toy)
+    try:
+        sidecar.context_add("legacy-context", resolved["context_loaded"])
+    finally:
+        sidecar.close()
+    event = make_event("pre_context", session="legacy-context")
+    assert handle_event(event, toy)["injections"]
+    assert handle_event(event, toy)["injections"] == []
+
+
+def test_cli_resolve_records_content_for_hook_deduplication(toy):
+    proc = run_cli("resolve", "--slice", "slice-042", "--session", "cli-context",
+                   root=toy)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["injections"]
+    event = make_event("pre_context", session="cli-context")
+    assert handle_event(event, toy)["injections"] == []
+
+
 def test_warm_pre_change_under_150ms(toy):
     loaded_context(toy, session="warm")
     evt = make_event("pre_change", session="warm", files=["orders.py"])

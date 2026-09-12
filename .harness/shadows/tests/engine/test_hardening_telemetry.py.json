@@ -1,0 +1,194 @@
+{
+ "exports": [
+  "fail_second",
+  "fail_sync",
+  "test_aggregate_applies_since_to_events_and_edges_and_reports_samples",
+  "test_aggregate_exposes_retry_parks_outcomes_and_advisory_compaction",
+  "test_concurrent_flushes_acknowledge_each_buffer_row_once",
+  "test_direct_emit_separates_a_valid_unterminated_final_row",
+  "test_failed_direct_emit_is_advisory_and_buffered_for_retry",
+  "test_flush_repairs_torn_live_tail_without_losing_valid_prefix",
+  "test_flush_retains_outbox_until_file_is_durable",
+  "test_flush_retries_after_partial_append_without_loss_or_duplicates",
+  "test_load_combines_archive_live_and_buffer_and_deduplicates_ids",
+  "test_malformed_buffer_row_is_quarantined_without_stranding_valid_rows",
+  "test_malformed_rotation_limit_is_advisory"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "concurrent.futures.ThreadPoolExecutor",
+  "engine.events.Sidecar",
+  "engine.read_jsonl",
+  "engine.telemetry",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:ddc7be8ea1e324d3ddb0feb5a42d7675f0e9a5d317d67415481bab7787cac4f3",
+ "imports": [
+  "base64",
+  "concurrent.futures",
+  "engine",
+  "engine.events",
+  "engine.telemetry",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_telemetry",
+ "source_hash": "sha256:d83c5241a6302d384664759d4130d2565fa81ed08ba98abd2f188406bbc80018",
+ "source_path": "tests/engine/test_hardening_telemetry.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_event",
+   "signature": "def _event(ts, event_id, *, verdict=\"allow\", gates=None)",
+   "span": [
+    11,
+    12
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "A write failure must leave selected buffer rows retryable by ID.",
+   "kind": "function",
+   "name": "test_flush_retries_after_partial_append_without_loss_or_duplicates",
+   "signature": "def test_flush_retries_after_partial_append_without_loss_or_duplicates( toy, monkeypatch, capsys)",
+   "span": [
+    27,
+    29
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "fail_second",
+   "signature": "def fail_second(path, row)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Two flushers must not duplicate or delete one another's selections.",
+   "kind": "function",
+   "name": "test_concurrent_flushes_acknowledge_each_buffer_row_once",
+   "signature": "def test_concurrent_flushes_acknowledge_each_buffer_row_once(toy)",
+   "span": [
+    61,
+    62
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Rotation or flush retry overlap must remain one logical event.",
+   "kind": "function",
+   "name": "test_load_combines_archive_live_and_buffer_and_deduplicates_ids",
+   "signature": "def test_load_combines_archive_live_and_buffer_and_deduplicates_ids(toy)",
+   "span": [
+    76,
+    77
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Optional logging failure must not block work or discard the event.",
+   "kind": "function",
+   "name": "test_failed_direct_emit_is_advisory_and_buffered_for_retry",
+   "signature": "def test_failed_direct_emit_is_advisory_and_buffered_for_retry( toy, monkeypatch, capsys)",
+   "span": [
+    96,
+    98
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Windowed rates must not mix recent events with lifetime graph edges.",
+   "kind": "function",
+   "name": "test_aggregate_applies_since_to_events_and_edges_and_reports_samples",
+   "signature": "def test_aggregate_applies_since_to_events_and_edges_and_reports_samples(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Status must report automatic parks without claiming one-shot promotion.",
+   "kind": "function",
+   "name": "test_aggregate_exposes_retry_parks_outcomes_and_advisory_compaction",
+   "signature": "def test_aggregate_exposes_retry_parks_outcomes_and_advisory_compaction(toy)",
+   "span": [
+    143,
+    144
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_flush_retains_outbox_until_file_is_durable",
+   "signature": "def test_flush_retains_outbox_until_file_is_durable(toy, monkeypatch)",
+   "span": [
+    167,
+    168
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "fail_sync",
+   "signature": "def fail_sync(_path)",
+   "span": [
+    171,
+    172
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A crashed final append must not permanently poison outbox retries.",
+   "kind": "function",
+   "name": "test_flush_repairs_torn_live_tail_without_losing_valid_prefix",
+   "signature": "def test_flush_repairs_torn_live_tail_without_losing_valid_prefix(toy)",
+   "span": [
+    185,
+    186
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "A complete legacy final row needs a newline before the next append.",
+   "kind": "function",
+   "name": "test_direct_emit_separates_a_valid_unterminated_final_row",
+   "signature": "def test_direct_emit_separates_a_valid_unterminated_final_row(toy)",
+   "span": [
+    212,
+    213
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Corrupt optional telemetry must not hide or block later valid events.",
+   "kind": "function",
+   "name": "test_malformed_buffer_row_is_quarantined_without_stranding_valid_rows",
+   "signature": "def test_malformed_buffer_row_is_quarantined_without_stranding_valid_rows(toy)",
+   "span": [
+    229,
+    230
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Invalid optional telemetry config must not block close workflows.",
+   "kind": "function",
+   "name": "test_malformed_rotation_limit_is_advisory",
+   "signature": "def test_malformed_rotation_limit_is_advisory(toy, capsys)",
+   "span": [
+    260,
+    261
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -3,9 +3,19 @@
   "validate_rows",
   "validate_substrate"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.SubstrateMissing",
+  "engine.harness_dir",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.registry.registry_kinds"
+ ],
+ "import_resolution_hash": "sha256:7be33aa25cb211eed5ce476636e946bd9dcc8897c8d857e4dba735d9b829d853",
  "imports": [
-  "registry"
+  "engine",
+  "engine.registry"
  ],
  "language": "python",
  "module_id": "engine.schema",

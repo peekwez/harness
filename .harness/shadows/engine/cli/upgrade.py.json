@@ -1,0 +1,224 @@
+{
+ "exports": [
+  "cmd_upgrade",
+  "upgrade_installed_plugin",
+  "upgrade_project",
+  "visit"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.ENGINE_VERSION",
+  "engine.HarnessError",
+  "engine.SCHEMA_VERSION",
+  "engine.cli.common._install_merge_drivers",
+  "engine.cli.common._print",
+  "engine.cli.init._vendor_engine",
+  "engine.cli.init._write_autonomy_settings",
+  "engine.cli.init._write_workflow",
+  "engine.extractor.engine.extract_all",
+  "engine.graph.repair_legacy_provenance",
+  "engine.load_config",
+  "engine.migrate.MIGRATIONS",
+  "engine.migrate.current_version",
+  "engine.migrate.migrate",
+  "engine.plugin_install.entry_id",
+  "engine.plugin_install.installed_entries",
+  "engine.plugin_install.plugin_commands",
+  "engine.plugin_install.prevent_downgrade",
+  "engine.plugin_install.prove_engine",
+  "engine.plugin_install.select_plugin",
+  "engine.registry.load_registry",
+  "engine.registry.refresh_built",
+  "engine.schema.validate_substrate",
+  "engine.sha256_file",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:6cee388b33a99847342e6512f36c5fe64b0364a032c1fcf17520c99ed18397d3",
+ "imports": [
+  "engine",
+  "engine.cli.common",
+  "engine.cli.init",
+  "engine.extractor.engine",
+  "engine.graph",
+  "engine.migrate",
+  "engine.plugin_install",
+  "engine.registry",
+  "engine.schema",
+  "json",
+  "pathlib",
+  "shlex",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.upgrade",
+ "source_hash": "sha256:8b3273f76c3e522c2ae0f7faa7a97d5ca36492b43943e285490a5e1b90e572dc",
+ "source_path": "engine/cli/upgrade.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_require_substrate",
+   "signature": "def _require_substrate(root: Path) -> None",
+   "span": [
+    34,
+    35
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_schema_version",
+   "signature": "def _schema_version(root: Path) -> int",
+   "span": [
+    41,
+    42
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Snapshot which BUILT entries were clean before upgrade writes.\n\n    Registry hashes are provenance.  A later forced extraction must not turn\n    an unrelated, pre-existing source edit into an approved registry update.",
+   "kind": "function",
+   "name": "_clean_registry_entries",
+   "signature": "def _clean_registry_entries(root: Path) -> tuple[list[str], list[str], list[str]]",
+   "span": [
+    50,
+    51
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_refresh_claude_settings",
+   "signature": "def _refresh_claude_settings(root: Path, config: dict) -> dict",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_is_harness_adapter_command",
+   "signature": "def _is_harness_adapter_command(command: object) -> bool",
+   "span": [
+    97,
+    98
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Point only recognizable Harness commands at the vendored adapter.",
+   "kind": "function",
+   "name": "_refresh_codex_hooks",
+   "signature": "def _refresh_codex_hooks(root: Path, *, dry_run: bool = False) -> dict",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "visit",
+   "signature": "def visit(value)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Upgrade one substrate without rewriting authored project state.",
+   "kind": "function",
+   "name": "upgrade_project",
+   "signature": "def upgrade_project(root, *, dry_run: bool = False) -> dict",
+   "span": [
+    160,
+    161
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_run_command",
+   "signature": "def _run_command(command)",
+   "span": [
+    238,
+    239
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Run an interactive host mutation without contaminating JSON stdout.",
+   "kind": "function",
+   "name": "_run_host_command",
+   "signature": "def _run_host_command(command)",
+   "span": [
+    242,
+    243
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_run_checked",
+   "signature": "def _run_checked(command)",
+   "span": [
+    248,
+    249
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_run_host_checked",
+   "signature": "def _run_host_checked(command)",
+   "span": [
+    260,
+    261
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_command_json",
+   "signature": "def _command_json(command)",
+   "span": [
+    273,
+    274
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Update one installed Harness plugin, then delegate project upgrade.",
+   "kind": "function",
+   "name": "upgrade_installed_plugin",
+   "signature": "def upgrade_installed_plugin(root, host: str, *, plugin_id=None, scope=None, dry_run: bool = False) -> dict",
+   "span": [
+    282,
+    284
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "cmd_upgrade",
+   "signature": "def cmd_upgrade(args)",
+   "span": [
+    366,
+    367
+   ],
+   "visibility": "public"
+  }
+ ]
+}

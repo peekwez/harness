@@ -9,9 +9,21 @@
   "run_gate",
   "verify_extra_findings"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.EVENTS",
+  "engine.events.VerdictError",
+  "engine.events.make_finding",
+  "engine.events.rel_in_root",
+  "engine.events.validate_finding",
+  "engine.gates.GateContext",
+  "engine.gates.builtin_gates",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:fb480c2edaa353e04d98b662358fb5b91a264bd1eae37599e6fee94bb3bdec18",
  "imports": [
-  "events",
+  "engine.events",
+  "engine.gates",
   "hashlib",
   "importlib",
   "importlib.util",

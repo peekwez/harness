@@ -1,9 +1,9 @@
 """C2 — Extractor: tree-sitter -> universal shadows.
 
 One driver, per-language query packs (symbols.scm / imports.scm / exports.scm).
-Content-hash cache: unchanged source -> no work. Unknown language -> degenerate
-shadow + G8 finding, never silence. Shadows are deterministic: same source
-bytes -> byte-identical shadow.
+Content/input cache: unchanged derivation inputs -> no work. Unknown language
+-> degenerate shadow + G8 finding, never silence. Shadows are deterministic:
+the same source and module-resolution context produce byte-identical output.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pathlib import Path
 from .. import (IGNORED_DIRS, IGNORED_EXTS, HarnessError, harness_dir,
                 sha256_bytes)
 from ..events import make_finding
-from .modules import module_id_for_rel
+from .modules import module_id_for_rel, python_module_ids
 # re-exported: the gates and the event pipeline reach the matcher through
 # the extractor's public surface (ADR-002 / D-008)
 from .modules import RegistryIndex, match_registry_module  # noqa: F401
@@ -27,7 +27,9 @@ from .modules import RegistryIndex, match_registry_module  # noqa: F401
 # v3 = dotted Python imports + src-root-stripped module ids (0.8, D-008):
 # without this bump every committed shadow stays a cache HIT with its
 # truncated imports while G7's uncached rebuild mismatches forever.
-EXTRACTOR_VERSION = 3
+# v4 = package-relative imports and recognized ``from package import
+# submodule`` dependencies, plus their import-resolution cache stamp.
+EXTRACTOR_VERSION = 4
 
 LANG_BY_EXT = {
     ".py": "python",
@@ -174,25 +176,56 @@ def _python_symbols(tree, src):
     return symbols
 
 
-def _python_imports(tree, src):
+def _python_imports(tree, src, module_id: str, is_package: bool,
+                    known_modules: set[str]):
     imports = set()
+    candidates = set()
     caps = _captures(_get_query("python", "imports"), tree.root_node)
     for node in caps.get("import", []):
         if node.type == "import_from_statement":
             mod = node.child_by_field_name("module_name")
             if mod is not None:
-                # the WHOLE dotted path (D-008): truncating to the top-level
-                # segment makes every namespace package one opaque node
-                t = _text(mod, src).lstrip(".")
-                if t:
-                    imports.add(t)
+                raw_module = _text(mod, src)
+                level = len(raw_module) - len(raw_module.lstrip("."))
+                tail = raw_module[level:]
+                if level:
+                    package = module_id if is_package else module_id.rpartition(".")[0]
+                    package_parts = [p for p in package.split(".") if p]
+                    keep = max(0, len(package_parts) - level + 1)
+                    base = ".".join(package_parts[:keep] +
+                                    ([tail] if tail else []))
+                else:
+                    base = tail
+
+                # A from-import name is a module dependency only when an
+                # actual local/registered module has that identity.  Otherwise
+                # it is an ordinary symbol exported by the base module.
+                names = []
+                for child in node.named_children:
+                    if child.start_byte < mod.end_byte:
+                        continue
+                    if child.type == "aliased_import":
+                        name = child.child_by_field_name("name")
+                        if name is not None:
+                            names.append(_text(name, src))
+                    elif child.type == "dotted_name":
+                        names.append(_text(child, src))
+                submodule_candidates = {
+                    f"{base}.{name}" if base else name
+                    for name in names
+                }
+                candidates.update(submodule_candidates)
+                resolved_submodules = submodule_candidates & known_modules
+                imports.update(resolved_submodules)
+                if base and (not names or len(resolved_submodules) < len(names)):
+                    imports.add(base)
         else:  # import_statement
             for child in node.named_children:
                 if child.type in ("dotted_name", "aliased_import"):
                     t = _text(child, src).split(" as ")[0].strip()
                     if t:
                         imports.add(t)
-    return sorted(imports)
+    return sorted(imports), sorted(candidates)
 
 
 def _python_exports(tree, src, symbols):
@@ -577,12 +610,25 @@ def _degenerate_shadow(root, path: Path, source: bytes, config=None) -> dict:
     }
 
 
-def build_shadow(root, path: Path, source: bytes, lang: str, config=None) -> dict:
+def build_shadow(root, path: Path, source: bytes, lang: str, config=None,
+                 known_modules=None) -> dict:
     parser, _ = _get_parser(lang)
     tree = parser.parse(source)
+    module_id = module_id_for(root, path, config)
+    import_candidates = []
+    import_resolution_hash = None
     if lang == "python":
+        if known_modules is None:
+            known_modules = python_module_ids(root, config)
+        elif not isinstance(known_modules, set):
+            known_modules = set(known_modules)
         symbols = _python_symbols(tree, source)
-        imports = _python_imports(tree, source)
+        imports, import_candidates = _python_imports(
+            tree, source, module_id, Path(path).name == "__init__.py",
+            known_modules)
+        import_resolution_hash = sha256_bytes(json.dumps(
+            {name: name in known_modules for name in import_candidates},
+            sort_keys=True, separators=(",", ":")).encode())
         exports = _python_exports(tree, source, symbols)
     elif lang == "typescript":
         symbols = _ts_symbols(tree, source)
@@ -609,8 +655,8 @@ def build_shadow(root, path: Path, source: bytes, lang: str, config=None) -> dic
     else:  # pragma: no cover — guarded by caller
         raise HarnessError(f"no builder for language {lang}")
     symbols.sort(key=lambda s: (s["span"][0], s["name"]))
-    return {
-        "module_id": module_id_for(root, path, config),
+    shadow = {
+        "module_id": module_id,
         "language": lang,
         "source_path": str(Path(path).resolve().relative_to(Path(root).resolve())),
         "source_hash": sha256_bytes(source),
@@ -619,6 +665,10 @@ def build_shadow(root, path: Path, source: bytes, lang: str, config=None) -> dic
         "imports": imports,
         "exports": exports,
     }
+    if import_resolution_hash is not None:
+        shadow["import_candidates"] = import_candidates
+        shadow["import_resolution_hash"] = import_resolution_hash
+    return shadow
 
 
 def write_shadow(root, path: Path, shadow: dict) -> Path:
@@ -632,13 +682,13 @@ def load_shadow_file(sp: Path) -> dict:
     return json.loads(Path(sp).read_text(encoding="utf-8"))
 
 
-def extract_path(root, path, config=None, force=False) -> tuple:
+def extract_path(root, path, config=None, force=False,
+                 _known_modules=None) -> tuple:
     """Extract one file. Returns (shadow_dict | None, findings).
 
-    Cache: unchanged source AND same extractor version -> no work. A format
-    change is a cache miss by construction (W7) — otherwise stale-format
-    shadows are served forever while G7's uncached rebuild mismatches
-    forever. `force` bypasses the cache entirely (the escape hatch).
+    Cache: unchanged source, extractor version, language, module identity, and
+    import-resolution context -> no work. A changed derivation input is a
+    cache miss by construction; ``force`` bypasses the cache entirely.
     Unknown language -> degenerate shadow + G8 UNKNOWN_LANGUAGE finding.
     Ignored extensions -> (None, []) — docs/substrate are not modules.
     """
@@ -657,6 +707,13 @@ def extract_path(root, path, config=None, force=False) -> tuple:
     src_hash = sha256_bytes(source)
     sp = shadow_path_for(root, path)
     lang = LANG_BY_EXT.get(ext)
+    expected_module_id = module_id_for(root, path, config)
+    import_resolution_hash = None
+    if lang == "python" and deps_available():
+        if _known_modules is None:
+            _known_modules = python_module_ids(root, config)
+        elif not isinstance(_known_modules, set):
+            _known_modules = set(_known_modules)
     enabled = (config or {}).get("languages", {})
     # the language a fresh extraction would produce RIGHT NOW — a language
     # toggle or a deps install changes it, and a cached shadow of the wrong
@@ -667,9 +724,26 @@ def extract_path(root, path, config=None, force=False) -> tuple:
     if sp.exists() and not force:
         try:
             existing = load_shadow_file(sp)
+            python_cache_valid = True
+            if expected_lang == "python":
+                candidates = existing.get("import_candidates", [])
+                python_cache_valid = (
+                    isinstance(candidates, list)
+                    and all(isinstance(name, str) for name in candidates)
+                    and isinstance(existing.get("import_resolution_hash"), str)
+                )
+                if python_cache_valid:
+                    import_resolution_hash = sha256_bytes(json.dumps(
+                        {name: name in _known_modules for name in candidates},
+                        sort_keys=True, separators=(",", ":")).encode())
             if (existing.get("source_hash") == src_hash
                     and existing.get("extractor_version") == EXTRACTOR_VERSION
-                    and existing.get("language") == expected_lang):
+                    and existing.get("language") == expected_lang
+                    and existing.get("module_id") == expected_module_id
+                    and (expected_lang != "python" or
+                         python_cache_valid and
+                         existing.get("import_resolution_hash") ==
+                         import_resolution_hash)):
                 return existing, []   # cache hit: unchanged source + format + kind
         except (json.JSONDecodeError, OSError):
             pass
@@ -691,7 +765,8 @@ def extract_path(root, path, config=None, force=False) -> tuple:
             f"degraded until you run `{DEP_INSTALL_HINT}`",
             severity="advisory", key="deps|" + shadow["source_path"]))
     else:
-        shadow = build_shadow(root, path, source, lang, config)
+        shadow = build_shadow(root, path, source, lang, config,
+                              known_modules=_known_modules)
     write_shadow(root, path, shadow)
     return shadow, findings
 
@@ -704,11 +779,13 @@ def extract_all(root, config=None, force=False) -> dict:
     root = Path(root)
     written, cached, findings = [], [], []
     seen = set()
+    known_python_modules = python_module_ids(root, config)
 
     def one(p):
         sp = shadow_path_for(root, p)
         pre = sp.read_bytes() if sp.exists() else None
-        shadow, f = extract_path(root, p, config, force=force)
+        shadow, f = extract_path(root, p, config, force=force,
+                                 _known_modules=known_python_modules)
         findings.extend(f)
         if shadow is None:
             return

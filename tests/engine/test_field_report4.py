@@ -122,11 +122,11 @@ def test_override_records_the_actual_rule_ref(toy):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     edge = [e for e in load_edges(toy) if e["to"] == "file:weird.py"][-1]
     assert edge["meta"]["rule_ref"] == "gate:G1"
-    # default stays G5 when the flag is omitted
+    # file/boundary targets default to the scope gate when omitted
     run_cli("gates", "override", "--slice", "slice-042",
             "--target", "file:other.py", "--justification", "needed", root=toy)
     edge = [e for e in load_edges(toy) if e["to"] == "file:other.py"][-1]
-    assert edge["meta"]["rule_ref"] == "gate:G5"
+    assert edge["meta"]["rule_ref"] == "gate:G3"
 
 
 # ---------------------------------------------------------------- W10

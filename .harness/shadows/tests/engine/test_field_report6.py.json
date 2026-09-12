@@ -9,7 +9,17 @@
   "test_merge_slice_finishes_the_mechanical_tail",
   "test_merge_slice_refuses_an_unclosed_slice"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.read_jsonl"
+ ],
+ "import_resolution_hash": "sha256:e4ac7826102e0170daa497838c369e6c009a364a5a7ee648fef849298bd1efdc",
  "imports": [
   "conftest",
   "engine",

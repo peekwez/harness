@@ -4,7 +4,12 @@
   "main",
   "slice_closed"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "claude_agent_sdk.ClaudeAgentOptions",
+  "claude_agent_sdk.query"
+ ],
+ "import_resolution_hash": "sha256:eadc0c828516f01a7917c433a8ba220fd3c39a9d0081f4582ca196d4898720fe",
  "imports": [
   "asyncio",
   "claude_agent_sdk",

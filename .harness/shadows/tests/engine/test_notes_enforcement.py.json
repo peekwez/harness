@@ -8,7 +8,20 @@
   "test_verify_accepts_a_commit_noting_every_closed_slice",
   "test_verify_flags_a_closed_slice_with_no_note"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.handle_event",
+  "engine.graph.read_notes",
+  "engine.graph.write_note",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:0643218f4a5384ceffdd87678cbf42ac635e3ff27e5908f533522ead386087a1",
  "imports": [
   "conftest",
   "engine",
@@ -19,7 +32,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_notes_enforcement",
- "source_hash": "sha256:496eb26fcecfef591610723148748a2c9f58352288985cfd5be941820e47225b",
+ "source_hash": "sha256:d8a3b6b210a82824fa9afafb9f8092c30d83481da992f3ae27308da531569cf8",
  "source_path": "tests/engine/test_notes_enforcement.py",
  "symbols": [
   {
@@ -116,8 +129,8 @@
    "name": "test_close_still_works_without_git",
    "signature": "def test_close_still_works_without_git(tmp_path)",
    "span": [
-    143,
-    144
+    146,
+    147
    ],
    "visibility": "public"
   }

@@ -32,6 +32,13 @@ def _acked(ctx) -> set:
 def check(ctx) -> list:
     if not ctx.work_unit_id:
         return []
+    from ..baseline import ensure_baseline
+    from .. import HarnessError
+    try:
+        ensure_baseline(ctx.root, ctx.sidecar, ctx.work_unit_id)
+    except HarnessError as exc:
+        return [make_finding("MISSING_DRIFT_BASELINE", GATE["rule_ref"],
+                             str(exc), severity="block", key=ctx.work_unit_id)]
     baseline = ctx.sidecar.snapshot_get(ctx.work_unit_id)
     if not baseline:
         return []

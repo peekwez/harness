@@ -62,7 +62,8 @@ def cmd_resolve(args):
     else:
         sidecar = Sidecar(root)
         try:
-            sidecar.context_add(session, out["context_loaded"])
+            sidecar.context_add(session, out["context_loaded"],
+                                injections=out["injections"])
         finally:
             sidecar.close()
         out["context_registered"] = len(out["context_loaded"])

@@ -5,7 +5,11 @@
   "test_every_subcommand_has_a_cli_module",
   "test_help_still_lists_all_subcommands"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.cli.COMMANDS"
+ ],
+ "import_resolution_hash": "sha256:083a8d4d480a896ade0e7425aca30e788186ad72ee59e3ba278ff43daac43dbc",
  "imports": [
   "engine.cli",
   "pathlib",

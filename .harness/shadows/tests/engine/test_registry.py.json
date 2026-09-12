@@ -6,7 +6,19 @@
   "test_flip_succeeds_and_derives_fields",
   "test_manifest_deletion_blocks_session_start"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.make_event",
+  "engine.events.handle_event",
+  "engine.extractor.engine.extract_path",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.registry.RegistryError",
+  "engine.registry.flip_status",
+  "engine.registry.load_registry",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:ad2395f9bb3c2470571b83352797f73b2e16c0670330a2cb9e002e10eb41b95a",
  "imports": [
   "conftest",
   "engine",

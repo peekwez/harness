@@ -15,10 +15,22 @@
   "similarity",
   "validate_manifests"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.events.make_finding",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.harness_dir",
+  "engine.read_jsonl",
+  "engine.sha256_file",
+  "engine.write_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:10c45e4b8a15536fd75d384d7e197fc331e09c98557688ce11c5fe78f8afb8e2",
  "imports": [
-  "events",
-  "extractor.engine",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
   "json",
   "pathlib",
   "re"

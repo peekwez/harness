@@ -28,10 +28,9 @@ def _overridden(ctx) -> set:
     (field report #2-recurrence/#21)."""
     if not ctx.work_unit_id:
         return set()
-    from ..graph import load_edges
-    s = f"slice:{ctx.work_unit_id}"
-    return {e["to"].split(":", 1)[-1] for e in load_edges(ctx.root)
-            if e["from"] == s and e["type"] == "override"}
+    from ..graph import override_targets
+    return override_targets(ctx.root, ctx.work_unit_id, "gate:G3",
+                            {"file", "boundary"})
 
 
 def _declared_set(ctx) -> set:

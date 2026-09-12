@@ -2,7 +2,6 @@
 substrate, adjudication is reachable, G2 certifies only what was emitted,
 G7 scales, substrate writes are atomic, docs stay true, metrics are honest."""
 import json
-import os
 import subprocess
 import sys
 
@@ -93,26 +92,22 @@ def test_resolve_registers_context_only_when_it_emits_it(toy):
 
 
 # ---------------------------------------------------------------- R4
-def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(toy):
-    """Regenerating every shadow on every Stop is an O(repo) scale cliff.
-    A shadow proven identical in an earlier sweep and untouched since is
-    skipped — provable by backdating its mtime past the watermark."""
+def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(
+        toy, monkeypatch):
+    """An unchanged shadow/source/input tuple skips the expensive parse."""
     session = "g7scope"
     loaded_context(toy, session=session)
     v = handle_event(make_event("unit_complete", session=session), toy)
     assert v["verdict"] != "block", v["findings"]      # clean sweep recorded
 
-    sp = toy / ".harness" / "shadows" / "config.py.json"
-    shadow = json.loads(sp.read_text())
-    shadow["symbols"] = []
-    sp.write_text(json.dumps(shadow, sort_keys=True, indent=1) + "\n")
-    os.utime(sp, ns=(1_000_000_000, 1_000_000_000))    # "unchanged since"
+    from engine.gates import g7_derivation
+
+    def unexpected_parse(*args, **kwargs):
+        raise AssertionError("unchanged inputs must not be re-parsed")
+
+    monkeypatch.setattr(g7_derivation, "build_shadow", unexpected_parse)
     v = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" not in {f["code"] for f in v["findings"]}, \
-        "an untouched-since-verified shadow must not be re-parsed"
-    # the exhaustive sweep still belongs to CI verify, which never skips
-    proc = run_cli("verify", root=toy)
-    assert proc.returncode == 1 and "DERIVATION_MISMATCH" in proc.stdout
+    assert "DERIVATION_MISMATCH" not in {f["code"] for f in v["findings"]}
 
 
 def test_g7_still_catches_any_hand_edited_shadow_at_stop(toy):
@@ -179,9 +174,8 @@ def test_spec_glossary_resolves_every_referenced_marker():
 
 
 # ---------------------------------------------------------------- R7
-def test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden(toy):
-    """The metric answers 'which rules are stable enough to promote?' — it
-    must look at rules that FIRED, not only ones that were overridden."""
+def test_rule_samples_report_observations_without_automatic_promotion(toy):
+    """Sparse telemetry is evidence for review, not a promotion decision."""
     from engine import telemetry
     from engine.gates.g5_conformance import record_override
     for _ in range(3):
@@ -196,10 +190,11 @@ def test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden(toy)
     record_override(toy, "slice-042", "registry:telemetry", "needed",
                     rule_ref="gate:G5")
     agg = telemetry.aggregate(toy)
-    assert "gate:G3" in agg["layer0_promotion_candidates"], \
-        "fired 3x, never overridden -> promote"
-    assert "gate:G5" not in agg["layer0_promotion_candidates"], \
-        "overridden -> not a promotion candidate"
+    assert agg["rule_samples"]["gate:G3"] == {
+        "firings": 3, "overrides": 0, "reversals": 0}
+    assert agg["rule_samples"]["gate:G5"] == {
+        "firings": 1, "overrides": 1, "reversals": 0}
+    assert agg["layer0_promotion_candidates"] == []
 
 
 # ---------------------------------------------------------------- R8

@@ -1,25 +1,55 @@
 {
  "exports": [
   "cmd_close_slice",
-  "cmd_merge_slice"
+  "cmd_merge_slice",
+  "reject_uncommitted_product_changes",
+  "rollback"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.acceptance.GATE_REASON",
+  "engine.cli.acceptance.gate_finding",
+  "engine.cli.ceremony._close_ceremony",
+  "engine.cli.closure_state.recover_closure",
+  "engine.cli.common._CeremonyFail",
+  "engine.cli.common._config_merge_drivers",
+  "engine.cli.common._print",
+  "engine.cli.common._reset_close_attempts",
+  "engine.cli.common._root",
+  "engine.cli.common._session",
+  "engine.cli.landing.land_pr",
+  "engine.cli.landing.landing_config",
+  "engine.cli.landing.redact",
+  "engine.cli.slice._regression_suite",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.events.make_finding",
+  "engine.extractor.engine.extract_all",
+  "engine.get_slice",
+  "engine.load_config",
+  "engine.save_slice",
+  "engine.telemetry"
+ ],
+ "import_resolution_hash": "sha256:b94a342a0ee029fbd72cc2f11b1570f19707ee60801b0cba0f73fa8e152ab643",
  "imports": [
   "engine",
   "engine.cli.acceptance",
   "engine.cli.ceremony",
+  "engine.cli.closure_state",
   "engine.cli.common",
   "engine.cli.landing",
   "engine.cli.slice",
   "engine.events",
   "engine.extractor.engine",
+  "engine.telemetry",
   "json",
   "subprocess",
   "sys"
  ],
  "language": "python",
  "module_id": "engine.cli.close",
- "source_hash": "sha256:5b57bbd5b22c27e976d2a6386aa2d4a74c1b5675a4a54578f16d42552f3d75c0",
+ "source_hash": "sha256:1ac2d090e39f7a7ee8fa2399b78578d07e6b19fda39fe2e136fb34ca0b88edd6",
  "source_path": "engine/cli/close.py",
  "symbols": [
   {
@@ -50,8 +80,8 @@
    "name": "cmd_merge_slice",
    "signature": "def cmd_merge_slice(args)",
    "span": [
-    90,
-    91
+    96,
+    97
    ],
    "visibility": "public"
   },
@@ -61,10 +91,32 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    116,
-    117
+    122,
+    123
    ],
    "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "rollback",
+   "signature": "def rollback(reason, **extra)",
+   "span": [
+    176,
+    177
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Rollback if a check changed tracked/index state outside substrate.",
+   "kind": "function",
+   "name": "reject_uncommitted_product_changes",
+   "signature": "def reject_uncommitted_product_changes(stage, expected_head)",
+   "span": [
+    190,
+    191
+   ],
+   "visibility": "public"
   }
  ]
 }

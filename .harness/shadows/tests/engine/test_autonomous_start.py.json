@@ -13,7 +13,15 @@
   "test_start_without_worktree_binds_in_place",
   "test_undeclared_file_still_prompts"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.git",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.read_jsonl"
+ ],
+ "import_resolution_hash": "sha256:aed3d7d0b2b19d0f1e064dfb993e552d9fd64a1cde84a6e712cf82e0074ce82a",
  "imports": [
   "conftest",
   "engine",

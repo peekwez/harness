@@ -53,3 +53,19 @@ def test_flush_reports_entries(toy):
     memory.write_entry(toy, memory.make_entry("slice-042", "observation", "x"))
     out = memory.flush(toy, "slice-042")
     assert out["entries"] == 1
+def test_compaction_retry_restores_edges_after_interrupted_promotion(toy, monkeypatch):
+    import pytest
+    from engine import memory, graph, read_jsonl
+    entry = memory.make_entry("slice-042", "observation", "remember this",
+                              edges=[{"to": "module:telemetry"}])
+    memory.write_entry(toy, entry)
+    def interrupted(*args, **kwargs):
+        raise OSError("interrupted after durable row")
+    with monkeypatch.context() as patch:
+        patch.setattr(graph, "append_edge", interrupted)
+        with pytest.raises(OSError):
+            memory.compact_to_durable(toy, "slice-042")
+    memory.compact_to_durable(toy, "slice-042")
+    assert len([r for r in read_jsonl(memory.durable_path(toy)) if r["id"] == entry["id"]]) == 1
+    assert any(e["from"] == f"memory:{entry['id']}" and e["to"] == "module:telemetry"
+               for e in graph.load_edges(toy))

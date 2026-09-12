@@ -2,25 +2,42 @@
  "exports": [
   "cmd_run",
   "hcli",
+  "log_tail",
   "park",
   "ready",
-  "statuses"
+  "statuses",
+  "terminate_builder"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.common.PLUGIN_ROOT",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.cli.landing.landing_config",
+  "engine.get_slice",
+  "engine.load_backlog",
+  "engine.load_config",
+  "engine.save_slice",
+  "engine.telemetry"
+ ],
+ "import_resolution_hash": "sha256:27d3db87d2273697526cc25997b506ee6a7370a1847edf9fcf85fe4396401b25",
  "imports": [
   "engine",
   "engine.cli.common",
   "engine.cli.landing",
+  "engine.telemetry",
   "json",
   "os",
-  "shlex",
+  "signal",
   "subprocess",
   "sys",
+  "tempfile",
   "time"
  ],
  "language": "python",
  "module_id": "engine.cli.run",
- "source_hash": "sha256:d61b4909c7d56e19071ab742bdc6866fb1a134f72350fb20b00cc401d803f6a0",
+ "source_hash": "sha256:7f635b8606574cee58fc5b0894ede499ef130d7abf7e033909190872f8b71646",
  "source_path": "engine/cli/run.py",
  "symbols": [
   {
@@ -40,8 +57,8 @@
    "name": "statuses",
    "signature": "def statuses()",
    "span": [
-    54,
-    55
+    55,
+    56
    ],
    "visibility": "public"
   },
@@ -51,8 +68,8 @@
    "name": "ready",
    "signature": "def ready(rows)",
    "span": [
-    57,
-    58
+    58,
+    59
    ],
    "visibility": "public"
   },
@@ -62,8 +79,8 @@
    "name": "hcli",
    "signature": "def hcli(*a)",
    "span": [
-    93,
-    94
+    94,
+    95
    ],
    "visibility": "public"
   },
@@ -73,8 +90,30 @@
    "name": "park",
    "signature": "def park(sid, reason)",
    "span": [
-    98,
-    99
+    99,
+    100
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Terminate and reap the builder's whole process group.",
+   "kind": "function",
+   "name": "terminate_builder",
+   "signature": "def terminate_builder(proc)",
+   "span": [
+    116,
+    117
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Read only the bounded tail from a file-backed builder log.",
+   "kind": "function",
+   "name": "log_tail",
+   "signature": "def log_tail(log, limit=400)",
+   "span": [
+    131,
+    132
    ],
    "visibility": "public"
   }

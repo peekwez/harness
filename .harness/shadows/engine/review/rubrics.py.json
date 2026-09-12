@@ -5,11 +5,26 @@
   "run_review",
   "uses_reconciled"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.append_jsonl",
+  "engine.events.make_finding",
+  "engine.events.validate_finding",
+  "engine.graph.load_edges",
+  "engine.harness_dir",
+  "engine.read_jsonl",
+  "engine.review.ensemble.run_ensemble",
+  "engine.telemetry",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:79e059988fae51aa3bd233754e2949ff43f5a2fdf165362f19fcdd50c5025211",
  "imports": [
-  "ensemble",
-  "events",
-  "graph",
+  "engine",
+  "engine.events",
+  "engine.graph",
+  "engine.review.ensemble",
+  "engine.telemetry",
   "json",
   "pathlib"
  ],

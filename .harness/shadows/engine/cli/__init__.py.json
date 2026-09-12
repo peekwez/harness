@@ -3,7 +3,39 @@
   "COMMANDS",
   "main"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.acceptance.cmd_acceptance",
+  "engine.cli.author.DEFAULT_WORKING_DOC",
+  "engine.cli.author.cmd_architect",
+  "engine.cli.author.cmd_author_gate",
+  "engine.cli.author.cmd_backlog",
+  "engine.cli.author.cmd_compile",
+  "engine.cli.author.cmd_slice",
+  "engine.cli.close.cmd_close_slice",
+  "engine.cli.close.cmd_merge_slice",
+  "engine.cli.init.cmd_init",
+  "engine.cli.landing.cmd_land",
+  "engine.cli.review.cmd_adjudicate",
+  "engine.cli.review.cmd_review",
+  "engine.cli.run.cmd_run",
+  "engine.cli.slice.cmd_permit",
+  "engine.cli.slice.cmd_start",
+  "engine.cli.substrate.cmd_extract",
+  "engine.cli.substrate.cmd_gates",
+  "engine.cli.substrate.cmd_graph",
+  "engine.cli.substrate.cmd_memory",
+  "engine.cli.substrate.cmd_merge_substrate",
+  "engine.cli.substrate.cmd_registry",
+  "engine.cli.substrate.cmd_resolve",
+  "engine.cli.substrate.cmd_status",
+  "engine.cli.upgrade.cmd_upgrade",
+  "engine.cli.verify.cmd_doctor",
+  "engine.cli.verify.cmd_event",
+  "engine.cli.verify.cmd_verify"
+ ],
+ "import_resolution_hash": "sha256:57cd2825c0bb2c18b3e3d49307ed6aafbf8d3e5f409f1280969a24b62f9fee18",
  "imports": [
   "argparse",
   "engine",
@@ -16,13 +48,14 @@
   "engine.cli.run",
   "engine.cli.slice",
   "engine.cli.substrate",
+  "engine.cli.upgrade",
   "engine.cli.verify",
   "json",
   "sys"
  ],
  "language": "python",
  "module_id": "engine.cli",
- "source_hash": "sha256:4901c852935e2f863e35d4f88fa67161d1148fd51cf47e293f73bda820388a2b",
+ "source_hash": "sha256:259cd5a895810eaa64e96b75d5594f32ebd8a857ef045847ffe5286cf5aa0736",
  "source_path": "engine/cli/__init__.py",
  "symbols": [
   {
@@ -31,8 +64,8 @@
    "name": "main",
    "signature": "def main(argv=None)",
    "span": [
-    51,
-    52
+    52,
+    53
    ],
    "visibility": "public"
   }

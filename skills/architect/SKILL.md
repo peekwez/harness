@@ -1,9 +1,14 @@
 ---
 name: architect
 description: Drive the five-stage Phase-0 pipeline (brainstorm, red-team, converge, compile, author-gate). Each stage ends at a safe session boundary — state lives in the working document, never the transcript.
-disable-model-invocation: true
 allowed-tools: Bash(*/bin/harness *)
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:architect
 

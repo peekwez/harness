@@ -2,7 +2,18 @@
  "exports": [
   "main"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "common.call_engine",
+  "common.clip",
+  "common.emit",
+  "common.extract_paths",
+  "common.flush_compaction",
+  "common.injections_text",
+  "common.reasons_text",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:27792a972fa4c28b4935a3cf468c13b06d1495ffa379f8c8fce7713bbc270b24",
  "imports": [
   "common",
   "json",

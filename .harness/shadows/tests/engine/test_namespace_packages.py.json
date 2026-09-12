@@ -21,7 +21,26 @@
   "test_typescript_imports_unchanged",
   "test_v2_shadow_is_rebuilt_not_served"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "engine.HarnessError",
+  "engine.events.handle_event",
+  "engine.extractor.engine.EXTRACTOR_VERSION",
+  "engine.extractor.engine.extract_all",
+  "engine.extractor.engine.extract_path",
+  "engine.extractor.engine.match_registry_module",
+  "engine.extractor.engine.module_id_for",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.resolver.resolve",
+  "engine.review.layer0.assemble",
+  "engine.write_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:fc681967191573b05c07eb0eba93979bd411e74ca94a490abbe0768d79c53fbb",
  "imports": [
   "conftest",
   "engine",

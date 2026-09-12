@@ -6,11 +6,11 @@
   "resolver",
   "schema"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
  "imports": [],
  "language": "yaml",
  "module_id": "templates.harness",
- "source_hash": "sha256:5f3c1a53df8c4da6a285e8cbdb7914451751d95be8c5f61050bb25bfdca17659",
+ "source_hash": "sha256:621aa56cd28f56fad0c534f841e0daceb30bcba5de7945db7a25a50470239623",
  "source_path": "templates/harness.yaml",
  "symbols": [
   {

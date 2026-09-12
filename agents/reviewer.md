@@ -33,6 +33,14 @@ Discipline:
   --record-finding …`, and block only with a rule_ref. Codex never edits the
   slice — fixes are the slice owner's, so the gates see them. Absent Codex,
   skip it silently.
+- In a Codex-led session, the reciprocal reviewer is a fresh `claude -p`
+  invocation supplied with the same diff and requirements. Request JSON
+  findings, allow only Read/Grep/Glob built-in tools, and use an empty strict
+  MCP configuration; do not let the reviewer edit the slice. Inspect the
+  exit status and JSON `is_error` before accepting output. Verify findings
+  against the code and record them through Harness. Failure or absence is
+  not a passing review. Claude's built-in `mcp serve` exports tools, not an
+  independent reasoning reviewer; use print mode or an explicit wrapper.
 - Low confidence on a would-block finding -> mark it uncertain and let it
   park. A parked dispute that adjudicates into a decision row makes every
   future review more deterministic; a bluffed block teaches nothing.

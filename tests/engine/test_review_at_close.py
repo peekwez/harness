@@ -44,14 +44,15 @@ def test_close_runs_the_review_stack_and_records_its_verdict(toy):
 def test_a_blocking_review_finding_blocks_the_close(toy):
     """The deterministic rubrics are real gates now, not a report."""
     session = _work_and_commit(toy)
-    from engine.graph import append_edge
-    append_edge(toy, "uses", "slice:slice-042", "module:ghost")  # R-uses fails
+    rows = read_jsonl(toy / ".harness/backlog.jsonl")
+    rows[0]["declares_dep"] = ["config"]  # source really imports undeclared telemetry
+    write_jsonl(toy / ".harness/backlog.jsonl", rows)
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
                    "--commit", "HEAD", root=toy)
     assert proc.returncode == 1, proc.stdout
     out = json.loads(proc.stdout)
     assert not out["closed"]
-    assert "ghost" in json.dumps(out)
+    assert "telemetry" in json.dumps(out)
 
 
 def test_agent_recorded_findings_are_surfaced_at_close(toy):

@@ -10,6 +10,7 @@ import json
 import subprocess
 import sys
 
+import pytest
 import yaml
 from conftest import PLUGIN_ROOT, build_toy_repo, git, run_cli
 from engine import ENGINE_VERSION
@@ -51,12 +52,16 @@ def test_init_vendors_the_engine_into_the_substrate(tmp_path):
     assert (vendored / "bin" / "harness").exists()
     assert (vendored / "engine" / "__init__.py").exists()
     assert (vendored / "engine" / "cli" / "verify.py").exists()
+    assert (vendored / "adapters" / "common.py").exists()
+    assert (vendored / "adapters" / "codex" / "adapter.py").exists()
     # the tree-sitter query packs are part of the engine (G7 regenerates
     # shadows in CI)
     assert (vendored / "engine" / "extractor" / "queries" / "python" /
             "symbols.scm").exists()
-    # only the engine: no tests, templates, skills, caches
-    assert not (vendored / "templates").exists()
+    # only runtime support: upgrade templates are bundled, tests/skills/caches
+    # are not
+    assert (vendored / "templates" / "ci-verify.yml").exists()
+    assert (vendored / "templates" / "claude-settings.json").exists()
     assert not (vendored / "tests").exists()
     assert not list(vendored.rglob("__pycache__"))
     assert not list(vendored.rglob("*.pyc"))
@@ -171,6 +176,52 @@ def test_upgrade_replaces_a_stale_vendored_engine_wholesale(tmp_path):
     assert not (vendored / "engine" / "stale_module.py").exists()
     assert (vendored / "engine" / "cli" / "verify.py").read_text() == \
         (PLUGIN_ROOT / "engine" / "cli" / "verify.py").read_text()
+
+
+def test_vendored_engine_can_run_upgrade_without_deleting_itself(tmp_path):
+    root = _init(tmp_path)
+    vendored = root.joinpath(*VENDOR)
+    proc = subprocess.run(
+        [sys.executable, str(vendored / "bin" / "harness"),
+         "--root", str(root), "upgrade"],
+        cwd=root, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["vendored_engine"]["action"] == "unchanged"
+    assert (vendored / "bin" / "harness").exists()
+
+
+def test_stale_vendored_engine_refuses_self_replacement_and_survives(tmp_path):
+    root = _init(tmp_path)
+    vendored = root.joinpath(*VENDOR)
+    (vendored / "VERSION").write_text("0.0.1\n")
+    proc = subprocess.run(
+        [sys.executable, str(vendored / "bin" / "harness"),
+         "--root", str(root), "upgrade"],
+        cwd=root, capture_output=True, text=True)
+    assert proc.returncode != 0
+    assert "would replace" in proc.stderr
+    assert (vendored / "bin" / "harness").exists()
+    assert (vendored / "VERSION").read_text() == "0.0.1\n"
+
+
+def test_vendor_copy_failure_preserves_previous_engine(tmp_path, monkeypatch):
+    from engine.cli import init
+
+    root = _init(tmp_path)
+    vendored = root.joinpath(*VENDOR)
+    (vendored / "VERSION").write_text("0.0.1\n")
+    old_bin = (vendored / "bin" / "harness").read_bytes()
+
+    def fail_copy(*args, **kwargs):
+        raise OSError("simulated copy failure")
+
+    monkeypatch.setattr(init.shutil, "copytree", fail_copy)
+    with pytest.raises(OSError, match="simulated copy failure"):
+        init._vendor_engine(root)
+    assert (vendored / "VERSION").read_text() == "0.0.1\n"
+    assert (vendored / "bin" / "harness").read_bytes() == old_bin
+    assert not list((root / ".harness").glob(".engine-upgrade-*"))
 
 
 def test_upgrade_never_overwrites_a_hand_authored_workflow(tmp_path):

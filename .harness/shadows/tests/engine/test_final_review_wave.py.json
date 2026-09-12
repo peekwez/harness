@@ -27,7 +27,27 @@
   "test_the_three_column_abstraction_table_still_compiles",
   "test_the_three_declared_versions_agree"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.HarnessError",
+  "engine.cli.author.validate_linear",
+  "engine.docsections.parse_doc_blocks",
+  "engine.events.handle_event",
+  "engine.extractor.modules.RegistryIndex",
+  "engine.permits.command_decision",
+  "engine.read_jsonl",
+  "pathlib.Path",
+  "test_landing_pr._close",
+  "test_landing_pr._pr_repo",
+  "test_landing_pr._squash_land",
+  "test_landing_pr._work_and_commit"
+ ],
+ "import_resolution_hash": "sha256:1f6559b7ea942bfdbf385ac393e4454256838f077929dc15562a06cba2c3c706",
  "imports": [
   "conftest",
   "engine",
@@ -43,7 +63,7 @@
  ],
  "language": "python",
  "module_id": "tests.engine.test_final_review_wave",
- "source_hash": "sha256:15d2521d84835e04b8016389650c0cb47e7e9f9a0061b3d533561ae27b1ea628",
+ "source_hash": "sha256:6c6f3531c87612b57905198a5e304e811a17b1a79281697280e888c832d76ccb",
  "source_path": "tests/engine/test_final_review_wave.py",
  "symbols": [
   {
@@ -338,8 +358,8 @@
    "name": "test_the_readme_changelogs_the_release",
    "signature": "def test_the_readme_changelogs_the_release()",
    "span": [
-    310,
-    311
+    312,
+    313
    ],
    "visibility": "public"
   },
@@ -349,8 +369,8 @@
    "name": "test_doctor_uses_verifys_note_resolution",
    "signature": "def test_doctor_uses_verifys_note_resolution(tmp_path)",
    "span": [
-    324,
-    325
+    326,
+    327
    ],
    "visibility": "public"
   },
@@ -360,8 +380,8 @@
    "name": "test_doctor_still_reports_a_slice_with_no_provenance_at_all",
    "signature": "def test_doctor_still_reports_a_slice_with_no_provenance_at_all(toy)",
    "span": [
-    339,
-    340
+    341,
+    342
    ],
    "visibility": "public"
   },
@@ -371,8 +391,8 @@
    "name": "test_a_malformed_linear_id_is_a_harness_error",
    "signature": "def test_a_malformed_linear_id_is_a_harness_error()",
    "span": [
-    360,
-    361
+    362,
+    363
    ],
    "visibility": "public"
   }

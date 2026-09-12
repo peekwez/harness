@@ -1,12 +1,17 @@
 ---
 name: review
 description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory.
-disable-model-invocation: true
-allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *)
+allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *) Bash(claude -p *)
 context: fork
 agent: reviewer
 argument-hint: "<slice-id>"
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:review $1
 
@@ -57,6 +62,18 @@ Layers 1–3 — rubric-bound checks over those facts:
   so the rest are Layer-3 advisories. Codex never auto-fixes inside the
   slice — the slice owner applies fixes so the gates see the edits. If Codex
   is absent, skip this silently.
+- When Codex owns the slice, use Claude Code as the independent second
+  opinion if available. Start a fresh `claude -p` process with the diff and
+  requirements; request structured findings with file, line, evidence and
+  severity. Use `--tools Read,Grep,Glob --strict-mcp-config --mcp-config
+  '{"mcpServers":{}}' --output-format json --no-session-persistence` so the
+  reviewer has file-reading tools and no editing or shell tools. Do not
+  resume the builder's session. Check process success and JSON `is_error`,
+  then verify and record findings through the same Harness contract above.
+  An unavailable or failed reviewer is reported as skipped/failed, never pass.
+  `claude mcp serve` exposes Claude Code's tools; it is not itself an
+  independent Claude reasoning service. A separate MCP wrapper around
+  `claude -p` is optional and is not required for this workflow.
 
 Output: findings list (§5.2 schema), verdict, and any Layer-3 proposals.
 Blocking findings gate the merge; disputes park via `/harness:adjudicate`.

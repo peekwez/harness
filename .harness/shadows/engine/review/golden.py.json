@@ -4,12 +4,20 @@
   "__init__",
   "replay"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.review.layer0.assemble",
+  "engine.review.rubrics.run_review",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:e534ab6caef7a3c894c1294659a687e66aa991b57481f6f70b853e6a2f03c9bd",
  "imports": [
+  "engine",
+  "engine.review.layer0",
+  "engine.review.rubrics",
   "json",
-  "layer0",
-  "pathlib",
-  "rubrics"
+  "pathlib"
  ],
  "language": "python",
  "module_id": "engine.review.golden",

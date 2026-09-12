@@ -11,11 +11,25 @@
   "test_replay_ten_pairs_stable_across_three_runs",
   "test_reviewer_never_receives_builder_session_memory"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.events.VerdictError",
+  "engine.events.validate_finding",
+  "engine.load_config",
+  "engine.memory",
+  "engine.review.assemble",
+  "engine.review.ensemble.run_ensemble",
+  "engine.review.golden.ReplayModel",
+  "engine.review.replay",
+  "engine.review.run_review"
+ ],
+ "import_resolution_hash": "sha256:110588857126bc6bd35f5285c372f061060bceb4183be168c8580c5e757d8120",
  "imports": [
   "conftest",
   "engine",
   "engine.events",
+  "engine.memory",
   "engine.review",
   "engine.review.ensemble",
   "engine.review.golden",

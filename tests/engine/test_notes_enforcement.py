@@ -131,6 +131,9 @@ def test_verify_accepts_a_commit_noting_every_closed_slice(toy):
     # two historical slices, one commit
     rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
     rows.append({**rows[0], "id": "slice-old", "status": "closed"})
+    # This synthetic historical slice predates the graph completeness contract.
+    for key in ("provenance_version", "closed_commit", "closed_files"):
+        rows[-1].pop(key, None)
     from engine import write_jsonl
     write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
     for sid in ("slice-042", "slice-old"):

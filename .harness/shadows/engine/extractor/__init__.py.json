@@ -1,8 +1,15 @@
 {
  "exports": [],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.extractor.engine.LANG_BY_EXT",
+  "engine.extractor.engine.extract_all",
+  "engine.extractor.engine.extract_path",
+  "engine.extractor.engine.shadow_path_for"
+ ],
+ "import_resolution_hash": "sha256:f8c416fe08b82f53cb3e0079c8049b1700ffa50947f77e79a72884b6b9577d19",
  "imports": [
-  "engine"
+  "engine.extractor.engine"
  ],
  "language": "python",
  "module_id": "engine.extractor",

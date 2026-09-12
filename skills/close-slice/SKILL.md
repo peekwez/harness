@@ -1,10 +1,15 @@
 ---
 name: close-slice
 description: The close ceremony — acceptance green, uses/declares reconciled, drift acknowledged, commit + git note, memory compaction, registry flips, worktree merge.
-disable-model-invocation: true
 allowed-tools: Bash(*/bin/harness *) Bash(git *)
 argument-hint: "<slice-id>"
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:close-slice $1
 

@@ -1,9 +1,14 @@
 ---
 name: adjudicate
 description: Present parked findings with evidence and nearest precedents; every resolution writes back a decision row or durable memory plus an adjudication edge.
-disable-model-invocation: true
 allowed-tools: Bash(*/bin/harness *)
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:adjudicate
 

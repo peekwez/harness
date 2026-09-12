@@ -1,10 +1,15 @@
 ---
 name: build
 description: Start or resume the slice loop — one command provisions the worktree, sandbox, binding and Phase-1 context, then the slice runs to close without interruption.
-disable-model-invocation: true
 allowed-tools: Bash(*/bin/harness *) Bash(git *) Bash(pytest *) Bash(python3 -m pytest *)
 argument-hint: "<slice-id>"
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:build $1
 

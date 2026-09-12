@@ -18,7 +18,22 @@
   "test_g7_catches_hand_edited_shadow",
   "test_g8_coverage_advisory_always_emitted"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "engine.HarnessError",
+  "engine.events.handle_event",
+  "engine.gates.g5_conformance.record_override",
+  "engine.gates.g6_drift.acknowledge",
+  "engine.graph.load_edges",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.token_estimate",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:340430a2c323447e9faffcc36e654a4df24b7b9d921044b5a14b74415043ca46",
  "imports": [
   "conftest",
   "engine",

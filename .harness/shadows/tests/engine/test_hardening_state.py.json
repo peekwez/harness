@@ -1,0 +1,259 @@
+{
+ "exports": [
+  "bind",
+  "changed",
+  "close",
+  "commit",
+  "event",
+  "interrupted",
+  "test_close_checks_hookless_non_goal_even_when_declared",
+  "test_close_checks_new_import_without_hook_events",
+  "test_close_records_module_revision_and_governing_decisions",
+  "test_close_recovers_crash_after_substrate_commit",
+  "test_close_rejects_uncommitted_acceptance_fix",
+  "test_deleting_source_retires_current_use",
+  "test_drift_ack_does_not_override_dependency_conformance",
+  "test_failed_substrate_commit_is_retryable",
+  "test_legacy_graph_repair_uses_recorded_facts_only",
+  "test_lost_sidecar_recovers_original_drift_baseline",
+  "test_removing_import_retires_current_use_but_preserves_history",
+  "test_shared_session_cannot_attribute_other_slice_touches"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "argparse.Namespace",
+  "conftest.git",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.cli.ceremony._close_ceremony",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.gates.g6_drift.acknowledge",
+  "engine.graph.load_edges",
+  "engine.graph.provenance",
+  "engine.graph.repair_legacy_provenance",
+  "engine.graph.uses_vs_declares",
+  "engine.graph.write_note",
+  "engine.read_jsonl",
+  "engine.telemetry.aggregate",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:dd82d837f2e6c13ce1dad319e98f173b421a0e2e0911903fbe8cf238d62d18cf",
+ "imports": [
+  "argparse",
+  "conftest",
+  "engine",
+  "engine.cli.ceremony",
+  "engine.cli.closure_state",
+  "engine.events",
+  "engine.gates.g6_drift",
+  "engine.graph",
+  "engine.telemetry",
+  "json",
+  "pytest"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_state",
+ "source_hash": "sha256:257fc8c79c19418fc2c35e66e90458614aa7fa8727d654ff8ff4d3543f4b3aa0",
+ "source_path": "tests/engine/test_hardening_state.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "bind",
+   "signature": "def bind(toy, deps=None, session=\"audit\")",
+   "span": [
+    13,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "event",
+   "signature": "def event(toy, kind=\"unit_complete\", files=None, sid=\"slice-042\", session=\"audit\")",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "changed",
+   "signature": "def changed(toy, text)",
+   "span": [
+    26,
+    27
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "commit",
+   "signature": "def commit(toy)",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "close",
+   "signature": "def close(toy)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_removing_import_retires_current_use_but_preserves_history",
+   "signature": "def test_removing_import_retires_current_use_but_preserves_history(toy)",
+   "span": [
+    44,
+    45
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_deleting_source_retires_current_use",
+   "signature": "def test_deleting_source_retires_current_use(toy)",
+   "span": [
+    53,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_shared_session_cannot_attribute_other_slice_touches",
+   "signature": "def test_shared_session_cannot_attribute_other_slice_touches(toy)",
+   "span": [
+    62,
+    63
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_drift_ack_does_not_override_dependency_conformance",
+   "signature": "def test_drift_ack_does_not_override_dependency_conformance(toy)",
+   "span": [
+    74,
+    75
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_lost_sidecar_recovers_original_drift_baseline",
+   "signature": "def test_lost_sidecar_recovers_original_drift_baseline(toy)",
+   "span": [
+    82,
+    83
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_rejects_uncommitted_acceptance_fix",
+   "signature": "def test_close_rejects_uncommitted_acceptance_fix(toy)",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_checks_new_import_without_hook_events",
+   "signature": "def test_close_checks_new_import_without_hook_events(toy)",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_failed_substrate_commit_is_retryable",
+   "signature": "def test_failed_substrate_commit_is_retryable(toy)",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_checks_hookless_non_goal_even_when_declared",
+   "signature": "def test_close_checks_hookless_non_goal_even_when_declared(toy)",
+   "span": [
+    136,
+    137
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_recovers_crash_after_substrate_commit",
+   "signature": "def test_close_recovers_crash_after_substrate_commit(toy, monkeypatch)",
+   "span": [
+    149,
+    150
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "interrupted",
+   "signature": "def interrupted(*args)",
+   "span": [
+    158,
+    159
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_close_records_module_revision_and_governing_decisions",
+   "signature": "def test_close_records_module_revision_and_governing_decisions(toy)",
+   "span": [
+    171,
+    172
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_legacy_graph_repair_uses_recorded_facts_only",
+   "signature": "def test_legacy_graph_repair_uses_recorded_facts_only(toy)",
+   "span": [
+    191,
+    192
+   ],
+   "visibility": "public"
+  }
+ ]
+}

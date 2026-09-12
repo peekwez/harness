@@ -11,7 +11,21 @@
   "redact",
   "slice_branch"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.get_slice",
+  "engine.graph.last_note_payload",
+  "engine.graph.notes_log",
+  "engine.graph.source_key",
+  "engine.graph.tree_hash",
+  "engine.graph.write_note",
+  "engine.load_config",
+  "engine.save_slice"
+ ],
+ "import_resolution_hash": "sha256:938fa0c68e462bcbe81c837486b42c2dd8a84db86babbca862dec6a39bc8db8f",
  "imports": [
   "engine",
   "engine.cli.common",

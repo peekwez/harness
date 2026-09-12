@@ -1,9 +1,14 @@
 ---
 name: init
 description: Scaffold the harness substrate (.harness/, adr/, contracts/, CI verify workflow) into this repo, detect languages, enable query packs, stamp the schema version, and install hook wiring.
-disable-model-invocation: true
 allowed-tools: Bash(*/bin/harness *)
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:init
 

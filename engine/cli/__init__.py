@@ -16,7 +16,7 @@ from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
-from engine.cli.init import cmd_init, cmd_upgrade
+from engine.cli.init import cmd_init
 from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
 from engine.cli.run import cmd_run
@@ -25,6 +25,7 @@ from engine.cli.substrate import (cmd_extract, cmd_gates, cmd_graph,
                                   cmd_memory, cmd_merge_substrate,
                                   cmd_registry, cmd_resolve, cmd_status)
 from engine.cli.verify import cmd_doctor, cmd_event, cmd_verify
+from engine.cli.upgrade import cmd_upgrade
 
 __all__ = ["COMMANDS", "main"]
 
@@ -71,11 +72,20 @@ def main(argv=None):
                     help="also write .claude/settings.json pre-approving the "
                          "slice loop's commands (gates stay the guardrail)")
 
-    sub.add_parser("upgrade",
-                   help="bring a substrate scaffolded by an older plugin up "
-                        "to this one: schema migration, merge drivers, the "
-                        "vendored CI engine (.harness/engine) and the "
-                        "harness-verify workflow; idempotent")
+    sp = sub.add_parser(
+        "upgrade", help="safely upgrade a local substrate, optionally after "
+                        "updating its installed Harness host plugin")
+    sp.add_argument("--plugin", action="store_true",
+                    help="update the selected installed Harness plugin, then "
+                         "delegate project upgrade to its newly installed engine")
+    sp.add_argument("--host", choices=("claude", "codex"),
+                    help="host whose installed Harness plugin to update")
+    sp.add_argument("--plugin-id",
+                    help="installed plugin id when more than one Harness plugin exists")
+    sp.add_argument("--scope",
+                    help="Claude installation scope when an id exists in more than one scope")
+    sp.add_argument("--dry-run", action="store_true",
+                    help="report the exact plan and host commands without writes")
 
     sp = sub.add_parser("extract", help="tree-sitter -> universal shadows")
     sp.add_argument("paths", nargs="*")
@@ -107,7 +117,7 @@ def main(argv=None):
     ov.add_argument("--target", required=True, help="e.g. registry:telemetry")
     ov.add_argument("--justification", required=True)
     ov.add_argument("--finding-id", dest="finding_id")
-    ov.add_argument("--rule-ref", dest="rule_ref", default="gate:G5",
+    ov.add_argument("--rule-ref", dest="rule_ref", default=None,
                     help="the gate being overridden (e.g. gate:G1); "
                          "recorded in the audit edge")
     ack = gsub.add_parser("ack-drift")

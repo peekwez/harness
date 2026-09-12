@@ -7,7 +7,30 @@
   "cmd_slice",
   "validate_linear"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.cli.common._session",
+  "engine.cli.slice._bind_slice",
+  "engine.compiler.author_gate",
+  "engine.compiler.compile_substrate",
+  "engine.compiler.seed_doc_from_spec",
+  "engine.docsections.mentions_typed_blocks",
+  "engine.events.Sidecar",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.harness_dir",
+  "engine.load_backlog",
+  "engine.load_config",
+  "engine.registry.load_registry",
+  "engine.resolver.context_cost_breakdown",
+  "engine.resolver.context_cost_estimate",
+  "engine.write_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:647b3a550555e8c672a945ce28af146d98700f398055386cde60c21f2e4d5cde",
  "imports": [
   "engine",
   "engine.cli.common",
@@ -24,7 +47,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.author",
- "source_hash": "sha256:50a059dbbf792864cdee68f0b202ae2b12b73002713510567e83da575d13891a",
+ "source_hash": "sha256:72ae420a400ffe5eb5789e243a2beaf992eed3b4a3599902111798d44fd95d3b",
  "source_path": "engine/cli/author.py",
  "symbols": [
   {
@@ -132,8 +155,8 @@
    "name": "cmd_slice",
    "signature": "def cmd_slice(args)",
    "span": [
-    274,
-    275
+    306,
+    307
    ],
    "visibility": "public"
   }

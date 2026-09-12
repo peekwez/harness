@@ -2,11 +2,17 @@
  "exports": [
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.make_finding",
+  "engine.registry.validate_manifests",
+  "fnmatch.fnmatch"
+ ],
+ "import_resolution_hash": "sha256:2679f8d028a0e58ca8b12d503c5c71f93edc6b04c917600e2bf4dda9f79557dc",
  "imports": [
-  "events",
-  "fnmatch",
-  "registry"
+  "engine.events",
+  "engine.registry",
+  "fnmatch"
  ],
  "language": "python",
  "module_id": "engine.gates.g1_manifest",

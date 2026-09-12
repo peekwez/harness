@@ -4,22 +4,43 @@
   "cmd_upgrade",
   "vendored_engine_status"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.ENGINE_VERSION",
+  "engine.HarnessError",
+  "engine.IGNORED_DIRS",
+  "engine.SCHEMA_VERSION",
+  "engine.cli.common.PLUGIN_ROOT",
+  "engine.cli.common._dep_status",
+  "engine.cli.common._install_merge_drivers",
+  "engine.cli.common._print",
+  "engine.cli.landing.forge_hosts",
+  "engine.cli.landing.landing_config",
+  "engine.cli.upgrade.cmd_upgrade",
+  "engine.load_config",
+  "engine.plugin_install.prevent_downgrade",
+  "engine.sha256_file",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:e61bc691e923a1aa52a4d97f7e9c4fe8b907eb936342e1a90e92ff9a57705014",
  "imports": [
   "engine",
   "engine.cli.common",
   "engine.cli.landing",
-  "engine.migrate",
+  "engine.cli.upgrade",
+  "engine.plugin_install",
   "json",
   "os",
   "pathlib",
   "shutil",
   "subprocess",
-  "sys"
+  "sys",
+  "tempfile",
+  "uuid"
  ],
  "language": "python",
  "module_id": "engine.cli.init",
- "source_hash": "sha256:ea4709bf9f269a5b1d7aa30601865aa63d3b4300aff08b642d7b41f2cd668cca",
+ "source_hash": "sha256:6faa2d2bbe1f266cdc0e4a32b2a17a3753b742df3989424c1dd02d6f6012d79d",
  "source_path": "engine/cli/init.py",
  "symbols": [
   {
@@ -28,8 +49,8 @@
    "name": "cmd_init",
    "signature": "def cmd_init(args)",
    "span": [
-    42,
-    43
+    45,
+    46
    ],
    "visibility": "public"
   },
@@ -39,8 +60,8 @@
    "name": "_vendor_engine",
    "signature": "def _vendor_engine(root) -> dict",
    "span": [
-    188,
-    189
+    191,
+    192
    ],
    "visibility": "private"
   },
@@ -50,8 +71,8 @@
    "name": "_vendored_matches",
    "signature": "def _vendored_matches(target) -> bool",
    "span": [
-    232,
-    233
+    290,
+    291
    ],
    "visibility": "private"
   },
@@ -61,8 +82,8 @@
    "name": "_files",
    "signature": "def _files(base)",
    "span": [
-    238,
-    239
+    296,
+    297
    ],
    "visibility": "private"
   },
@@ -72,8 +93,8 @@
    "name": "vendored_engine_status",
    "signature": "def vendored_engine_status(root) -> dict",
    "span": [
-    254,
-    255
+    321,
+    322
    ],
    "visibility": "public"
   },
@@ -83,19 +104,19 @@
    "name": "_write_workflow",
    "signature": "def _write_workflow(root) -> dict",
    "span": [
-    283,
-    284
+    353,
+    354
    ],
    "visibility": "private"
   },
   {
-   "doc": "Bring a substrate scaffolded by an older plugin up to the installed\n    one: schema migration, merge drivers, the vendored engine and the CI\n    workflow. Idempotent; hand-authored files are never touched.",
+   "doc": "Compatibility entry point for ``init --migrate`` and old imports.",
    "kind": "function",
    "name": "cmd_upgrade",
    "signature": "def cmd_upgrade(args)",
    "span": [
-    319,
-    320
+    389,
+    390
    ],
    "visibility": "public"
   },
@@ -105,8 +126,8 @@
    "name": "_pr_landing_rules",
    "signature": "def _pr_landing_rules(text, landing) -> str",
    "span": [
-    342,
-    343
+    395,
+    396
    ],
    "visibility": "private"
   },
@@ -116,8 +137,8 @@
    "name": "_write_autonomy_settings",
    "signature": "def _write_autonomy_settings(root, quiet=False, local=False, config=None)",
    "span": [
-    386,
-    387
+    439,
+    440
    ],
    "visibility": "private"
   }

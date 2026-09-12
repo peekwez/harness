@@ -11,7 +11,22 @@
   "test_parallel_close_branches_merge_without_conflict",
   "test_python_class_fields_surface_in_shadow"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.extractor.engine.extract_path",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:d64558a68ef6333464bbd02d04d302e593f2caebefb6f5d9f06580c1dfe5a95c",
  "imports": [
   "conftest",
   "engine",

@@ -8,11 +8,17 @@
   "is_egress",
   "paths_in_scope"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.cli.landing.landing_config",
+  "engine.gates.g3_scope.SUBSTRATE_PREFIXES",
+  "fnmatch.fnmatch"
+ ],
+ "import_resolution_hash": "sha256:4e3095434ccb5ee6341b8c084e76904d867cfe71694304810e348764775e0e2c",
  "imports": [
   "engine.cli.landing",
+  "engine.gates.g3_scope",
   "fnmatch",
-  "gates.g3_scope",
   "re",
   "shlex"
  ],

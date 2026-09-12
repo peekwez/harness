@@ -15,7 +15,7 @@ from . import (HarnessError, append_jsonl, harness_dir, now_iso,
 
 EDGE_TYPES = {"implements", "declares_dep", "uses", "shadows", "supersedes",
               "governs", "decided_by", "satisfies", "produced_by", "touches",
-              "reviewed_by",
+              "reviewed_by", "dependency_snapshot",
               "remembers", "override"}
 
 NOTES_REF = "refs/notes/harness"
@@ -94,13 +94,204 @@ def _bare(node_id: str) -> str:
     return node_id.split(":", 1)[-1]
 
 
+def override_targets(root, slice_id, rule_ref, kinds) -> set:
+    """An exception only authorizes its named rule and target namespace."""
+    return {_bare(e["to"]) for e in load_edges(root)
+            if e["from"] == f"slice:{slice_id}" and e["type"] == "override"
+            and e.get("meta", {}).get("rule_ref") == rule_ref
+            and e["to"].partition(":")[0] in kinds}
+
+
+def record_dependency_snapshot(root, slice_id, uses, files, commit=None):
+    """Append a complete current view; historical use edges remain intact.
+
+    One row replaces the whole dependency set, so deletions and removal of
+    the last import are representable. A repeat of the same facts is inert.
+    """
+    from . import get_slice
+    sl = get_slice(root, slice_id)
+    old = [e for e in load_edges(root) if e["from"] == f"slice:{slice_id}"
+           and e["type"] == "dependency_snapshot"]
+    # Hook events can still arrive after a slice closes.  Their live,
+    # uncommitted view must not become the current snapshot and hide the
+    # immutable view recorded for the closing revision.
+    if sl.get("status") == "closed" and commit is None:
+        closed = [e for e in old if e.get("commit") == sl.get("closed_commit")]
+        return closed[-1] if closed else None
+    meta = {"version": 1, "uses": sorted(set(uses)),
+            "declares": sorted({f"module:{d}" for d in sl.get("declares_dep", [])}),
+            "files": sorted(set(files))}
+    if old and old[-1].get("meta") == meta and old[-1].get("commit") == commit:
+        return old[-1]
+    return append_edge(root, "dependency_snapshot", f"slice:{slice_id}",
+                       f"slice:{slice_id}", commit=commit, meta=meta)
+
+
+_CLOSED_COMMIT = "$closed_commit"
+
+
+def slice_provenance_requirements(root, slice_id, files, *, governance=True):
+    """Return the complete, serializable provenance promised at closure.
+
+    The produced-by target uses ``$closed_commit`` because the requirement is
+    stored with the slice and resolved against its immutable ``closed_commit``
+    during verification.
+    """
+    from . import get_slice, load_decisions
+    from .registry import load_registry
+    entries = load_registry(root)
+    sl = get_slice(root, slice_id)
+    has_revision_store = (Path(root) / ".git").exists()
+    scope = [e for e in entries if e["id"] in sl.get("declares_dep", [])]
+    domains = {value for e in scope
+               for value in (e["id"], e.get("kind"), e.get("domain")) if value}
+    decisions = ([d for d in load_decisions(root)
+                  if not domains or d.get("domain") in domains]
+                 if governance else [])
+    required = []
+    seen = set()
+
+    def require(kind, source, target):
+        item = kind, source, target
+        if item not in seen:
+            required.append(list(item))
+            seen.add(item)
+
+    for path in sorted(set(files)):
+        if Path(path).is_absolute() or ".." in Path(path).parts:
+            continue
+        require("touches", f"slice:{slice_id}", f"file:{path}")
+        for entry in entries:
+            if entry.get("source") != path and path not in entry.get("manifest", []):
+                continue
+            node = f"module:{entry['id']}"
+            require("touches", f"slice:{slice_id}", node)
+            if has_revision_store:
+                require("produced_by", node, _CLOSED_COMMIT)
+            if entry.get("shadow"):
+                require("shadows", node, f"file:{entry['shadow']}")
+            for decision in decisions:
+                require("governs", f"decision:{decision['id']}", node)
+    for test in sl.get("acceptance", []) if governance else []:
+        require("satisfies", f"slice:{slice_id}", f"file:{test}")
+    return required
+
+
+def record_slice_provenance(root, slice_id, commit, files, *, governance=True):
+    """Link the observed files, modules, decisions and revision at closure.
+
+    Legacy repair may recover file/revision facts from Git notes, but must
+    not assert that today's decisions governed a historical implementation.
+    """
+    existing = {(e["type"], e["from"], e["to"], e.get("commit")) for e in load_edges(root)}
+    added = []
+    def add(kind, frm, to):
+        key = kind, frm, to, commit
+        if key not in existing:
+            added.append(append_edge(root, kind, frm, to, commit=commit))
+            existing.add(key)
+    for kind, source, target in slice_provenance_requirements(
+            root, slice_id, files, governance=governance):
+        target = commit if target == _CLOSED_COMMIT else target
+        # Legacy repairs without a known revision cannot assert produced-by.
+        if kind != "produced_by" or commit:
+            add(kind, source, target)
+    return added
+
+
+def repair_legacy_provenance(root):
+    """Restore only facts explicitly recorded in historical Git notes.
+
+    This does not infer old imports, successful acceptance, or governing
+    decisions. Modern closure evidence must be restored from its own log.
+    """
+    from . import load_backlog
+    if not (Path(root) / ".git").exists():
+        return {"edges_added": 0, "slices": []}
+    legacy = {s["id"]: s for s in load_backlog(root)
+              if s.get("status") == "closed" and not s.get("provenance_version")}
+    keys = {(e["type"], e["from"], e["to"], e.get("commit")) for e in load_edges(root)}
+    count, repaired = 0, set()
+    for note in read_notes(root):
+        commit = note["commit"]
+        try:
+            registry = [json.loads(line) for line in
+                        _git(root, "show", f"{commit}:.harness/registry.jsonl").splitlines() if line]
+        except (GraphError, ValueError):
+            registry = []
+        for payload in note["payloads"]:
+            sid = payload.get("slice_id")
+            if sid not in legacy:
+                continue
+            facts = []
+            for path in payload.get("modules_touched", []):
+                if not isinstance(path, str) or Path(path).is_absolute() or ".." in Path(path).parts:
+                    continue
+                facts.append(("touches", f"slice:{sid}", f"file:{path}"))
+                for entry in registry:
+                    if entry.get("source") == path or path in entry.get("manifest", []):
+                        facts.extend([("touches", f"slice:{sid}", f"module:{entry['id']}"),
+                                      ("produced_by", f"module:{entry['id']}", commit)])
+            for dep in payload.get("registry_used", []):
+                facts.append(("declares_dep", f"slice:{sid}", f"module:{dep}"))
+            for kind, source, target in facts:
+                key = kind, source, target, commit
+                if key not in keys:
+                    append_edge(root, kind, source, target, commit=commit,
+                                meta={"reconstructed_from": "git_note"})
+                    keys.add(key)
+                    count += 1
+                    repaired.add(sid)
+    return {"edges_added": count, "slices": sorted(repaired)}
+
+
+def provenance_gaps(root, sl):
+    """New closures promise complete graph evidence; older ones are explicit."""
+    if not sl.get("provenance_version"):
+        return []
+    edges = load_edges(root)
+    own = [e for e in edges if e["from"] == f"slice:{sl['id']}"]
+    gaps = []
+    snapshots = [e for e in own if e["type"] == "dependency_snapshot"
+                 and e.get("commit") == sl.get("closed_commit")]
+    if not snapshots or set(snapshots[-1]["meta"]["files"]) != set(sl.get("closed_files", [])):
+        gaps.append("current dependency snapshot")
+    for path in sl.get("closed_files", []):
+        if not any(e["type"] == "touches" and e["to"] == f"file:{path}"
+                   and e.get("commit") == sl.get("closed_commit") for e in own):
+            gaps.append(f"touch provenance for {path}")
+    evidence = sl.get("closed_evidence")
+    if sl.get("provenance_version") == 1 and not isinstance(evidence, list):
+        gaps.append("recorded closed evidence")
+        return gaps
+    all_edges = {(e["type"], e["from"], e["to"], e.get("commit")) for e in edges}
+    for item in evidence or []:
+        if not (isinstance(item, (list, tuple)) and len(item) == 3
+                and all(isinstance(value, str) for value in item)):
+            gaps.append("malformed closed evidence")
+            continue
+        kind, source, target = item
+        target = sl.get("closed_commit") if target == _CLOSED_COMMIT else target
+        if (kind, source, target, sl.get("closed_commit")) not in all_edges:
+            gaps.append(f"{kind} provenance {source} -> {target}")
+    return gaps
+
+
 def uses_vs_declares(root, slice_id: str) -> dict:
     edges = load_edges(root)
     s = f"slice:{slice_id}"
-    uses = {e["to"] for e in edges if e["from"] == s and e["type"] == "uses"}
-    declares = {e["to"] for e in edges if e["from"] == s and e["type"] == "declares_dep"}
-    overridden = {_bare(e["to"]) for e in edges
-                  if e["from"] == s and e["type"] == "override"}
+    uses, declares = set(), set()
+    for e in edges:
+        if e["from"] != s:
+            continue
+        if e["type"] == "dependency_snapshot":
+            uses = set(e["meta"]["uses"])
+            declares = set(e["meta"]["declares"])
+        elif e["type"] == "uses":
+            uses.add(e["to"])
+        elif e["type"] == "declares_dep":
+            declares.add(e["to"])
+    overridden = override_targets(root, slice_id, "gate:G5", {"module", "registry"})
     undeclared = sorted(uses - declares)
     return {"uses": sorted(uses), "declares": sorted(declares),
             "undeclared": undeclared,

@@ -10,7 +10,21 @@
   "test_missing_decision_row_fields_fail_loud",
   "test_parse_frontmatter_shapes"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "engine.HarnessError",
+  "engine.compiler.author_gate",
+  "engine.compiler.compile_substrate",
+  "engine.compiler.parse_frontmatter",
+  "engine.events.handle_event",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.resolver.resolve",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:95e2ac3820e6ac48247775371e61d499de6b77620b6cbb7b4ee87eda6275d9e9",
  "imports": [
   "conftest",
   "engine",
