@@ -5,14 +5,28 @@
   "render_shadow",
   "resolve"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.SubstrateMissing",
+  "engine.compiler.parse_frontmatter",
+  "engine.extractor.modules.RegistryIndex",
+  "engine.get_slice",
+  "engine.harness_dir",
+  "engine.load_decisions",
+  "engine.read_jsonl",
+  "engine.registry.load_registry",
+  "engine.token_estimate",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:e51c76b08235da63b2a9d7916448f8bf39e95a135c7d55ff49eab721937f6c35",
  "imports": [
-  "compiler",
-  "extractor.modules",
+  "engine",
+  "engine.compiler",
+  "engine.extractor.modules",
+  "engine.registry",
   "json",
   "pathlib",
-  "re",
-  "registry"
+  "re"
  ],
  "language": "python",
  "module_id": "engine.resolver",

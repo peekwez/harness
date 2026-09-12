@@ -5,7 +5,16 @@
   "test_record_fork_requires_slice",
   "test_security_slice_blocks_close_until_fork_review_pass"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.handle_event",
+  "engine.read_jsonl"
+ ],
+ "import_resolution_hash": "sha256:791bde1de627897a4595d1973af6ef1bd4e67fb0ea401d823d10e699ece651a3",
  "imports": [
   "conftest",
   "engine",

@@ -95,12 +95,12 @@ notes under `refs/notes/harness`, plus agent-facing repo docs: `AGENTS.md` (the 
 agreement, cross-tool standard) and `CLAUDE.md` (imports it via `@AGENTS.md`).
 Existing CLAUDE.md/AGENTS.md files are never overwritten.
 
-Workflow skills (`/harness:*`) are user-invoked by design
-(`disable-model-invocation: true`): you decide when a ceremony runs, Claude
-can't trigger one on its own. If you ask Claude in chat to "run init", it
-will instead call the same engine command the skill wraps
-(`${CLAUDE_PLUGIN_ROOT}/bin/harness init`) — identical result, since skills
-are pointers to the engine, not the other way around.
+Workflow skills (`/harness:*` in Claude Code) run ceremonies for work you
+request. The shared skills are discoverable by both Claude Code and Codex;
+their instructions limit execution to that requested work. Asking an agent
+to "run init" can invoke the same engine command directly. In Codex, resolve
+the plugin root from the installed skill path and pass the project's
+`--root` explicitly; `${CLAUDE_PLUGIN_ROOT}` is Claude Code syntax.
 
 ## Landing modes
 
@@ -230,7 +230,7 @@ hand-editing it is a bug like any other derived file.
                        #   Already have a spec? `harness architect
                        #   --from-spec docs/spec.md` seeds the working
                        #   document at stage 3 instead of re-deriving it.
-/harness:backlog       # spec + ADRs -> dependency-ordered slices, cost-split
+/harness:backlog       # spec + ADRs -> slices, estimates, decomposition proposals
 /harness:build slice-001   # worktree + sandbox + binding + context, then
                        #   the slice runs to close uninterrupted
 /harness:review slice-001  # forked reviewer: substrate + diff only
@@ -323,6 +323,16 @@ slice diff under the same contract — verify, record with
 `harness review --record-finding`, block only with a `rule_ref`, and never let
 it fix the slice itself.
 
+For a Codex-led slice, the reciprocal review can run through a fresh
+`claude -p` process with the diff, read-only file tools and JSON output.
+Check both its exit status and `is_error`, verify its findings, and record
+them through the same Harness review contract. Claude Code's built-in
+`claude mcp serve` exports tools; an MCP wrapper around print mode would be
+needed to expose an actual Claude reviewer as a tool. Direct CLI invocation
+already supports the review, so no wrapper is required. See the official
+[MCP server explanation](https://code.claude.com/docs/en/mcp#use-claude-code-as-an-mcp-server)
+and [programmatic usage](https://code.claude.com/docs/en/headless).
+
 ## The acceptance command (`acceptance.*`)
 
 Acceptance is decided by a command, and that command is yours (ADR-002,
@@ -391,10 +401,22 @@ full cost and is reported (`anchor-missing` in the resolver's `dropped`,
 load. `resolve` also reports `demand` (everything that qualified) next
 to `token_estimate` (what fit the budget).
 
-Oversized slices are split only when they are **planned** and nothing
-depends on them; a closed, bound or parked row, or a parent named in
-another slice's `depends_on`, is never split — it is listed under
-`split_refused` with the reason, and the human splits it by hand.
+Context savings come from compact API shadows, selecting only relevant
+dependencies/guidance, and suppressing unchanged resolver output within a
+session. Suppression checks the rendered content as well as its IDs, so a
+changed decision or API signature is injected again. The budget applies to
+Harness's injected context, not the host's whole conversation. Estimates
+are not measured model usage: reviews, findings and retries also consume
+tokens, so Harness does not claim a net billed-token saving.
+
+Oversized free planned slices produce `split_proposals`; the parent remains
+intact. Each proposed child needs its own acceptance tests and predicted
+files before it can become executable work. Copying the full parent contract
+while partitioning only dependencies is not a valid decomposition. Existing
+child-ID collisions fail before any backlog write. Closed, bound or parked
+rows and parents with dependents appear in `split_refused` with a reason.
+Both `start` and direct `slice` binding enforce prerequisites. A justified
+`start --force` records its exception in the target worktree.
 
 ## Repo-local gates (`gates.extra`)
 
@@ -493,8 +515,7 @@ harness repo itself is the ship gate for every release.
 ### Self-contained CI: the vendored engine
 
 Consumer repos carry everything their `harness-verify` workflow needs.
-`harness init` copies the engine (`bin/harness` + `engine/`, ~600 KB, no
-tests or templates) into `.harness/engine/` and the scaffolded
+`harness init` copies the engine and its upgrade support files into `.harness/engine/` and the scaffolded
 `.github/workflows/harness-verify.yml` runs that copy:
 `python3 .harness/engine/bin/harness verify`. Nothing is cloned from this
 repo, no repository variable or token is needed, and the engine that
@@ -511,6 +532,82 @@ is named), runs the schema migration and reinstalls the merge drivers.
 (unhealthy — CI would enforce different rules than the hooks) or
 `missing` (a substrate scaffolded before 0.8.5; CI still works via the
 clone fallback below), and names `harness upgrade` as the fix.
+
+### Upgrade the plugin and project together
+
+```bash
+harness --root /path/to/project upgrade --dry-run
+harness --root /path/to/project upgrade
+harness --root /path/to/project upgrade --plugin --host claude --dry-run
+harness --root /path/to/project upgrade --plugin --host claude
+harness --root /path/to/project upgrade --plugin --host codex
+```
+
+A plain upgrade uses the installed engine and needs no network. `--plugin`
+updates Harness through the selected host, locates the new installation,
+and runs its engine against the project. Claude uses its plugin update
+command; Codex refreshes the selected marketplace and reinstalls Harness.
+If selection is ambiguous, provide `--plugin-id harness@<marketplace>`
+and, for duplicate Claude installations, `--scope user|project|local`.
+A local Codex marketplace reinstalls from its current checkout; a Git
+marketplace is refreshed first.
+The command reports versions and reload/new-thread steps, and refuses
+to delegate to an older release or downgrade a newer vendored engine. It does not pull
+or overwrite your application's source code.
+
+The project upgrade refreshes the vendored engine, generated shadows and
+Harness-owned integration files, applies supported schema migrations, and
+recovers historical graph facts available in Git notes. Authored decisions,
+backlog contracts and custom configuration remain authoritative. Existing
+source changes are not ratified by refreshing their registry hashes. Review
+and commit the generated changes in each consumer repository.
+
+The repository includes native Codex metadata and a host-neutral Harness
+skill. Register this repository as a Codex marketplace and install
+`harness@harness-marketplace` to use native plugin management. Skills alone
+do not install project hooks: follow `adapters/codex/README.md` and retain
+the host's hook-trust check. Shared workflow guides contain Claude command
+substitutions; their Codex instructions use explicit engine paths.
+
+### Integrity and telemetry in 0.9
+
+Close validates the exact committed source before and after acceptance,
+discovers changes from Git even if hooks were skipped, and checks the full
+file set before recording provenance. A completion journal makes an
+interrupted substrate commit recoverable. Merge failures retain the slice
+branch for repair.
+
+Graph history stays append-only. A complete dependency snapshot defines the
+current uses/declares projection, so removing an import or deleting a file
+retires its dependency without deleting history. Overrides apply only to
+their named gate and target namespace. New closures record file/module,
+revision and governing-decision evidence, and verification detects missing
+evidence. Legacy closures report incomplete historical coverage; upgrade
+recovers only facts supported by their existing notes.
+
+SQLite stores session state and recoverable interface baselines. When a
+sidecar is lost, active Git-backed slices recover their original baseline
+from `started_at_commit`; unrecoverable baselines fail visibly. Shadow
+identity includes extraction configuration, and incremental verification
+checks source/configuration inputs as well as the generated shadow.
+
+The gitignored `.harness/sidecar.db` holds loaded-context IDs/fingerprints,
+active session/slice bindings, touched paths, interface snapshots,
+derivation-check caches, and telemetry awaiting a flush. Its SQLite-managed
+`-wal` companion holds changed database pages until checkpointed into the
+main database; `-shm` holds the WAL index and reader/locking coordination,
+not Harness records. Leave both under SQLite's control while it is running.
+Deleting the sidecar loses transient session state and unflushed telemetry,
+even though authoritative JSONL and recoverable Git baselines survive.
+See [SQLite's WAL format](https://sqlite.org/walformat.html).
+
+Telemetry is advisory. Stable event IDs, append-before-ack flushing and
+archive-aware reads make retries and rotation safe. Status reports sample
+counts, time bounds, outcomes and automatic parks; `--since` applies to
+both telemetry and graph observations. Compaction is context pressure by
+default (`telemetry.compaction_is_defect: false`); existing explicit settings
+are respected. Sparse observations never automatically justify promoting a
+rule into enforcement. Logging failures warn without blocking core work.
 
 **Clone fallback (repos that have not run `upgrade`).** When no
 `.harness/engine/` exists the workflow falls back to cloning the engine
@@ -535,6 +632,21 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.9.0 — lifecycle integrity and cross-host upgrades
+
+- Validate the committed source at closure, recover interrupted finalization,
+  and roll back failed merges without losing pre-existing tracked work.
+- Use current dependency snapshots, gate-specific overrides, recoverable
+  SQLite baselines, and complete modern graph evidence.
+- Resolve Python relative/submodule imports and invalidate shadow caches on
+  source, extractor and configuration changes.
+- Replace unsafe automatic slice splits with authored-child proposals; enforce
+  prerequisites for every binding path and reap timed-out builder processes.
+- Make telemetry durable through retries, archive-aware and advisory by default.
+- Add Claude/Codex plugin upgrade orchestration, safer project upgrades, native
+  Codex metadata, and reciprocal Claude review guidance.
+
 
 ### 0.8.6
 

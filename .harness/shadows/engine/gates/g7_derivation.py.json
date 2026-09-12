@@ -3,38 +3,93 @@
   "check",
   "derivation_findings"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.IGNORED_DIRS",
+  "engine.IGNORED_EXTS",
+  "engine.events.make_finding",
+  "engine.extractor.engine",
+  "engine.extractor.engine.DEP_INSTALL_HINT",
+  "engine.extractor.engine.LANG_BY_EXT",
+  "engine.extractor.engine._degenerate_shadow",
+  "engine.extractor.engine.build_shadow",
+  "engine.extractor.engine.deps_available",
+  "engine.extractor.engine.in_root",
+  "engine.extractor.engine.load_shadow_file",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.extractor.modules.python_module_ids",
+  "engine.load_backlog",
+  "engine.registry.load_registry",
+  "engine.sha256_bytes",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:19b655cc34cacc4017240fdeeddcdf48d7bbe1fb71dbf8fcbe4e6abc8f09ce33",
  "imports": [
-  "events",
-  "extractor.engine",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.extractor.modules",
+  "engine.registry",
   "json",
-  "pathlib",
-  "time"
+  "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g7_derivation",
- "source_hash": "sha256:bb44d50810537faffce922b688bf17871704548f52f99856fdf313a4b69f6649",
+ "source_hash": "sha256:5cc342379ef47a0e9e3bbc0d23dff8228cb1d0eabefc5d4212d1b588290ffdd7",
  "source_path": "engine/gates/g7_derivation.py",
  "symbols": [
   {
-   "doc": "Shared with C9 verify. Regenerate shadows in memory, byte-compare.\n\n    `since_ns` skips shadows untouched since a previous verified sweep \u2014 a\n    pure cache (absence = do the work), so the guarantee is unchanged while\n    the Stop hook stops being O(repo) tree-sitter parses (review R4). CI\n    verify passes nothing and always sweeps everything.",
+   "doc": "Expected shadow path -> source for explicitly enforced source files.\n\n    Registry sources are part of the substrate even while planned. Modern\n    closed slices also promise derivation coverage for their recorded files.\n    This intentionally does not turn every repository file into a Stop-hook\n    requirement; ``extract --all`` remains the explicit full discovery pass.",
+   "kind": "function",
+   "name": "_required_shadow_sources",
+   "signature": "def _required_shadow_sources(root, config) -> dict[Path, Path]",
+   "span": [
+    21,
+    22
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Recover the source path encoded by ``shadow_path_for`` safely.",
+   "kind": "function",
+   "name": "_source_for_shadow_path",
+   "signature": "def _source_for_shadow_path(root: Path, shadow: Path) -> Path | None",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Shared with C9 verify. Regenerate shadows in memory, byte-compare.\n\n    ``shadow_paths`` may restrict regeneration to artifacts whose complete\n    input fingerprint changed since a previous clean sweep. ``since_ns`` is\n    retained for callers from older releases but is deliberately not trusted:\n    a source/config/extractor change need not move the shadow mtime. CI verify\n    passes neither argument and always sweeps everything.",
    "kind": "function",
    "name": "derivation_findings",
-   "signature": "def derivation_findings(root, config, paths=None, since_ns=None) -> list",
+   "signature": "def derivation_findings(root, config, paths=None, since_ns=None, shadow_paths=None) -> list",
    "span": [
-    18,
-    19
+    74,
+    76
    ],
    "visibility": "public"
   },
   {
-   "doc": "Every shadow still gets verified \u2014 but a shadow proven identical in\n    an earlier sweep and untouched since is skipped, so the Stop hook costs\n    O(changed) parses instead of O(repo) (review R4). The sweep timestamp is\n    taken BEFORE the work, so anything modified mid-sweep is re-checked.",
+   "doc": "Cheap, safe G7 cache keys for every stored shadow.\n\n    The fingerprint covers both sides of the derivation and all context that\n    can alter module identity/import resolution. Reading bytes is much cheaper\n    than parsing every source, while backdated mtimes cannot hide a change.",
+   "kind": "function",
+   "name": "_input_fingerprints",
+   "signature": "def _input_fingerprints(root, config) -> dict",
+   "span": [
+    191,
+    192
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Regenerate only shadows whose complete derivation inputs changed.",
    "kind": "function",
    "name": "check",
    "signature": "def check(ctx) -> list",
    "span": [
-    100,
-    101
+    238,
+    239
    ],
    "visibility": "public"
   }

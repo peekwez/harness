@@ -88,4 +88,4 @@ ensemble:
 languages:
 {{languages}}
 telemetry:
-  compaction_is_defect: true
+  compaction_is_defect: false

@@ -71,7 +71,12 @@ def _close_ceremony(args):
     root = _root(args)
     config = load_config(root)
     session = _session(args, root)
+    from engine.cli.closure_state import recover_closure
+    recovered = recover_closure(root, args.slice)
+    if recovered is not None:
+        return recovered
     sl = get_slice(root, args.slice)
+    original_slice = json.loads(json.dumps(sl))
 
     # Re-closing re-runs the whole ceremony (duplicate telemetry, note
     # rewrite, fresh substrate commit) — refuse (S10). Guards are not
@@ -93,11 +98,11 @@ def _close_ceremony(args):
     # `--commit $(git rev-parse HEAD)` substitution defeats permission
     # auto-approval — `--commit HEAD` is the prompt-free spelling.
     if args.commit and (root / ".git").exists():
-        import subprocess
-        rp = subprocess.run(["git", "-C", str(root), "rev-parse", "--verify",
-                             args.commit], capture_output=True, text=True)
-        if rp.returncode == 0:
-            args.commit = rp.stdout.strip()
+        from engine.graph import resolve_commit
+        try:
+            args.commit = resolve_commit(root, args.commit)
+        except GraphError as exc:
+            _fail({"closed": False, "reason": str(exc)}, attempt=False)
 
     # Precondition 0: no scaffold placeholders ratify by inertia.
     from engine.compiler import PLACEHOLDER_SENTINEL
@@ -108,6 +113,17 @@ def _close_ceremony(args):
                           f"backlog row before closing"})
 
     # Precondition 1: acceptance green (engine-enforced, §7.5 / §1.4).
+    from engine.cli.closure_state import source_matches_commit, prepare_files
+    try:
+        source_matches_commit(root, args.commit)
+        sidecar = Sidecar(root)
+        try:
+            prepared_touched, prepared_shadows = prepare_files(
+                root, sl, sidecar, session, args.commit, config)
+        finally:
+            sidecar.close()
+    except HarnessError as exc:
+        _fail({"closed": False, "rule_ref": "gate:G1", "reason": str(exc)}, attempt=False)
     green, evidence = _acceptance_green(root, sl, config)
     if not green:
         reason = "acceptance tests are not green"
@@ -125,6 +141,10 @@ def _close_ceremony(args):
                 "findings": [gate]})
     # a repo with no gate_cmd is not a repo whose gate passed: say which
     acceptance_gate = "passed" if gate_configured(config) else "skipped"
+    try:
+        source_matches_commit(root, args.commit)
+    except HarnessError as exc:
+        _fail({"closed": False, "rule_ref": "gate:G1", "reason": str(exc)}, attempt=False)
 
     # Precondition 1.5 — ADR-001: a slice resolving any security-marked
     # decision row needs an INDEPENDENT forked reviewer's pass verdict.
@@ -215,10 +235,17 @@ def _close_ceremony(args):
                 "parked": [p["finding"]["finding_id"] for p in open_parks]})
 
     # Precondition 2: unit_complete gate pack must not block.
+    from engine.cli.closure_state import scope_findings
+    scope_blocks = [f for f in scope_findings(root, sl, session, prepared_touched, config)
+                    if f["severity"] == "block"]
+    if scope_blocks:
+        _fail({"closed": False, "reason": "G3 scope boundaries block closure",
+               "rule_ref": "gate:G3", "findings": scope_blocks})
     verdict = handle_event({
         "event": "unit_complete", "session_id": session,
         "work_unit_id": args.slice,
-        "payload": {"files": [], "context_loaded": [], "diff": None, "prompt": None},
+        "payload": {"files": [{"path": p} for p in prepared_touched],
+                    "context_loaded": [], "diff": None, "prompt": None},
     }, root)
     if verdict["verdict"] == "block":
         _fail({"closed": False, "reason": "unit_complete gates block",
@@ -232,43 +259,7 @@ def _close_ceremony(args):
                 "reason": f"uses not ⊆ declares: {unreconciled} (amend the "
                           f"slice declaration or record an override)"})
 
-    sidecar = Sidecar(root)
-    try:
-        touched = sorted(sidecar.touched_paths(slice_id=args.slice))
-    finally:
-        sidecar.close()
-
-    # W11: git is ground truth for what changed — hook-recorded touches are
-    # an optimization that misses bash-side edits. Union the slice's diff
-    # (bind commit .. close commit); substrate churn stays out of the set.
-    if args.commit and sl.get("started_at_commit") and (root / ".git").exists():
-        import subprocess
-        dp = subprocess.run(["git", "-C", str(root), "diff", "--name-only",
-                             f"{sl['started_at_commit']}..{args.commit}"],
-                            capture_output=True, text=True)
-        if dp.returncode == 0:
-            from engine import IGNORED_DIRS
-
-            def _enforceable(rel):
-                # build artifacts and vendored trees are not slice scope:
-                # a repo without a tidy .gitignore would otherwise get G3
-                # blocks for __pycache__/node_modules churn
-                parts = Path(rel).parts
-                return (rel and not rel.startswith(".harness/")
-                        and not any(p in IGNORED_DIRS for p in parts))
-            touched = sorted(set(touched) |
-                             {ln.strip() for ln in dp.stdout.splitlines()
-                              if _enforceable(ln.strip())})
-        else:
-            print(f"warning: git diff for touch reconciliation failed: "
-                  f"{dp.stderr.strip()}", file=sys.stderr)
-    elif args.commit and (root / ".git").exists():
-        # skipping the union silently is how worktree closes went vacuous —
-        # loud, and the fix is named (S1)
-        print(f"warning: slice {args.slice} has no started_at_commit — touch "
-              f"reconciliation is limited to hook-recorded edits; re-bind "
-              f"with `harness slice --slice {args.slice}` to record the "
-              f"anchor for future slices", file=sys.stderr)
+    touched = prepared_touched
 
     # Precondition 4: G3 declaration reconciliation (T2: unit cannot close
     # until every touched file is declared/predicted or overridden).
@@ -278,12 +269,13 @@ def _close_ceremony(args):
         set(sl.get("acceptance", []))
     # overrides consult the same ledger as G3/G5: any recorded target
     # (file:path, boundary:B-x, registry:x) reconciles by bare id (#21)
-    overridden = {e["to"].split(":", 1)[-1] for e in load_edges(root)
-                  if e["from"] == f"slice:{args.slice}"
-                  and e["type"] == "override"}
+    from engine.graph import override_targets
+    overridden = override_targets(root, args.slice, "gate:G3", {"file", "boundary"})
+    from fnmatch import fnmatch
     rogue = [t for t in touched
              if not t.startswith(SUBSTRATE_PREFIXES)
-             and t not in declared and t not in overridden]
+             and not any(fnmatch(t, pattern) for pattern in declared if pattern)
+             and t not in overridden]
     if rogue:
         _fail({"closed": False,
                 "reason": f"G3 unreconciled: touched files not in the declared/"
@@ -297,7 +289,7 @@ def _close_ceremony(args):
     # still blocks anything stale or hand-edited.
     from engine import IGNORED_EXTS
     from engine.extractor.engine import extract_path, shadow_path_for
-    shadows_extracted, shadow_failures = [], []
+    shadows_extracted, shadow_failures = list(prepared_shadows), []
     for rel in sorted(touched):
         if rel.startswith(SUBSTRATE_PREFIXES):
             continue
@@ -325,40 +317,33 @@ def _close_ceremony(args):
                           f"{shadow_failures} — fix the named cause and "
                           f"re-close", "rule_ref": "gate:G7"})
 
-    # Precondition 6: a slice IS a commit boundary. Closing without one
-    # records no provenance at all and used to succeed silently — the note
-    # is the artifact that makes provenance travel with the repo.
-    if (root / ".git").exists() and not args.commit:
-        _fail({"closed": False, "rule_ref": "gate:G1",
-                "reason": "--commit is required to close in a git repo: the "
-                          "slice's provenance note is written onto it. "
-                          "Commit the work and re-close with `--commit HEAD` "
-                          "(the engine resolves the ref)."})
-
-    # Precondition 7 (Y1): the named commit must actually CONTAIN the
-    # touched files — `git add -N` (intent-to-add) produced a commit
-    # without the slice's sources and the provenance note landed on the
-    # wrong commit.
+    # Precondition 8: dependency governance. Third-party deps are outside
+    # shadow enforcement — a builder silently adding one is the drift class
+    # G5 exists to stop, one level down. Added lines in dependency manifests
+    # require a recorded override naming why.
     if args.commit and (root / ".git").exists():
-        import subprocess
-        missing_from_commit = []
-        for rel in sorted(touched):
-            if rel.startswith(".harness/"):
-                continue  # substrate commits separately by contract (W4)
-            if not (root / rel).is_file():
-                continue  # deletions are legitimately absent from the tree
-            ok = subprocess.run(["git", "-C", str(root), "cat-file", "-e",
-                                 f"{args.commit}:{rel}"], capture_output=True)
-            if ok.returncode != 0:
-                missing_from_commit.append(rel)
-        if missing_from_commit:
-            _fail({"closed": False, "rule_ref": "gate:G1",
-                    "reason": f"commit {args.commit[:12]} does not contain "
-                              f"touched files {missing_from_commit} — the "
-                              f"provenance note would land on the wrong "
-                              f"commit; `git add` them, commit, and re-close "
-                              f"with the new HEAD"})
+        added = _added_dependency_lines(root, sl, args.commit)
+        if added:
+            from engine.graph import load_edges as _edges
+            overridden_deps = override_targets(root, args.slice, "gate:G5", {"deps"})
+            rogue_deps = {f: lines for f, lines in added.items()
+                          if f not in overridden_deps}
+            if rogue_deps:
+                _fail({"closed": False, "rule_ref": "gate:G5",
+                        "reason": f"new dependencies added without a recorded "
+                                  f"decision: {rogue_deps}. Record why: "
+                                  f"`harness gates override --slice "
+                                  f"{args.slice} --target deps:<file> "
+                                  f"--rule-ref gate:G5 --justification "
+                                  f'"<why>"` — or remove them.'})
 
+    # git note: slice = commit boundary; provenance travels with the repo
+    try:
+        source_matches_commit(root, args.commit)
+    except HarnessError as exc:
+        _fail({"closed": False, "reason": str(exc)}, attempt=False)
+    from engine.cli.closure_state import begin_finalization
+    begin_finalization(root, original_slice, args.commit)
     # registry status flips (planned -> built) for modules this slice
     # produced; built entries whose source this slice touched (G6-acked
     # drift) get their recorded hash/digest refreshed, or verify would
@@ -383,32 +368,10 @@ def _close_ceremony(args):
             # not silently: the entry keeps its status and the reason is named
             flip_skipped.append({"id": e["id"], "reason": str(exc)})
 
-    # Precondition 8: dependency governance. Third-party deps are outside
-    # shadow enforcement — a builder silently adding one is the drift class
-    # G5 exists to stop, one level down. Added lines in dependency manifests
-    # require a recorded override naming why.
-    if args.commit and (root / ".git").exists():
-        added = _added_dependency_lines(root, sl, args.commit)
-        if added:
-            from engine.graph import load_edges as _edges
-            overridden_deps = {e["to"].split(":", 1)[-1]
-                               for e in _edges(root)
-                               if e["from"] == f"slice:{args.slice}"
-                               and e["type"] == "override"
-                               and e["to"].startswith("deps:")}
-            rogue_deps = {f: lines for f, lines in added.items()
-                          if f not in overridden_deps}
-            if rogue_deps:
-                _fail({"closed": False, "rule_ref": "gate:G5",
-                        "reason": f"new dependencies added without a recorded "
-                                  f"decision: {rogue_deps}. Record why: "
-                                  f"`harness gates override --slice "
-                                  f"{args.slice} --target deps:<file> "
-                                  f"--rule-ref gate:G5 --justification "
-                                  f'"<why>"` — or remove them.'})
-
-    # git note: slice = commit boundary; provenance travels with the repo
     from engine.graph import NOTES_REF
+    from engine.graph import record_slice_provenance, record_dependency_snapshot
+    record_dependency_snapshot(root, args.slice, ud["uses"], touched, commit=args.commit)
+    record_slice_provenance(root, args.slice, args.commit, touched)
     memory_ids = [m["id"] for m in memory.read_session(root, args.slice)]
     note_written, note_row = False, {}
     if args.commit:
@@ -428,29 +391,33 @@ def _close_ceremony(args):
                               f"(stale ref lock? read-only .git?) and "
                               f"re-close — provenance is not optional."})
 
-    compacted = memory.compact_to_durable(root, args.slice, commit=args.commit)
+    compacted = memory.compact_to_durable(root, args.slice, commit=args.commit,
+                                          consume=False)
 
-    sl["status"] = "closed"
-    save_slice(root, sl)
-
-    # release every session binding pointing at the now-closed slice —
-    # otherwise the next edit is gated against a closed slice (#22) — and
-    # drop its G6 baselines so a later rebind starts fresh (S6)
-    sidecar = Sidecar(root)
-    try:
-        released = sidecar.release_slice(args.slice)
-        sidecar.release_snapshots(args.slice)
-    finally:
-        sidecar.close()
-
-    telemetry.emit(root, "slice_closed", {"slice": args.slice,
-                                          "flipped": flipped,
-                                          "flip_skipped": flip_skipped,
-                                          "memories": compacted["total"]})
     # hook-frequency events buffered in the sidecar land here, once, so the
     # tracked file doesn't churn on every edit (review R8)
     telemetry_flushed = telemetry.flush(root)
     telemetry_archived = telemetry.rotate(root, config)
+
+    result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
+              "acceptance_gate": acceptance_gate, "substrate_commit": None,
+              "source_commit": args.commit, "shadows_extracted": shadows_extracted,
+              "fork_review": fork_review, "review": review_result,
+              "telemetry_flushed": telemetry_flushed, "telemetry_archived": telemetry_archived,
+              "registry_refreshed": refreshed, "flip_skipped": flip_skipped, "memory": compacted,
+              "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
+              "notes_ref": NOTES_REF if note_written else None,
+              "notes_hint": (f"view with: git notes --ref={NOTES_REF} show {args.commit}")
+                            if note_written else None, "touched": touched}
+    from engine.cli.closure_state import prepare_journal, finish_closure
+    prepare_journal(root, original_slice, result)
+    sl["status"] = "closed"
+    sl["provenance_version"] = 1
+    sl["closed_commit"] = args.commit
+    sl["closed_files"] = touched
+    from engine.graph import slice_provenance_requirements
+    sl["closed_evidence"] = slice_provenance_requirements(root, args.slice, touched)
+    save_slice(root, sl)
 
     # The ceremony itself just mutated substrate (backlog flip, registry,
     # edges, telemetry) AFTER the commit it stamps — commit those mutations
@@ -468,30 +435,18 @@ def _close_ceremony(args):
             return subprocess.run(["git", "-C", str(root), *a],
                                   capture_output=True, text=True)
         if _git("status", "--porcelain", "--", ".harness").stdout.strip():
-            _git("add", "-A", "--", ".harness")
+            staged = _git("add", "-A", "--", ".harness")
             committed = _git("commit", "-q", "-m",
                              f"harness: close-slice {args.slice} substrate",
-                             "--", ".harness")
+                             "--", ".harness") if staged.returncode == 0 else staged
             if committed.returncode == 0:
                 substrate_commit = _git("rev-parse", "HEAD").stdout.strip()
             else:
-                print(f"warning: substrate auto-commit failed: "
-                      f"{committed.stderr.strip() or committed.stdout.strip()}",
-                      file=sys.stderr)
+                recover_closure(root, args.slice)
+                _fail({"closed": False, "rule_ref": "gate:G1",
+                       "reason": "substrate commit failed; closure remains retryable: "
+                                 + (committed.stderr.strip() or committed.stdout.strip()
+                                    or f"git exited {committed.returncode}")}, attempt=False)
 
-    return {"closed": True, "slice": args.slice, "registry_flipped": flipped,
-            "acceptance_gate": acceptance_gate,
-            "substrate_commit": substrate_commit,
-            "shadows_extracted": shadows_extracted,
-            "fork_review": fork_review,
-            "review": review_result,
-            "telemetry_flushed": telemetry_flushed,
-            "telemetry_archived": telemetry_archived,
-            "registry_refreshed": refreshed, "bindings_released": released,
-            "flip_skipped": flip_skipped, "memory": compacted,
-            "note_written": note_written,
-            "note_tree_hash": note_row.get("tree_hash"),
-            "notes_ref": NOTES_REF if note_written else None,
-            "notes_hint": (f"view with: git notes --ref={NOTES_REF} show "
-                           f"{args.commit}") if note_written else None,
-            "touched": touched}
+    result["substrate_commit"] = substrate_commit
+    return finish_closure(root, result)

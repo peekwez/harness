@@ -108,12 +108,16 @@ def test_close_blocked_on_undeclared_use(toy):
     run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
     loaded_context(toy, session=session)
     (toy / "orders.py").write_text(GOOD_ORDERS)  # acceptance green
-    from engine.graph import append_edge
-    append_edge(toy, "uses", "slice:slice-042", "module:ghost")
+    from engine import read_jsonl, write_jsonl
+    rows = read_jsonl(toy / ".harness/backlog.jsonl")
+    rows[0]["declares_dep"] = ["config"]
+    write_jsonl(toy / ".harness/backlog.jsonl", rows)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "orders with undeclared telemetry")
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   root=toy)
+                   "--commit", "HEAD", root=toy)
     assert proc.returncode == 1
-    assert "ghost" in proc.stdout
+    assert "telemetry" in proc.stdout
 
 
 def test_close_blocked_on_red_acceptance(toy):
@@ -123,7 +127,7 @@ def test_close_blocked_on_red_acceptance(toy):
     loaded_context(toy, session=session)
     # orders.py never written -> the acceptance test cannot pass
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   root=toy)
+                   "--commit", "HEAD", root=toy)
     assert proc.returncode == 1
     assert "acceptance" in proc.stdout
 
@@ -137,8 +141,10 @@ def test_close_blocked_on_unreconciled_g3_touch(toy):
     (toy / "rogue.py").write_text("x = 1\n")
     handle_event(make_event("post_change", session=session,
                             files=["orders.py", "rogue.py"]), toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "orders and rogue")
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   root=toy)
+                   "--commit", "HEAD", root=toy)
     assert proc.returncode == 1
     out = json.loads(proc.stdout)
     assert "rogue.py" in json.dumps(out) and out.get("rule_ref") == "gate:G3"
@@ -156,18 +162,20 @@ def test_close_blocked_on_unreconciled_g3_touch(toy):
     assert proc2.returncode == 0, proc2.stdout + proc2.stderr
 
 
-def test_backlog_splits_oversized_slice(tmp_path):
+def test_backlog_proposes_authored_children_for_oversized_slice(tmp_path):
     from conftest import build_toy_repo
     toy = build_toy_repo(tmp_path / "toy", budget=100)  # tiny budget
     proc = run_cli("backlog", root=toy)
     out = json.loads(proc.stdout)
-    assert "slice-042" in out["split"]
-    assert "slice-042-a" in out["slices"] and "slice-042-b" in out["slices"]
+    assert out["split"] == []
+    proposal = out["split_proposals"][0]
+    assert proposal["id"] == "slice-042"
+    assert proposal["child_ids"] == ["slice-042-a", "slice-042-b"]
+    assert "acceptance" in proposal["reason"]
     from engine import read_jsonl
     rows = {r["id"]: r for r in read_jsonl(toy / ".harness" / "backlog.jsonl")}
-    assert rows["slice-042-b"]["depends_on"] == ["slice-042-a"]
-    deps_a = set(rows["slice-042-a"]["declares_dep"])
-    deps_b = set(rows["slice-042-b"]["declares_dep"])
+    assert set(rows) == {"slice-042"}, "the parent stays until children are authored"
+    deps_a, deps_b = map(set, proposal["declares_dep"])
     assert deps_a | deps_b == {"telemetry", "config"} and not deps_a & deps_b
 
 

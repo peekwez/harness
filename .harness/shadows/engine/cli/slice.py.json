@@ -3,7 +3,34 @@
   "cmd_permit",
   "cmd_start"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.cli.acceptance.run_acceptance",
+  "engine.cli.acceptance.run_regression",
+  "engine.cli.common.PLUGIN_ROOT",
+  "engine.cli.common._acceptance_python",
+  "engine.cli.common._config_merge_drivers",
+  "engine.cli.common._print",
+  "engine.cli.common._root",
+  "engine.cli.common._session",
+  "engine.cli.init._write_autonomy_settings",
+  "engine.cli.landing.landing_config",
+  "engine.events.Sidecar",
+  "engine.events._snapshot_slice_baseline",
+  "engine.get_slice",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.load_backlog",
+  "engine.load_config",
+  "engine.permits.command_decision",
+  "engine.permits.paths_in_scope",
+  "engine.registry.load_registry",
+  "engine.resolver.resolve",
+  "engine.save_slice",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:371677b485ac8c1d6adbc21550c0fe5365b94fd5aeabbf182aa86c05dc7c4c22",
  "imports": [
   "engine",
   "engine.cli.acceptance",
@@ -16,22 +43,56 @@
   "engine.registry",
   "engine.resolver",
   "pathlib",
+  "re",
   "subprocess",
   "sys"
  ],
  "language": "python",
  "module_id": "engine.cli.slice",
- "source_hash": "sha256:b37460a687018acbe2c93f49324dab8cfc17f69139bcffc0bd7b65e92e4c490c",
+ "source_hash": "sha256:e7e6c0dbcf4001f7e298f77825e3464996378ebcf12b3960e2b23b23fbc425e9",
  "source_path": "engine/cli/slice.py",
  "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_slice_id_refusal",
+   "signature": "def _slice_id_refusal(slice_id: str)",
+   "span": [
+    24,
+    25
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_binding_refusal",
+   "signature": "def _binding_refusal(root, sl, *, force=False, justification=None)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_public_bind_result",
+   "signature": "def _public_bind_result(result)",
+   "span": [
+    70,
+    71
+   ],
+   "visibility": "private"
+  },
   {
    "doc": "Everything binding a slice entails, in one place (shared by `slice`\n    and `start`): session + repo-default binding, declares_dep edges, status\n    flip, git anchor, G6 baseline, context registration, merge drivers.",
    "kind": "function",
    "name": "_bind_slice",
-   "signature": "def _bind_slice(root, slice_id: str, session: str) -> dict",
+   "signature": "def _bind_slice(root, slice_id: str, session: str, *, force=False, justification=None) -> dict",
    "span": [
-    20,
-    21
+    75,
+    77
    ],
    "visibility": "private"
   },
@@ -41,8 +102,8 @@
    "name": "_acceptance_green",
    "signature": "def _acceptance_green(root, sl, config)",
    "span": [
-    91,
-    92
+    179,
+    180
    ],
    "visibility": "private"
   },
@@ -52,8 +113,8 @@
    "name": "_regression_suite",
    "signature": "def _regression_suite(root, config, exclude=None, interpreter=None, env=None)",
    "span": [
-    100,
-    101
+    188,
+    189
    ],
    "visibility": "private"
   },
@@ -63,8 +124,8 @@
    "name": "cmd_start",
    "signature": "def cmd_start(args)",
    "span": [
-    109,
-    110
+    197,
+    198
    ],
    "visibility": "public"
   },
@@ -74,8 +135,8 @@
    "name": "_git",
    "signature": "def _git(*a)",
    "span": [
-    167,
-    168
+    243,
+    244
    ],
    "visibility": "private"
   },
@@ -85,8 +146,8 @@
    "name": "cmd_permit",
    "signature": "def cmd_permit(args)",
    "span": [
-    199,
-    200
+    280,
+    281
    ],
    "visibility": "public"
   }

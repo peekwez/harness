@@ -3,18 +3,33 @@
   "check",
   "record_override"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.events.make_finding",
+  "engine.extractor.engine.LANG_BY_EXT",
+  "engine.extractor.engine.RegistryIndex",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.graph.append_edge",
+  "engine.graph.override_targets",
+  "engine.registry.digest_tokens",
+  "engine.registry.signature_digest",
+  "engine.registry.similarity",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:facbee3a9871fd43a81bdbefb5456a395163c6d0005f3a48688bac1e5548a29d",
  "imports": [
-  "events",
-  "extractor.engine",
-  "graph",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.graph",
+  "engine.registry",
   "json",
-  "pathlib",
-  "registry"
+  "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g5_conformance",
- "source_hash": "sha256:2371b6c543a8c61d9aa58dcaefb6f5af2e3c5200724d4a274b2bec0ded60c073",
+ "source_hash": "sha256:ec7e11a32e9f4ee83fa08b0c651b4b25ca87e38616ff1becc123226704a1a117",
  "source_path": "engine/gates/g5_conformance.py",
  "symbols": [
   {
@@ -45,8 +60,8 @@
    "name": "_shadow_for_touched",
    "signature": "def _shadow_for_touched(ctx, rel)",
    "span": [
-    38,
-    39
+    37,
+    38
    ],
    "visibility": "private"
   },
@@ -56,8 +71,8 @@
    "name": "check",
    "signature": "def check(ctx) -> list",
    "span": [
-    49,
-    50
+    48,
+    49
    ],
    "visibility": "public"
   },
@@ -65,10 +80,10 @@
    "doc": "Builder override-and-justification: auditable edge (T3). rule_ref\n    names the gate actually being overridden \u2014 hardcoding G5 falsified the\n    ledger for G1/G3 overrides (field report W9).",
    "kind": "function",
    "name": "record_override",
-   "signature": "def record_override(root, slice_id: str, target: str, justification: str, finding_id: str | None = None, rule_ref: str = \"gate:G5\") -> dict",
+   "signature": "def record_override(root, slice_id: str, target: str, justification: str, finding_id: str | None = None, rule_ref: str | None = None) -> dict",
    "span": [
-    116,
-    119
+    115,
+    118
    ],
    "visibility": "public"
   }

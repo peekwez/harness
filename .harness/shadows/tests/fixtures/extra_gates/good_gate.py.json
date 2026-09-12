@@ -2,7 +2,11 @@
  "exports": [
   "run"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.make_finding"
+ ],
+ "import_resolution_hash": "sha256:a0f3dc0e752b0bd373a71cfd3c77dca832b9f3f22ea63a48cedd48cd52aff390",
  "imports": [
   "engine.events"
  ],

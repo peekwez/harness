@@ -6,68 +6,200 @@
   "load",
   "rotate"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.SubstrateMissing",
+  "engine.append_jsonl",
+  "engine.events.Sidecar",
+  "engine.graph.load_edges",
+  "engine.harness_dir",
+  "engine.load_backlog",
+  "engine.load_config",
+  "engine.now_iso",
+  "engine.read_jsonl",
+  "engine.write_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:72edbec82d176d3420dda350e25a156e92b97acc2cbbbbf009e8b45fbf5a60fa",
  "imports": [
-  "events",
-  "graph"
+  "base64",
+  "engine",
+  "engine.events",
+  "engine.graph",
+  "hashlib",
+  "json",
+  "os",
+  "pathlib",
+  "sys",
+  "uuid"
  ],
  "language": "python",
  "module_id": "engine.telemetry",
- "source_hash": "sha256:5b009d227b8b0a48dfb3599caf24c24ed4298136265d5b81f2d5f7b326ad212f",
+ "source_hash": "sha256:d966fd07179af8e8e948a72f07a6b949655693cd4d617d51dc33b74ff81136f1",
  "source_path": "engine/telemetry.py",
  "symbols": [
   {
    "doc": null,
    "kind": "function",
-   "name": "emit",
-   "signature": "def emit(root, kind: str, meta: dict) -> None",
+   "name": "_warn",
+   "signature": "def _warn(action: str, exc: Exception) -> None",
    "span": [
-    19,
-    20
+    23,
+    24
    ],
-   "visibility": "public"
-  },
-  {
-   "doc": "Move buffered rows into the tracked file (close-slice / merge-slice).\n    Returns the number of rows flushed.",
-   "kind": "function",
-   "name": "flush",
-   "signature": "def flush(root) -> int",
-   "span": [
-    32,
-    33
-   ],
-   "visibility": "public"
-  },
-  {
-   "doc": "Keep the tracked file bounded: rows beyond `telemetry.max_rows` move\n    to telemetry.archive.jsonl (append-only, union-merged like the live\n    file). Nothing is deleted \u2014 history stays, diffs stay small. Returns the\n    number of rows moved.",
-   "kind": "function",
-   "name": "rotate",
-   "signature": "def rotate(root, config=None) -> int",
-   "span": [
-    46,
-    47
-   ],
-   "visibility": "public"
-  },
-  {
-   "doc": "Tracked rows plus anything still buffered \u2014 the dashboard must never\n    under-report just because a slice hasn't closed yet.",
-   "kind": "function",
-   "name": "load",
-   "signature": "def load(root) -> list",
-   "span": [
-    64,
-    65
-   ],
-   "visibility": "public"
+   "visibility": "private"
   },
   {
    "doc": null,
    "kind": "function",
+   "name": "_sync_file",
+   "signature": "def _sync_file(path)",
+   "span": [
+    27,
+    28
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_sync_directory",
+   "signature": "def _sync_directory(path)",
+   "span": [
+    33,
+    34
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Durably preserve corrupt telemetry before its source is repaired.",
+   "kind": "function",
+   "name": "_quarantine_bytes",
+   "signature": "def _quarantine_bytes(root, source: str, raw: bytes, reason: str) -> None",
+   "span": [
+    41,
+    42
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_json_object",
+   "signature": "def _json_object(raw: bytes | str) -> dict",
+   "span": [
+    86,
+    87
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Repair only a final unterminated row, preserving it in quarantine.",
+   "kind": "function",
+   "name": "_repair_trailing_jsonl",
+   "signature": "def _repair_trailing_jsonl(root, path: Path, source: str) -> None",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Stable identity for rows written before telemetry IDs were introduced.",
+   "kind": "function",
+   "name": "_legacy_id",
+   "signature": "def _legacy_id(source: str, position: int, row: dict) -> str",
+   "span": [
+    127,
+    128
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_rows_from_file",
+   "signature": "def _rows_from_file(path: Path, source: str) -> list",
+   "span": [
+    135,
+    136
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_deduplicate",
+   "signature": "def _deduplicate(rows: list) -> list",
+   "span": [
+    141,
+    142
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_tracked_rows",
+   "signature": "def _tracked_rows(root) -> list",
+   "span": [
+    153,
+    154
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Record one diagnostic event without blocking the observed workflow.",
+   "kind": "function",
+   "name": "emit",
+   "signature": "def emit(root, kind: str, meta: dict, *, event_id=None, buffered=False) -> None",
+   "span": [
+    160,
+    161
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Append selected rows, then acknowledge only their SQLite row IDs.",
+   "kind": "function",
+   "name": "flush",
+   "signature": "def flush(root) -> int",
+   "span": [
+    215,
+    216
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Move old live rows to the archive without losing logical events.",
+   "kind": "function",
+   "name": "rotate",
+   "signature": "def rotate(root, config=None) -> int",
+   "span": [
+    281,
+    282
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Read archive, live file, and buffer as one deduplicated history.",
+   "kind": "function",
+   "name": "load",
+   "signature": "def load(root) -> list",
+   "span": [
+    331,
+    332
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Build a windowed dashboard with explicit samples and observation span.",
+   "kind": "function",
    "name": "aggregate",
    "signature": "def aggregate(root, since: str | None = None) -> dict",
    "span": [
-    77,
-    78
+    364,
+    365
    ],
    "visibility": "public"
   }

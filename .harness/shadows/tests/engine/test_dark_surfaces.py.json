@@ -11,12 +11,24 @@
   "test_typescript_shadow_regenerates_identically",
   "test_yaml_shadow_extracts_top_level_keys"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.run_cli",
+  "engine.extractor.engine.extract_path",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.telemetry",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:45209d046c80918732e20878e85274945fe132846550290eb814a8a42a0e19de",
  "imports": [
   "conftest",
   "engine",
   "engine.extractor.engine",
   "engine.gates.g7_derivation",
+  "engine.telemetry",
   "json",
   "shutil",
   "subprocess",

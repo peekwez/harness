@@ -1,19 +1,30 @@
 {
  "exports": [
+  "interrupted",
   "test_attempt_requires_approach_outcome_why",
   "test_compact_promotes_attempts_and_deletes_session_file",
+  "test_compaction_retry_restores_edges_after_interrupted_promotion",
   "test_flush_reports_entries",
   "test_invalid_kind_fails_loud"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.graph",
+  "engine.graph.load_edges",
+  "engine.memory",
+  "engine.read_jsonl"
+ ],
+ "import_resolution_hash": "sha256:dde1059fefaf2b203e1544b0736fb57c4d921ec81439de4ea737ade68fb96c06",
  "imports": [
   "engine",
   "engine.graph",
+  "engine.memory",
   "pytest"
  ],
  "language": "python",
  "module_id": "tests.engine.test_memory",
- "source_hash": "sha256:965243c92e4aef670efd9816c00e8b615bf7423db5e9aa3054e7676d227c019b",
+ "source_hash": "sha256:34f01a5d8b43fdb2f9fe0693add7a1770a41bab5952a79a0cf95a4e6ae95ee9e",
  "source_path": "tests/engine/test_memory.py",
  "symbols": [
   {
@@ -57,6 +68,28 @@
    "span": [
     52,
     53
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_compaction_retry_restores_edges_after_interrupted_promotion",
+   "signature": "def test_compaction_retry_restores_edges_after_interrupted_promotion(toy, monkeypatch)",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "interrupted",
+   "signature": "def interrupted(*args, **kwargs)",
+   "span": [
+    62,
+    63
    ],
    "visibility": "public"
   }

@@ -2,7 +2,12 @@
  "exports": [
   "cache_url"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "kente.config.get_setting",
+  "kente.service.health"
+ ],
+ "import_resolution_hash": "sha256:85c36a0428a0c4608773591cab15983e3dd29d846807b9af2ca2c432fc018f48",
  "imports": [
   "kente.config",
   "kente.service"

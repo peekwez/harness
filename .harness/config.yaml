@@ -17,4 +17,4 @@ languages:
   yaml: true
   hcl: false
 telemetry:
-  compaction_is_defect: true
+  compaction_is_defect: false

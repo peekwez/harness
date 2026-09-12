@@ -90,11 +90,14 @@ def test_split_refuses_a_parent_other_slices_depend_on(tmp_path):
     assert _backlog(toy)[1]["depends_on"] == ["slice-042"]
 
 
-def test_split_of_a_free_planned_slice_still_works(tmp_path):
+def test_split_of_a_free_planned_slice_requires_authored_child_contracts(tmp_path):
     toy = build_toy_repo(tmp_path / "toy", budget=100)
     out = json.loads(run_cli("backlog", root=toy).stdout)
-    assert out["split"] == ["slice-042"]
-    assert out["split_refused"] == []
+    assert out["split"] == []
+    assert out["split_proposals"][0]["child_ids"] == ["slice-042-a",
+                                                        "slice-042-b"]
+    assert "authored" in out["split_refused"][0]["reason"]
+    assert [row["id"] for row in _backlog(toy)] == ["slice-042"]
 
 
 # ========================================================= E3: adjudicate

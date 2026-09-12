@@ -10,9 +10,10 @@ ids by longest dotted prefix (ADR-002, decision row D-008).
 from __future__ import annotations
 
 from fnmatch import fnmatchcase
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
-from .. import DEFAULT_SRC_ROOTS, HarnessError
+from .. import (DEFAULT_SRC_ROOTS, IGNORED_DIRS, HarnessError, harness_dir,
+                read_jsonl)
 
 _SRC_ROOTS_KEY = "extractor.src_roots"
 
@@ -95,6 +96,53 @@ def module_id_for_rel(rel_posix: str, config: dict | None = None) -> str:
     if len(parts) > 1 and parts[-1] == "__init__":
         parts = parts[:-1]
     return ".".join(parts)
+
+
+def python_module_ids(root, config: dict | None = None) -> set[str]:
+    """Known Python module identities from local sources and the registry.
+
+    Python's ``from package import name`` is ambiguous: ``name`` can be an
+    ordinary exported symbol or a submodule.  Only promote it to
+    ``package.name`` when that module identity is present in the repository
+    or registry; otherwise keep the dependency on ``package``.
+    """
+    root = Path(root)
+    modules = set()
+
+    def add_source(rel_posix: str):
+        """Add a concrete module and namespace packages implied by its dirs."""
+        stem = PurePosixPath(rel_posix).with_suffix("").as_posix()
+        parts = strip_src_root(stem, src_roots(config))
+        is_package = len(parts) > 1 and parts[-1] == "__init__"
+        module_parts = parts[:-1] if is_package else parts
+        modules.add(".".join(module_parts))
+        # Only directory segments imply namespace packages.  Splitting the
+        # complete dotted id would incorrectly treat a filename such as
+        # ``client.v2.py`` as a package tree.
+        namespace_parts = module_parts if is_package else parts[:-1]
+        for end in range(1, len(namespace_parts) + 1):
+            modules.add(".".join(namespace_parts[:end]))
+
+    for path in root.rglob("*.py"):
+        try:
+            rel = path.relative_to(root)
+        except ValueError:  # pragma: no cover - rglob keeps paths under root
+            continue
+        if any(part in IGNORED_DIRS for part in rel.parts) or not path.is_file():
+            continue
+        add_source(rel.as_posix())
+
+    registry_path = harness_dir(root) / "registry.jsonl"
+    if registry_path.exists():
+        for entry in read_jsonl(registry_path):
+            if isinstance(entry.get("module_id"), str) and entry["module_id"]:
+                modules.add(entry["module_id"])
+            if isinstance(entry.get("id"), str) and entry["id"]:
+                modules.add(entry["id"])
+            source = entry.get("source")
+            if isinstance(source, str) and PurePosixPath(source).suffix == ".py":
+                add_source(source)
+    return modules
 
 
 class RegistryIndex:

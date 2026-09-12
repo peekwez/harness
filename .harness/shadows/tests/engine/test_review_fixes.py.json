@@ -3,32 +3,51 @@
   "test_g7_reverifies_only_what_changed_since_the_last_clean_sweep",
   "test_g7_still_catches_any_hand_edited_shadow_at_stop",
   "test_park_requires_a_rule_ref_and_message",
-  "test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden",
   "test_readme_documents_every_cli_subcommand",
   "test_resolve_registers_context_only_when_it_emits_it",
   "test_reviewer_records_findings_and_parks_into_the_queue",
+  "test_rule_samples_report_observations_without_automatic_promotion",
   "test_spec_glossary_resolves_every_referenced_marker",
   "test_status_reports_parks_per_slice",
   "test_substrate_writes_are_atomic",
   "test_telemetry_buffers_in_the_sidecar_and_flushes_at_close",
-  "test_the_same_question_never_parks_twice"
+  "test_the_same_question_never_parks_twice",
+  "unexpected_parse"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.gates.g5_conformance.record_override",
+  "engine.gates.g7_derivation",
+  "engine.graph.load_edges",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.telemetry",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:e4f6328b942c8264e43661d72071578cd28d912331c8e841b962167bc92f3a39",
  "imports": [
   "conftest",
   "engine",
   "engine.events",
   "engine.gates.g5_conformance",
+  "engine.gates.g7_derivation",
   "engine.graph",
+  "engine.telemetry",
   "json",
-  "os",
   "re",
   "subprocess",
   "sys"
  ],
  "language": "python",
  "module_id": "tests.engine.test_review_fixes",
- "source_hash": "sha256:92e13193e8ceffc7c3bf54b143ed817e60a3b4f34311af82a51202730f985509",
+ "source_hash": "sha256:87338b2b827430b1c8ed4b9c5ade4431f088f60b10a159bd1d78203e3bdf8ec3",
  "source_path": "tests/engine/test_review_fixes.py",
  "symbols": [
   {
@@ -37,8 +56,8 @@
    "name": "test_reviewer_records_findings_and_parks_into_the_queue",
    "signature": "def test_reviewer_records_findings_and_parks_into_the_queue(toy)",
    "span": [
-    15,
-    16
+    14,
+    15
    ],
    "visibility": "public"
   },
@@ -48,8 +67,8 @@
    "name": "test_park_requires_a_rule_ref_and_message",
    "signature": "def test_park_requires_a_rule_ref_and_message(toy)",
    "span": [
-    48,
-    49
+    47,
+    48
    ],
    "visibility": "public"
   },
@@ -59,8 +78,8 @@
    "name": "test_the_same_question_never_parks_twice",
    "signature": "def test_the_same_question_never_parks_twice(toy)",
    "span": [
-    55,
-    56
+    54,
+    55
    ],
    "visibility": "public"
   },
@@ -70,8 +89,8 @@
    "name": "test_status_reports_parks_per_slice",
    "signature": "def test_status_reports_parks_per_slice(toy)",
    "span": [
-    63,
-    64
+    62,
+    63
    ],
    "visibility": "public"
   },
@@ -81,19 +100,30 @@
    "name": "test_resolve_registers_context_only_when_it_emits_it",
    "signature": "def test_resolve_registers_context_only_when_it_emits_it(toy)",
    "span": [
-    72,
-    73
+    71,
+    72
    ],
    "visibility": "public"
   },
   {
-   "doc": "Regenerating every shadow on every Stop is an O(repo) scale cliff.\n    A shadow proven identical in an earlier sweep and untouched since is\n    skipped \u2014 provable by backdating its mtime past the watermark.",
+   "doc": "An unchanged shadow/source/input tuple skips the expensive parse.",
    "kind": "function",
    "name": "test_g7_reverifies_only_what_changed_since_the_last_clean_sweep",
-   "signature": "def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(toy)",
+   "signature": "def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep( toy, monkeypatch)",
    "span": [
-    96,
+    95,
     97
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "unexpected_parse",
+   "signature": "def unexpected_parse(*args, **kwargs)",
+   "span": [
+    105,
+    106
    ],
    "visibility": "public"
   },
@@ -103,8 +133,8 @@
    "name": "test_g7_still_catches_any_hand_edited_shadow_at_stop",
    "signature": "def test_g7_still_catches_any_hand_edited_shadow_at_stop(toy)",
    "span": [
-    118,
-    119
+    113,
+    114
    ],
    "visibility": "public"
   },
@@ -114,8 +144,8 @@
    "name": "test_substrate_writes_are_atomic",
    "signature": "def test_substrate_writes_are_atomic(toy, tmp_path)",
    "span": [
-    137,
-    138
+    132,
+    133
    ],
    "visibility": "public"
   },
@@ -125,8 +155,8 @@
    "name": "test_readme_documents_every_cli_subcommand",
    "signature": "def test_readme_documents_every_cli_subcommand()",
    "span": [
-    156,
-    157
+    151,
+    152
    ],
    "visibility": "public"
   },
@@ -136,19 +166,19 @@
    "name": "test_spec_glossary_resolves_every_referenced_marker",
    "signature": "def test_spec_glossary_resolves_every_referenced_marker()",
    "span": [
-    168,
-    169
+    163,
+    164
    ],
    "visibility": "public"
   },
   {
-   "doc": "The metric answers 'which rules are stable enough to promote?' \u2014 it\n    must look at rules that FIRED, not only ones that were overridden.",
+   "doc": "Sparse telemetry is evidence for review, not a promotion decision.",
    "kind": "function",
-   "name": "test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden",
-   "signature": "def test_promotion_candidates_rank_rules_that_fire_and_are_never_overridden(toy)",
+   "name": "test_rule_samples_report_observations_without_automatic_promotion",
+   "signature": "def test_rule_samples_report_observations_without_automatic_promotion(toy)",
    "span": [
-    182,
-    183
+    177,
+    178
    ],
    "visibility": "public"
   },
@@ -158,8 +188,8 @@
    "name": "test_telemetry_buffers_in_the_sidecar_and_flushes_at_close",
    "signature": "def test_telemetry_buffers_in_the_sidecar_and_flushes_at_close(toy)",
    "span": [
-    206,
-    207
+    201,
+    202
    ],
    "visibility": "public"
   }

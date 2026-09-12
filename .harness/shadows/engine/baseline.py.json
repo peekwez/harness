@@ -1,0 +1,56 @@
+{
+ "exports": [
+  "blob",
+  "ensure_baseline"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.extractor.engine.LANG_BY_EXT",
+  "engine.extractor.engine._degenerate_shadow",
+  "engine.extractor.engine.build_shadow",
+  "engine.get_slice",
+  "engine.load_config",
+  "engine.registry.load_registry",
+  "engine.registry.public_symbols",
+  "engine.save_slice",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:6ed738b18f03e0076220930ba641d43a4b8835a6f055225cb86b893679db79e2",
+ "imports": [
+  "engine",
+  "engine.extractor.engine",
+  "engine.registry",
+  "json",
+  "pathlib",
+  "subprocess"
+ ],
+ "language": "python",
+ "module_id": "engine.baseline",
+ "source_hash": "sha256:e71bafa53cbec82b2146cbda966e539d5ce17179852982ce7d81d65935c52a15",
+ "source_path": "engine/baseline.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "ensure_baseline",
+   "signature": "def ensure_baseline(root, sidecar, slice_id, *, starting=False)",
+   "span": [
+    11,
+    12
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "blob",
+   "signature": "def blob(path)",
+   "span": [
+    31,
+    32
+   ],
+   "visibility": "public"
+  }
+ ]
+}

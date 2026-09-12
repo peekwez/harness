@@ -219,18 +219,49 @@ def cmd_backlog(args):
     for r in rows:
         for d in r.get("depends_on") or []:
             dependents.setdefault(d, []).append(r["id"])
-    out, split, refused, estimates = [], [], [], {}
+    out, split, refused, proposals, estimates = [], [], [], [], {}
+
+    # Work out every split candidate and reserve its proposed ids before
+    # changing backlog.jsonl.  A collision must leave even routine estimate
+    # updates unwritten: otherwise a rejected split still mutates substrate.
+    breakdowns = {}
+    candidates = []
     for s in rows:
-        # acceptance paths are implicitly predicted: every slice writes its
-        # own acceptance test — declaring it twice is ceremony, not discipline
-        s["predicted_files"] = list(dict.fromkeys(
-            s.get("predicted_files", []) + s.get("acceptance", [])))
         breakdown = context_cost_breakdown(root, s.get("declares_dep", []),
                                            config)
+        breakdowns[s["id"]] = breakdown
+        oversized = (breakdown["total"] > limit
+                     and len(s.get("declares_dep", [])) > 1)
+        if (args.split and oversized and s.get("status") == "planned"
+                and not dependents.get(s["id"])):
+            candidates.append(s)
+    existing_ids = {s["id"] for s in rows}
+    for s in candidates:
+        child_ids = [f"{s['id']}-a", f"{s['id']}-b"]
+        collisions = sorted(set(child_ids) & existing_ids)
+        if collisions:
+            reason = (f"cannot propose split for {s['id']}: generated child "
+                      f"id(s) {collisions} already exist; choose fresh ids "
+                      f"and author the child contracts explicitly")
+            _print({"slices": [row["id"] for row in rows], "split": [],
+                    "split_refused": [{"id": s["id"], "reason": reason}],
+                    "split_proposals": [], "estimates": breakdowns,
+                    "budget": budget, "limit": limit, "reason": reason})
+            return 1
+
+    for s in rows:
+        s = dict(s)
+        breakdown = breakdowns[s["id"]]
         est = breakdown["total"]
         s["context_cost_estimate"] = est
         estimates[s["id"]] = breakdown
         oversized = est > limit and len(s.get("declares_dep", [])) > 1
+        if not (args.split and oversized):
+            # acceptance paths are implicitly predicted during ordinary
+            # estimation.  A refused split keeps the parent's authored work
+            # contract byte-for-byte equivalent apart from its estimate.
+            s["predicted_files"] = list(dict.fromkeys(
+                s.get("predicted_files", []) + s.get("acceptance", [])))
         if oversized and args.split and s.get("status") != "planned":
             # closed work is provenance, bound/parked work is someone's
             # context: neither is rewritten opportunistically
@@ -249,23 +280,24 @@ def cmd_backlog(args):
         elif oversized and args.split:
             deps = s["declares_dep"]
             mid = max(1, len(deps) // 2)
-            for suffix, part in (("a", deps[:mid]), ("b", deps[mid:])):
-                child = dict(s)
-                child["id"] = f"{s['id']}-{suffix}"
-                child["title"] = f"{s.get('title', s['id'])} ({suffix})"
-                child["declares_dep"] = part
-                child["context_cost_estimate"] = context_cost_breakdown(
-                    root, part, config)["total"]
-                if suffix == "b":
-                    child["depends_on"] = list(dict.fromkeys(
-                        (s.get("depends_on") or []) + [f"{s['id']}-a"]))
-                out.append(child)
-            split.append(s["id"])
+            child_ids = [f"{s['id']}-a", f"{s['id']}-b"]
+            reason = ("automatic split refused: child slices require authored "
+                      "acceptance and predicted_files contracts; add the "
+                      f"proposed children {child_ids} explicitly after "
+                      "partitioning their work scopes")
+            proposal = {
+                "id": s["id"], "child_ids": child_ids,
+                "declares_dep": [deps[:mid], deps[mid:]], "reason": reason,
+            }
+            proposals.append(proposal)
+            refused.append({"id": s["id"], "reason": reason})
+            out.append(s)
         else:
             out.append(s)
     write_jsonl(harness_dir(root) / "backlog.jsonl", out)
     _print({"slices": [s["id"] for s in out], "split": split,
-            "split_refused": refused, "estimates": estimates,
+            "split_refused": refused, "split_proposals": proposals,
+            "estimates": estimates,
             "budget": budget, "limit": limit})
     return 0
 
@@ -286,5 +318,7 @@ def cmd_slice(args):
     if not args.slice:
         print("error: --slice required (or --release)", file=sys.stderr)
         return 2
-    _print(_bind_slice(root, args.slice, _session(args, root)))
-    return 0
+    result = _bind_slice(root, args.slice, _session(args, root))
+    code = result.pop("_exit_code", 0)
+    _print(result)
+    return code

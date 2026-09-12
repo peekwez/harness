@@ -1,0 +1,181 @@
+{
+ "exports": [
+  "test_g7_rejects_deleted_required_shadow_incrementally_and_exhaustively",
+  "test_incremental_g7_rechecks_when_config_changes_module_identity",
+  "test_incremental_g7_rechecks_when_extractor_version_changes",
+  "test_incremental_g7_rechecks_when_source_changes_but_shadow_mtime_does_not",
+  "test_incremental_g7_rejects_deleted_previously_seen_shadow",
+  "test_python_imports_do_not_treat_imported_symbols_as_modules",
+  "test_python_imports_recognize_implied_namespace_subpackage",
+  "test_python_imports_recognize_registered_submodule_without_local_file",
+  "test_python_imports_resolve_relative_and_local_submodules",
+  "test_shadow_cache_invalidates_when_src_roots_change_module_identity"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.extractor.engine",
+  "engine.extractor.engine.RegistryIndex",
+  "engine.extractor.engine.extract_all",
+  "engine.extractor.engine.extract_path",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.extractor.modules.python_module_ids",
+  "engine.gates.g7_derivation.check",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.write_jsonl",
+  "types.SimpleNamespace"
+ ],
+ "import_resolution_hash": "sha256:3b8c281421c0f4ef6e53ba9c70fe2efda05c7ef0f77ac0da256d3b5cc9cf1dbb",
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.extractor.modules",
+  "engine.gates.g7_derivation",
+  "json",
+  "os",
+  "types"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_shadows",
+ "source_hash": "sha256:67b37847ca2fa783c81c695f88a2de5674d79fe3390a235cb10b502fc0a5c7ac",
+ "source_path": "tests/engine/test_hardening_shadows.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_codes",
+   "signature": "def _codes(findings)",
+   "span": [
+    18,
+    19
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_package_source",
+   "signature": "def _package_source(toy)",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_python_imports_resolve_relative_and_local_submodules",
+   "signature": "def test_python_imports_resolve_relative_and_local_submodules(toy)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_python_imports_do_not_treat_imported_symbols_as_modules",
+   "signature": "def test_python_imports_do_not_treat_imported_symbols_as_modules(toy)",
+   "span": [
+    63,
+    64
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_python_imports_recognize_registered_submodule_without_local_file",
+   "signature": "def test_python_imports_recognize_registered_submodule_without_local_file(toy)",
+   "span": [
+    75,
+    76
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_python_imports_recognize_implied_namespace_subpackage",
+   "signature": "def test_python_imports_recognize_implied_namespace_subpackage(toy)",
+   "span": [
+    89,
+    90
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_shadow_cache_invalidates_when_src_roots_change_module_identity",
+   "signature": "def test_shadow_cache_invalidates_when_src_roots_change_module_identity(toy)",
+   "span": [
+    105,
+    106
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_incremental_g7_rechecks_when_source_changes_but_shadow_mtime_does_not",
+   "signature": "def test_incremental_g7_rechecks_when_source_changes_but_shadow_mtime_does_not( toy)",
+   "span": [
+    119,
+    121
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_incremental_g7_rechecks_when_config_changes_module_identity",
+   "signature": "def test_incremental_g7_rechecks_when_config_changes_module_identity(toy)",
+   "span": [
+    137,
+    138
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_incremental_g7_rechecks_when_extractor_version_changes",
+   "signature": "def test_incremental_g7_rechecks_when_extractor_version_changes( toy, monkeypatch)",
+   "span": [
+    159,
+    161
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_g7_rejects_deleted_required_shadow_incrementally_and_exhaustively",
+   "signature": "def test_g7_rejects_deleted_required_shadow_incrementally_and_exhaustively(toy)",
+   "span": [
+    179,
+    180
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_incremental_g7_rejects_deleted_previously_seen_shadow",
+   "signature": "def test_incremental_g7_rejects_deleted_previously_seen_shadow(toy)",
+   "span": [
+    203,
+    204
+   ],
+   "visibility": "public"
+  }
+ ]
+}

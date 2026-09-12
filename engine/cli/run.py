@@ -25,8 +25,9 @@ def cmd_run(args):
 
     Exit 0: backlog fully closed and merged. Exit 2: stopped on a park (the
     report names it). Exit 1: dispatcher error."""
-    import shlex
+    import signal
     import subprocess
+    import tempfile
     import time
     from engine import telemetry
     root = _root(args)
@@ -112,6 +113,29 @@ def cmd_run(args):
             print(f"warning: park commit failed: {c.stderr.strip()}",
                   file=sys.stderr)
 
+    def terminate_builder(proc):
+        """Terminate and reap the builder's whole process group."""
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            return proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            return proc.wait()
+
+    def log_tail(log, limit=400):
+        """Read only the bounded tail from a file-backed builder log."""
+        log.flush()
+        log.seek(0, os.SEEK_END)
+        size = log.tell()
+        log.seek(max(0, size - max(4096, limit * 4)))
+        return log.read().decode("utf-8", errors="replace").strip()[-limit:]
+
     completed, attempts, active = [], {}, {}
     while True:
         rows = statuses()
@@ -136,10 +160,15 @@ def cmd_run(args):
                         "CLAUDE_SESSION_ID": f"run:{sid}"})
             print(f"run: dispatching builder for {sid} in {wt}",
                   file=sys.stderr)
+            # A regular temporary file drains without a pipe-capacity ceiling
+            # and keeps memory bounded even for very verbose builders.
+            log = tempfile.TemporaryFile(mode="w+b")
             active[sid] = {"proc": subprocess.Popen(
                 builder_cmd, shell=True, cwd=wt, env=env,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True),
-                "worktree": wt, "deadline": time.monotonic() + timeout}
+                stdout=log, stderr=subprocess.STDOUT,
+                start_new_session=True),
+                "log": log, "worktree": wt,
+                "deadline": time.monotonic() + timeout, "timed_out": False}
         if not active:
             planned = [sid for sid, s in rows.items()
                        if s.get("status") in ("planned", "in_progress")]
@@ -156,13 +185,18 @@ def cmd_run(args):
                     finished = sid
                     break
                 if time.monotonic() > lane["deadline"]:
-                    lane["proc"].kill()
+                    lane["timed_out"] = True
+                    terminate_builder(lane["proc"])
                     finished = sid
                     break
             if finished is None:
                 time.sleep(0.2)
         lane = active.pop(finished)
-        tail = (lane["proc"].stdout.read() or "").strip()[-400:]
+        # poll() normally supplied the return code; timeout termination waits
+        # above.  wait() here makes that lifecycle guarantee explicit.
+        rc = lane["proc"].wait()
+        tail = log_tail(lane["log"])
+        lane["log"].close()
         # did the builder actually CLOSE the slice on its branch?
         show = subprocess.run(
             ["git", "-C", str(root), "show",
@@ -181,7 +215,9 @@ def cmd_run(args):
                 continue
             failure = f"merge failed: {(merged.stdout or '').strip()[-300:]}"
         else:
-            failure = (f"builder exited rc={lane['proc'].returncode} without "
+            timeout_detail = (f"builder timed out after {timeout}s; "
+                              if lane["timed_out"] else "")
+            failure = (f"{timeout_detail}builder exited rc={rc} without "
                        f"closing the slice; tail: {tail}")
         attempts[finished] = attempts.get(finished, 0) + 1
         if attempts[finished] >= max_attempts:

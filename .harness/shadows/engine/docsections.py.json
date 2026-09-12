@@ -6,9 +6,16 @@
   "parse_doc_blocks",
   "seed_doc_from_spec"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.extractor.engine.module_id_for",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:6e33a265599740b1e7105379a041110f0b6812464d716d73ad47d9c98e1289fd",
  "imports": [
-  "extractor.engine",
+  "engine",
+  "engine.extractor.engine",
   "pathlib",
   "re"
  ],

@@ -228,6 +228,8 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     git(root, "init", "-q")
     git(root, "config", "user.email", "t@t")
     git(root, "config", "user.name", "t")
+    git(root, "config", "maintenance.auto", "false")
+    git(root, "config", "gc.auto", "0")
     git(root, "add", "-A")
     git(root, "commit", "-qm", "toy repo baseline")
     return root

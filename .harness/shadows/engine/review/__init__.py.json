@@ -1,10 +1,16 @@
 {
  "exports": [],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.review.golden.replay",
+  "engine.review.layer0.assemble",
+  "engine.review.rubrics.run_review"
+ ],
+ "import_resolution_hash": "sha256:60bf82477f2f5233ccfb8c233a4dd49518f8f409a0f81cae8a6806715a1c4eca",
  "imports": [
-  "golden",
-  "layer0",
-  "rubrics"
+  "engine.review.golden",
+  "engine.review.layer0",
+  "engine.review.rubrics"
  ],
  "language": "python",
  "module_id": "engine.review",

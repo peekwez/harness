@@ -1,0 +1,104 @@
+{
+ "exports": [
+  "test_closed_slice_ignores_uncommitted_dependency_snapshot",
+  "test_gitless_closure_does_not_promise_a_revision_edge",
+  "test_modern_provenance_requires_recorded_closure_evidence",
+  "test_provenance_gaps_rejects_missing_promised_edges",
+  "test_requirements_are_the_complete_records_written_at_closure"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.get_slice",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.graph.provenance_gaps",
+  "engine.graph.record_dependency_snapshot",
+  "engine.graph.record_slice_provenance",
+  "engine.graph.slice_provenance_requirements",
+  "engine.graph.uses_vs_declares",
+  "engine.read_jsonl",
+  "engine.save_slice",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:36f71167bac11a98a2a6f4fb37d4a16e73a720856eb9bbf4d0bb907c38b86e0a",
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.graph",
+  "pytest",
+  "shutil"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_provenance",
+ "source_hash": "sha256:cab72462e7eaa7965489d849f5d4921dfd6c60fce31092d15e6cdf9ff497a338",
+ "source_path": "tests/engine/test_hardening_provenance.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_closed_slice",
+   "signature": "def _closed_slice(toy, evidence)",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_provenance_gaps_rejects_missing_promised_edges",
+   "signature": "def test_provenance_gaps_rejects_missing_promised_edges(toy, missing)",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_modern_provenance_requires_recorded_closure_evidence",
+   "signature": "def test_modern_provenance_requires_recorded_closure_evidence(toy)",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_requirements_are_the_complete_records_written_at_closure",
+   "signature": "def test_requirements_are_the_complete_records_written_at_closure(toy): # A manifest match must bind the file even when it is not the primary source.",
+   "span": [
+    52,
+    54
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_closed_slice_ignores_uncommitted_dependency_snapshot",
+   "signature": "def test_closed_slice_ignores_uncommitted_dependency_snapshot(toy)",
+   "span": [
+    77,
+    78
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_gitless_closure_does_not_promise_a_revision_edge",
+   "signature": "def test_gitless_closure_does_not_promise_a_revision_edge(toy)",
+   "span": [
+    93,
+    94
+   ],
+   "visibility": "public"
+  }
+ ]
+}

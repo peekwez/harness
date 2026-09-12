@@ -2,7 +2,11 @@
  "exports": [
   "get_setting"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "kente.core.KenteError"
+ ],
+ "import_resolution_hash": "sha256:506e84e8bd5a552e671854566b5f45edb7fd69e9b638b98779b4b77bccbf0920",
  "imports": [
   "kente.core"
  ],

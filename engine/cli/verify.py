@@ -192,7 +192,16 @@ def cmd_verify(args):
 
     # shadow regeneration match (G7)
     from engine.gates.g7_derivation import derivation_findings
-    findings.extend(derivation_findings(root, config))
+    try:
+        findings.extend(derivation_findings(root, config))
+    except HarnessError as exc:
+        # Required-shadow discovery reads the substrate too. Keep schema
+        # failures in this structured report instead of losing every finding
+        # to a loader exception; an incomplete derivation check still blocks.
+        findings.append(make_finding(
+            "DERIVATION_MISMATCH", "gate:G7",
+            f"cannot verify required shadows: {exc}",
+            severity="block", key="required-shadow-substrate"))
 
     # manifest completeness against the built artifact. Files an OPEN slice
     # predicts are pending work, not the md-file-bug.
@@ -342,6 +351,18 @@ def cmd_verify(args):
     for s in backlog:
         if s.get("status") != "closed":
             continue
+        from engine.graph import provenance_gaps
+        if not s.get("provenance_version"):
+            findings.append(make_finding(
+                "LEGACY_GRAPH_PROVENANCE", "gate:G1",
+                f"closed slice {s['id']} predates complete graph evidence; "
+                "upgrade recovers explicit note facts, but historical imports and decisions "
+                "cannot be inferred", severity="advisory", key=s["id"] + "|legacy-graph"))
+        for gap in provenance_gaps(root, s):
+            findings.append(make_finding(
+                "INCOMPLETE_GRAPH_PROVENANCE", "gate:G1",
+                f"closed slice {s['id']} is missing {gap}; restore its "
+                "recorded graph evidence", severity="block", key=s["id"] + "|" + gap))
         if (root / ".git").exists() and s["id"] not in noted \
                 and not _resolves(s["id"]):
             findings.append(make_finding(

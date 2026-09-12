@@ -12,7 +12,16 @@
   "test_verify_validates_backlog_rows",
   "test_verify_validates_registry_and_decision_rows"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.graph.load_edges",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:89b96dbbbfacd74423381eff259ea5491668f057c5c42261ff8116cc73330d62",
  "imports": [
   "conftest",
   "engine",

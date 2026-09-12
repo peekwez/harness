@@ -13,7 +13,16 @@
   "test_verify_green_on_harness_repo_itself",
   "verify"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.run_cli",
+  "engine.graph.append_edge",
+  "engine.graph.write_note",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:b39f1067a054404ad1121bf7b138fab4da2b28c06fd255da2793124e5fcb38ff",
  "imports": [
   "conftest",
   "engine",

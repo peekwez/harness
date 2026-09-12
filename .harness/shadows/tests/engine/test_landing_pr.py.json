@@ -42,7 +42,26 @@
   "test_verify_flags_a_pr_slice_that_records_no_landing",
   "test_verify_resolves_against_a_remote_tracking_base"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.HarnessError",
+  "engine.cli.common.PLUGIN_ROOT",
+  "engine.cli.init._write_autonomy_settings",
+  "engine.cli.landing.landing_config",
+  "engine.cli.landing.pr_title",
+  "engine.events.handle_event",
+  "engine.graph.reachable_trees",
+  "engine.permits.command_allowed",
+  "engine.permits.command_decision",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:c1eb4e1e2b3ecb3c46d63b345c3984540114cfec070946655cdcdc32de219d49",
  "imports": [
   "conftest",
   "engine",

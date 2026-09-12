@@ -15,7 +15,7 @@ fails otherwise.
 | Marker | Component | Lives in |
 |---|---|---|
 | C1 | Event contract & engine shell — the five events, EnforcementEvent → EnforcementVerdict, sidecar state | `engine/events.py` |
-| C2 | Extractor — tree-sitter → universal shadows, content-hash + extractor-version cache | `engine/extractor/` |
+| C2 | Extractor — tree-sitter → universal shadows, source, configuration, import-resolution and extractor-version cache | `engine/extractor/` |
 | C3 | Resolver — slice → assembled context under a token budget, with ranked degradation | `engine/resolver.py` |
 | C4 | Compiler — authored ADRs → substrate (decision rows, registry skeletons, G3 boundaries) | `engine/compiler.py` |
 | C5 | Registry & provenance graph — abstractions, manifests, edges, git notes | `engine/registry.py`, `engine/graph.py` |
@@ -49,13 +49,13 @@ fails otherwise.
 | Marker | Section |
 |---|---|
 | §1.4 | Gates live in the CLI, not in prompts — enforcement is engine-side or it does not exist. |
-| §1.5 | Compaction is a defect signal, not a feature: session cycling is the strategy. |
+| §1.5 | Compaction is an advisory context-pressure signal by default; `telemetry.compaction_is_defect` may opt into defect counting. Counts never establish correctness or safe autonomy. |
 | §5.2 | Findings contract: `{finding_id, layer, severity, code, rule_ref, message, inject[], precedents[]}`. Every blocking finding cites a `rule_ref`; the engine rejects those without one. |
 | §5.3 | Universal shadow: `{module_id, language, source_path, source_hash, extractor_version, symbols[], imports[], exports}`. Python imports are recorded whole and dotted (`kente.telemetry.decorators`), never the top-level segment only; `module_id` strips the first matching `extractor.src_roots` glob (default `["src", "packages/*/src"]`), dots the remainder and drops a trailing `__init__`, so `packages/kente-config/src/kente/config/__init__.py` is `kente.config` and a repo matching no source root keeps its dotted relative path. G5 and the resolver map an import to a registry entry by longest dotted prefix over `module_id`/`id` (ADR-002 / D-008). |
 | §5.5 | Decision row schema: `{id: D-NNN, domain, question, answer, adr_ref, origin: phase0\|adjudication, created}` (+ optional `security: true`, see ADR-001). Rows are authored in ADR frontmatter `decision_table_rows` **or** in the working document's fenced ` ```harness-decisions ` pipe table (`id \| domain \| question \| answer \| adr_ref \| security`, ADR-002 D-013); abstractions likewise in ` ```harness-abstractions ` (`id \| kind \| guidance_ref \| source \| module_id`; the three-column `id \| kind \| guidance_ref` header stays valid). A module-level abstraction needs `source` (or `module_id`) — or an id equal to the dotted module id — else G5 and the resolver cannot see it; `module_id` is derived from `source` via the `extractor.src_roots` rule when the cell is empty. Both compile to `origin: phase0`; one id belongs to exactly one source. |
 | §5.6 | Slice schema: `{id, spec, title, status, declares_dep[], acceptance[], predicted_files[], context_cost_estimate, depends_on[], worktree}` (+ `started_at_commit`, recorded at bind; + optional `linear` — the tracker id a `landing.mode: pr` PR quotes in its title and links in its body, set with `harness backlog add --linear GOO-NN` and validated `^[A-Z][A-Z0-9]+-\\d+$` — and `landed_via: local\|pr\|pending` / `pr_url` / `landing_error`, recorded and committed by the landing, ADR-002 / D-009). |
 | §5.7 | Node IDs in the graph are stable logical ids (`slice:`, `module:`, `file:`, `finding:`, `decision:`), never machine-specific absolute paths. |
-| §7.5 | Close preconditions, engine-enforced: acceptance green, gates pass, uses ⊆ declares reconciled. |
+| §7.5 | Close preconditions, engine-enforced: the tested source matches the named commit, acceptance is green, gates inspect the complete changed-file set, uses ⊆ declares reconciles, and closure substrate persists successfully before finalization. |
 | §7.7 | Park-once: a question already adjudicated surfaces its precedent instead of re-parking. |
 | §8 | Memory model: session memory (working, compacted at close) vs durable memory (survives, edged to modules). |
 
@@ -99,3 +99,26 @@ squash). Resolved slices appear in verify's `resolved_via` map as
 `.harness/notes.jsonl` is derived, append-only and union-merged (like
 `edges.jsonl`): it is history, so G7 never regenerates it and hand-editing
 it is a bug.
+
+## Current graph state and recovery
+
+`dependency_snapshot` edges carry `{version, uses, declares, files}`. The
+latest complete snapshot supersedes older dependency observations while
+retaining their history. Closed slices with `provenance_version: 1` also
+record `closed_commit`, `closed_files` and immutable `closed_evidence`;
+verify requires the matching snapshot and every promised file, module,
+revision, shadow, acceptance and governing-decision edge. Rule overrides require both matching `meta.rule_ref`
+and the gate's allowed target namespace.
+
+The close journal lives in gitignored `.harness/memory/session/`. It records
+the original authoritative files, Git index/note and completion result
+before the final status write.
+Retry restores unfinished status or finalizes a closure already committed.
+The `slice_closed` diagnostic is buffered only after successful persistence.
+Git-backed G6 baselines recover from the original `started_at_commit` when
+SQLite is lost. Legacy graph repair reads recorded Git-note facts and does
+not infer historical imports, acceptance results, or governing decisions.
+
+`LEGACY_GRAPH_PROVENANCE` is advisory. `INCOMPLETE_GRAPH_PROVENANCE` and
+`MISSING_DRIFT_BASELINE` block when the corresponding modern integrity
+contract cannot be established.

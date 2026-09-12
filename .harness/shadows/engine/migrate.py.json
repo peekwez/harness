@@ -3,8 +3,16 @@
   "current_version",
   "migrate"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.SCHEMA_VERSION",
+  "engine.harness_dir",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:8f89a80a31e1c23d6c8322705401c854c55c09cea74e15bd41bc96f3180aec0f",
  "imports": [
+  "engine",
   "pathlib"
  ],
  "language": "python",

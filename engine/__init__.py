@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-ENGINE_VERSION = "0.8.6"
+ENGINE_VERSION = "0.9.0"
 
 # Extensions we consider "source modules". Anything else in these families is
 # either substrate/docs (ignored) or unknown-language source (degenerate
@@ -200,7 +200,7 @@ DEFAULT_CONFIG = {
     "extractor": {"src_roots": list(DEFAULT_SRC_ROOTS)},
     "languages": {"python": True, "typescript": True, "rust": True,
                   "go": True, "yaml": True, "hcl": True},
-    "telemetry": {"compaction_is_defect": True},
+    "telemetry": {"compaction_is_defect": False},
 }
 
 

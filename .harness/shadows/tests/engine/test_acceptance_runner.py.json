@@ -21,7 +21,23 @@
   "test_the_gate_tail_is_truncated_to_twenty_lines",
   "test_the_persisted_reason_never_carries_raw_gate_output"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.HarnessError",
+  "engine.cli.acceptance._acceptance_cmd",
+  "engine.cli.acceptance._acceptance_cwd",
+  "engine.cli.acceptance._acceptance_env",
+  "engine.cli.acceptance.run_acceptance",
+  "engine.cli.acceptance.run_gate_cmd",
+  "engine.cli.slice._acceptance_green",
+  "engine.events.handle_event",
+  "engine.load_config"
+ ],
+ "import_resolution_hash": "sha256:41cf68cb7258751fd0230b1a932d4e727a8fa2a0b60f574a02fec1ca4c7e880b",
  "imports": [
   "conftest",
   "engine",

@@ -52,6 +52,8 @@ def cmd_close_slice(args):
     try:
         payload = _close_ceremony(args)
     except _CeremonyFail as fail:
+        from engine.cli.closure_state import recover_closure
+        recover_closure(root, args.slice)
         payload = fail.payload
         payload.setdefault("closed", False)
         if fail.attempt and _bump_close_attempts(root, args.slice, config,
@@ -59,6 +61,10 @@ def cmd_close_slice(args):
             payload["parked"] = True
         _print(payload)
         return 1
+    except (HarnessError, OSError):
+        from engine.cli.closure_state import recover_closure
+        recover_closure(root, args.slice)
+        raise
     if landing["mode"] == "pr":
         # D-009: in pr mode the close IS the landing. The ceremony already
         # committed substrate and wrote the note, so a failed push or
@@ -144,6 +150,64 @@ def cmd_merge_slice(args):
                           f"run close-slice in the worktree first"})
         return 1
 
+    # From this point rollback uses a hard reset, which is safe only when it
+    # cannot erase the caller's tracked working-tree or index changes.
+    # Untracked and ignored files (including the sidecar/session state) are
+    # intentionally outside this preflight and are never cleaned by us.
+    dirty = _git("status", "--porcelain", "--untracked-files=no")
+    if dirty.returncode != 0:
+        _print({"merged": False, "rolled_back": False,
+                "reason": "cannot verify a clean tracked worktree and index "
+                          f"before merge: {dirty.stderr.strip()}"})
+        return 1
+    if dirty.stdout.strip():
+        _print({"merged": False, "rolled_back": False,
+                "reason": "merge-slice requires a clean tracked worktree "
+                          "and index so rollback cannot erase user changes",
+                "dirty": dirty.stdout.splitlines()})
+        return 1
+    head = _git("rev-parse", "HEAD")
+    if head.returncode != 0:
+        print(f"error: cannot resolve current HEAD: {head.stderr.strip()}",
+              file=sys.stderr)
+        return 1
+    original_head = head.stdout.strip()
+
+    def rollback(reason, **extra):
+        reset = _git("reset", "--hard", original_head)
+        current = _git("rev-parse", "HEAD")
+        rolled_back = (reset.returncode == 0 and current.returncode == 0
+                       and current.stdout.strip() == original_head)
+        payload = {"merged": False, "rolled_back": rolled_back,
+                   "reason": reason}
+        if not rolled_back:
+            payload["rollback_detail"] = (
+                reset.stderr or reset.stdout or current.stderr).strip()[-500:]
+        payload.update(extra)
+        _print(payload)
+        return 1
+
+    def reject_uncommitted_product_changes(stage, expected_head):
+        """Rollback if a check changed tracked/index state outside substrate."""
+        status = _git("status", "--porcelain", "--untracked-files=no", "--",
+                      ".", ":(exclude).harness",
+                      ":(exclude).harness/**")
+        current = _git("rev-parse", "HEAD")
+        if status.returncode != 0 or current.returncode != 0:
+            detail = (status.stderr or current.stderr or status.stdout).strip()
+            return rollback(
+                f"cannot verify tracked source after {stage} — merge rolled "
+                f"back: {detail}")
+        dirty_paths = status.stdout.splitlines()
+        if dirty_paths or current.stdout.strip() != expected_head:
+            return rollback(
+                f"{stage} changed tracked source or index state after merge; "
+                "only committed slice bytes may land",
+                dirty=dirty_paths,
+                expected_head=expected_head,
+                observed_head=current.stdout.strip())
+        return None
+
     _config_merge_drivers(root)   # S8: drivers before any merge, always
     merged = _git("merge", "--no-edit", branch)
     if merged.returncode != 0:
@@ -158,80 +222,132 @@ def cmd_merge_slice(args):
             # NEVER leave main mid-merge: conflict markers inside
             # .harness/*.jsonl are substrate corruption. Abort, report, and
             # name the likely cause.
-            _git("merge", "--abort")
-            _print({"merged": False, "conflicts": unmerged or None,
-                    "rolled_back": True,
-                    "detail": (merged.stderr or merged.stdout).strip()[-500:],
-                    "hint": "keyed substrate conflicts resolve mechanically "
-                            "when the merge drivers are installed — if "
-                            ".gitattributes lacks the harness entries, run "
-                            "`harness init --migrate`"})
-            return 1
+            unmerged = _git("diff", "--name-only",
+                            "--diff-filter=U").stdout.split()
+            return rollback(
+                "slice merge failed and was rolled back",
+                conflicts=unmerged or None,
+                detail=(merged.stderr or merged.stdout).strip()[-500:],
+                hint="keyed substrate conflicts resolve mechanically when "
+                     "the merge drivers are installed — if .gitattributes "
+                     "lacks the harness entries, run `harness init --migrate`")
+
+    merged_head_result = _git("rev-parse", "HEAD")
+    if merged_head_result.returncode != 0:
+        return rollback(
+            "cannot resolve the merged revision — merge rolled back: "
+            f"{merged_head_result.stderr.strip()}")
+    merged_head = merged_head_result.stdout.strip()
 
     # the merged tree is what ships: the FULL accumulated acceptance suite
     # must be green on it. Each side being green alone proves nothing about
     # the combination — on red, the merge is rolled back, loudly, and the
     # branch/worktree stay put for fixing.
-    ok, detail = _regression_suite(root, config)
-    # the gate runs on the MERGED tree but with the config as it stands in
-    # this (pre-merge) tree — a slice that introduces `gate_cmd` on its own
-    # branch is honoured from the next merge on
-    gate, gate_tail = gate_finding(root, config) if ok else (None, "")
+    try:
+        config = load_config(root)
+        ok, detail = _regression_suite(root, config)
+        gate, gate_tail = gate_finding(root, config) if ok else (None, "")
+    except Exception as exc:
+        return rollback(f"merged-tree acceptance checks failed: {exc}")
     if not ok or gate is not None:
-        rolled = _git("reset", "--hard", "ORIG_HEAD")
-        payload = {"merged": False, "rolled_back": rolled.returncode == 0,
-                   "reason": (f"merged tree fails the accumulated acceptance "
-                              f"suite — merge rolled back; fix on branch "
-                              f"{branch} and re-run merge-slice.\n{detail}")
-                             if not ok else GATE_REASON}
+        payload = {}
+        reason = (f"merged tree fails the accumulated acceptance suite — "
+                  f"merge rolled back; fix on branch {branch} and re-run "
+                  f"merge-slice.\n{detail}" if not ok else GATE_REASON)
         if gate is not None:
             payload["rule_ref"] = gate["rule_ref"]
             payload["evidence"] = gate_tail
             payload["findings"] = [gate]
-        _print(payload)
-        return 1
+        return rollback(reason, **payload)
+    changed = reject_uncommitted_product_changes(
+        "merged-tree acceptance checks", merged_head)
+    if changed is not None:
+        return changed
 
     # shadows never content-merge (W10): regenerate from the merged tree,
     # THEN run the G4 safety net, THEN commit — every byte this ceremony
     # writes (shadows, telemetry) rides in its own substrate commit
     from engine.extractor.engine import extract_all
-    ex = extract_all(root, config)
+    try:
+        ex = extract_all(root, config)
+    except Exception as exc:
+        return rollback(
+            f"merged-tree extraction failed — merge rolled back: {exc}")
+    changed = reject_uncommitted_product_changes(
+        "merged-tree extraction", merged_head)
+    if changed is not None:
+        return changed
 
     from engine.events import handle_event
-    verdict = handle_event({
-        "event": "unit_complete", "session_id": _session(args, root),
-        "work_unit_id": args.slice,
-        "payload": {"files": [], "context_loaded": [], "diff": None,
-                    "prompt": None}}, root)
+    try:
+        verdict = handle_event({
+            "event": "unit_complete", "session_id": _session(args, root),
+            "work_unit_id": args.slice,
+            "payload": {"files": [], "context_loaded": [], "diff": None,
+                        "prompt": None}}, root)
+    except Exception as exc:
+        return rollback(
+            f"merged-tree event checks failed — merge rolled back: {exc}")
+    if verdict["verdict"] == "block":
+        return rollback(
+            "merged tree failed unit_complete gates — merge rolled back; "
+            f"fix on branch {branch} and re-run merge-slice",
+            gates="block", findings=verdict["findings"],
+            shadows={"written": len(ex["written"]),
+                     "pruned": ex["pruned"]})
+    changed = reject_uncommitted_product_changes(
+        "merged-tree event checks", merged_head)
+    if changed is not None:
+        return changed
     telemetry.emit(root, "slice_merged", {
         "slice": args.slice, "gates": verdict["verdict"],
         "shadows_written": len(ex["written"]), "pruned": ex["pruned"]})
     telemetry.flush(root)      # buffered hook events land with the merge
+    changed = reject_uncommitted_product_changes(
+        "merge telemetry", merged_head)
+    if changed is not None:
+        return changed
 
     substrate_commit = None
     if _git("status", "--porcelain", "--", ".harness").stdout.strip():
-        _git("add", "-A", "--", ".harness")
+        added = _git("add", "-A", "--", ".harness")
+        if added.returncode != 0:
+            return rollback(
+                "substrate regeneration could not be staged — merge rolled "
+                f"back: {added.stderr.strip() or added.stdout.strip()}",
+                gates=verdict["verdict"],
+                findings=[f["code"] for f in verdict["findings"]],
+                substrate_commit=None)
         c = _git("commit", "-q", "-m",
                  f"harness: merge-slice {args.slice} substrate regen",
                  "--", ".harness")
         if c.returncode == 0:
             substrate_commit = _git("rev-parse", "HEAD").stdout.strip()
         else:
-            print(f"warning: substrate regen commit failed: "
-                  f"{c.stderr.strip() or c.stdout.strip()}", file=sys.stderr)
+            return rollback(
+                "substrate regeneration commit failed — merge rolled back: "
+                f"{c.stderr.strip() or c.stdout.strip()}",
+                gates=verdict["verdict"],
+                findings=[f["code"] for f in verdict["findings"]],
+                substrate_commit=None)
+
+    expected_final_head = substrate_commit or merged_head
+    changed = reject_uncommitted_product_changes(
+        "substrate finalization", expected_final_head)
+    if changed is not None:
+        return changed
 
     cleanup = {"worktree_removed": False, "branch_deleted": False}
-    if verdict["verdict"] != "block":
-        wt = root / ".worktrees" / args.slice
-        if wt.exists():
-            # --force: the gitignored sidecar makes every worktree "dirty"
-            r = _git("worktree", "remove", "--force", str(wt))
-            cleanup["worktree_removed"] = r.returncode == 0
-            if r.returncode != 0:
-                print(f"warning: worktree not removed: {r.stderr.strip()}",
-                      file=sys.stderr)
-        r = _git("branch", "-d", branch)
-        cleanup["branch_deleted"] = r.returncode == 0
+    wt = root / ".worktrees" / args.slice
+    if wt.exists():
+        # --force: the gitignored sidecar makes every worktree "dirty"
+        r = _git("worktree", "remove", "--force", str(wt))
+        cleanup["worktree_removed"] = r.returncode == 0
+        if r.returncode != 0:
+            print(f"warning: worktree not removed: {r.stderr.strip()}",
+                  file=sys.stderr)
+    r = _git("branch", "-d", branch)
+    cleanup["branch_deleted"] = r.returncode == 0
 
     _print({"merged": True, "slice": args.slice,
             "gates": verdict["verdict"],
@@ -239,4 +355,4 @@ def cmd_merge_slice(args):
             "shadows": {"written": len(ex["written"]),
                         "pruned": ex["pruned"]},
             "substrate_commit": substrate_commit, **cleanup})
-    return 0 if verdict["verdict"] != "block" else 1
+    return 0

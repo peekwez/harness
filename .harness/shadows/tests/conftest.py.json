@@ -9,7 +9,16 @@
   "run_cli",
   "toy"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.handle_event",
+  "engine.extractor.engine.extract_path",
+  "engine.load_config",
+  "engine.registry.flip_status",
+  "engine.write_jsonl",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:33306716b59eaf725ff07bc27221256e554d078ca94b02b17e0959394b024c68",
  "imports": [
   "engine",
   "engine.events",
@@ -25,7 +34,7 @@
  ],
  "language": "python",
  "module_id": "tests.conftest",
- "source_hash": "sha256:5f1c9b055e7f94474d588726c2090534d834eed6710ee3ef250cf1c78c975634",
+ "source_hash": "sha256:e70a826e41639b585239747fe7d5d47b826673fdd29993f5816309740513aeea",
  "source_path": "tests/conftest.py",
  "symbols": [
   {
@@ -78,8 +87,8 @@
    "name": "toy",
    "signature": "def toy(tmp_path)",
    "span": [
-    237,
-    238
+    239,
+    240
    ],
    "visibility": "public"
   },
@@ -89,8 +98,8 @@
    "name": "plugin_root",
    "signature": "def plugin_root()",
    "span": [
-    242,
-    243
+    244,
+    245
    ],
    "visibility": "public"
   },
@@ -100,8 +109,8 @@
    "name": "make_event",
    "signature": "def make_event(event, session=\"s1\", slice_id=\"slice-042\", files=None, context=None, prompt=None)",
    "span": [
-    246,
-    248
+    248,
+    250
    ],
    "visibility": "public"
   },
@@ -111,8 +120,8 @@
    "name": "loaded_context",
    "signature": "def loaded_context(root, session=\"s1\", slice_id=\"slice-042\")",
    "span": [
-    255,
-    256
+    257,
+    258
    ],
    "visibility": "public"
   }

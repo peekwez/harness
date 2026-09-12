@@ -1,9 +1,14 @@
 ---
 name: status
-description: Render harness telemetry — slice progress, gate block rates, override and reversal rates, compaction defects, parks per slice.
-disable-model-invocation: true
+description: Render advisory harness telemetry — slice progress, gate outcomes, compaction pressure, and parks per slice.
 allowed-tools: Bash(*/bin/harness *)
 ---
+
+Run this workflow for work the user has requested. In Codex, resolve the
+plugin root from this skill path and invoke `python3 <plugin-root>/bin/harness`
+with an explicit project `--root`; the `!` substitutions and
+`${CLAUDE_PLUGIN_ROOT}` examples below use Claude Code syntax.
+
 
 # /harness:status
 
@@ -14,16 +19,21 @@ provenance notes, unflushed telemetry) is a separate, complementary view:
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" doctor --substrate`
 
-Render the JSON as a short dashboard and interpret it — this is the view
-that proves human withdrawal is safe:
+Render the JSON as a short diagnostic dashboard. Telemetry is best-effort:
+warnings on stderr mean some optional observations may be missing, and the
+dashboard does not by itself prove that human withdrawal is safe.
 
 - **Slice progress**: planned / in_progress / parked / closed counts.
-- **G2-block rate**: the Phase-1 completeness signal. Rising rate = the
-  resolver or slice declarations are missing context; fix declarations, not
-  the agent.
-- **Override & reversal rates per rule**: rules with ~zero variance and zero
-  reversals are Layer-0 promotion candidates (name them).
-- **COMPACTION_REACHED count**: a decomposition-quality defect signal —
-  each one means a slice didn't fit its window; point at the slice.
-- **Parks per slice**: should trend down; the same question must never park
-  twice (if it does, the adjudication failed to write substrate — flag it).
+- **Observation bounds**: always show `sample_counts` and
+  `observed_interval`; when `--since` is used, telemetry events and graph
+  edges use that same window.
+- **G2-block rate**: treat it as a Phase-1 completeness diagnostic over the
+  reported pre-change sample, especially when the sample is small.
+- **Rule outcomes**: show firing, override, and reversal counts from
+  `rule_samples`. Do not promote a rule automatically from telemetry; review
+  the rule and a meaningful observation history first.
+- **COMPACTION_REACHED count**: report context pressure. Call it a defect only
+  when `compaction_is_defect` is true in the returned configuration view.
+- **Parks per slice and outcomes**: include both review parks and automatic
+  retry exhaustion (`slice_parked`), alongside dispatched, closed, merged,
+  and event-verdict counts.

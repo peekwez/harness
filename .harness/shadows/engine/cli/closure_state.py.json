@@ -1,0 +1,174 @@
+{
+ "exports": [
+  "begin_finalization",
+  "finish_closure",
+  "journal_path",
+  "prepare_files",
+  "prepare_journal",
+  "recover_closure",
+  "scope_findings",
+  "source_matches_commit"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.IGNORED_DIRS",
+  "engine.events.Sidecar",
+  "engine.events._regenerate_touched",
+  "engine.events.rel_in_root",
+  "engine.extractor.engine.shadow_path_for",
+  "engine.gates.GateContext",
+  "engine.gates.g3_scope.check",
+  "engine.get_slice",
+  "engine.graph.load_edges",
+  "engine.memory",
+  "engine.save_slice",
+  "engine.telemetry",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:dea855093163fffcc020483d1bc31805999518d5e5c598e7d12b79ada34d8274",
+ "imports": [
+  "base64",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
+  "engine.gates",
+  "engine.gates.g3_scope",
+  "engine.graph",
+  "engine.memory",
+  "engine.telemetry",
+  "hashlib",
+  "json",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "language": "python",
+ "module_id": "engine.cli.closure_state",
+ "source_hash": "sha256:382dbbd471bceb5322ccc0325aac6352860041ac281047db79593f8c4cfad88d",
+ "source_path": "engine/cli/closure_state.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "journal_path",
+   "signature": "def journal_path(root, slice_id)",
+   "span": [
+    13,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_save_journal",
+   "signature": "def _save_journal(path, pending)",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Snapshot ceremony-owned state and the index before ratification.",
+   "kind": "function",
+   "name": "begin_finalization",
+   "signature": "def begin_finalization(root, original, commit)",
+   "span": [
+    32,
+    33
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Keep recovery state outside the commit that it describes.",
+   "kind": "function",
+   "name": "prepare_journal",
+   "signature": "def prepare_journal(root, original, result)",
+   "span": [
+    48,
+    49
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_restore_finalization",
+   "signature": "def _restore_finalization(root, pending)",
+   "span": [
+    56,
+    57
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "finish_closure",
+   "signature": "def finish_closure(root, result)",
+   "span": [
+    85,
+    86
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Recover a process interruption before or after the substrate commit.",
+   "kind": "function",
+   "name": "recover_closure",
+   "signature": "def recover_closure(root, slice_id)",
+   "span": [
+    104,
+    105
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "scope_findings",
+   "signature": "def scope_findings(root, sl, session, touched, config)",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_git",
+   "signature": "def _git(root, *args)",
+   "span": [
+    141,
+    142
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": "Acceptance must see the bytes the provenance commit contains.",
+   "kind": "function",
+   "name": "source_matches_commit",
+   "signature": "def source_matches_commit(root, commit)",
+   "span": [
+    148,
+    149
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Discover all changes before any review or conformance check.",
+   "kind": "function",
+   "name": "prepare_files",
+   "signature": "def prepare_files(root, sl, sidecar, session, commit, config)",
+   "span": [
+    163,
+    164
+   ],
+   "visibility": "public"
+  }
+ ]
+}

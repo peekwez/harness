@@ -21,7 +21,11 @@
   "token_estimate",
   "write_jsonl"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:ff25dea7436bd4ed6c51848861a54c9b103b602ef8f9f2c311383f874cdf9ca8",
  "imports": [
   "copy",
   "hashlib",
@@ -33,7 +37,7 @@
  ],
  "language": "python",
  "module_id": "engine",
- "source_hash": "sha256:75d6780408f032d557e38d5b34cc4fe5648bd8f7f2916b770cf1963e2e0ea932",
+ "source_hash": "sha256:52949d0270d4aaf2c4973f8a70934e0c99f3a1291fcd4fbe789d933b9426ee26",
  "source_path": "engine/__init__.py",
  "symbols": [
   {

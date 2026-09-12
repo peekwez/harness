@@ -9,7 +9,21 @@
   "test_review_diff_with_missing_file_errors_cleanly",
   "test_session_defaults_to_claude_session_id_env"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:9ee6759aaefd65612b9d568787a796ae69a2f78932439da434e0b8836afdf7f1",
  "imports": [
   "conftest",
   "engine",

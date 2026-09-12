@@ -2,10 +2,18 @@
  "exports": [
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.IGNORED_EXTS",
+  "engine.events.make_finding",
+  "engine.extractor.engine.LANG_BY_EXT",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:768e46d2e46956851820a36a120bb82acd1748f1c17f1030a803c2edb6be5de0",
  "imports": [
-  "events",
-  "extractor.engine",
+  "engine",
+  "engine.events",
+  "engine.extractor.engine",
   "pathlib"
  ],
  "language": "python",

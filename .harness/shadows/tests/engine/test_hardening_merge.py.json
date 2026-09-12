@@ -1,0 +1,147 @@
+{
+ "exports": [
+  "blocked",
+  "test_merge_loads_branch_config_and_rolls_back_its_gate_failure",
+  "test_merge_refuses_dirty_tracked_index_and_worktree_without_changes",
+  "test_merge_rolls_back_when_event_pipeline_raises",
+  "test_merge_rolls_back_when_extraction_raises",
+  "test_merge_rolls_back_when_postmerge_unit_complete_blocks",
+  "test_merge_rolls_back_when_substrate_commit_hook_fails",
+  "test_merge_rolls_back_when_successful_gate_mutates_tracked_source"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.git",
+  "conftest.run_cli",
+  "engine.cli.close.cmd_merge_slice",
+  "engine.extractor.engine",
+  "types.SimpleNamespace"
+ ],
+ "import_resolution_hash": "sha256:c20597070276631c67e1f6a4de0d7fe881696f60cb1c1f96f49bb5a6ea3a04ab",
+ "imports": [
+  "conftest",
+  "engine.cli.close",
+  "engine.events",
+  "engine.extractor.engine",
+  "json",
+  "sys",
+  "types",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_merge",
+ "source_hash": "sha256:1993c10703d8cab22fc4c63fbf2a2864987ad46ab03a59da9a89851877fba144",
+ "source_path": "tests/engine/test_hardening_merge.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_closed_slice_worktree",
+   "signature": "def _closed_slice_worktree(toy)",
+   "span": [
+    19,
+    20
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_branch_exists",
+   "signature": "def _branch_exists(toy)",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_refuses_dirty_tracked_index_and_worktree_without_changes",
+   "signature": "def test_merge_refuses_dirty_tracked_index_and_worktree_without_changes(toy)",
+   "span": [
+    42,
+    43
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_loads_branch_config_and_rolls_back_its_gate_failure",
+   "signature": "def test_merge_loads_branch_config_and_rolls_back_its_gate_failure(toy)",
+   "span": [
+    68,
+    69
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_rolls_back_when_postmerge_unit_complete_blocks",
+   "signature": "def test_merge_rolls_back_when_postmerge_unit_complete_blocks( toy, monkeypatch, capsys)",
+   "span": [
+    93,
+    95
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "blocked",
+   "signature": "def blocked(*_args, **_kwargs)",
+   "span": [
+    98,
+    99
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_rolls_back_when_substrate_commit_hook_fails",
+   "signature": "def test_merge_rolls_back_when_substrate_commit_hook_fails(toy)",
+   "span": [
+    121,
+    122
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_rolls_back_when_successful_gate_mutates_tracked_source",
+   "signature": "def test_merge_rolls_back_when_successful_gate_mutates_tracked_source(toy)",
+   "span": [
+    142,
+    143
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_rolls_back_when_extraction_raises",
+   "signature": "def test_merge_rolls_back_when_extraction_raises(toy, monkeypatch, capsys)",
+   "span": [
+    169,
+    170
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_merge_rolls_back_when_event_pipeline_raises",
+   "signature": "def test_merge_rolls_back_when_event_pipeline_raises(toy, monkeypatch, capsys)",
+   "span": [
+    190,
+    191
+   ],
+   "visibility": "public"
+  }
+ ]
+}

@@ -1,0 +1,173 @@
+{
+ "exports": [
+  "entry_id",
+  "installed_entries",
+  "key",
+  "plugin_commands",
+  "prevent_downgrade",
+  "prove_engine",
+  "select_plugin"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:4b67e3dd3bb78b3b911750a2341caa0902318666e983f6c84dd3b6981cbe9306",
+ "imports": [
+  "engine",
+  "json",
+  "os",
+  "pathlib",
+  "re"
+ ],
+ "language": "python",
+ "module_id": "engine.plugin_install",
+ "source_hash": "sha256:4efc0d4b24be412442d501b8fda2c2fc2637e02a35cf962d6b665a1559bb338b",
+ "source_path": "engine/plugin_install.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "prevent_downgrade",
+   "signature": "def prevent_downgrade(candidate, current, label=\"engine\")",
+   "span": [
+    12,
+    13
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "key",
+   "signature": "def key(value)",
+   "span": [
+    13,
+    14
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "installed_entries",
+   "signature": "def installed_entries(host: str, payload) -> list[dict]",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "entry_id",
+   "signature": "def entry_id(host: str, entry: dict) -> str | None",
+   "span": [
+    36,
+    37
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_is_harness",
+   "signature": "def _is_harness(host: str, entry: dict) -> bool",
+   "span": [
+    40,
+    41
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "select_plugin",
+   "signature": "def select_plugin(host: str, entries: list[dict], plugin_id=None, scope=None) -> dict",
+   "span": [
+    46,
+    48
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_listed_path",
+   "signature": "def _listed_path(host: str, entry: dict) -> Path | None",
+   "span": [
+    78,
+    79
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_engine_files",
+   "signature": "def _engine_files(root: Path | None) -> tuple[Path, Path] | None",
+   "span": [
+    85,
+    86
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_manifest_matches",
+   "signature": "def _manifest_matches(root: Path, entry: dict) -> bool",
+   "span": [
+    95,
+    96
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_codex_cache_root",
+   "signature": "def _codex_cache_root() -> Path",
+   "span": [
+    107,
+    108
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_prove_codex_engine",
+   "signature": "def _prove_codex_engine(entry: dict) -> tuple[Path, Path]",
+   "span": [
+    113,
+    114
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "prove_engine",
+   "signature": "def prove_engine(host: str, entry: dict) -> tuple[Path, Path]",
+   "span": [
+    150,
+    151
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "plugin_commands",
+   "signature": "def plugin_commands(host: str, entry: dict) -> list[list[str]]",
+   "span": [
+    162,
+    163
+   ],
+   "visibility": "public"
+  }
+ ]
+}

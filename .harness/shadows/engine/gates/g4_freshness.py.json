@@ -2,9 +2,16 @@
  "exports": [
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.make_finding",
+  "engine.sha256_file",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:c5343446621b2fe2142fd50695eadf1711eb8926695909bfec3d9295cf7f8387",
  "imports": [
-  "events",
+  "engine",
+  "engine.events",
   "json",
   "pathlib"
  ],

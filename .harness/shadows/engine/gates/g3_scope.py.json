@@ -2,16 +2,23 @@
  "exports": [
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.make_finding",
+  "engine.graph.override_targets",
+  "fnmatch.fnmatch",
+  "pathlib.PurePosixPath"
+ ],
+ "import_resolution_hash": "sha256:ce8743e62a74f8cfbc4ea682666e88bcad61c23bb337853d875a63370d9c723c",
  "imports": [
-  "events",
+  "engine.events",
+  "engine.graph",
   "fnmatch",
-  "graph",
   "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g3_scope",
- "source_hash": "sha256:7aa033c02abb6c0a81017d8e54fa985e00277d4c6930d6900af45d84e5d2b30f",
+ "source_hash": "sha256:327496fd0920ba278f0b8dfc5a877f7761c77d34ca3ed4aa9af2a47c523cb132",
  "source_path": "engine/gates/g3_scope.py",
  "symbols": [
   {
@@ -31,8 +38,8 @@
    "name": "_declared_set",
    "signature": "def _declared_set(ctx) -> set",
    "span": [
-    37,
-    38
+    36,
+    37
    ],
    "visibility": "private"
   },
@@ -42,8 +49,8 @@
    "name": "check",
    "signature": "def check(ctx) -> list",
    "span": [
-    49,
-    50
+    48,
+    49
    ],
    "visibility": "public"
   }

@@ -3,17 +3,29 @@
   "acknowledge",
   "check"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.HarnessError",
+  "engine.baseline.ensure_baseline",
+  "engine.events.make_finding",
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.registry.public_symbols",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:0efb606e4976483b5cc3510f1836e3238a8a8d9cda15cde5d3abd6c249ee0c6e",
  "imports": [
-  "events",
-  "graph",
+  "engine",
+  "engine.baseline",
+  "engine.events",
+  "engine.graph",
+  "engine.registry",
   "json",
-  "pathlib",
-  "registry"
+  "pathlib"
  ],
  "language": "python",
  "module_id": "engine.gates.g6_drift",
- "source_hash": "sha256:515939f5ff1abf4b928f878e8dd8c6d493073ebfa870de5f17c2b61459c8f062",
+ "source_hash": "sha256:60aa62443b4b10597531a06ca8ef1a78e2deaa657028f81368c02ac2eff8e930",
  "source_path": "engine/gates/g6_drift.py",
  "symbols": [
   {
@@ -55,8 +67,8 @@
    "name": "acknowledge",
    "signature": "def acknowledge(root, slice_id: str, module_id: str, note: str = \"\") -> dict",
    "span": [
-    73,
-    74
+    80,
+    81
    ],
    "visibility": "public"
   }

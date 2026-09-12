@@ -2,7 +2,13 @@
  "exports": [
   "__init__"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.events.Sidecar",
+  "engine.find_root",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:b05e7e7ffcfb1b8b5c07dda7aa2755e753db5cc0115eff265ef7b098850f3eff",
  "imports": [
   "engine",
   "engine.events",

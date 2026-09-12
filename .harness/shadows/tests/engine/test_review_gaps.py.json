@@ -19,7 +19,25 @@
   "test_relative_traversal_paths_never_poison_the_sidecar",
   "test_worktree_close_is_not_vacuous"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.loaded_context",
+  "conftest.make_event",
+  "conftest.run_cli",
+  "engine.events.Sidecar",
+  "engine.events.handle_event",
+  "engine.extractor.engine.EXTRACTOR_VERSION",
+  "engine.extractor.engine._degenerate_shadow",
+  "engine.extractor.engine.write_shadow",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:b83c82858859a32e6b73d9d22497f4a6f395a2d1195d6e7d25d53f2a26827f10",
  "imports": [
   "conftest",
   "engine",

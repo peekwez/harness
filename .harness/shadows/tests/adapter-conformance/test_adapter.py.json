@@ -20,7 +20,13 @@
   "test_stop_maps_to_unit_complete_and_can_block",
   "test_unbound_hook_is_noop"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.gates.all_gates",
+  "engine.gates.gates_for_event",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:f0e6b2de60b564fe2ea845a6e601e6ceed396a19ce1ed7466e4f91f6297e10fe",
  "imports": [
   "engine.gates",
   "importlib.util",

@@ -29,10 +29,9 @@ def _severity(ctx) -> str:
 
 def _override_targets(ctx) -> set:
     """Bare ids of overridden targets (module:/registry: prefixes stripped)."""
-    from ..graph import load_edges
-    s = f"slice:{ctx.work_unit_id}"
-    return {e["to"].split(":", 1)[-1] for e in load_edges(ctx.root)
-            if e["from"] == s and e["type"] == "override"}
+    from ..graph import override_targets
+    return override_targets(ctx.root, ctx.work_unit_id, "gate:G5",
+                            {"module", "registry"})
 
 
 def _shadow_for_touched(ctx, rel):
@@ -115,7 +114,7 @@ def check(ctx) -> list:
 
 def record_override(root, slice_id: str, target: str, justification: str,
                     finding_id: str | None = None,
-                    rule_ref: str = "gate:G5") -> dict:
+                    rule_ref: str | None = None) -> dict:
     """Builder override-and-justification: auditable edge (T3). rule_ref
     names the gate actually being overridden — hardcoding G5 falsified the
     ledger for G1/G3 overrides (field report W9)."""
@@ -123,7 +122,8 @@ def record_override(root, slice_id: str, target: str, justification: str,
     from .. import HarnessError
     if not justification or not justification.strip():
         raise HarnessError("override requires a non-empty justification (fail closed)")
+    inferred = "gate:G3" if target.partition(":")[0] in {"file", "boundary"} else "gate:G5"
     return append_edge(root, "override", f"slice:{slice_id}", target,
                        meta={"justification": justification.strip(),
                              "finding_id": finding_id,
-                             "rule_ref": rule_ref or "gate:G5"})
+                             "rule_ref": rule_ref or inferred})

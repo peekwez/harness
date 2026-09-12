@@ -12,7 +12,14 @@
   "test_rust_symbols_cover_the_item_kinds",
   "test_rust_visibility_follows_pub"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.extractor.engine.extract_path",
+  "engine.gates.g7_derivation.derivation_findings",
+  "engine.load_config"
+ ],
+ "import_resolution_hash": "sha256:4427bac601b33f022d1fb62ed92b534a3d24eb4703b99907b4560ea3021c85d8",
  "imports": [
   "conftest",
   "engine",

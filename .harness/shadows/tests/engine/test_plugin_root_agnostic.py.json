@@ -12,7 +12,14 @@
   "test_the_clone_never_echoes_the_credentialled_url",
   "test_the_note_for_a_hand_authored_profile_names_no_absolute_path"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.PLUGIN_ROOT",
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.run_cli"
+ ],
+ "import_resolution_hash": "sha256:bba3dec6f56c273f831061c5418adbbae72d28cc42a1fa658cddb228693d1d0c",
  "imports": [
   "conftest",
   "json",

@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -17,14 +18,101 @@ from engine.cli.common import (PLUGIN_ROOT, _acceptance_python,
 from engine.cli.init import _write_autonomy_settings
 
 
-def _bind_slice(root, slice_id: str, session: str) -> dict:
+SLICE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _slice_id_refusal(slice_id: str):
+    if not isinstance(slice_id, str) or not SLICE_ID.fullmatch(slice_id):
+        return {"bound": False, "reason":
+                f"slice id {slice_id!r} must be one logical identifier "
+                "containing only letters, digits, '.', '_' or '-'",
+                "_exit_code": 2}
+    return None
+
+
+def _binding_refusal(root, sl, *, force=False, justification=None):
+    malformed = _slice_id_refusal(sl.get("id"))
+    if malformed:
+        return malformed
+    reason = (justification or "").strip()
+    if force and not reason:
+        return {"bound": False, "reason":
+                "--force requires a nonwhitespace --justification (an "
+                "override without a recorded reason is a silent bypass)",
+                "_exit_code": 2}
+    status = sl.get("status")
+    if status == "closed":
+        return {"bound": False, "reason":
+                f"slice {sl['id']} is closed and cannot be bound for more "
+                "writes", "rule_ref": "lifecycle:closed", "_exit_code": 1}
+    if status not in ("planned", "in_progress", "parked"):
+        return {"bound": False, "reason":
+                f"slice {sl['id']} has unsupported lifecycle status "
+                f"{status!r}", "rule_ref": "lifecycle:status",
+                "_exit_code": 1}
+    known = {s["id"]: s for s in load_backlog(root)}
+    blocking = []
+    for dep in sl.get("depends_on", []) or []:
+        row = known.get(dep)
+        if row is None:
+            blocking.append(f"{dep} (not in the backlog)")
+        elif row.get("status") != "closed":
+            blocking.append(f"{dep} ({row.get('status')})")
+    if blocking and not force:
+        return {"bound": False, "started": False, "rule_ref": "gate:G1",
+                "reason": f"slice {sl['id']} depends on unclosed slices: "
+                          f"{blocking}. Close them first, or override with "
+                          "`--force --justification \"<why>\"` (recorded).",
+                "_exit_code": 1}
+    return None
+
+
+def _public_bind_result(result):
+    result = dict(result)
+    return result.pop("_exit_code", 0), result
+
+
+def _bind_slice(root, slice_id: str, session: str, *, force=False,
+                justification=None) -> dict:
     """Everything binding a slice entails, in one place (shared by `slice`
     and `start`): session + repo-default binding, declares_dep edges, status
     flip, git anchor, G6 baseline, context registration, merge drivers."""
     from engine.events import Sidecar, _snapshot_slice_baseline
     from engine.graph import append_edge, load_edges
     from engine.resolver import resolve as _resolve
+    malformed = _slice_id_refusal(slice_id)
+    if malformed:
+        return malformed
     sl = get_slice(root, slice_id)
+    refusal = _binding_refusal(root, sl, force=force,
+                               justification=justification)
+    if refusal:
+        return refusal
+    justification = (justification or "").strip()
+
+    existing_edges = load_edges(root)
+    existing = {(e["type"], e["from"], e["to"]) for e in existing_edges}
+    if force:
+        for dep in sl.get("depends_on", []) or []:
+            row = next((s for s in load_backlog(root)
+                        if s.get("id") == dep), None)
+            if row is not None and row.get("status") == "closed":
+                continue
+            already_recorded = any(
+                e["type"] == "override"
+                and e["from"] == f"slice:{slice_id}"
+                and e["to"] == f"slice:{dep}"
+                and e.get("meta", {}).get("rule_ref") == "gate:G1"
+                and e.get("meta", {}).get("kind") == "dependency_order"
+                for e in existing_edges)
+            if not already_recorded:
+                append_edge(root, "override", f"slice:{slice_id}",
+                            f"slice:{dep}",
+                            meta={"rule_ref": "gate:G1",
+                                  "kind": "dependency_order",
+                                  "justification": justification})
+                existing.add(("override", f"slice:{slice_id}",
+                              f"slice:{dep}"))
     sidecar = Sidecar(root)
     try:
         # Bind for the named session AND as the repo default: hook events
@@ -35,7 +123,6 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
         sidecar.state_set("__default__", "active_slice", slice_id)
     finally:
         sidecar.close()
-    existing = {(e["type"], e["from"], e["to"]) for e in load_edges(root)}
     for dep in sl.get("declares_dep", []):
         key = ("declares_dep", f"slice:{slice_id}", f"module:{dep}")
         if key not in existing:
@@ -70,7 +157,8 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
     sidecar = Sidecar(root)
     try:
         _snapshot_slice_baseline(root, sidecar, slice_id)
-        sidecar.context_add(session, res["context_loaded"])
+        sidecar.context_add(session, res["context_loaded"],
+                            injections=res["injections"])
     finally:
         sidecar.close()
 
@@ -79,7 +167,7 @@ def _bind_slice(root, slice_id: str, session: str) -> dict:
     # and tree-untouching) so drivers exist before any merge on this machine
     _config_merge_drivers(root)
 
-    return {"active_slice": slice_id, "session": session,
+    return {"bound": True, "active_slice": slice_id, "session": session,
             "status": sl["status"],
             "context_registered": len(res["context_loaded"]),
             "context_loaded": res["context_loaded"],
@@ -113,7 +201,25 @@ def cmd_start(args):
     import subprocess
     from engine.cli.landing import landing_config
     root = _root(args)
+    malformed = _slice_id_refusal(args.slice)
+    if malformed:
+        _, public = _public_bind_result(malformed)
+        print(public["reason"], file=sys.stderr)
+        return 2
     sl = get_slice(root, args.slice)     # fail loud before touching git
+
+    # Validate the transition before creating a filesystem path.  The same
+    # check runs again inside _bind_slice in the target tree, where it is the
+    # authoritative guard for every binding caller.
+    refusal = _binding_refusal(root, sl, force=args.force,
+                               justification=args.justification)
+    if refusal:
+        code, public = _public_bind_result(refusal)
+        if code == 2:
+            print(public["reason"], file=sys.stderr)
+        else:
+            _print(public)
+        return code
 
     # pr landing pushes the slice's OWN branch from the slice's own tree
     # (D-009): binding in the main tree would leave the close with nothing
@@ -123,36 +229,6 @@ def cmd_start(args):
             "landing.mode: pr requires the slice worktree — the close pushes "
             "slice/" + str(args.slice) + " from it. Drop --no-worktree, or "
             "set landing.mode: local in .harness/config.yaml")
-
-    # depends_on was recorded, ordered and cost-estimated — but never
-    # enforced. Foundations exist so consumers can rely on them: starting
-    # out of order is how a slice ends up coding against a module that does
-    # not exist yet.
-    if args.force and not args.justification:
-        print("error: --force requires --justification (an override without "
-              "a recorded reason is a silent bypass)", file=sys.stderr)
-        return 2
-    known = {s["id"]: s for s in load_backlog(root)}
-    blocking = []
-    for dep in sl.get("depends_on", []) or []:
-        row = known.get(dep)
-        if row is None:
-            blocking.append(f"{dep} (not in the backlog)")
-        elif row.get("status") != "closed":
-            blocking.append(f"{dep} ({row.get('status')})")
-    if blocking and not args.force:
-        _print({"started": False, "rule_ref": "gate:G1",
-                "reason": f"slice {args.slice} depends on unclosed slices: "
-                          f"{blocking}. Close them first, or override with "
-                          f"`--force --justification \"<why>\"` (recorded)."})
-        return 1
-    if blocking and args.force:
-        from engine.graph import append_edge
-        for dep in sl.get("depends_on", []) or []:
-            append_edge(root, "override", f"slice:{args.slice}",
-                        f"slice:{dep}",
-                        meta={"rule_ref": "gate:G1", "kind": "dependency_order",
-                              "justification": args.justification.strip()})
 
     resumed, worktree, branch = False, None, None
 
@@ -184,7 +260,12 @@ def cmd_start(args):
     target = worktree or root
     settings_written = _write_autonomy_settings(target, quiet=True,
                                                  local=worktree is not None)
-    bound = _bind_slice(target, args.slice, _session(args, target))
+    bound = _bind_slice(target, args.slice, _session(args, target),
+                        force=args.force, justification=args.justification)
+    code, bound = _public_bind_result(bound)
+    if code:
+        _print(bound)
+        return code
 
     _print({**bound, "slice": args.slice, "resumed": resumed,
             "worktree": str(worktree) if worktree else None,

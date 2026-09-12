@@ -5,7 +5,13 @@
   "test_fresh_init_gate_reports_domain_gaps_not_edit_me",
   "test_init_scaffolds_without_placeholder_rows"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.run_cli",
+  "engine.compiler.author_gate",
+  "engine.read_jsonl"
+ ],
+ "import_resolution_hash": "sha256:c802368511ad02918704a98ff59c28dd40b2a3d180831b6788c379baf09b3453",
  "imports": [
   "conftest",
   "engine",

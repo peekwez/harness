@@ -1,0 +1,162 @@
+{
+ "exports": [
+  "test_campaign_drains_output_beyond_pipe_capacity_and_builder_closes",
+  "test_campaign_timeout_reaps_process_group_and_reports_actual_rc",
+  "test_closed_slice_cannot_be_bound_for_more_writes",
+  "test_direct_slice_binding_cannot_bypass_open_dependency",
+  "test_force_requires_a_nonwhitespace_reason_before_creating_worktree",
+  "test_forced_start_records_override_only_in_target_and_once_on_resume",
+  "test_split_child_id_collision_is_refused_before_any_write",
+  "test_split_reports_proposal_without_cloning_parent_contract",
+  "test_start_rejects_path_like_slice_id_before_creating_worktree"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "conftest.build_toy_repo",
+  "conftest.git",
+  "conftest.run_cli",
+  "engine.graph.load_edges",
+  "engine.read_jsonl",
+  "engine.write_jsonl",
+  "test_dispatcher._campaign",
+  "test_dispatcher._run"
+ ],
+ "import_resolution_hash": "sha256:fb9f44635d89a04c60c955cf45d6f5532589a643d4db5f7dd36e1bbc99b81043",
+ "imports": [
+  "conftest",
+  "engine",
+  "engine.graph",
+  "json",
+  "os",
+  "test_dispatcher",
+  "time",
+  "yaml"
+ ],
+ "language": "python",
+ "module_id": "tests.engine.test_hardening_backlog",
+ "source_hash": "sha256:f2124891b8cb9b3e8958853d3e553c808105fe2493673c5d6048cbaa55fa25e6",
+ "source_path": "tests/engine/test_hardening_backlog.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_add_open_dependency",
+   "signature": "def _add_open_dependency(toy)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "_override_edges",
+   "signature": "def _override_edges(root)",
+   "span": [
+    29,
+    30
+   ],
+   "visibility": "private"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_split_child_id_collision_is_refused_before_any_write",
+   "signature": "def test_split_child_id_collision_is_refused_before_any_write(tmp_path)",
+   "span": [
+    35,
+    36
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_split_reports_proposal_without_cloning_parent_contract",
+   "signature": "def test_split_reports_proposal_without_cloning_parent_contract(tmp_path)",
+   "span": [
+    59,
+    60
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_direct_slice_binding_cannot_bypass_open_dependency",
+   "signature": "def test_direct_slice_binding_cannot_bypass_open_dependency(tmp_path)",
+   "span": [
+    84,
+    85
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_force_requires_a_nonwhitespace_reason_before_creating_worktree",
+   "signature": "def test_force_requires_a_nonwhitespace_reason_before_creating_worktree(tmp_path)",
+   "span": [
+    102,
+    103
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_start_rejects_path_like_slice_id_before_creating_worktree",
+   "signature": "def test_start_rejects_path_like_slice_id_before_creating_worktree(tmp_path)",
+   "span": [
+    115,
+    116
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_forced_start_records_override_only_in_target_and_once_on_resume",
+   "signature": "def test_forced_start_records_override_only_in_target_and_once_on_resume(tmp_path)",
+   "span": [
+    128,
+    129
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_closed_slice_cannot_be_bound_for_more_writes",
+   "signature": "def test_closed_slice_cannot_be_bound_for_more_writes(toy)",
+   "span": [
+    148,
+    149
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_campaign_drains_output_beyond_pipe_capacity_and_builder_closes",
+   "signature": "def test_campaign_drains_output_beyond_pipe_capacity_and_builder_closes(toy)",
+   "span": [
+    189,
+    190
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "test_campaign_timeout_reaps_process_group_and_reports_actual_rc",
+   "signature": "def test_campaign_timeout_reaps_process_group_and_reports_actual_rc(tmp_path)",
+   "span": [
+    201,
+    202
+   ],
+   "visibility": "public"
+  }
+ ]
+}

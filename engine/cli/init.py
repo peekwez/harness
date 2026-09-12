@@ -10,9 +10,12 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 
 from engine import ENGINE_VERSION, SCHEMA_VERSION, HarnessError
+from engine.plugin_install import prevent_downgrade
 from engine.cli.common import (PLUGIN_ROOT, _dep_status, _install_merge_drivers,
                                _print)
 
@@ -207,26 +210,81 @@ def _vendor_engine(root) -> dict:
     version_file = target / "VERSION"
     previous = (version_file.read_text().strip()
                 if version_file.exists() else None)
-    if previous == ENGINE_VERSION and _vendored_matches(target):
+    prevent_downgrade(ENGINE_VERSION, previous, "vendored engine")
+    self_target = target.exists() and target.resolve() == PLUGIN_ROOT.resolve()
+    try:
+        current = previous == ENGINE_VERSION and _vendored_matches(target)
+    except OSError:
+        current = False
+    if current:
         return {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
                 "action": "unchanged", "from": previous}
-    if target.exists():
-        shutil.rmtree(target)
-    target.mkdir(parents=True)
+    if self_target:
+        raise HarnessError(
+            "the vendored engine is running from the copy it would replace, "
+            "and that copy is stale or damaged; run `harness upgrade` from "
+            "the installed Harness plugin (or use `harness upgrade --plugin "
+            "--host claude|codex`) to refresh it safely")
+
+    # Build and validate the complete replacement beside the target.  The
+    # live engine remains untouched if any copy fails; only two same-filesystem
+    # renames occur after the staged tree is known-good.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    stage = Path(tempfile.mkdtemp(prefix=".engine-upgrade-",
+                                  dir=target.parent))
+    backup = target.with_name(f".engine-rollback-{uuid.uuid4().hex}")
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
-    shutil.copytree(PLUGIN_ROOT / "engine", target / "engine", ignore=ignore)
-    (target / "bin").mkdir()
-    shutil.copy(PLUGIN_ROOT / "bin" / "harness", target / "bin" / "harness")
-    (target / "bin" / "harness").chmod(0o755)
-    version_file.write_text(f"{ENGINE_VERSION}\n")
-    (target / "README.md").write_text(
-        "# vendored harness engine\n\nDerived: written by `harness init` / "
-        "`harness upgrade`, run by `.github/workflows/harness-verify.yml`. "
-        "Never hand-edit; `harness upgrade` replaces it wholesale after a "
-        "plugin upgrade.\n")
-    return {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
-            "action": "installed" if previous is None else "refreshed",
-            "from": previous}
+    cleanup_warning = None
+    try:
+        shutil.copytree(PLUGIN_ROOT / "engine", stage / "engine", ignore=ignore)
+        (stage / "bin").mkdir()
+        shutil.copy(PLUGIN_ROOT / "bin" / "harness", stage / "bin" / "harness")
+        (stage / "bin" / "harness").chmod(0o755)
+        # Upgrade needs these after it starts from the vendored binary.
+        shutil.copytree(PLUGIN_ROOT / "templates", stage / "templates",
+                        ignore=ignore)
+        # Codex project hooks use a stable project-local adapter rather than
+        # a versioned plugin cache path.
+        (stage / "adapters" / "codex").mkdir(parents=True)
+        shutil.copy(PLUGIN_ROOT / "adapters" / "common.py",
+                    stage / "adapters" / "common.py")
+        shutil.copy(PLUGIN_ROOT / "adapters" / "codex" / "adapter.py",
+                    stage / "adapters" / "codex" / "adapter.py")
+        (stage / "VERSION").write_text(f"{ENGINE_VERSION}\n")
+        (stage / "README.md").write_text(
+            "# vendored harness engine\n\nDerived: written by `harness init` / "
+            "`harness upgrade`, run by `.github/workflows/harness-verify.yml`. "
+            "Never hand-edit; `harness upgrade` replaces it wholesale after a "
+            "plugin upgrade.\n")
+        if not _vendored_matches(stage):
+            raise HarnessError("staged vendored engine failed integrity check")
+
+        had_target = target.exists()
+        if had_target:
+            target.rename(backup)
+        try:
+            stage.rename(target)
+        except BaseException:
+            if had_target and backup.exists() and not target.exists():
+                backup.rename(target)
+            raise
+        if backup.exists():
+            try:
+                shutil.rmtree(backup)
+            except OSError as exc:
+                cleanup_warning = str(exc)
+    finally:
+        if stage.exists():
+            shutil.rmtree(stage, ignore_errors=True)
+
+    report = {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
+              "action": "installed" if previous is None else "refreshed",
+              "from": previous}
+    if cleanup_warning:
+        report["cleanup_warning"] = (
+            f"new engine installed, but old rollback copy remains at "
+            f"{backup}: {cleanup_warning}")
+    return report
 
 
 def _vendored_matches(target) -> bool:
@@ -248,7 +306,16 @@ def _vendored_matches(target) -> bool:
     if sha256_file(target / "bin" / "harness") != \
             sha256_file(PLUGIN_ROOT / "bin" / "harness"):
         return False
-    return _files(PLUGIN_ROOT / "engine") == _files(target / "engine")
+    if _files(PLUGIN_ROOT / "engine") != _files(target / "engine"):
+        return False
+    if _files(PLUGIN_ROOT / "templates") != _files(target / "templates"):
+        return False
+    adapters = {
+        Path("common.py"): sha256_file(PLUGIN_ROOT / "adapters" / "common.py"),
+        Path("codex/adapter.py"): sha256_file(
+            PLUGIN_ROOT / "adapters" / "codex" / "adapter.py"),
+    }
+    return adapters == _files(target / "adapters")
 
 
 def vendored_engine_status(root) -> dict:
@@ -275,7 +342,10 @@ def vendored_engine_status(root) -> dict:
         report["status"] = "missing"
         return report
     report["version"] = version_file.read_text().strip()
-    ok = report["version"] == ENGINE_VERSION and _vendored_matches(target)
+    try:
+        ok = report["version"] == ENGINE_VERSION and _vendored_matches(target)
+    except OSError:
+        ok = False
     report["status"] = "current" if ok else "stale"
     return report
 
@@ -317,26 +387,9 @@ def _write_workflow(root) -> dict:
 
 
 def cmd_upgrade(args):
-    """Bring a substrate scaffolded by an older plugin up to the installed
-    one: schema migration, merge drivers, the vendored engine and the CI
-    workflow. Idempotent; hand-authored files are never touched."""
-    from engine.migrate import migrate
-    root = Path(args.root or os.getcwd()).resolve()
-    if not (root / ".harness").exists():
-        raise HarnessError(
-            f"{root / '.harness'} does not exist — nothing to upgrade; run "
-            f"`harness init` to scaffold a substrate first")
-    _install_merge_drivers(root)  # existing substrates pick up W5 drivers
-    report = {"schema": migrate(root),
-              "vendored_engine": _vendor_engine(root),
-              "workflow": _write_workflow(root),
-              "engine_version": ENGINE_VERSION}
-    profile = root / ".claude" / "settings.json"
-    if profile.exists() and "harness autonomy profile" in profile.read_text():
-        # our own profile: refresh it so new pre-approved shapes land too
-        report["autonomy_profile"] = _write_autonomy_settings(root, quiet=True)
-    _print(report)
-    return 0
+    """Compatibility entry point for ``init --migrate`` and old imports."""
+    from engine.cli.upgrade import cmd_upgrade as upgrade
+    return upgrade(args)
 
 
 def _pr_landing_rules(text, landing) -> str:

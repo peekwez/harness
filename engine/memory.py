@@ -4,8 +4,7 @@ Working memory (session scope): per-slice JSONL, flushed at every Stop.
 `kind: attempt` is mandatory whenever an approach is abandoned mid-slice —
 the replacement for what conversation compaction would have preserved.
 Durable memory: promoted at close-slice and at adjudication.
-PreCompact: flush + COMPACTION_REACHED telemetry only — compaction is a
-defect signal, not an event to handle gracefully.
+PreCompact flushes memory and emits advisory context-pressure telemetry.
 """
 from __future__ import annotations
 
@@ -54,12 +53,19 @@ def read_session(root, slice_id: str) -> list:
     return read_jsonl(session_path(root, slice_id))
 
 
-def compact_to_durable(root, slice_id: str, commit=None) -> dict:
+def compact_to_durable(root, slice_id: str, commit=None, consume=True) -> dict:
     """Promote session memory to durable, then delete the session file.
     Attempts and adjudications always survive; reasoning survives when marked
     or when it carries module edges."""
-    from .graph import append_edge
+    from .graph import append_edge, load_edges
     entries = read_session(root, slice_id)
+    existing = {e["id"] for e in read_jsonl(durable_path(root))}
+    edges = {(e["type"], e["from"], e["to"], e.get("commit")) for e in load_edges(root)}
+    def ensure_edge(kind, source, target, revision):
+        key = kind, source, target, revision
+        if key not in edges:
+            append_edge(root, kind, source, target, commit=revision)
+            edges.add(key)
     promoted = []
     for e in entries:
         keep = (e.get("kind") in ("attempt", "adjudication") or
@@ -69,11 +75,13 @@ def compact_to_durable(root, slice_id: str, commit=None) -> dict:
         d = dict(e)
         d["scope"] = "durable"
         d["commit"] = d.get("commit") or commit
-        append_jsonl(durable_path(root), d)
         promoted.append(d["id"])
+        if d["id"] not in existing:
+            append_jsonl(durable_path(root), d)
+            existing.add(d["id"])
         for edge in d.get("edges", []):
-            append_edge(root, edge.get("type", "remembers"),
-                        f"memory:{d['id']}", edge["to"], commit=d["commit"])
+            ensure_edge(edge.get("type", "remembers"),
+                        f"memory:{d['id']}", edge["to"], d["commit"])
     if entries:
         summary = {
             "id": "mem-" + hashlib.sha1(f"{slice_id}|summary|{len(entries)}".encode()).hexdigest()[:12],
@@ -85,11 +93,11 @@ def compact_to_durable(root, slice_id: str, commit=None) -> dict:
             "attempt": None,
             "edges": [{"type": "remembers", "to": f"slice:{slice_id}"}],
         }
-        append_jsonl(durable_path(root), summary)
-        append_edge(root, "remembers", f"memory:{summary['id']}", f"slice:{slice_id}",
-                    commit=commit)
+        if summary["id"] not in existing:
+            append_jsonl(durable_path(root), summary)
+        ensure_edge("remembers", f"memory:{summary['id']}", f"slice:{slice_id}", commit)
     sp = session_path(root, slice_id)
-    if sp.exists():
+    if consume and sp.exists():
         sp.unlink()
     return {"promoted": promoted, "total": len(entries)}
 

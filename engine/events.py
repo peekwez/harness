@@ -135,8 +135,9 @@ def validate_event(raw: dict) -> dict:
 
 # ---------------------------------------------------------------- sidecar
 class Sidecar:
-    """Gitignored SQLite: session context_loaded state, slice symbol snapshots,
-    touched-file tracking, extractor cache metadata. Fully rebuildable."""
+    """Gitignored session state, touched files, baseline/cache data and
+    pending telemetry. Git-backed baselines recover after loss; transient
+    session observations and unflushed telemetry do not."""
 
     def __init__(self, root):
         self.path = harness_dir(root) / "sidecar.db"
@@ -167,12 +168,28 @@ class Sidecar:
     def close(self):
         self.db.close()
 
-    def context_add(self, session_id, items):
+    @staticmethod
+    def _context_stamp(items, injections):
+        payload = json.dumps([sorted(items), injections], ensure_ascii=False)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def context_add(self, session_id, items, *, injections=None):
         ts = now_iso()
         self.db.executemany(
             "INSERT OR IGNORE INTO session_context(session_id, item, ts) VALUES(?,?,?)",
             [(session_id, i, ts) for i in items])
+        if injections is not None:
+            self.db.execute(
+                "INSERT OR REPLACE INTO session_state(session_id, key, value) VALUES(?,?,?)",
+                (session_id, "resolved_context_fingerprint",
+                 json.dumps(self._context_stamp(items, injections))))
         self.db.commit()
+
+    def context_matches(self, session_id, items, injections):
+        """IDs certify coverage; the stamp certifies the rendered content."""
+        return (set(items) <= self.context_get(session_id)
+                and self.state_get(session_id, "resolved_context_fingerprint")
+                == self._context_stamp(items, injections))
 
     def context_get(self, session_id) -> set:
         cur = self.db.execute(
@@ -227,6 +244,8 @@ class Sidecar:
         phantom drift when the id is later rebound (S6)."""
         cur = self.db.execute(
             "DELETE FROM slice_snapshot WHERE slice_id=?", (slice_id,))
+        self.db.execute("DELETE FROM session_state WHERE session_id=? AND key=?",
+                        ("__baselines__", f"baseline:{slice_id}"))
         self.db.commit()
         return cur.rowcount
 
@@ -296,17 +315,17 @@ def handle_event(raw: dict, root) -> dict:
             from .resolver import resolve
             res = resolve(root, slice_id, config)
             resolved_manifest = res["context_loaded"]
-            already = sidecar.context_get(session)
             # Dedupe for BOTH Phase-1 events: SessionStart re-runs on resume
             # (same session_id) and UserPromptSubmit fires every prompt — if
-            # the session already carries the full manifest, re-injecting only
-            # bloats the transcript. Substrate changes alter the manifest and
-            # re-trigger injection naturally.
-            if resolved_manifest and set(resolved_manifest) <= already:
+            # the session carries this exact content, suppress its repetition.
+            # Stable IDs alone cannot detect updated decisions or signatures.
+            if resolved_manifest and sidecar.context_matches(
+                    session, resolved_manifest, res["injections"]):
                 injections = []
             else:
                 injections = res["injections"]
-            sidecar.context_add(session, resolved_manifest)
+            sidecar.context_add(session, resolved_manifest,
+                                injections=res["injections"])
             _snapshot_slice_baseline(root, sidecar, slice_id)
 
         if event == "post_change":
@@ -380,37 +399,38 @@ def _normalize_file_paths(root, evt):
 
 
 def _snapshot_slice_baseline(root, sidecar, slice_id):
-    """G6 baseline: public symbols per module at slice start (first Phase 1).
-    The source_hash rides along so G6 can tell real drift (source changed)
-    from extractor format skew (symbols changed, bytes did not) — W8."""
-    from .registry import load_registry, public_symbols
-    for entry in load_registry(root):
-        if entry.get("status") == "built" and entry.get("shadow"):
-            syms = public_symbols(root, entry)
-            if syms is None:
-                continue
-            src_hash = None
-            try:
-                src_hash = json.loads(
-                    (Path(root) / entry["shadow"]).read_text()).get("source_hash")
-            except (OSError, json.JSONDecodeError):
-                pass
-            sidecar.snapshot_set(slice_id, entry["id"],
-                                 {"symbols": syms, "source_hash": src_hash})
+    """Snapshot once, with a Git anchor that can recover lost SQLite state."""
+    from .baseline import ensure_baseline
+    ensure_baseline(root, sidecar, slice_id, starting=True)
 
 
 def _regenerate_touched(root, sidecar, session, slice_id, config):
     """Stop hook duties: regenerate shadows for touched files, append
     touches + uses edges (feeding G5 and the close-slice reconciliation)."""
     from .extractor.engine import RegistryIndex, extract_path
-    from .graph import append_edge, load_edges
+    from .graph import append_edge, load_edges, record_dependency_snapshot
     from .registry import load_registry
-    touched = sidecar.touched_paths(session_id=session)
+    if slice_id:
+        from . import get_slice
+        if get_slice(root, slice_id).get("status") == "closed":
+            return  # historical closure evidence must not change on a later merge/Stop
+    touched = (sidecar.touched_paths(slice_id=slice_id) if slice_id
+               else sidecar.touched_paths(session_id=session))
+    edges = load_edges(root)
+    if slice_id:
+        touched |= {e["to"][5:] for e in edges
+                    if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
+                    and e["to"].startswith("file:")}
     if not touched:
+        if slice_id:
+            record_dependency_snapshot(root, slice_id, set(), set())
         return
     registry = load_registry(root)
     index = RegistryIndex(registry)
-    existing = {(e["type"], e["from"], e["to"]) for e in load_edges(root)}
+    from .extractor.modules import python_module_ids
+    known_modules = python_module_ids(root, config)
+    existing = {(e["type"], e["from"], e["to"]) for e in edges}
+    uses = set()
 
     def add_once(etype, frm, to):
         if (etype, frm, to) not in existing:
@@ -422,8 +442,10 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
             continue  # legacy poison rows (absolute OR traversal): skip, never crash
         p = Path(root) / rel
         if not p.exists():
+            from .extractor.engine import shadow_path_for
+            shadow_path_for(root, p).unlink(missing_ok=True)
             continue
-        shadow, _f = extract_path(root, p, config)
+        shadow, _f = extract_path(root, p, config, _known_modules=known_modules)
         if shadow is None or not slice_id:
             continue
         add_once("touches", f"slice:{slice_id}", f"file:{rel}")
@@ -431,7 +453,11 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
         for imp in shadow.get("imports", []):
             target = index.match(imp)
             if target is not None and (own is None or own["id"] != target["id"]):
-                add_once("uses", f"slice:{slice_id}", f"module:{target['id']}")
+                node = f"module:{target['id']}"
+                uses.add(node)
+                add_once("uses", f"slice:{slice_id}", node)
+    if slice_id:
+        record_dependency_snapshot(root, slice_id, uses, touched)
 
 
 # ---------------------------------------------------------------- CLI shim

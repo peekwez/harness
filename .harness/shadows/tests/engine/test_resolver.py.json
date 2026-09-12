@@ -11,7 +11,17 @@
   "test_same_slice_same_substrate_byte_identical",
   "test_superseded_guidance_absent_surviving_present"
  ],
- "extractor_version": 3,
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.SubstrateMissing",
+  "engine.append_jsonl",
+  "engine.load_config",
+  "engine.read_jsonl",
+  "engine.resolver.resolve",
+  "engine.token_estimate",
+  "engine.write_jsonl"
+ ],
+ "import_resolution_hash": "sha256:714bdd0d7ad5e695017c54c523997b9c738be8a1b2912ae7cdfa8a720fe056e4",
  "imports": [
   "engine",
   "engine.resolver",
