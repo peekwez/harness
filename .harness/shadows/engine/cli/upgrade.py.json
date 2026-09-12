@@ -21,6 +21,7 @@
   "engine.migrate.MIGRATIONS",
   "engine.migrate.current_version",
   "engine.migrate.migrate",
+  "engine.overrides.repair_legacy_overrides",
   "engine.plugin_install.entry_id",
   "engine.plugin_install.installed_entries",
   "engine.plugin_install.plugin_commands",
@@ -33,7 +34,7 @@
   "engine.sha256_file",
   "pathlib.Path"
  ],
- "import_resolution_hash": "sha256:6cee388b33a99847342e6512f36c5fe64b0364a032c1fcf17520c99ed18397d3",
+ "import_resolution_hash": "sha256:9966b8414c6b2154a22a8e0921798403d5fb443857c7e71762fb8beb75e89a41",
  "imports": [
   "engine",
   "engine.cli.common",
@@ -41,6 +42,7 @@
   "engine.extractor.engine",
   "engine.graph",
   "engine.migrate",
+  "engine.overrides",
   "engine.plugin_install",
   "engine.registry",
   "engine.schema",
@@ -52,7 +54,7 @@
  ],
  "language": "python",
  "module_id": "engine.cli.upgrade",
- "source_hash": "sha256:8b3273f76c3e522c2ae0f7faa7a97d5ca36492b43943e285490a5e1b90e572dc",
+ "source_hash": "sha256:f4b8fceb461679aa3bf55c1dc554a78df26512d5fff9ff99489c479b53b05eaa",
  "source_path": "engine/cli/upgrade.py",
  "symbols": [
   {
@@ -61,8 +63,8 @@
    "name": "_require_substrate",
    "signature": "def _require_substrate(root: Path) -> None",
    "span": [
-    34,
-    35
+    35,
+    36
    ],
    "visibility": "private"
   },
@@ -72,8 +74,8 @@
    "name": "_schema_version",
    "signature": "def _schema_version(root: Path) -> int",
    "span": [
-    41,
-    42
+    42,
+    43
    ],
    "visibility": "private"
   },
@@ -83,8 +85,8 @@
    "name": "_clean_registry_entries",
    "signature": "def _clean_registry_entries(root: Path) -> tuple[list[str], list[str], list[str]]",
    "span": [
-    50,
-    51
+    51,
+    52
    ],
    "visibility": "private"
   },
@@ -94,8 +96,8 @@
    "name": "_refresh_claude_settings",
    "signature": "def _refresh_claude_settings(root: Path, config: dict) -> dict",
    "span": [
-    77,
-    78
+    78,
+    79
    ],
    "visibility": "private"
   },
@@ -105,8 +107,8 @@
    "name": "_is_harness_adapter_command",
    "signature": "def _is_harness_adapter_command(command: object) -> bool",
    "span": [
-    97,
-    98
+    98,
+    99
    ],
    "visibility": "private"
   },
@@ -116,8 +118,8 @@
    "name": "_refresh_codex_hooks",
    "signature": "def _refresh_codex_hooks(root: Path, *, dry_run: bool = False) -> dict",
    "span": [
-    113,
-    114
+    114,
+    115
    ],
    "visibility": "private"
   },
@@ -127,8 +129,8 @@
    "name": "visit",
    "signature": "def visit(value)",
    "span": [
-    137,
-    138
+    138,
+    139
    ],
    "visibility": "public"
   },
@@ -138,8 +140,8 @@
    "name": "upgrade_project",
    "signature": "def upgrade_project(root, *, dry_run: bool = False) -> dict",
    "span": [
-    160,
-    161
+    161,
+    162
    ],
    "visibility": "public"
   },
@@ -149,8 +151,8 @@
    "name": "_run_command",
    "signature": "def _run_command(command)",
    "span": [
-    238,
-    239
+    243,
+    244
    ],
    "visibility": "private"
   },
@@ -160,8 +162,8 @@
    "name": "_run_host_command",
    "signature": "def _run_host_command(command)",
    "span": [
-    242,
-    243
+    247,
+    248
    ],
    "visibility": "private"
   },
@@ -171,8 +173,8 @@
    "name": "_run_checked",
    "signature": "def _run_checked(command)",
    "span": [
-    248,
-    249
+    253,
+    254
    ],
    "visibility": "private"
   },
@@ -182,8 +184,8 @@
    "name": "_run_host_checked",
    "signature": "def _run_host_checked(command)",
    "span": [
-    260,
-    261
+    265,
+    266
    ],
    "visibility": "private"
   },
@@ -193,8 +195,8 @@
    "name": "_command_json",
    "signature": "def _command_json(command)",
    "span": [
-    273,
-    274
+    278,
+    279
    ],
    "visibility": "private"
   },
@@ -204,8 +206,8 @@
    "name": "upgrade_installed_plugin",
    "signature": "def upgrade_installed_plugin(root, host: str, *, plugin_id=None, scope=None, dry_run: bool = False) -> dict",
    "span": [
-    282,
-    284
+    287,
+    289
    ],
    "visibility": "public"
   },
@@ -215,8 +217,8 @@
    "name": "cmd_upgrade",
    "signature": "def cmd_upgrade(args)",
    "span": [
-    366,
-    367
+    371,
+    372
    ],
    "visibility": "public"
   }

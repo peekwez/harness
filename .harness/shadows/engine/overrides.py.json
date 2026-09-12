@@ -1,0 +1,50 @@
+{
+ "exports": [
+  "canonical_target",
+  "repair_legacy_overrides"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "engine.graph.append_edge",
+  "engine.graph.load_edges",
+  "engine.registry.load_registry",
+  "engine.sha256_text",
+  "pathlib.Path"
+ ],
+ "import_resolution_hash": "sha256:cc88bc9a127f8d205c4eee01fddb431e97a478e59871ed9818067297e89120b1",
+ "imports": [
+  "engine",
+  "engine.graph",
+  "engine.registry",
+  "json",
+  "pathlib"
+ ],
+ "language": "python",
+ "module_id": "engine.overrides",
+ "source_hash": "sha256:60cd33acad40ba25f7eaa369ae434c6e59a94ea8e644b074575ec4f8987d0b24",
+ "source_path": "engine/overrides.py",
+ "symbols": [
+  {
+   "doc": "Resolve only unambiguous, justified G5 legacy registry targets.\n\n    deps: also names actual dependency manifests. Paths, known manifest\n    names, existing files, unknown IDs and other gates retain that spelling.\n    A matching registry ID alone must never convert a manifest exception.",
+   "kind": "function",
+   "name": "canonical_target",
+   "signature": "def canonical_target(root, target, rule_ref, justification, registry_ids=None)",
+   "span": [
+    15,
+    16
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Append canonical aliases once, retaining every original approval.",
+   "kind": "function",
+   "name": "repair_legacy_overrides",
+   "signature": "def repair_legacy_overrides(root, *, dry_run=False)",
+   "span": [
+    38,
+    39
+   ],
+   "visibility": "public"
+  }
+ ]
+}

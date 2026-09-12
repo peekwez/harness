@@ -15,11 +15,7 @@ from engine.cli.acceptance import (GATE_REASON, gate_configured,
                                    gate_finding)
 from engine.cli.common import _fail, _reset_close_attempts, _root, _session
 from engine.cli.slice import _acceptance_green
-
-
-DEP_MANIFESTS = ("requirements.txt", "requirements-dev.txt",
-                 "pyproject.toml", "setup.py", "setup.cfg", "package.json",
-                 "Cargo.toml", "go.mod")
+from engine.overrides import DEP_MANIFESTS
 
 
 def _added_dependency_lines(root, sl, commit) -> dict:

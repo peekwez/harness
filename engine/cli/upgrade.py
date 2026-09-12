@@ -24,6 +24,7 @@ PROJECT_PLAN = [
     "refresh harness-generated workflow",
     "refresh harness-owned Claude settings",
     "refresh Harness-owned Codex hook commands",
+    "canonicalize legacy G5 dependency overrides",
     "repair legacy graph provenance",
     "force-regenerate shadows",
     "refresh clean registry derivations",
@@ -162,6 +163,7 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
     root = Path(root).resolve()
     _require_substrate(root)
     from engine.migrate import MIGRATIONS, migrate
+    from engine.overrides import repair_legacy_overrides
 
     # Even a dry run performs the schema preflight, but nothing that writes.
     version = _schema_version(root)
@@ -181,6 +183,7 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
                            "would_apply": list(
                                range(version + 1, SCHEMA_VERSION + 1))},
                 "engine_version": ENGINE_VERSION,
+                "legacy_overrides": repair_legacy_overrides(root, dry_run=True),
                 "codex_adapter": _refresh_codex_hooks(root, dry_run=True)}
 
     # Migration is deliberately the first write.  New code must never read
@@ -204,6 +207,7 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
         warnings.append(codex["note"])
 
     from engine.graph import repair_legacy_provenance
+    legacy_overrides = repair_legacy_overrides(root)
     graph = repair_legacy_provenance(root)
     from engine.extractor.engine import extract_all
     shadows = extract_all(root, config, force=True)
@@ -227,6 +231,7 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
         "claude": claude,
         "codex_adapter": codex,
         "graph": graph,
+        "legacy_overrides": legacy_overrides,
         "shadows": shadows,
         "registry": {"refreshed": refreshed, "skipped_dirty": dirty},
         "schema_validation": {"problems": [], "passed": True},

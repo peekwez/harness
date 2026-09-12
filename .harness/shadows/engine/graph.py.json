@@ -41,14 +41,16 @@
   "engine.load_backlog",
   "engine.load_decisions",
   "engine.now_iso",
+  "engine.overrides.canonical_target",
   "engine.read_jsonl",
   "engine.registry.load_registry",
   "engine.sha256_text",
   "pathlib.Path"
  ],
- "import_resolution_hash": "sha256:61195e50b26828540887efa70a7ed62d3061c695c6612cb47ef320d742f7e49f",
+ "import_resolution_hash": "sha256:72c9add4e68660dda78749434fb34aa715a80c368e55d450761d741e530a7460",
  "imports": [
   "engine",
+  "engine.overrides",
   "engine.registry",
   "json",
   "pathlib",
@@ -56,7 +58,7 @@
  ],
  "language": "python",
  "module_id": "engine.graph",
- "source_hash": "sha256:092e7ce814c876395b44df46252a32f140f6687ebec8cd7464358bdd34054d39",
+ "source_hash": "sha256:ce3ef278478a6fa6f47be5f4a0c9231fccc67c68f37abd745b00f70e6ee4e5f0",
  "source_path": "engine/graph.py",
  "symbols": [
   {
@@ -148,7 +150,7 @@
    "visibility": "private"
   },
   {
-   "doc": "An exception only authorizes its named rule and target namespace.",
+   "doc": "Resolve target spelling while retaining the rule and namespace scope.",
    "kind": "function",
    "name": "override_targets",
    "signature": "def override_targets(root, slice_id, rule_ref, kinds) -> set",
@@ -164,8 +166,8 @@
    "name": "record_dependency_snapshot",
    "signature": "def record_dependency_snapshot(root, slice_id, uses, files, commit=None)",
    "span": [
-    105,
-    106
+    114,
+    115
    ],
    "visibility": "public"
   },
@@ -175,8 +177,8 @@
    "name": "slice_provenance_requirements",
    "signature": "def slice_provenance_requirements(root, slice_id, files, *, governance=True)",
    "span": [
-    133,
-    134
+    142,
+    143
    ],
    "visibility": "public"
   },
@@ -186,8 +188,8 @@
    "name": "require",
    "signature": "def require(kind, source, target)",
    "span": [
-    154,
-    155
+    163,
+    164
    ],
    "visibility": "public"
   },
@@ -197,8 +199,8 @@
    "name": "record_slice_provenance",
    "signature": "def record_slice_provenance(root, slice_id, commit, files, *, governance=True)",
    "span": [
-    180,
-    181
+    189,
+    190
    ],
    "visibility": "public"
   },
@@ -208,8 +210,8 @@
    "name": "add",
    "signature": "def add(kind, frm, to)",
    "span": [
-    188,
-    189
+    197,
+    198
    ],
    "visibility": "public"
   },
@@ -219,8 +221,8 @@
    "name": "repair_legacy_provenance",
    "signature": "def repair_legacy_provenance(root)",
    "span": [
-    202,
-    203
+    211,
+    212
    ],
    "visibility": "public"
   },
@@ -230,8 +232,8 @@
    "name": "provenance_gaps",
    "signature": "def provenance_gaps(root, sl)",
    "span": [
-    248,
-    249
+    257,
+    258
    ],
    "visibility": "public"
   },
@@ -241,8 +243,8 @@
    "name": "uses_vs_declares",
    "signature": "def uses_vs_declares(root, slice_id: str) -> dict",
    "span": [
-    280,
-    281
+    289,
+    290
    ],
    "visibility": "public"
   },
@@ -252,8 +254,8 @@
    "name": "_git",
    "signature": "def _git(root, *args, check=True) -> str",
    "span": [
-    304,
-    305
+    313,
+    314
    ],
    "visibility": "private"
   },
@@ -263,8 +265,8 @@
    "name": "_note_payloads",
    "signature": "def _note_payloads(body: str) -> list",
    "span": [
-    312,
-    313
+    321,
+    322
    ],
    "visibility": "private"
   },
@@ -274,8 +276,8 @@
    "name": "notes_log_path",
    "signature": "def notes_log_path(root) -> Path",
    "span": [
-    323,
-    324
+    332,
+    333
    ],
    "visibility": "public"
   },
@@ -285,8 +287,8 @@
    "name": "resolve_commit",
    "signature": "def resolve_commit(root, commit: str) -> str",
    "span": [
-    328,
-    329
+    337,
+    338
    ],
    "visibility": "public"
   },
@@ -296,8 +298,8 @@
    "name": "tree_hash",
    "signature": "def tree_hash(root, commit: str)",
    "span": [
-    354,
-    355
+    363,
+    364
    ],
    "visibility": "public"
   },
@@ -307,8 +309,8 @@
    "name": "source_key",
    "signature": "def source_key(root, commit: str)",
    "span": [
-    360,
-    361
+    369,
+    370
    ],
    "visibility": "public"
   },
@@ -318,8 +320,8 @@
    "name": "record_tree",
    "signature": "def record_tree(root, slice_id: str, commit: str) -> dict",
    "span": [
-    385,
-    386
+    394,
+    395
    ],
    "visibility": "public"
   },
@@ -329,8 +331,8 @@
    "name": "notes_log",
    "signature": "def notes_log(root, slice_id=None) -> list",
    "span": [
-    403,
-    404
+    412,
+    413
    ],
    "visibility": "public"
   },
@@ -340,8 +342,8 @@
    "name": "write_note",
    "signature": "def write_note(root, commit, payload: dict) -> dict",
    "span": [
-    409,
-    410
+    418,
+    419
    ],
    "visibility": "public"
   },
@@ -351,8 +353,8 @@
    "name": "slice_note_payload",
    "signature": "def slice_note_payload(root, slice_id: str) -> dict",
    "span": [
-    440,
-    441
+    449,
+    450
    ],
    "visibility": "public"
   },
@@ -362,8 +364,8 @@
    "name": "last_note_payload",
    "signature": "def last_note_payload(root, slice_id: str) -> dict",
    "span": [
-    465,
-    466
+    474,
+    475
    ],
    "visibility": "public"
   },
@@ -373,8 +375,8 @@
    "name": "repoint_note",
    "signature": "def repoint_note(root, slice_id: str, commit: str) -> dict",
    "span": [
-    487,
-    488
+    496,
+    497
    ],
    "visibility": "public"
   },
@@ -384,8 +386,8 @@
    "name": "read_notes",
    "signature": "def read_notes(root) -> list",
    "span": [
-    509,
-    510
+    518,
+    519
    ],
    "visibility": "public"
   },
@@ -395,8 +397,8 @@
    "name": "orphaned_notes",
    "signature": "def orphaned_notes(root) -> list",
    "span": [
-    525,
-    526
+    534,
+    535
    ],
    "visibility": "public"
   },
@@ -406,8 +408,8 @@
    "name": "_walk_revs",
    "signature": "def _walk_revs(root, base=None, remote=None) -> list",
    "span": [
-    542,
-    543
+    551,
+    552
    ],
    "visibility": "private"
   },
@@ -417,8 +419,8 @@
    "name": "reachable_trees",
    "signature": "def reachable_trees(root, base=None, max_count=TREE_WALK_LIMIT, remote=None) -> dict",
    "span": [
-    567,
-    569
+    576,
+    578
    ],
    "visibility": "public"
   },
@@ -428,8 +430,8 @@
    "name": "reachable_source_keys",
    "signature": "def reachable_source_keys(root, base=None, max_count=SOURCE_WALK_LIMIT, remote=None) -> dict",
    "span": [
-    594,
-    596
+    603,
+    605
    ],
    "visibility": "public"
   },
@@ -439,8 +441,8 @@
    "name": "resolve_note",
    "signature": "def resolve_note(root, slice_id: str, trees: dict, source_keys=None)",
    "span": [
-    620,
-    621
+    629,
+    630
    ],
    "visibility": "public"
   }
