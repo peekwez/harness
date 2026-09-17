@@ -1,0 +1,17 @@
+{
+  "assessment": "concerns",
+  "summary": "The workflow preserves lead synthesis and human authority, handles imports and failures explicitly, prevents reciprocal review, and bounds review across sessions without adding an engine gate. One fingerprint lifecycle gap remains around ADR acceptance.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "medium",
+      "evidence": "coverage.md hashes entire authored files except stage-marker lines and allows coverage reuse only for editorial changes to drafts. adr-authoring/SKILL.md requires reviewing proposed ADRs before acceptance, while stage-converge.md specifies a status field in ADR frontmatter.",
+      "requirement": "Coverage must remain accurate through ADR acceptance and resumed stages without editing immutable accepted ADRs or exceeding the two-round limit.",
+      "consequence": "Changing a reviewed ADR's status from proposed to accepted changes its fingerprint. The text does not explain how to carry coverage through that expected transition, so a resume can either incorrectly reuse a mismatched fingerprint or unnecessarily classify an otherwise reviewed ADR as uncovered after the review budget is spent.",
+      "suggestion": "Explicitly allow a verified, status-only acceptance transition to retain coverage. Record the reviewed and accepted hashes and the exact metadata delta in the external coverage record; require ordinary material-change handling if any substantive content also changed. Keep the accepted ADR immutable.",
+      "uncertainty": "The supplied text does not show the acceptance implementation. This finding applies when acceptance updates the ADR's status field; if acceptance is recorded externally, document that mechanism instead."
+    }
+  ],
+  "alternative": "Keep the advisory two-round workflow and authored coverage records. Add the explicit acceptance-transition rule; neither a third local model pass nor a new engine hash command is necessary.",
+  "missing_context": []
+}

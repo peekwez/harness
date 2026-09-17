@@ -7,8 +7,24 @@ description: Write, record, or amend an architecture decision record (ADR). Use 
 
 Format: Nygard sections + machine frontmatter. Use `adr-template.md` in this
 skill directory (same schema as `templates/adr.md` scaffolded into repos).
-Files are `adr/NNN-kebab-title.md`, numbered sequentially, immutable once
-accepted — amendments create a new ADR with `supersedes: [NNN]`.
+Accepted files are `adr/NNN-kebab-title.md`, numbered sequentially and immutable;
+amendments create a new ADR with `supersedes: [NNN]`. Keep unaccepted drafts
+under `docs/design-reviews/drafts/`, outside the compiler's `adr/*.md` inputs.
+The compiler currently applies rows and `supersedes` even when status says
+`proposed`; putting a pending successor in `adr/` can retire the accepted ADR
+on another compile. Once acceptance is authorized under existing authority,
+set the accepted status and final relative links in the staging draft, then
+move it to its unused `adr/` path and compile. Immutability starts at that
+placement; there are no permitted post-placement status or link edits.
+
+Before accepting a new or superseding ADR, use `harness:design-review`
+(sibling `../design-review/SKILL.md`) for the other host's critique. Link
+the review record while the ADR is proposed; never edit an accepted ADR to
+attach it. A current architecture review that covers these exact inputs can
+be reused. During active architect convergence, batch proposed ADRs into its
+focused follow-up before acceptance; otherwise run the review here, even if
+the repo has a Phase-0 document. Reconcile findings under the existing human
+decision/delegation contract, record peer limitations and then compile.
 
 The split that matters:
 
@@ -23,8 +39,10 @@ Rules:
 
 - Every decision row needs `id, domain, question, answer` — the compiler
   fails loud on partial rows.
-- Never edit `.harness/decisions.jsonl` directly for phase0 rows; edit the
-  ADR frontmatter and re-run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile` (compiled form is derived).
+- Never edit `.harness/decisions.jsonl` directly for phase0 rows. Correct a
+  proposed draft before acceptance; for an accepted ADR, create/review its
+  successor instead of editing its frontmatter. After accepting the correction,
+  re-run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile` (compiled form is derived).
 - `[non-goal]` lines in the Implementation section become G3 boundaries.
   ENFORCEMENT INTENT MUST BE EXPLICIT: only backticked globs
   (`services/legacy/**`) or `forbid:`-marked paths (forbid: `infra/x.yaml`)
@@ -42,4 +60,6 @@ Rules:
   coerced to `other` with a warning (decision rows still match by the
   abstraction's id as a domain). Use `replaces: [logging, telemetry]` on an
   abstraction to prune scaffolded planned entries it merges away.
-- After writing an ADR, run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile` so gates see it this session.
+- After accepting and placing an ADR in `adr/`, run
+  `"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile` so gates see it this session.
+  Writing or reviewing an unaccepted draft is not a reason to compile it.

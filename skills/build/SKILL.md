@@ -40,6 +40,11 @@ Loop discipline — in order:
    them first; they must fail before you write implementation. Inside them,
    drive every unit with `superpowers:test-driven-development`: one failing
    unit test, watch it fail, minimal code to green, repeat.
+   Use `harness:verification` to map the actual ACs to implementation and
+   decisive checks before coding. A failing environment is not a feature
+   regression; a green mock-call assertion is not proof of the promised
+   behavior. Keep the map in the existing slice/review record and expose
+   observable outputs or narrow test seams where verification is difficult.
 2. **Root cause before retry.** On ANY red test or gate block, run
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
@@ -82,6 +87,11 @@ resolves (`close-slice --commit HEAD`), never `$(git rev-parse HEAD)`.
    Record what your review concluded so it becomes substrate:
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --record-finding ...` (and
    `--park` anything you are genuinely uncertain about).
+   The reviewer applies `harness:verification` to the ACs and current evidence.
+   For a gap, reproduce the expected/actual mismatch, distinguish product/test/
+   environment causes, fix the cause and rerun affected checks. Do not weaken
+   criteria to satisfy a test. A required unrun or inconclusive check leaves
+   completion unverified even when other checks are green.
 7. **Then close without asking**: run
    `superpowers:verification-before-completion` — run the acceptance command
    fresh and read its output — then commit and run close-slice. If it blocks,
@@ -92,7 +102,9 @@ resolves (`close-slice --commit HEAD`), never `$(git rev-parse HEAD)`.
    harness:reviewer agent with fresh context; IT records the fork verdict.
 8. **The ONLY reasons to stop and involve the human**: a parked review
    finding (adjudication is theirs by design), an author-gate gap (substrate
-   authoring is theirs), or a gate still blocking after
+   authoring is theirs), a required verification check still unavailable after
+   diagnosis and authorized in-scope repair (report NOT VERIFIED with the exact
+   missing prerequisite and next action), or a gate still blocking after
    `superpowers:systematic-debugging` named a root cause you cannot fix
    inside this slice's declared scope (log an attempt memory first, then
    report the finding verbatim).

@@ -19,7 +19,7 @@
  ],
  "language": "python",
  "module_id": "templates.claude-builder-sdk",
- "source_hash": "sha256:6dde8e4a911ea060930d9be7e988d88a9e0df946acf74a309442bdfd794f1ec0",
+ "source_hash": "sha256:3bde20b7861f986ec9b1a469e493345c01914256b1941f30e177ab613e345223",
  "source_path": "templates/claude-builder-sdk.py",
  "symbols": [
   {
@@ -39,8 +39,8 @@
    "name": "slice_closed",
    "signature": "def slice_closed(worktree: str, slice_id: str) -> bool",
    "span": [
-    80,
-    81
+    94,
+    95
    ],
    "visibility": "public"
   },
@@ -50,8 +50,8 @@
    "name": "main",
    "signature": "async def main() -> int",
    "span": [
-    95,
-    96
+    109,
+    110
    ],
    "visibility": "public"
   }

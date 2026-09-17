@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Spec-driven development with slice lifecycles, dependency gates, interface shadows and recoverable provenance.",
   "author": {"name": "Kwesi P Apponsah"},
   "license": "MIT",

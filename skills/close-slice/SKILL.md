@@ -21,6 +21,10 @@ from the wrong tree closes against the wrong substrate.
 
 0. Run `superpowers:verification-before-completion` first: run the
    acceptance command fresh and read its output. Evidence before assertions.
+   Apply `harness:verification` to the review's AC evidence map. Every required
+   criterion/check needs current PASS evidence; skipped, disabled, inconclusive
+   or stale checks are not done. Resolve gaps within authorized scope before
+   continuing. This is a completion-evidence obligation, not a new engine gate.
 1. Acceptance tests green (run the slice's `acceptance` paths).
 2. Commit the work (slice = commit boundary), keeping harness state OUT of
    the feature commit — the ceremony commits its own substrate mutations:

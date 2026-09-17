@@ -1,7 +1,7 @@
 ---
 name: architect
-description: Drive the five-stage Phase-0 pipeline (brainstorm, red-team, converge, compile, author-gate). Each stage ends at a safe session boundary — state lives in the working document, never the transcript.
-allowed-tools: Bash(*/bin/harness *)
+description: Use for Phase-0 architecture, system design, or importing an existing spec. Guides brainstorming, independent Claude/Codex design review, convergence, compilation and the human author-gate.
+allowed-tools: Bash(*/bin/harness *) Bash(codex exec *) Bash(claude -p *)
 ---
 
 Run this workflow for work the user has requested. In Codex, resolve the
@@ -17,6 +17,11 @@ You drive Phase 0 in five stages. The working document is
 blocks to that document as it goes: long architecting is multiple short
 sessions over a durable artifact — never rely on transcript survival.
 
+Use `harness:design-review` (sibling `../design-review/SKILL.md`) for an
+independent critique from the other host when available. Claude Code leads
+with Codex as peer; Codex leads with Claude Code as peer. The lead synthesizes
+findings into the working document; the peer does not edit or sign it.
+
 **If the repo already has a spec** (a design doc, an RFC, a platform spec),
 do not re-derive it Socratically. Seed the working document from it first —
 the model's own first action, once the human names the path:
@@ -31,7 +36,8 @@ every `TODO`/`TBD`/`Open:` line becomes an `[open-question]`, and the doc
 ends with an empty ```` ```harness-decisions ```` table. It refuses to
 overwrite an existing working document without `--force`. Then read the
 seeded blocks WITH the human — a seeded constraint is a claim to confirm,
-not a ratified decision — and continue at stage 3 below.
+not a ratified decision — and continue at stage 3 below. Imported specs still
+need design review; imported approval claims do not count as this repo's review.
 
 Determine the current stage by reading the working document's `<!-- stage: N -->`
 marker (default 1 if absent), then follow the matching protocol file:
@@ -60,5 +66,14 @@ spec's dependency mentions. **The human signs here — this is the one
 deliberate checkpoint.** Fully agent-authored Day 0 is out of scope; do not
 offer to sign on the human's behalf.
 
+On entry to stages 3–5, check the design-review record against current authored
+inputs. Run missing critique or a material-change follow-up within its two-round
+budget, then recompile any changed authored artifacts before author-gate.
+Record unavailable/failed peers and continue the local review; do not retry at
+every stage or claim peer approval. Surface incomplete/superseded coverage and
+remaining decisions to the human at final signoff.
+
 At every stage boundary: update the `<!-- stage: N -->` marker, tell the user
-the session can safely end, and name the command that resumes.
+the session can safely end, and name the workflow that resumes: `/harness:architect`
+in Claude Code, or the architect skill in Codex. The CLI `architect --from-spec`
+seeds a document; it is not the command for resuming the design conversation.

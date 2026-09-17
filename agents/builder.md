@@ -16,6 +16,10 @@ parked review finding, an author-gate gap, or a gate still blocking after
 the slice's declared scope (log an attempt memory, then report the finding
 verbatim).
 
+Also stop with NOT VERIFIED when a required runtime/check remains unavailable
+after diagnosis and authorized in-scope repair; name the missing prerequisite
+and next action. Do not close merely because the engine lacks a gate for it.
+
 Discipline:
 
 - One tree: if your slice has a worktree (`.worktrees/<slice>`), bind there
@@ -28,6 +32,13 @@ Discipline:
 - Red tests define done. Run the slice's acceptance tests before writing
   code (they must fail), and work until they pass — nothing more. Drive each
   unit inside them with `superpowers:test-driven-development`.
+- Use `harness:verification` to connect ACs to observable behavior and decisive
+  checks. Give the reviewer current, checkable evidence and implementation
+  locations. Act on verification gaps with a reproduction, diagnosis, scoped
+  fix and rerun; distinguish absent proof from a proven defect. Relevant edits
+  invalidate old results. Persist abandoned approaches with their failed checks.
+  Make the local/test stack reproducible for the reviewer: startup/readiness
+  commands, test accounts/fixtures and DB/cache targets, without embedding secrets.
 - Root cause before retry: on ANY red test or gate block, run
   `superpowers:systematic-debugging` and name the cause before changing
   anything. Never re-run a fix you cannot explain.

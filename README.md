@@ -333,7 +333,52 @@ already supports the review, so no wrapper is required. See the official
 [MCP server explanation](https://code.claude.com/docs/en/mcp#use-claude-code-as-an-mcp-server)
 and [programmatic usage](https://code.claude.com/docs/en/headless).
 
+Architecture uses the same two-host principle through
+[`design-review`](skills/design-review/SKILL.md). Claude Code leads with a
+fresh Codex critique; Codex leads with a fresh Claude Code critique, whenever
+the other provider is available. This runs during `/harness:architect`, for
+imported specs and before accepting new/superseding ADRs. Invoke
+`/harness:design-review` directly in Claude Code, or the `design-review` skill
+in Codex, for an existing design. These are skill workflows, not a new engine
+subcommand or an MCP service.
+
+The lead reconciles findings into the design and stores the reviewed inputs,
+peer response, dispositions and coverage in `docs/design-reviews/`. One initial
+critique and at most one focused follow-up bound the additional model cost;
+unchanged reviewed inputs reuse their record. Missing credentials, unavailable
+CLIs and failed reviews are reported, with local review continuing. This adds
+review tokens; its benefit is independent scrutiny before implementation,
+not a guaranteed token saving. Human signoff and deterministic gates retain
+their existing authority.
+
+Update the host plugin with `harness upgrade --plugin --host claude` or
+`--host codex`, then start a fresh session to load these skills. Upgrade also
+refreshes the vendored engine/templates; existing authored `AGENTS.md` files
+remain user-owned. Merge the design-review guidance from
+`templates/agents-md.md` when a project's custom working agreement needs it.
+
 ## The acceptance command (`acceptance.*`)
+
+The existing reviewer uses the [`verification` skill](skills/verification/SKILL.md)
+to judge whether work meets its acceptance criteria: criterion → implementation
+→ decisive check → observed evidence. It returns `VERIFIED` or `NOT VERIFIED`,
+per-criterion `PASS/FAIL/NOT_RUN/INCONCLUSIVE`, and reproducible next actions for
+gaps. Builders prepare that map before coding and use failures to diagnose,
+fix and rerun. No extra reviewer is required. Invoke `/harness:verification`
+in Claude Code or the `verification` skill in Codex for a standalone check.
+
+Tests passing is evidence only for what they actually assert on the tested
+revision. Skipped checks, disabled runners and unavailable services do not
+prove completion. The `harness verify` CLI checks substrate consistency and
+does not run application acceptance; the skill and the command have distinct
+purposes. Verification alone never closes a slice or deploys anything.
+
+Every verification pass discovers and starts/attaches to the local runtime.
+For apps this includes Docker/services, the real UI and browser/DevTools,
+console/network and application logs, scoped SQL extracts/stored-data checks,
+and cache contents/invalidation where present. Screenshots and data/log evidence
+are tied to the AC and the running revision. Missing connections remain gaps;
+only components genuinely absent from the project are not applicable.
 
 Acceptance is decided by a command, and that command is yours (ADR-002,
 D-012). Nothing configured means nothing changes: the engine runs the
@@ -632,6 +677,18 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.9.2 — reciprocal design review and acceptance verification
+
+- Add a shared `design-review` skill for Claude Code/Codex collaboration in
+  Phase 0, imported specs, resumed designs and proposed ADRs.
+- Persist structured peer findings and input coverage; reconcile decisions,
+  preserve accepted ADRs and limit reviews to an initial pass plus one follow-up.
+- Report unavailable/failed peers honestly, retain local review and human
+  authority, and ship the guidance to both host plugins and generated templates.
+- Add `verification` to the existing reviewer: trace ACs to implementation and
+  current evidence, distinguish missing proof from defects, and return actionable
+  feedback through the build/review/close loop.
 
 ### 0.9.1 — preserve legacy G5 approvals during upgrade
 

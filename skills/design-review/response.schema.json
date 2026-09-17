@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "assessment": {"type": "string", "enum": ["ready", "concerns", "insufficient-context"]},
+    "summary": {"type": "string"},
+    "findings": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+          "evidence": {"type": "string"},
+          "requirement": {"type": "string"},
+          "consequence": {"type": "string"},
+          "suggestion": {"type": "string"},
+          "uncertainty": {"type": "string"}
+        },
+        "required": ["id", "severity", "evidence", "requirement", "consequence", "suggestion", "uncertainty"]
+      }
+    },
+    "alternative": {"type": "string"},
+    "missing_context": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["assessment", "summary", "findings", "alternative", "missing_context"]
+}
