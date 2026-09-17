@@ -13,6 +13,16 @@ Start with `doctor --substrate` and `status --json`. Read the project's
 working agreement and `.harness/config.yaml`. The guides under `skills/`
 describe the method; use the CLI's `--help` for executable command syntax.
 
+For design, architecture, imported specs and new/superseding ADRs, follow
+`architect` and `design-review`: the current host leads and the other provider
+independently critiques when available. Persist findings and coverage; retain
+local review and human design authority when the peer is unavailable.
+
+For implementation review or "is it done?", use `verification` inside the
+existing reviewer. Trace ACs through production behavior and current observed
+checks, return explicit per-criterion evidence and actionable gaps. The engine's
+`verify` command checks substrate consistency, not application acceptance.
+
 - Use `upgrade --dry-run` to inspect local generated-file and schema updates.
   Use `upgrade --plugin --host codex --dry-run` to inspect a plugin update.
   Apply an upgrade when the user has requested it; report the resulting

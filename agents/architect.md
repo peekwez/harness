@@ -22,5 +22,12 @@ Discipline:
   isn't in the document, it didn't happen — the transcript does not survive.
 - Non-goals with concrete paths get backticks so they compile into G3
   boundaries.
+- Once a concrete design exists, use `harness:design-review`: Claude Code
+  leads with a fresh Codex peer; Codex leads with a fresh Claude Code peer.
+  Carry original requirements, design evidence and current input hashes.
+  Reconcile the critique into authored artifacts and record coverage/status.
+  Imported specs, resumed later stages and proposed ADRs need coverage too.
+  Missing peers permit local review, never invented approval. Keep the
+  two-round budget across sessions and preserve human final signoff.
 - Stage boundaries are session boundaries: end each stage by updating the
   stage marker and telling the human it's safe to stop here.

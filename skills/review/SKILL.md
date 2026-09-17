@@ -34,6 +34,21 @@ git diff <landing.base>...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN
 `main`) — a repo that ships from `develop` must not be reviewed against a
 branch its slices never leave.
 
+After Layer 0, run `harness:verification` (sibling
+`../verification/SKILL.md`) as part of this review. Independently trace the
+actual acceptance criteria through the implementation and observed check
+results. Report the AC evidence matrix and `VERIFIED|NOT VERIFIED` alongside
+the existing review verdict; do not claim done from green tests that miss an
+AC, skipped checks or stale results. The builder supplies checkable artifacts,
+never session memory as proof. Feed each gap back with a reproduction and
+next action. This is the reviewer's responsibility, not another agent layer.
+It includes starting/attaching to the local stack, a real browser/DevTools
+connection, and observing logs, persisted database state and cache effects
+where those components exist. Attach the resulting screenshots/extracts to
+the AC evidence map. Report an unavailable runtime connection as missing proof.
+Engine-blocking findings still require the existing `rule_ref` contract below;
+missing proof never licenses an invented rule or a fabricated passing result.
+
 Layers 1–3 — rubric-bound checks over those facts:
 
 - One narrow question per check; answer in the fixed schema
@@ -75,5 +90,6 @@ Layers 1–3 — rubric-bound checks over those facts:
   independent Claude reasoning service. A separate MCP wrapper around
   `claude -p` is optional and is not required for this workflow.
 
-Output: findings list (§5.2 schema), verdict, and any Layer-3 proposals.
+Output: AC verification matrix/verdict, findings list (§5.2 schema), review
+verdict, and any Layer-3 proposals.
 Blocking findings gate the merge; disputes park via `/harness:adjudicate`.

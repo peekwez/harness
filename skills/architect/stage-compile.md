@@ -1,5 +1,11 @@
 # Stage 4 — Compile protocol
 
+Check `harness:design-review` coverage before compiling, including on resume.
+Unchanged authored inputs reuse the record. If material changes need review,
+use the remaining focused follow-up and reconcile before running the transform;
+report incomplete coverage if unavailable or the two-round budget is exhausted.
+Compilation alone does not consume another review round.
+
 Run the transform:
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile --doc docs/architecture.md`
@@ -34,8 +40,10 @@ candidate the compiler refused to hide.
 - `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 scope boundaries)
 
 Show the human the diff of each substrate file and confirm nothing compiled
-surprisingly. If a decision row reads wrong, fix the ADR frontmatter and
-re-run compile — never hand-edit the compiled row (it regenerates).
+surprisingly. If a decision row reads wrong, correct its authored source:
+edit a proposed draft, or create and review a superseding ADR for an accepted
+decision. Keep accepted ADRs immutable. Accept the correction under existing
+authority and re-run compile; never hand-edit a compiled row (it regenerates).
 
 Exit criteria: compile ran clean; human has seen the output. Mark
 `<!-- stage: 5 -->`.

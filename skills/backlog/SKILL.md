@@ -34,6 +34,10 @@ the slice-decomposition skill):
   first — the config/telemetry/errors sequence orders before consumers.
 - `acceptance`: red acceptance-test stubs under `tests/slices/NNN_*.py`.
   Write the stubs (failing tests) as part of this skill.
+  Use `harness:verification` to turn each actual AC into an observable result
+  and a check that would detect it being broken. Name needed fixtures/services
+  and any required integration/browser check in the existing slice spec.
+  Stubs are starting points; they must become behavior assertions before done.
 - `predicted_files`: every file the slice is expected to touch.
 - `depends_on`: slice ordering derived from the registry dependency graph.
 

@@ -26,10 +26,13 @@ shell out) operates under the harness substrate. Read this before editing.
 
 A bound slice is yours to finish: implement → acceptance green → self-review
 → fix findings → close-slice, with no human in the loop. Stop only for:
-a parked (uncertain) review finding, an author-gate gap, or a gate that
+a parked (uncertain) review finding, an author-gate gap, a required verification
+check still unavailable after diagnosis and authorized in-scope repair, or a gate that
 still blocks after a root-cause investigation named a cause you cannot fix
 inside the slice's declared scope. Gate blocks name their own fix —
-apply it, don't ask. Closing a slice releases its binding; bind the next
+apply it, don't ask. An unavailable required check means NOT VERIFIED: report
+its exact missing prerequisite and next action; do not close just because no
+engine gate covers it. Closing a slice releases its binding; bind the next
 slice or run `harness slice --release` before Phase-0 edits.
 
 ## Precedence when superpowers is installed
@@ -66,7 +69,7 @@ Read that as these obligations:
 - **Do not stop for side effects.**
   `superpowers:subagent-driven-development`'s stop-for-side-effects rule does
   not apply inside a bound slice: the sandbox and the gates are the permission
-  layer, and declared work is already approved. Stop only for the three
+  layer, and declared work is already approved. Stop only for the
   reasons in the autonomy contract above.
 - **Finishing.** `superpowers:finishing-a-development-branch` is not used
   inside a bound slice. `close-slice` is the finish, and `merge-slice` (or the
@@ -78,7 +81,31 @@ Read that as these obligations:
   finding you receive — verify it against the substrate, then fix it or rebut
   it with technical reasoning.
 
-## Independent review with Codex
+## Independent design review with Claude Code and Codex
+
+For architecture, imported specs and new/superseding ADRs, use Harness's
+`design-review` skill before final acceptance. Claude Code leads with Codex
+as peer; Codex leads with Claude Code as peer. Give the fresh peer the original
+requirements and current design evidence, reconcile its critique, and record
+input hashes, findings, dispositions and coverage in `docs/design-reviews/`.
+Use the same record across architect stages and sessions; at most one initial
+critique plus one focused follow-up for material changes. A missing/failed
+peer means local review with a stated limitation, never a passing peer review.
+Peer advice does not sign the human author-gate or establish new gate rules.
+
+## Independent code review
+
+The existing reviewer runs Harness's `verification` skill: map each acceptance
+criterion to implementation, a decisive check and current observed evidence.
+Report `VERIFIED|NOT VERIFIED` plus per-AC status and concrete next actions.
+Green tests that miss an AC, skipped checks or results from older code cannot
+establish completion. Builders use this map before coding and the feedback
+to reproduce, diagnose, fix and rerun. `harness verify` checks substrate
+consistency; application behavior still needs its own acceptance evidence.
+Verification starts/attaches to the project's local services and browser/DevTools,
+exercises real flows, checks logs and resulting database/cache state, and links
+screenshots/query extracts to the criteria. Prove the running code is current.
+Unavailable services or tools remain evidence gaps; tests alone do not fill them.
 
 When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
 PATH), `/harness:review` also runs it as a **second Layer-3 advisory** over
@@ -88,7 +115,9 @@ findings against the substrate like any reviewer's, record the real ones
 with `harness review --record-finding …`, and block only with a `rule_ref` —
 Codex severities carry no blocking power of their own. Codex never auto-fixes
 inside a slice: the slice owner applies the fix so the gates see the edits.
-If Codex is not installed, skip it silently.
+In a Codex-led slice, use a fresh `claude -p` reviewer instead, following the
+`review` skill's read-only invocation and result checks. A missing or failed
+other-host review is recorded as such, never a pass.
 
 ## Workflow (in order)
 

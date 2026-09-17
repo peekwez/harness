@@ -82,7 +82,20 @@ loop is:
    until clean. Verify each finding against the substrate before applying it
    (superpowers:receiving-code-review); rebut the wrong ones with reasoning.
 6. Run superpowers:verification-before-completion — a fresh acceptance run
-   whose output you read — then commit everything (git add -A; git commit)
+   whose output you read. Apply harness:verification in the existing review:
+   map every AC to implementation, decisive checks and current observed evidence.
+   Start/attach the documented local test stack, confirm this worktree's code,
+   connect browser/DevTools, inspect console/network and service logs, query
+   scoped database/cache state and capture screenshots/extracts. Only components
+   absent from the project are not applicable. Missing tools, denied connections,
+   skipped checks, mock-only assertions or stale results never establish PASS.
+   If the skill is unavailable, these same obligations still apply. Return
+   VERIFIED only when every required AC/check has current PASS evidence.
+   For gaps, reproduce, diagnose, fix in scope and rerun; when a prerequisite
+   remains unavailable, report NOT VERIFIED and stop without closing, even
+   if CLI review has no engine block. Never mutate production, wipe shared
+   data, weaken permissions or edit an AC to manufacture green.
+   Only after verification, commit everything (git add -A; git commit)
    and close:
    "${HARNESS_BIN}" --root . close-slice --slice ${HARNESS_SLICE} --commit HEAD
    Use the symbolic HEAD — \$(...) substitution is never auto-approved.
@@ -99,7 +112,8 @@ the finish, and the dispatcher owns the merge); and
 superpowers:subagent-driven-development's stop-for-side-effects rule does not
 apply — the sandbox and the gates are the permission layer.
 
-Done means close-slice printed {"closed": true}. Nothing else counts.
+Done requires VERIFIED evidence and close-slice printing {"closed": true}.
+Do not invoke close-slice while required verification is missing.
 EOF
 )
 
