@@ -40,6 +40,10 @@ merge, never touch the main tree.
    "{harness_bin}" --root . resolve --slice {slice_id}
    and treat its injections as your Phase-1 context. Read this slice's row
    in .harness/backlog.jsonl (acceptance tests, predicted_files, declares).
+   Before implementation, read or complete the feature's verification design:
+   concrete happy/edge/failure/recovery inputs, independent expected outcomes,
+   planned live paths/coverage and runtime probes. Scope missing test seams,
+   instrumentation and environment prerequisites now, not after coding.
 2. Red first: run the slice's acceptance tests with the acceptance_python
    that resolve reported; they must fail before you implement. Drive every
    unit inside them with the superpowers:test-driven-development skill when
@@ -72,6 +76,12 @@ merge, never touch the main tree.
    backfills; probes must not mutate/repair state or derive expected from actual.
    Inspect probe code/imports and use storage-enforced read-only access. Missing
    provenance or contaminated evidence means NOT VERIFIED, not permission to close.
+   Follow a verification design prepared before implementation: happy path plus
+   relevant boundaries, races, retries, partial failures and recovery, each with
+   independent expected outcomes. Collect scenario-attributed block/branch coverage
+   from the live app and workers, joined to traces and independently probed effects.
+   Aggregate unit/probe coverage or unrelated hits do not prove that path produced
+   this result; missing instrumentation/attribution leaves NOT VERIFIED.
    If the skill is unavailable, these same obligations still apply. Return
    VERIFIED only when every required AC/check has current PASS evidence.
    For gaps, reproduce, diagnose, fix in scope and rerun; when a prerequisite

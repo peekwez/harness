@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Use when checking implementation against acceptance criteria (ACs), reviewing whether work is complete, investigating failed checks, or preparing a Harness slice for review or close.
+description: Use when designing how a feature will be verified, checking implementation against acceptance criteria (ACs), reviewing completion, investigating failed checks, or preparing a Harness slice for review or close.
 ---
 
 # Verify the work
@@ -10,6 +10,11 @@ part of the existing reviewer, not another mandatory agent or engine gate.
 Run it for requested work; verification alone does not authorize edits,
 closing a slice or deployment. In a build loop, return failures to the builder
 for repair and re-verification within the already authorized scope.
+
+During feature design, follow [design.md](design.md) to define happy-path and
+relevant edge/failure/recovery cases, independent oracles, live coverage and
+runtime observations before implementation. Reuse that matrix during verification;
+planned checks are not executed evidence.
 
 1. **Read the contract.** Read the actual ACs, slice/spec, applicable decisions
    and diff. Give each criterion a stable label. Preserve its meaning; do not
@@ -35,6 +40,10 @@ for repair and re-verification within the already authorized scope.
    The app must leave correlated write fingerprints tied to actual contents.
    Direct storage inserts/uploads, forged fingerprints or a probe that repairs
    state invalidate the evidence; they never prove the app performed a write.
+   For runtime ACs, follow [coverage.md](coverage.md): collect scenario-scoped
+   coverage from the running production code, including participating workers.
+   Link executed blocks/branches to the app action, trace and independently
+   checked result. Aggregate unit-test or probe coverage cannot establish this.
 4. **Run decisive checks.** Use the project's runner/configuration in the
    correct worktree. Run the smallest check first, then required regressions
    and integration/browser/visual checks. Testable
@@ -63,6 +72,7 @@ Verdict: VERIFIED | NOT VERIFIED
 Scope: slice/requirement source; worktree; revision + dirty state
 AC | implementation | check + expected result | observed evidence | status
 Write cases: case/oracle hash; app action + receipt; fingerprint; probe + result
+Execution: scenario/operation ID; process/build; covered/missed blocks + branches; trace
 Gaps: criterion, reproduction, expected/actual, cause confidence, next action
 ```
 

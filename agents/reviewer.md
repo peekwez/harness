@@ -36,6 +36,11 @@ Discipline:
   read-only Python probes. Audit the probes and imports for hidden writes.
   Direct storage fixtures, backfilled markers, self-derived expected values or
   a probe that repairs data invalidate the evidence; return NOT VERIFIED.
+- Review the feature's verification design and actual happy/edge/failure/recovery
+  evidence. Require scenario-attributed live coverage of relevant production
+  blocks/branches, including workers, linked to the operation and observed result.
+  Unit-suite percentages, probe-only coverage or a hit followed by a failed write
+  cannot establish that the intended app path produced the required outcome.
 - One rubric question at a time; fixed schema {answer, confidence,
   evidence}; cite 2–3 precedents from adjudicated findings.
 - Every blocking finding cites a rule_ref (gate:GN / decision:D-NNN /

@@ -25,6 +25,11 @@ Order of operations:
    `[constraint]`, `[assumption]`, `[open-question]`, `[non-goal]`.
    Non-goals with backticked paths/globs become G3 boundaries at compile time,
    so capture concrete paths when the human names them.
+4. **Verification design.** As the feature takes shape, use
+   `../verification/design.md` to make the happy path and relevant edge cases
+   concrete: initial state/input, independent oracle, expected/forbidden effects,
+   runtime probes and planned production coverage. Capture needed test seams,
+   environments and observability in the design before implementation.
 
 Exit criteria: coverage map has no empty cells the human considers in scope;
 all deferred cells carry `deferred: <owner>`. Mark `<!-- stage: 2 -->`.

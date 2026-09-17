@@ -19,6 +19,8 @@ do not require or manufacture a write to an unrelated store.
    Check health/readiness and dependent service connectivity; a listening port
    or an `up` container alone is insufficient. Record commands, endpoints and
    environment identity. Keep logs accessible while exercising behavior.
+   Enable scenario-scoped production coverage and trace attribution before the
+   action, including participating workers, per [coverage.md](coverage.md).
 2. Open the actual UI through the host's browser automation or browser/DevTools
    connection. Confirm the URL and current application build. Connect tools to
    inspect DOM/rendered state, console errors, network requests/responses and
@@ -54,7 +56,8 @@ For each affected AC, perform the real action and inspect its consequences:
   markers alone and verifier-created records/keys/objects cannot establish PASS.
 
 Store screenshots, scoped/sanitized query extracts, console/network evidence
-and log excerpts as artifacts linked to the AC map, with time and runtime
+and log excerpts, plus attributable production coverage/trace artifacts, as
+evidence linked to the AC map, with time and runtime
 identity. Exclude credentials/session tokens and unrelated user data. Compare
 expected and observed results; merely collecting screenshots or SQL output
 does not establish PASS.

@@ -92,6 +92,11 @@ Use the same record across architect stages and sessions; at most one initial
 critique plus one focused follow-up for material changes. A missing/failed
 peer means local review with a stated limitation, never a passing peer review.
 Peer advice does not sign the human author-gate or establish new gate rules.
+Design verification alongside the feature using the verification skill's
+`design.md`: happy-path and relevant boundary/failure/recovery scenarios,
+independent oracles, live coverage/trace attribution and real runtime observations.
+Include this matrix in peer review and carry its prerequisites into slice scope;
+undefined required verification methods prevent an implementation-ready claim.
 
 ## Independent code review
 
@@ -112,6 +117,10 @@ independent read-only Python probes. The app leaves correlated write fingerprint
 the verifier never backfills them. Direct SQL/Redis/blob writes cannot manufacture
 acceptance evidence. Keep cases, scripts, app receipts and probe results reproducible
 as described in the verification skill's `integrity.md` reference.
+Collect coverage from the running app/worker/browser code for each scenario,
+mapping relevant executed/missed blocks and branches to its trace/operation and
+verified result. Unit-suite percentages, coverage of probes or unrelated traffic
+do not establish the path; executed code alone does not prove correct effects.
 
 When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
 PATH), `/harness:review` also runs it as a **second Layer-3 advisory** over

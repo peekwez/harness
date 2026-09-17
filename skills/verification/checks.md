@@ -31,6 +31,7 @@ Choose evidence proportional to the claim:
 | Retry/idempotency | Repeated request against the real state transition; exactly one durable effect |
 | Persistence/migration | Disposable representative database; read after reconnect/restart; migration failure/recovery where required |
 | App writes across stores | Predeclared sample case, app-only seed/actions, correlated real DB/cache/blob contents and independent read-only Python probes (see [integrity.md](integrity.md)) |
+| Production path executed for this result | Scenario-scoped live block/branch coverage plus operation/trace linkage and independently asserted effects (see [coverage.md](coverage.md)) |
 | API/integration | Real boundary in the supported test environment; status, response and resulting state |
 | UI behavior/layout | Exercise required flow in browser; state assertions and rendered evidence for visual claims |
 | Static docs/config | Parse/lint/reference or generated-output inspection tied to the actual requirement |

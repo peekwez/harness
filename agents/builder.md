@@ -43,6 +43,11 @@ Discipline:
   app-interface seed driver and separate read-only Python storage probes. Expose
   write fingerprints in real application code and verify actual DB/cache/blob
   contents. Never manufacture evidence with direct storage writes or marker backfills.
+  Design verification before implementation: happy and relevant edge/failure/
+  recovery cases, independent oracles and test seams. Instrument the live app
+  and workers for scenario-attributed block/branch coverage; link paths to the
+  same operation's independently checked effects. Follow verification/design.md
+  and coverage.md; unit/probe coverage is not live application evidence.
 - Root cause before retry: on ANY red test or gate block, run
   `superpowers:systematic-debugging` and name the cause before changing
   anything. Never re-run a fix you cannot explain.

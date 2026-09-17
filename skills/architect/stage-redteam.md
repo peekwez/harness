@@ -11,6 +11,11 @@ the missing peer. Never label a same-host fork as a cross-provider review.
 The red-team hunts: unstated assumptions, scale cliffs, security holes,
 silent-failure modes (the md-file-bug class: anything that no-ops instead of
 erroring when an artifact is missing — see the premortem skill's checklist).
+Review the feature's verification matrix using `../verification/design.md`.
+Challenge happy-path assumptions with concrete boundary, race, retry, partial
+failure and recovery cases. For each applicable risk, demand a reproducible
+trigger and independent observable oracle, including live production coverage
+and cross-store probes where relevant; a unit-test list is insufficient.
 
 Binding rule: **every risk raised must resolve into either a decision or an
 explicit `[accepted-risk]` block** in the working document, or an evidence-backed

@@ -5,6 +5,9 @@ known-answer case, perform it through the app, then independently probe the
 result. Harness supplies this workflow; the builder writes and the reviewer
 inspects/runs project-specific Python scripts with the real schema and clients.
 There is no universal database/Redis/blob adapter or new Harness CLI command.
+Follow [coverage.md](coverage.md) to record which production blocks/branches
+actually execute for the case. Correlate that execution with the app operation
+and independently probed effects; fingerprints alone do not prove a code path.
 
 ## Define the case before running it
 

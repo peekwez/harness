@@ -1,0 +1,1 @@
+{"artifacts_unchanged_after_refusal": 98, "fresh": {"context": "init-fresh", "executed_branch": [57, 65], "hit_line": 92, "missed_line": 62}, "repeat": {"context": "init-repeat", "executed_branch": [57, 58], "hit_line": 62, "missed_line": 92}, "source_sha256": "6faa2d2bbe1f266cdc0e4a32b2a17a3753b742df3989424c1dd02d6f6012d79d"}

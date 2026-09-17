@@ -49,6 +49,11 @@ Loop discipline — in order:
    the app. Build an app-only seed driver and independent read-only Python probes
    of actual DB/cache/blob effects, with app-produced write fingerprints; follow
    `verification/integrity.md`. Direct storage seeding cannot prove app behavior.
+   Follow the feature's verification design (`verification/design.md`), including
+   concrete happy and relevant edge/failure/recovery cases. Fill missing methods
+   before implementing. Collect live app/worker block and branch coverage for
+   each scenario and join it to trace IDs and independently checked outcomes;
+   aggregate test/probe coverage cannot prove which app path produced a result.
 2. **Root cause before retry.** On ANY red test or gate block, run
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
