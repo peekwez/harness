@@ -106,6 +106,12 @@ Verification starts/attaches to the project's local services and browser/DevTool
 exercises real flows, checks logs and resulting database/cache state, and links
 screenshots/query extracts to the criteria. Prove the running code is current.
 Unavailable services or tools remain evidence gaps; tests alone do not fill them.
+For writes, freeze known sample inputs/expected outcomes before execution, seed
+through the app's real interfaces and inspect actual DB/cache/blob contents with
+independent read-only Python probes. The app leaves correlated write fingerprints;
+the verifier never backfills them. Direct SQL/Redis/blob writes cannot manufacture
+acceptance evidence. Keep cases, scripts, app receipts and probe results reproducible
+as described in the verification skill's `integrity.md` reference.
 
 When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
 PATH), `/harness:review` also runs it as a **second Layer-3 advisory** over

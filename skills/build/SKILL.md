@@ -45,6 +45,10 @@ Loop discipline — in order:
    regression; a green mock-call assertion is not proof of the promised
    behavior. Keep the map in the existing slice/review record and expose
    observable outputs or narrow test seams where verification is difficult.
+   For state changes, define sample inputs and expected outcomes before running
+   the app. Build an app-only seed driver and independent read-only Python probes
+   of actual DB/cache/blob effects, with app-produced write fingerprints; follow
+   `verification/integrity.md`. Direct storage seeding cannot prove app behavior.
 2. **Root cause before retry.** On ANY red test or gate block, run
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.

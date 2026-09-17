@@ -39,6 +39,10 @@ Discipline:
   invalidate old results. Persist abandoned approaches with their failed checks.
   Make the local/test stack reproducible for the reviewer: startup/readiness
   commands, test accounts/fixtures and DB/cache targets, without embedding secrets.
+  For state-changing ACs, prepare known sample inputs/expected outcomes, an
+  app-interface seed driver and separate read-only Python storage probes. Expose
+  write fingerprints in real application code and verify actual DB/cache/blob
+  contents. Never manufacture evidence with direct storage writes or marker backfills.
 - Root cause before retry: on ANY red test or gate block, run
   `superpowers:systematic-debugging` and name the cause before changing
   anything. Never re-run a fix you cannot explain.

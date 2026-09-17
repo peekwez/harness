@@ -65,6 +65,13 @@ merge, never touch the main tree.
    scoped database/cache state and capture screenshots/extracts. Only components
    absent from the project are not applicable. Missing tools, denied connections,
    skipped checks, mock-only assertions or stale results never establish PASS.
+   For writes, freeze known inputs/expected outcomes before execution; seed through
+   the app's real interfaces, then run separate read-only Python DB/cache/blob
+   probes. Require app-produced fingerprints linked to actual content/version.
+   Never fabricate expected outputs via SQL, Redis, blob uploads or marker
+   backfills; probes must not mutate/repair state or derive expected from actual.
+   Inspect probe code/imports and use storage-enforced read-only access. Missing
+   provenance or contaminated evidence means NOT VERIFIED, not permission to close.
    If the skill is unavailable, these same obligations still apply. Return
    VERIFIED only when every required AC/check has current PASS evidence.
    For gaps, reproduce, diagnose, fix in scope and rerun; when a prerequisite

@@ -29,6 +29,12 @@ for repair and re-verification within the already authorized scope.
    cache behavior; capture screenshots and relevant extracts. A component
    absent from the project is explicitly not applicable, with evidence;
    a component you cannot start/connect to is an outstanding verification gap.
+   For state-changing behavior, follow [integrity.md](integrity.md): declare
+   sample inputs and expected results before execution, seed through the app,
+   then run independent read-only Python probes of database/cache/blob effects.
+   The app must leave correlated write fingerprints tied to actual contents.
+   Direct storage inserts/uploads, forged fingerprints or a probe that repairs
+   state invalidate the evidence; they never prove the app performed a write.
 4. **Run decisive checks.** Use the project's runner/configuration in the
    correct worktree. Run the smallest check first, then required regressions
    and integration/browser/visual checks. Testable
@@ -56,6 +62,7 @@ Output this compact result in the existing review/PR record:
 Verdict: VERIFIED | NOT VERIFIED
 Scope: slice/requirement source; worktree; revision + dirty state
 AC | implementation | check + expected result | observed evidence | status
+Write cases: case/oracle hash; app action + receipt; fingerprint; probe + result
 Gaps: criterion, reproduction, expected/actual, cause confidence, next action
 ```
 
