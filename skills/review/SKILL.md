@@ -46,6 +46,10 @@ It includes starting/attaching to the local stack, a real browser/DevTools
 connection, and observing logs, persisted database state and cache effects
 where those components exist. Attach the resulting screenshots/extracts to
 the AC evidence map. Report an unavailable runtime connection as missing proof.
+For writes, follow `../verification/integrity.md`: a frozen known-answer case,
+app-only setup/actions, real DB/cache/blob fingerprints and content checks,
+and independently reviewed read-only Python probes. Verifier-created outputs
+or a probe that repairs state invalidate that run; they cannot establish PASS.
 Engine-blocking findings still require the existing `rule_ref` contract below;
 missing proof never licenses an invented rule or a fabricated passing result.
 

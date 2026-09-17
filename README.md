@@ -380,6 +380,16 @@ and cache contents/invalidation where present. Screenshots and data/log evidence
 are tied to the AC and the running revision. Missing connections remain gaps;
 only components genuinely absent from the project are not applicable.
 
+For state-changing ACs, [app-write integrity verification](skills/verification/integrity.md)
+defines known sample inputs and expected results before execution. Agents seed
+through the application's UI/API/import/CLI, then run project-specific read-only
+Python probes against the actual database, cache and blob store. The app's normal
+write path supplies correlated operation/entity IDs, versions or content digests;
+probes check real contents and required effects, not just marker existence.
+Direct SQL/Redis/blob writes cannot manufacture proof of app behavior. Probes
+must not repair state or copy observed values into the expected result. Cases,
+scripts, receipts and evidence stay reproducible in the consuming project.
+
 Acceptance is decided by a command, and that command is yours (ADR-002,
 D-012). Nothing configured means nothing changes: the engine runs the
 historical `<python> -m pytest <paths> -q` with the project's own venv
@@ -677,6 +687,15 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.9.3 — app-seeded integrity verification
+
+- Require pre-action known-answer cases, app-interface seeding and independent
+  read-only Python probes for state-changing acceptance criteria.
+- Trace app-produced write fingerprints through real database/cache/blob contents;
+  reject fabricated storage outputs, self-derived expectations and mutating probes.
+- Carry the evidence requirements through builders, reviewers, close and headless
+  templates; missing or contaminated evidence leaves the work NOT VERIFIED.
 
 ### 0.9.2 — reciprocal design review and acceptance verification
 

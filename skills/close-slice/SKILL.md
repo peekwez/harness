@@ -25,6 +25,9 @@ from the wrong tree closes against the wrong substrate.
    criterion/check needs current PASS evidence; skipped, disabled, inconclusive
    or stale checks are not done. Resolve gaps within authorized scope before
    continuing. This is a completion-evidence obligation, not a new engine gate.
+   State-changing ACs also need the pre-action case, app receipts and independent
+   read-only DB/cache/blob probe results. Directly seeded outputs and forged
+   write fingerprints are invalid evidence, even when the tests read them back.
 1. Acceptance tests green (run the slice's `acceptance` paths).
 2. Commit the work (slice = commit boundary), keeping harness state OUT of
    the feature commit — the ceremony commits its own substrate mutations:

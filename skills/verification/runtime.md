@@ -3,10 +3,13 @@
 Do this on every verification pass. Unit tests and source inspection accompany
 live verification; they do not replace it. Discover the runtime from the
 project's README, working agreement, Compose files, scripts and configuration.
-Record which services, UI, database and caches exist and which ACs use them.
+Record which services, UI, database, caches and blob stores exist and which ACs use them.
 Only a component actually absent from the project is `not applicable`, with
 the discovery evidence. Missing credentials/tools or a failed connection is
 `NOT_RUN`/`INCONCLUSIVE`, not `not applicable` or PASS.
+This project-level discovery is separate from an AC's expected effects: a store
+may exist without participating in a particular operation. Record that distinction;
+do not require or manufacture a write to an unrelated store.
 
 ## Start and connect
 
@@ -22,11 +25,12 @@ the discovery evidence. Missing credentials/tools or a failed connection is
    relevant browser storage. Screenshots alone do not prove API or state changes.
    If tooling lacks a needed capability, report that specific evidence gap;
    do not describe an imagined browser run.
-3. Connect to the disposable/local test database and cache using the project's
-   client, CLI or connector. Confirm the target database/schema/cache namespace
-   before queries. Scope fixtures and actions to the AC. Use existing test
-   accounts/data; no production mutation, blanket cache flush, volume deletion
-   or unrelated service shutdown to make a check green.
+3. Connect read-only probes to the disposable/local test database, cache and
+   blob store. Confirm the target database/schema/cache namespace/bucket before
+   queries. Seed scenario data through the app and preserve its write provenance,
+   following [integrity.md](integrity.md). Existing accounts may authenticate the
+   scenario; existing rows/keys/objects do not prove its writes. No production
+   mutation, blanket cache flush, volume deletion or unrelated service shutdown.
 
 ## Follow the effect through the stack
 
@@ -44,6 +48,10 @@ For each affected AC, perform the real action and inspect its consequences:
   mutation/invalidation or expiry when relevant. Compare with backing storage;
   a cached response can hide a failed write or stale data. Avoid sleeps when
   a controlled clock or polling on an explicit condition is available.
+- **Blob:** retrieve the app-written object, verify its bytes/digest, size and
+  version/metadata, and correlate it with the database reference and operation.
+  Check through independent read-only Python probes against the pre-action case;
+  markers alone and verifier-created records/keys/objects cannot establish PASS.
 
 Store screenshots, scoped/sanitized query extracts, console/network evidence
 and log excerpts as artifacts linked to the AC map, with time and runtime
