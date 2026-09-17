@@ -13,6 +13,8 @@ with identical design content reuses coverage. Never edit it after placement.
 
 Record the exact authored input set: working design or proposed ADR, relevant
 original spec/requirements, existing ADRs/decision sources and contracts.
+Include linked verification designs/matrices; changes to their oracles, scenario
+scope or instrumentation are material design changes, not editorial-only edits.
 Use repo-relative paths plus SHA-256 computed with the exact command below.
 Include the packet hash too; it identifies what was sent, not the cache key.
 Hash once before sending and recheck after the peer returns to catch concurrent

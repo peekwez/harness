@@ -50,6 +50,10 @@ For writes, follow `../verification/integrity.md`: a frozen known-answer case,
 app-only setup/actions, real DB/cache/blob fingerprints and content checks,
 and independently reviewed read-only Python probes. Verifier-created outputs
 or a probe that repairs state invalidate that run; they cannot establish PASS.
+Review the design's happy/edge/failure/recovery matrix, then require live
+scenario-attributed production coverage per `../verification/coverage.md`.
+Correlate covered/missed blocks and branches with the operation and independently
+verified effects; unit-suite percentages and probe-only coverage are insufficient.
 Engine-blocking findings still require the existing `rule_ref` contract below;
 missing proof never licenses an invented rule or a fabricated passing result.
 

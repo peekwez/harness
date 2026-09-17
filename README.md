@@ -390,6 +390,19 @@ Direct SQL/Redis/blob writes cannot manufacture proof of app behavior. Probes
 must not repair state or copy observed values into the expected result. Cases,
 scripts, receipts and evidence stay reproducible in the consuming project.
 
+[Verification is designed with the feature](skills/verification/design.md),
+before implementation: concrete happy-path and relevant boundary, concurrency,
+failure and recovery scenarios, each with an independent oracle and planned
+runtime observations. Architecture and peer review challenge the matrix; backlog
+and builders carry its test seams, instrumentation and probe work into scope.
+
+[Live execution coverage](skills/verification/coverage.md) connects each scenario
+to production blocks/branches in the running app and workers, then joins that
+execution to trace/operation identity and independently verified effects. Unit-suite
+percentages and probe-only coverage cannot establish which code produced a result.
+Coverage proves execution, not correct output or a successful commit; both types
+of evidence are required. Missing instrumentation or attribution stays a gap.
+
 Acceptance is decided by a command, and that command is yours (ADR-002,
 D-012). Nothing configured means nothing changes: the engine runs the
 historical `<python> -m pytest <paths> -q` with the project's own venv
@@ -687,6 +700,15 @@ this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
 defined in `docs/SPEC.md`.
 
 ## Changelog
+
+### 0.9.4 — verification design and live execution coverage
+
+- Design happy-path and relevant edge/failure/recovery verification with features;
+  review independent oracles and runtime observation plans before implementation.
+- Require scenario-attributed coverage of live production paths and branches,
+  including workers, correlated with the action and independently verified result.
+- Reject aggregate/probe-only/stale coverage as execution evidence and preserve
+  missing instrumentation as a verification gap throughout the build/close workflow.
 
 ### 0.9.3 — app-seeded integrity verification
 

@@ -34,6 +34,10 @@ the slice-decomposition skill):
   first — the config/telemetry/errors sequence orders before consumers.
 - `acceptance`: red acceptance-test stubs under `tests/slices/NNN_*.py`.
   Write the stubs (failing tests) as part of this skill.
+  Carry the design's happy/edge/failure/recovery matrix into slice scope via
+  `verification/design.md`; fill undefined required methods before implementation.
+  Include real app instrumentation, scenario coverage/trace attribution, test
+  seams and environment/probe dependencies, not only unit-test files.
   Use `harness:verification` to turn each actual AC into an observable result
   and a check that would detect it being broken. Name needed fixtures/services
   and any required integration/browser check in the existing slice spec.

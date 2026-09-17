@@ -28,6 +28,9 @@ from the wrong tree closes against the wrong substrate.
    State-changing ACs also need the pre-action case, app receipts and independent
    read-only DB/cache/blob probe results. Directly seeded outputs and forged
    write fingerprints are invalid evidence, even when the tests read them back.
+   Runtime ACs also require scenario-attributed production block/branch coverage
+   linked to the same app action and result, including the design's required
+   edge/failure/recovery cases. Missing instrumentation remains NOT VERIFIED.
 1. Acceptance tests green (run the slice's `acceptance` paths).
 2. Commit the work (slice = commit boundary), keeping harness state OUT of
    the feature commit — the ceremony commits its own substrate mutations:

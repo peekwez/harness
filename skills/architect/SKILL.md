@@ -21,6 +21,10 @@ Use `harness:design-review` (sibling `../design-review/SKILL.md`) for an
 independent critique from the other host when available. Claude Code leads
 with Codex as peer; Codex leads with Claude Code as peer. The lead synthesizes
 findings into the working document; the peer does not edit or sign it.
+Design verification alongside each feature using `../verification/design.md`:
+happy-path and relevant edge/failure/recovery scenarios, independent expected
+results, real runtime checks and planned code-coverage/trace attribution. Keep
+the matrix in the working design and include it in the peer's input packet.
 
 **If the repo already has a spec** (a design doc, an RFC, a platform spec),
 do not re-derive it Socratically. Seed the working document from it first —
@@ -67,7 +71,10 @@ deliberate checkpoint.** Fully agent-authored Day 0 is out of scope; do not
 offer to sign on the human's behalf.
 
 On entry to stages 3–5, check the design-review record against current authored
-inputs. Run missing critique or a material-change follow-up within its two-round
+inputs and check the verification design for gaps, including imported specs.
+Undefined required verification methods prevent an implementation-ready claim;
+the engine author-gate does not mechanically validate this matrix.
+Run missing critique or a material-change follow-up within its two-round
 budget, then recompile any changed authored artifacts before author-gate.
 Record unavailable/failed peers and continue the local review; do not retry at
 every stage or claim peer approval. Surface incomplete/superseded coverage and

@@ -22,6 +22,11 @@ Discipline:
   isn't in the document, it didn't happen — the transcript does not survive.
 - Non-goals with concrete paths get backticks so they compile into G3
   boundaries.
+- Design verification with the feature using `verification/design.md`: concrete
+  happy, boundary, failure and recovery cases; independent expected outcomes;
+  live production coverage/trace attribution; runtime and read-only storage checks.
+  Persist the matrix in the design, challenge it in red-team/peer review and
+  carry prerequisites into slice scope. Unit tests alone do not cover the design.
 - Once a concrete design exists, use `harness:design-review`: Claude Code
   leads with a fresh Codex peer; Codex leads with a fresh Claude Code peer.
   Carry original requirements, design evidence and current input hashes.

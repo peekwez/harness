@@ -7,6 +7,9 @@ For imported specs, also perform the stage-2 local premortem before converging:
 hunt silent failures and inherited assumptions, and resolve every real risk
 into a decision or `[accepted-risk]` block (or rebut it with evidence). The
 stage-3 import shortcut skips elicitation, not this risk-resolution obligation.
+Imports and resumed designs also need the AC/scenario verification matrix from
+`../verification/design.md`. Resolve undefined required checks before declaring
+implementation readiness; do not treat planned tests as executed PASS evidence.
 
 For each `[open-question]` in the working document:
 

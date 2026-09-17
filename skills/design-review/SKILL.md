@@ -20,7 +20,10 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    with only editorial changes need a recorded delta, not another critique.
 2. **Packet.** Provide the original requirements, constraints/non-goals,
    proposed design, alternatives/tradeoffs, relevant decisions/contracts and
-   open questions. Include exact current excerpts with source paths and
+   open questions. Include its verification matrix from
+   `../verification/design.md`: happy-path and edge/failure/recovery cases,
+   independent oracles, live coverage/trace plan and runtime observations.
+   Include exact current excerpts with source paths and
    content hashes; paths alone do not supply context. Use
    [coverage.md](coverage.md) for fingerprints and durable records. Prefer
    interfaces and
@@ -30,7 +33,9 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    evidence (path/section), affected requirement, consequence, proposed fix
    and uncertainty. Check assumptions, failure/recovery, security, migrations,
    concurrency, operability and unnecessary complexity; request a simpler
-   alternative if one meets the requirements. Require
+   alternative if one meets the requirements. Challenge whether the planned
+   checks can detect wrong paths, partial writes, stale state and failed recovery;
+   identify missing scenarios and observability before implementation. Require
    [response.schema.json](response.schema.json), no edits or delegation.
 4. **Reconcile.** Verify each finding against the packet. Record accepted,
    rebutted or deferred, with rationale and an owner for deferrals. Apply
