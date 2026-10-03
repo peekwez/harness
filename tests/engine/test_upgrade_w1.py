@@ -130,3 +130,42 @@ def test_flow_style_resolver_is_removed_through_yaml(tmp_path):
     out = upgrade_010.run(root, upgrade_010.always_yes, dry_run=False)
     assert _w1(out) == ["w1.drop-resolver-config"]
     assert "resolver" not in yaml.safe_load(cfg.read_text())
+
+
+INDENTLESS = ("schema: 1\nresolver:\n  budget_tokens: 8000\n  ranking:\n"
+              "  - direct_deps\n  - one_hop_types\n  degrade: x\ngates: {}\n")
+
+
+def test_indentless_list_is_stripped_whole():
+    from engine.upgrade_w1 import _strip_resolver_keys
+    assert yaml.safe_load(_strip_resolver_keys(INDENTLESS)) == {
+        "schema": 1, "gates": {}}
+
+
+def test_backstop_falls_back_to_yaml_when_the_line_stripper_corrupts(
+        tmp_path, monkeypatch):
+    from engine import upgrade_w1
+    root = build_toy_repo(tmp_path / "bs")
+    cfg = root / ".harness" / "config.yaml"
+    cfg.write_text(INDENTLESS)
+    monkeypatch.setattr(upgrade_w1, "_strip_resolver_keys",
+                        lambda text: text.replace("  budget_tokens: 8000\n", ""))
+    upgrade_w1._apply_resolver(root, lambda q: True)
+    assert yaml.safe_load(cfg.read_text()) == {"schema": 1, "gates": {}}
+
+
+def test_untrack_shadows_with_harness_root_in_a_subdirectory(tmp_path):
+    repo = tmp_path / "mono"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    sub = repo / "app"
+    shadows = sub / ".harness" / "shadows"
+    shadows.mkdir(parents=True)
+    (shadows / "a.json").write_text("{}\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "x")
+    from engine.upgrade_w1 import _apply_shadows
+    _apply_shadows(sub, lambda q: True)
+    assert not shadows.exists()
+    assert git(repo, "diff", "--cached", "--name-only").stdout.strip() == \
+        "app/.harness/shadows/a.json"

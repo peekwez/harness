@@ -3,6 +3,7 @@ steps 1, 5 and 8). Each step is idempotent: after `apply`, `describe`
 returns []."""
 from __future__ import annotations
 
+import copy
 import re
 import shutil
 import subprocess
@@ -43,8 +44,6 @@ def _apply_cache_ignore(root: Path, ask: Ask) -> list:
 
 # ------------------------------------------------------------ shadows
 def _tracked_shadows(root: Path) -> list:
-    if not (root / ".git").exists():
-        return []
     proc = _git(root, "ls-files", "--", SHADOWS_DIR)
     return [p for p in proc.stdout.splitlines() if p] if proc.returncode == 0 else []
 
@@ -152,7 +151,10 @@ def _strip_resolver_keys(text: str) -> str:
         kept, skip_indent = [], None
         for child in block:
             indent = len(child) - len(child.lstrip())
-            if skip_indent is not None and child.strip() and indent > skip_indent:
+            if (skip_indent is not None and child.strip()
+                    and (indent > skip_indent
+                         or (indent == skip_indent
+                             and child.lstrip().startswith("-")))):
                 continue                     # continuation of a removed key
             skip_indent = None
             m = re.match(r"^(\s+)([A-Za-z_][A-Za-z0-9_]*)\s*:", child)
@@ -181,15 +183,20 @@ def _apply_resolver(root: Path, ask: Ask) -> list:
     import yaml
     path = _config_path(root)
     before = _resolver_keys_in(_load_yaml(path.read_text()))
+    original = _load_yaml(path.read_text())
     text = _strip_resolver_keys(path.read_text())
     data = _load_yaml(text)
-    if _resolver_keys_in(data):
-        # flow style or an unusual layout: rewrite through YAML (comments go)
-        resolver = data["resolver"]
+    expected = copy.deepcopy(original)
+    if isinstance(expected.get("resolver"), dict):
         for key in RESOLVER_KEYS:
-            resolver.pop(key, None)
-        if not resolver:
-            data.pop("resolver")
+            expected["resolver"].pop(key, None)
+        if not expected["resolver"]:
+            expected.pop("resolver")
+    if data != expected:
+        data = expected
+        text = None
+    if text is None or _resolver_keys_in(data):
+        # flow style or an unusual layout: rewrite through YAML (comments go)
         text = yaml.safe_dump(data, sort_keys=False)
     path.write_text(text)
     return [f"removed resolver.{k} from .harness/config.yaml" for k in before]
