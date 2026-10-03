@@ -82,39 +82,81 @@ PROMOTE = re.compile(r"\bmemory\s+[\"']?promote\b")
 def needs_human(command: str):
     """The reason a command must go to the human, or None.
 
+    `harness memory promote` always asks. So does every other `harness memory`
+    subcommand but `changed`, and any spelling we cannot resolve (`pro${x}mote`,
+    `$'promote'`): the sub-word is read de-quoted and must equal `changed`.
+
     Args:
         command: The command line the host is asking about.
 
     Returns:
-        A reason string for `harness memory promote`, else None.
+        A reason string, else None.
     """
     raw = command or ""
-    # quoting and backslashes split a word without changing what the shell
-    # runs (`pro''mote`, `pro\mote`): test the de-quoted text too
     for text in (raw, re.sub(r"[\\'\"]", "", raw)):
-        if "harness" in text and PROMOTE.search(text):
-            return ("Permit rule: a human approves each harness memory "
-                    "promote. Shared memory holds only facts a human chose.")
+        if "harness" not in text:
+            continue
+        if PROMOTE.search(text):
+            return _PROMOTE_REASON
+        for m in re.finditer(r"\bmemory\b\s*(\S*)", text):
+            if m.group(1) != "changed":
+                return _PROMOTE_REASON
     return None
 
 
-_QUOTED = re.compile(r"\"(?:\\.|[^\"\\])*\"|'[^']*'")
-# redirects that cannot write a file: fd duplication and /dev/null
-_SAFE_REDIRECT = re.compile(
-    r"&?\d*>>?\s*/dev/null(?![\w./~-])|\d*>&\d+")
+_PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
+                   "and any harness memory command but `changed`. Shared "
+                   "memory holds only facts a human chose.")
+
+# A segment is auto-approved only when it is plain text: no quoting, expansion,
+# globbing, redirection or grouping. Pattern-matching shell syntax cannot be
+# made complete, so everything outside this alphabet goes to the human.
+_PLAIN = re.compile(r"^[A-Za-z0-9_./:=@%+,\s-]*$")
+_SAFE_REDIRECT_TOKENS = {"2>&1", "1>&2", "2>/dev/null", ">/dev/null",
+                         "&>/dev/null"}
+# literal engine spellings the skills document; the host leaves them as typed
+_PLUGIN_BIN = ("${CLAUDE_PLUGIN_ROOT}/bin/harness",)
 
 
-def has_file_redirect(segment: str) -> bool:
-    """True when a segment redirects output to anything but /dev/null or an fd.
+def is_plain_segment(seg: str, harness_bin=None) -> bool:
+    """True when a segment is plain text once its safe parts are removed.
 
     Args:
-        segment: One shell segment (already split on `&&`, `;`, `|`).
+        seg: One shell segment (split on `&&`, `||`, `;`, `|`, newline).
+        harness_bin: Absolute engine path, allowed as the head in any quoting.
 
     Returns:
-        Whether an output redirect (`>`, `>>`, `>|`, `&>`, `N>`) remains.
+        Whether nothing but [A-Za-z0-9_./:=@%+,-] and whitespace remains.
     """
-    bare = _SAFE_REDIRECT.sub(" ", _QUOTED.sub(" ", segment))
-    return ">" in bare
+    seg = seg.strip()
+    heads = list(_PLUGIN_BIN) + ([harness_bin] if harness_bin else [])
+    for h in heads:
+        for form in (f'"{h}"', f"'{h}'", h):
+            if seg.startswith(form):
+                seg = seg[len(form):] or " "
+                seg = "harness" + seg
+                break
+    tokens = [t for t in seg.split() if t not in _SAFE_REDIRECT_TOKENS]
+    return bool(_PLAIN.match(" ".join(tokens)))
+
+
+def _under_claude_dir(token: str) -> bool:
+    """True when a path token is `.claude` itself or inside `.claude/memory`."""
+    comps = [c for c in posixpath.normpath(token).casefold().split("/") if c]
+    for i, c in enumerate(comps):
+        if c == ".claude" and (i == len(comps) - 1
+                               or comps[i + 1] == "memory"):
+            return True
+    return False
+
+
+def _git_output_flag(parts: list) -> bool:
+    """True for `--output[=file]` or any unambiguous abbreviation of it."""
+    for tok in parts:
+        flag = tok.split("=", 1)[0]
+        if len(flag) >= 3 and flag.startswith("--") and "--output".startswith(flag):
+            return True
+    return False
 
 
 _REDIRECT_LEAD = re.compile(r"^[0-9]*[<>&|]+")
@@ -264,12 +306,17 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
         return False          # unbalanced quotes: not something to auto-approve
     if not parts:
         return True
-    if has_file_redirect(seg):
-        # `_SPLIT` ignores `>`, and the cwd is not ours to track: a file
-        # redirect behind ANY head can land in .claude/memory/shared
+    if not is_plain_segment(seg, harness_bin):
+        # quoting, expansion, globs and redirects can hide a write into
+        # .claude/memory/shared; the cwd is not ours to track
+        return False
+    if any(_under_claude_dir(t) for t in parts[1:] if not t.startswith("-")):
         return False
     head = parts[0]
-    if head in ("cd", "true", "echo", "ls", "pwd"):
+    if head == "cd":
+        return not any(c.casefold() == ".claude"
+                       for t in parts[1:] for c in t.split("/"))
+    if head in ("true", "echo", "ls", "pwd"):
         return True
     base = head.rsplit("/", 1)[-1]
     if base == "harness" or (harness_bin and head.strip('"\'') == harness_bin):
@@ -286,6 +333,8 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
         if landing and landing.get("mode") == "pr" \
                 and _config_escalation_parts(_strip_env(parts)):
             return False
+        if _git_output_flag(parts[1:]):
+            return False          # --output writes a file anywhere
         sub = next((p for p in parts[1:] if not p.startswith("-")), None)
         return sub in GIT_LOCAL and sub not in GIT_EGRESS
     return any(seg.startswith(pfx) for pfx in TEST_RUNNERS)

@@ -100,7 +100,6 @@ def test_file_redirects_are_never_auto_approved(command):
 @pytest.mark.parametrize("command", [
     "echo hi", "ls 2>/dev/null", "pytest -q 2>&1", "harness verify >/dev/null",
     "harness verify &>/dev/null", "echo x 1>&2", "pytest 2>&1 >/dev/null",
-    'git commit -m "a > b"',
 ])
 def test_harmless_redirects_stay_auto_approved(command):
     assert command_allowed(command, slice_id="s")[0] is True
@@ -114,3 +113,33 @@ def test_autonomy_profile_asks_before_promote():
     assert harness_allows
     for rule in harness_allows:
         assert rule.replace(":*)", " memory promote:*)") in perms["ask"]
+
+
+PROBES = ['echo "a" >x', "echo 'a'>x", 'harness verify <<< x', 'harness verify <<<"a>b"', 'harness verify | tee >(cat > f)', 'harness verify | tee .claude/memory/shared/a.md', 'harness verify>f', 'harness verify 3>f', 'harness verify >&out.txt', 'harness verify >&2x', 'echo x >&2x', "echo \\' > f \\'", "cd .claude/memory && echo \\' > shared/a.md \\'", "echo \\' > .claude/memory/sh*/a.md \\'", 'echo \\" > f \\"', 'harness verify "\\" > f \\""', 'echo a\\"b > f "c"', 'harness verify 2>/dev/null>f', 'harness verify >/dev/null2', 'harness verify &>>/dev/null', 'harness verify > /dev/null', 'harness verify 1>/dev/null 2>&1', 'harness verify <> f', 'git diff --output=.claude/memory/shared/x HEAD', 'cd .claude/memory && git diff --output=shared/a.md HEAD', 'cd .claude && git diff --output memory/shared/a.md HEAD', 'git diff --output=.claude/memory/{,shared}/a.md HEAD', 'git log --output=.claude/memory/s[h]ared/a.md', 'git mv a.md .claude/memory/s[h]ared', 'cd .claude/memory && git mv ../../a.md shared/', 'git diff --output=/tmp/r.diff main...HEAD', 'harness memory pro${x}mote --text x', 'harness memory ${P:-promote} --text x', "harness memory pro$'m'ote --text x", "harness memory $'promote' --text x", 'harness memory -- promote --text x', 'harness memory prom* --text x', 'harness memory\\ promote', 'harness   memory\tpromote --text x', 'harness memory promote', "harness memory 'promote'", 'HARNESS=1 /x/bin/harness memory promote', 'python3 -m engine.cli memory promote --text x', '/x/bin/harness --root . memory "pro"\'mo\'te']
+
+
+@pytest.mark.parametrize("command", PROBES)
+def test_review_probes_are_never_auto_approved(command):
+    decision, allow, _ = command_decision(command, slice_id="slice-042")
+    assert allow is False and decision != "allow"
+
+
+@pytest.mark.parametrize("command", [
+    "pytest -q tests/x.py 2>&1", "harness verify", "git status",
+    "harness memory changed --slice s1", "cd /repo && git diff HEAD",
+    "/plug/bin/harness close-slice --slice s1 --commit HEAD",
+    "${CLAUDE_PLUGIN_ROOT}/bin/harness verify",
+    '"${CLAUDE_PLUGIN_ROOT}/bin/harness" verify',
+    "git diff --stat HEAD", "python3 -m pytest tests/x.py -q",
+])
+def test_plain_commands_stay_auto_approved(command):
+    assert command_decision(command, slice_id="s1")[0] == "allow"
+
+
+@pytest.mark.parametrize("command", [
+    "harness memory compact", "harness memory", "git log --out=x.txt",
+    "cd .claude && git status", "cd ../.CLAUDE/memory",
+    "git -C .claude/memory status",
+])
+def test_other_memory_subcommands_and_claude_dir_are_not_auto_approved(command):
+    assert command_decision(command, slice_id="s1")[0] != "allow"

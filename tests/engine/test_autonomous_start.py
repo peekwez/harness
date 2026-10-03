@@ -140,12 +140,23 @@ def test_loop_commands_are_auto_allowed(toy):
                 f'"{PLUGIN_ROOT}/bin/harness" close-slice --slice slice-042',
                 "git add -A", "git status", "git commit -m x",
                 "git worktree add .worktrees/x -b slice/x",
-                "git add -A && git commit -m 'both segments allowed'"):
+                "git add -A && git commit -m both_segments_allowed"):
         proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd",
                             "tool_name": "Bash", "cwd": str(toy),
                             "tool_input": {"command": cmd}}, toy)
         assert out_of(proc).get("hookSpecificOutput", {}).get(
             "permissionDecision") == "allow", f"should not prompt: {cmd}"
+
+
+def test_quoted_or_expanded_commands_go_to_the_human(toy):
+    run_cli("start", "--slice", "slice-042", "--session", "cmd3", "--no-worktree",
+            root=toy)
+    proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd3",
+                        "tool_name": "Bash", "cwd": str(toy),
+                        "tool_input": {"command": "git commit -m 'two words'"}},
+                       toy)
+    assert out_of(proc).get("hookSpecificOutput", {}).get(
+        "permissionDecision") != "allow"
 
 
 def test_egress_and_unknown_commands_are_never_auto_allowed(toy):
