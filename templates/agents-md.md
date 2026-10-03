@@ -30,7 +30,7 @@ harness doctor                              # dependency preflight
 init -> architect -> author-gate            # Phase 0: a human signs
 backlog                                     # spec -> slices
 start -> build -> review -> close-slice     # one slice
-status / adjudicate / verify                # cost, disputes, CI
+status / adjudicate / verify                # cost, disputes (via harness skill), CI
 ```
 
 ## Pointers

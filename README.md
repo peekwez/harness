@@ -237,7 +237,7 @@ hand-editing it is a bug like any other derived file.
 /harness:close-slice slice-001  # commit + note, registry flips, memory
                        #   compacts, then merge-slice finishes the merge
 /harness:harness      # status view: slice metrics and gate outcomes
-/harness:review       # review; adjudicate.md resolves parked disputes
+/harness:harness      # also resolves parked disputes (adjudicate)
 ```
 
 ## Engine CLI (the portability boundary)

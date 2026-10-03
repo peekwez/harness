@@ -1,7 +1,7 @@
 # Adjudicate parked findings
 
-A human resolves parked findings in the main session, not in the forked
-reviewer. List the queue:
+A human resolves parked findings in the main session, through the `harness`
+skill. The forked reviewer never adjudicates. List the queue:
 
     "${CLAUDE_PLUGIN_ROOT}/bin/harness" adjudicate --list
 

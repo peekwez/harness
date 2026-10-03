@@ -23,6 +23,8 @@ disagreement is signal.
 
 Reference files in this skill: `rubrics.md` (the four layers and the
 findings contract) and `adjudicate.md` (how a human resolves parks).
+Adjudication happens in the main session through the `harness` skill, never
+inside this forked review.
 
 Layer 0 — deterministic facts (gates, uses/declares diff, duplicate
 candidates, decision rows in scope, shadows of everything the diff imports).
