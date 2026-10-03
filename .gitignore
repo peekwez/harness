@@ -6,3 +6,4 @@ __pycache__/
 .harness/memory/session/
 .worktrees/
 .claude/settings.local.json
+.harness/cache/

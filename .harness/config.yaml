@@ -1,9 +1,5 @@
 # harness self-hosting config — the plugin eats its own cooking.
 schema: 1
-resolver:
-  budget_tokens: 8000
-  ranking: [direct_deps, one_hop_types, durable_memories]
-  degrade: drop_docstrings_before_modules
 gates:
   g3_mode: allow_with_findings
   g5_override: recorded_justification

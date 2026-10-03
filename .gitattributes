@@ -5,4 +5,3 @@
 .harness/backlog.jsonl merge=harness-substrate
 .harness/registry.jsonl merge=harness-substrate
 .harness/decisions.jsonl merge=harness-substrate
-.harness/shadows/** merge=ours
