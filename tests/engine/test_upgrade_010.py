@@ -155,3 +155,17 @@ def test_cli_accepts_yes(tmp_path):
     proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "steps" in json.loads(proc.stdout)
+
+
+class _FakeTty(io.StringIO):
+    def isatty(self):
+        return True
+
+
+@pytest.mark.parametrize("answer,expected", [("y\n", True), ("YES\n", True),
+                                             ("n\n", False), ("\n", False)])
+def test_tty_ask_reads_the_answer_from_a_terminal(monkeypatch, capsys,
+                                                  answer, expected):
+    monkeypatch.setattr("sys.stdin", _FakeTty(answer))
+    assert upgrade_010.tty_ask("Delete it?") is expected
+    assert "Delete it? [y/N]" in capsys.readouterr().err

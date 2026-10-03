@@ -430,3 +430,74 @@ def test_outdated_marketplace_cannot_delegate_an_older_engine(tmp_path, monkeypa
     monkeypatch.setattr(upgrade, "_run_host_checked", lambda _cmd: _completed())
     with pytest.raises(HarnessError, match="downgrade"):
         upgrade.upgrade_installed_plugin(project, "claude")
+
+
+def test_delegated_upgrade_never_inherits_the_terminal_stdin(monkeypatch):
+    """A child upgrade under captured output must not block on a [y/N]
+    prompt nobody sees: it reads no stdin and reports `needs confirmation`."""
+    import subprocess
+    from engine.cli import upgrade
+    seen = {}
+
+    def fake_run(command, **kwargs):
+        seen.update(kwargs)
+        return _completed("{}")
+
+    monkeypatch.setattr(upgrade.subprocess, "run", fake_run)
+    upgrade._run_command(["harness", "upgrade"])
+    assert seen.get("stdin") is subprocess.DEVNULL
+    assert seen.get("capture_output") is True
+
+
+def test_plugin_upgrade_passes_yes_to_the_delegate(tmp_path, monkeypatch):
+    from engine.cli import upgrade
+
+    project = build_toy_repo(tmp_path / "project")
+    old_path = _plugin_tree(tmp_path, "old")
+    new_path = _plugin_tree(tmp_path, "new")
+    before = [{"id": "harness@team", "version": "1.0", "scope": "user",
+               "installPath": str(old_path)}]
+    after = [{"id": "harness@team", "version": "2.0", "scope": "user",
+              "installPath": str(new_path)}]
+    calls = []
+
+    def run(command):
+        calls.append(command)
+        if command == ["claude", "plugin", "list", "--json"]:
+            payload = before if calls.count(command) == 1 else after
+            return _completed(json.dumps(payload))
+        if command[:3] == ["claude", "plugin", "update"]:
+            return _completed()
+        if command[0] == upgrade.sys.executable:
+            return _completed(json.dumps({"engine_version": "2.0"}))
+        raise AssertionError(command)
+
+    monkeypatch.setattr(upgrade, "_run_command", run)
+    monkeypatch.setattr(upgrade, "_run_host_command", run)
+    upgrade.upgrade_installed_plugin(project, "claude",
+                                     plugin_id="harness@team", yes=True)
+    assert calls[-1] == [upgrade.sys.executable,
+                         str(new_path / "bin" / "harness"),
+                         "--root", str(project.resolve()), "upgrade", "--yes"]
+
+
+def test_upgrade_survives_a_built_entry_outside_shadow_scope(tmp_path):
+    """refresh_built raises for a source outside scope; upgrade has already
+    run its steps, so it warns and names shadows.include instead of aborting."""
+    from engine import sha256_file, write_jsonl
+    from engine.cli.upgrade import upgrade_project
+    root = build_toy_repo(tmp_path / "toy")
+    helper = root / "tests" / "helpers.py"
+    helper.write_text("def helper() -> int:\n    return 1\n")
+    reg_path = root / ".harness" / "registry.jsonl"
+    rows = read_jsonl(reg_path)
+    rows.append({"id": "helpers", "kind": "component", "status": "built",
+                 "module_id": "tests.helpers", "source": "tests/helpers.py",
+                 "source_hash": sha256_file(helper), "guidance_refs": [],
+                 "supersedes_guidance": [], "manifest": ["tests/helpers.py"],
+                 "signature_digest": "x"})
+    write_jsonl(reg_path, rows)
+    report = upgrade_project(root, yes=True)
+    assert "helpers" not in report["registry"]["refreshed"]
+    assert any("helpers" in w and "shadows.include" in w
+               for w in report["warnings"]), report["warnings"]

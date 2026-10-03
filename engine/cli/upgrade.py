@@ -220,10 +220,17 @@ def upgrade_project(root, *, dry_run: bool = False, yes: bool = False) -> dict:
     legacy_overrides = repair_legacy_overrides(root)
     graph = repair_legacy_provenance(root)
 
-    from engine.registry import refresh_built
+    from engine.registry import RegistryError, refresh_built
     refreshed = []
     for entry_id in clean:
-        refresh_built(root, entry_id)
+        try:
+            refresh_built(root, entry_id)
+        except RegistryError as exc:
+            # the steps already ran: name the entry, never abort here
+            warnings.append(
+                f"registry {entry_id}: not refreshed ({exc}). To keep it, "
+                f"add its source to shadows.include in .harness/config.yaml")
+            continue
         refreshed.append(entry_id)
 
     from engine.schema import validate_substrate
@@ -249,7 +256,11 @@ def upgrade_project(root, *, dry_run: bool = False, yes: bool = False) -> dict:
 
 
 def _run_command(command):
-    return subprocess.run(command, capture_output=True, text=True)
+    """Run a non-interactive command and capture its output. The child gets
+    no stdin: a delegated `harness upgrade` must not wait on a [y/N] prompt
+    that captured stderr hides. It reports `needs confirmation` instead."""
+    return subprocess.run(command, stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True)
 
 
 def _run_host_command(command):
