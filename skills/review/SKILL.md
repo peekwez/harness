@@ -32,7 +32,7 @@ candidates, decision rows in scope, shadows of everything the diff imports).
 argument, so this is your first command):
 
 ```
-git diff <landing.base>...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
+git diff --output=/tmp/harness-review-$1.diff <landing.base>...HEAD && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
 ```
 
 `<landing.base>` is `landing.base` from `.harness/config.yaml` (default

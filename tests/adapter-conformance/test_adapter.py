@@ -420,4 +420,7 @@ def test_notebook_edit_into_shared_memory_is_blocked(toy):
          "tool_name": "NotebookEdit",
          "tool_input": {"notebook_path": ".claude/memory/shared/n.ipynb",
                         "new_source": "x"}}, toy)
-    assert code != 0 or (out and "G10" in json.dumps(out)), (code, out, err)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"
+    assert "G10" in hso["permissionDecisionReason"]

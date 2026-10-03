@@ -15,6 +15,11 @@ PROMOTE_FORMS = [
     "bash -c '/plug/bin/harness memory  promote a.md'",
     "bin/harness --root /repo memory promote a.md",
     '${CLAUDE_PLUGIN_ROOT}/bin/harness memory promote a.md',
+    "harness memory pro''mote --text x",
+    'harness memory "pro"mote',
+    "harness memory pro\\mote",
+    "harness memory promot\\e",
+    'harness mem""ory promote',
 ]
 
 
@@ -69,9 +74,36 @@ def test_commands_touching_shared_memory_are_not_auto_approved(command):
     assert allow is False and decision != "allow"
 
 
-def test_echo_redirect_is_not_auto_approved_anywhere():
-    assert command_allowed("echo x > notes.txt", slice_id="s")[0] is False
-    assert command_allowed("echo hi", slice_id="s")[0] is True
+REDIRECT_PROBES = [
+    "harness verify > .claude/memory/sh*/a.md",
+    "harness verify > .claude/memory/sh?red/a.md",
+    "harness verify > .claude/memory/[s]hared/a.md",
+    "harness verify > .claude/memory/{shared,x}/a.md",
+    "harness verify > .claude/memory/s\\hared/a.md",
+    "cd .claude/memory && harness verify > shared/a.md",
+    "cd .claude && harness verify > memory/shared/a.md",
+    "cd .claude/memory && pytest > shared/a.md",
+    "pytest > log.txt",
+    "echo x > notes.txt",
+    "harness verify &> out.txt",
+    "harness verify >| out.txt",
+    "harness verify 2> err.txt",
+]
+
+
+@pytest.mark.parametrize("command", REDIRECT_PROBES)
+def test_file_redirects_are_never_auto_approved(command):
+    decision, allow, _ = command_decision(command, slice_id="slice-042")
+    assert allow is False and decision != "allow"
+
+
+@pytest.mark.parametrize("command", [
+    "echo hi", "ls 2>/dev/null", "pytest -q 2>&1", "harness verify >/dev/null",
+    "harness verify &>/dev/null", "echo x 1>&2", "pytest 2>&1 >/dev/null",
+    'git commit -m "a > b"',
+])
+def test_harmless_redirects_stay_auto_approved(command):
+    assert command_allowed(command, slice_id="s")[0] is True
 
 
 def test_autonomy_profile_asks_before_promote():

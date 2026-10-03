@@ -88,11 +88,33 @@ def needs_human(command: str):
     Returns:
         A reason string for `harness memory promote`, else None.
     """
-    text = command or ""
-    if "harness" in text and PROMOTE.search(text):
-        return ("Permit rule: a human approves each harness memory promote. "
-                "Shared memory holds only facts a human chose.")
+    raw = command or ""
+    # quoting and backslashes split a word without changing what the shell
+    # runs (`pro''mote`, `pro\mote`): test the de-quoted text too
+    for text in (raw, re.sub(r"[\\'\"]", "", raw)):
+        if "harness" in text and PROMOTE.search(text):
+            return ("Permit rule: a human approves each harness memory "
+                    "promote. Shared memory holds only facts a human chose.")
     return None
+
+
+_QUOTED = re.compile(r"\"(?:\\.|[^\"\\])*\"|'[^']*'")
+# redirects that cannot write a file: fd duplication and /dev/null
+_SAFE_REDIRECT = re.compile(
+    r"&?\d*>>?\s*/dev/null(?![\w./~-])|\d*>&\d+")
+
+
+def has_file_redirect(segment: str) -> bool:
+    """True when a segment redirects output to anything but /dev/null or an fd.
+
+    Args:
+        segment: One shell segment (already split on `&&`, `;`, `|`).
+
+    Returns:
+        Whether an output redirect (`>`, `>>`, `>|`, `&>`, `N>`) remains.
+    """
+    bare = _SAFE_REDIRECT.sub(" ", _QUOTED.sub(" ", segment))
+    return ">" in bare
 
 
 _REDIRECT_LEAD = re.compile(r"^[0-9]*[<>&|]+")
@@ -111,14 +133,15 @@ def touches_shared_memory(command: str) -> bool:
     Returns:
         Whether any token (or the normalized text) is in the shared folder.
     """
-    text = (command or "").replace("\\", "/")
-    flat = re.sub(r"/(\./)+", "/", re.sub(r"/{2,}", "/", text)).casefold()
-    if SHARED_DIR.casefold() in flat:
-        return True
+    raw = command or ""
+    for text in (raw.replace("\\", "/"), raw.replace("\\", "")):
+        flat = re.sub(r"/(\./)+", "/", re.sub(r"/{2,}", "/", text)).casefold()
+        if SHARED_DIR.casefold() in flat:
+            return True
     try:
-        tokens = shlex.split(text)
+        tokens = shlex.split(raw)
     except ValueError:
-        tokens = text.split()
+        tokens = raw.split()
     for tok in tokens:
         tok = _REDIRECT_LEAD.sub("", tok).split("=", 1)[-1]
         if tok and in_shared_dir(posixpath.normpath(tok)):
@@ -241,10 +264,13 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
         return False          # unbalanced quotes: not something to auto-approve
     if not parts:
         return True
+    if has_file_redirect(seg):
+        # `_SPLIT` ignores `>`, and the cwd is not ours to track: a file
+        # redirect behind ANY head can land in .claude/memory/shared
+        return False
     head = parts[0]
     if head in ("cd", "true", "echo", "ls", "pwd"):
-        # `_SPLIT` ignores `>`: a redirect writes a file, so it is no read
-        return ">" not in seg
+        return True
     base = head.rsplit("/", 1)[-1]
     if base == "harness" or (harness_bin and head.strip('"\'') == harness_bin):
         return True
