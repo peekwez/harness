@@ -27,6 +27,11 @@ INDEX_HEADER = (
     "# Shared memory\n\n"
     "Team facts. A human adds each one with `harness memory promote`.\n"
     "Agents read this file. Agents do not edit it.\n\n")
+# The harness template line: "This repo is harness-enforced. ..." (optionally
+# after a heading such as "# AGENTS.md — "). Line-anchored, not a substring.
+_MARKER_LINE = re.compile(
+    r"^(?:#+ .*?— )?this repo is " + re.escape(CLAUDE_MARKER) + r"\b",
+    re.I | re.M)
 _SHARED_SEGMENT = "/" + SHARED_DIR.casefold() + "/"
 
 
@@ -52,7 +57,7 @@ def ensure_index(root) -> bool:
     if index.exists():
         return False
     index.parent.mkdir(parents=True, exist_ok=True)
-    index.write_text(INDEX_HEADER, encoding="utf-8")
+    _write_atomic(index, INDEX_HEADER)
     return True
 
 
@@ -72,6 +77,16 @@ def slugify(text: str) -> str:
         cut = slug[:MAX_SLUG]
         slug = (cut.rsplit("-", 1)[0] if "-" in cut else cut).strip("-")
     return slug or "fact"
+
+
+def _write_atomic(path: Path, content: str) -> None:
+    """Write through a temp file and `os.replace` so readers never see half."""
+    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}")
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _one_line(text: str) -> str:
@@ -114,23 +129,29 @@ def _add_index_line(root, line: str, slug: str) -> bool:
         return False
     if text and not text.endswith("\n"):
         text += "\n"
-    index.write_text(text + line + "\n", encoding="utf-8")
+    _write_atomic(index, text + line + "\n")
     return True
 
 
 # ------------------------------------------------------------------ facts
 def split_front_matter(text: str) -> tuple:
-    """`(meta, body)`. Text without valid YAML front matter -> `({}, text)`."""
+    """`(meta, body)`. Text without valid YAML front matter -> `({}, text)`.
+
+    Accepts CRLF line endings and empty front matter. The closing line must
+    be exactly `---`.
+    """
+    text = text.replace("\r\n", "\n")
     if text.startswith("---\n"):
         end = text.find("\n---", 4)
-        if end != -1:
+        match = re.search(r"^---[ \t]*$", text[4:], re.M)
+        if match:
             import yaml
             try:
-                meta = yaml.safe_load(text[4:end]) or {}
+                meta = yaml.safe_load(text[4:4 + match.start()]) or {}
             except yaml.YAMLError:
                 meta = None
             if isinstance(meta, dict):
-                return meta, text[end + 4:].lstrip("\n")
+                return meta, text[4 + match.end():].lstrip("\n")
     return {}, text
 
 
@@ -191,7 +212,13 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
             raise HarnessError(
                 f"memory promote: {source.name} is an index, not a fact. "
                 f"Fix: promote one fact file.")
-        meta, body = split_front_matter(source.read_text(encoding="utf-8"))
+        try:
+            raw = source.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError) as err:
+            raise HarnessError(
+                f"memory promote: cannot read {source} as UTF-8 text ({err.__class__.__name__}). "
+                f"Fix: pass a UTF-8 text file.") from err
+        meta, body = split_front_matter(raw)
     else:
         body = text
     body = body.strip()
@@ -206,9 +233,19 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
     slug = slugify(name or meta.get("name")
                    or (source.stem if source is not None
                        else " ".join(words[:6])))
+    if f"{slug}.md".casefold() == INDEX_NAME.casefold():
+        raise HarnessError(
+            f"memory promote: the name {slug!r} is the index file. "
+            f"Fix: pass --name <new-name>.")
     identity = git_identity(root)          # before any write
     rel = f"{SHARED_DIR}/{slug}.md"
     target = root / rel
+    shared = root / SHARED_DIR
+    if (target.is_symlink() or shared.is_symlink()
+            or target.resolve().parent != shared.resolve()):
+        raise HarnessError(
+            f"memory promote: {rel} is a link or leaves the shared folder. "
+            f"Fix: remove the link or pass --name <new-name>.")
     line = index_line(title, slug, summary)
 
     if target.exists():
@@ -226,7 +263,7 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
              "promoted_by": identity, "promoted_at": now_iso()}
     target.parent.mkdir(parents=True, exist_ok=True)
     ensure_index(root)
-    target.write_text(_render_fact(front, body), encoding="utf-8")
+    _write_atomic(target, _render_fact(front, body))
     _add_index_line(root, line, slug)
     return {"promoted": True, "path": rel, "promoted_by": identity,
             "promoted_at": front["promoted_at"], "index_line": line,
@@ -330,7 +367,7 @@ def claude_md_state(root) -> str:
     text = path.read_text(encoding="utf-8")
     if any(line.strip() == CLAUDE_IMPORT for line in text.splitlines()):
         return "current"
-    return "marked" if CLAUDE_MARKER in text.casefold() else "unmarked"
+    return "marked" if _MARKER_LINE.search(text) else "unmarked"
 
 
 def add_claude_import(root) -> bool:

@@ -219,3 +219,75 @@ def test_ensure_index_is_idempotent(toy):
     assert sm.ensure_index(toy) is False
     assert (toy / sm.INDEX_REL).read_text() == first
     assert sm.index_entries(toy) == []
+
+
+def test_promote_never_overwrites_the_index_by_name(toy, tmp_path):
+    sm.ensure_index(toy)
+    before = (toy / sm.INDEX_REL).read_text()
+    with pytest.raises(HarnessError, match="--name"):
+        sm.promote(toy, text="Memory")
+    with pytest.raises(HarnessError, match="--name"):
+        sm.promote(toy, text="Deploys on Tuesdays.", name="memory")
+    src = _personal(tmp_path, name="memory.md", body="Some fact.\n")
+    with pytest.raises(HarnessError, match="--name"):
+        sm.promote(toy, source=src)
+    assert (toy / sm.INDEX_REL).read_text() == before
+
+
+def test_promote_refuses_a_symlink_in_the_shared_folder(toy, tmp_path):
+    outside = tmp_path / "outside.md"
+    shared = toy / SHARED
+    shared.mkdir(parents=True)
+    (shared / "evil.md").symlink_to(outside)
+    with pytest.raises(HarnessError, match="link"):
+        sm.promote(toy, text="x", name="evil")
+    assert not outside.exists()
+
+
+def test_promote_refuses_a_symlinked_shared_folder(toy, tmp_path):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (toy / ".claude" / "memory").mkdir(parents=True, exist_ok=True)
+    (toy / SHARED).symlink_to(elsewhere)
+    with pytest.raises(HarnessError, match="link"):
+        sm.promote(toy, text="Deploys on Tuesdays.")
+    assert list(elsewhere.iterdir()) == []
+
+
+def test_promote_leaves_no_temp_files(toy):
+    sm.promote(toy, text="Deploys happen on Tuesdays.")
+    assert sorted(p.name for p in (toy / SHARED).iterdir()) == [
+        "MEMORY.md", "deploys-happen-on-tuesdays.md"]
+
+
+def test_split_front_matter_edge_cases():
+    meta, body = sm.split_front_matter("---\r\nname: a\r\n---\r\n\r\nBody\r\n")
+    assert meta == {"name": "a"} and body.strip() == "Body"
+    assert sm.split_front_matter("---\n---\nBody\n") == ({}, "Body\n")
+    # a closing line must be exactly ---
+    text = "---\nname: a\n----\nBody\n"
+    assert sm.split_front_matter(text) == ({}, text)
+    text = "---\nname: a\n---x\nBody\n"
+    assert sm.split_front_matter(text) == ({}, text)
+
+
+def test_promote_refuses_a_non_utf8_file(toy, tmp_path):
+    bad = tmp_path / "bad.md"
+    bad.write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(HarnessError, match="UTF-8"):
+        sm.promote(toy, source=bad)
+
+
+def test_claude_md_marker_is_line_anchored(tmp_path):
+    claude = tmp_path / "CLAUDE.md"
+    claude.write_text("We are not harness-enforced.\n")
+    assert sm.claude_md_state(tmp_path) == "unmarked"
+    claude.write_text("# CLAUDE.md\n\nThis repo is harness-enforced. "
+                      "The working agreement is in AGENTS.md.\n")
+    assert sm.claude_md_state(tmp_path) == "marked"
+
+
+def test_index_line_truncates_multibyte_text():
+    line = sm.index_line("é" * 300, "slug", "日本語" * 100)
+    assert len(line) <= sm.MAX_INDEX_LINE
+    assert line.startswith("- [é") and "](slug.md)" in line
