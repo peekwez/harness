@@ -178,7 +178,7 @@ def test_hooks_json_binds_all_required_events():
     assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse",
                           "PostToolUse", "Stop", "PreCompact"}
     for name in ("PreToolUse", "PostToolUse"):
-        assert hooks[name][0]["matcher"] == "Edit|Write|MultiEdit"
+        assert hooks[name][0]["matcher"] == "Edit|Write|MultiEdit|NotebookEdit"
 
 
 def test_gates_declare_preferred_and_fallback_events():
@@ -390,3 +390,34 @@ def test_agent_write_into_shared_memory_is_denied(toy):
     assert hso["permissionDecision"] == "deny"
     assert "gate:G10" in hso["permissionDecisionReason"]
     assert "harness memory promote" in hso["permissionDecisionReason"]
+
+
+def test_pre_tool_use_bash_promote_asks_the_human(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "ask-1",
+         "tool_name": "Bash",
+         "tool_input": {"command": "harness memory promote --text x"}},
+        toy)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "ask"
+    assert "memory promote" in hso["permissionDecisionReason"]
+
+
+def test_notebook_edit_path_reaches_the_gates(toy):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hook_adapter", ADAPTER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    files = mod.files_from_tool_input(
+        {"notebook_path": "/r/.claude/memory/shared/n.ipynb", "new_source": "x"})
+    assert [f["path"] for f in files] == ["/r/.claude/memory/shared/n.ipynb"]
+
+
+def test_notebook_edit_into_shared_memory_is_blocked(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "nb-1",
+         "tool_name": "NotebookEdit",
+         "tool_input": {"notebook_path": ".claude/memory/shared/n.ipynb",
+                        "new_source": "x"}}, toy)
+    assert code != 0 or (out and "G10" in json.dumps(out)), (code, out, err)

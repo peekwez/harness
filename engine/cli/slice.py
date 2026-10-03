@@ -280,7 +280,7 @@ def cmd_permit(args):
     ever returns allow=true; a false is "not auto-approved", leaving the
     host's normal flow (and the human) in charge."""
     from engine.events import Sidecar
-    from engine.permits import command_decision, paths_in_scope
+    from engine.permits import command_decision, needs_human, paths_in_scope
     from engine.registry import load_registry
     root = _root(args)
     session = _session(args, root)
@@ -290,6 +290,11 @@ def cmd_permit(args):
                     or sidecar.state_get("__default__", "active_slice"))
     finally:
         sidecar.close()
+    why = needs_human(args.command) if args.command else None
+    if why:
+        _print({"allow": False, "decision": "ask", "reason": why,
+                "slice": slice_id})
+        return 0
     if not slice_id:
         _print({"allow": False, "reason": "no slice bound to this session — "
                                           "auto-approval is scoped to a bound slice"})

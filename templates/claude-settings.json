@@ -37,6 +37,12 @@
       "Glob",
       "Grep"
     ],
+    "ask": [
+      "Bash(*/bin/harness memory promote:*)",
+      "Bash(\"*/bin/harness\" memory promote:*)",
+      "Bash(python3 */bin/harness memory promote:*)",
+      "Bash(python3 \"*/bin/harness\" memory promote:*)"
+    ],
     "deny": [
       "Bash(git push:*)",
       "Bash(git remote:*)",

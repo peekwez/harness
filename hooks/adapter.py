@@ -5,7 +5,7 @@ Claude Code hook JSON <-> the five-event engine contract. Porting harness to
 another agent framework means writing one new file like this one.
 
 Bindings: SessionStart->session_start, UserPromptSubmit->pre_context,
-PreToolUse(Edit|Write|MultiEdit)->pre_change, PostToolUse(same)->post_change,
+PreToolUse(Edit|Write|MultiEdit|NotebookEdit)->pre_change, PostToolUse(same)->post_change,
 Stop->unit_complete, PreCompact->`harness precompact` (context-hash reset +
 COMPACTION_REACHED telemetry; the next prompt re-injects).
 """
@@ -119,6 +119,8 @@ def files_from_tool_input(tool_input):
         return files
     if tool_input.get("file_path"):
         files.append({"path": tool_input["file_path"], "proposed_content_hash": None})
+    if tool_input.get("notebook_path"):      # NotebookEdit
+        files.append({"path": tool_input["notebook_path"], "proposed_content_hash": None})
     for edit in tool_input.get("edits", []) or []:
         if isinstance(edit, dict) and edit.get("file_path"):
             files.append({"path": edit["file_path"], "proposed_content_hash": None})
@@ -158,6 +160,7 @@ def permit(session, root=None, command=None, paths=None):
         `(decision, reason)` where decision is `allow` (auto-approve),
         `deny` (pr-mode egress outside D-011's surface — the settings profile
         cannot express "this slice's branch", so the hook is the decider) or
+        `ask` (a human must approve: `harness memory promote`) or
         `defer` (stay silent; the host's own flow decides).
 
         When the engine itself fails, a pr-mode repo denies anything
@@ -240,7 +243,7 @@ def main():
     if hook_name == "PreToolUse" and hook.get("tool_name") == "Bash":
         command = (hook.get("tool_input") or {}).get("command", "")
         decision, reason = permit(session, root, command=command)
-        if decision in ("allow", "deny"):
+        if decision in ("allow", "deny", "ask"):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": decision,

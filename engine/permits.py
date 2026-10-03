@@ -16,14 +16,20 @@ Two surfaces:
   `git push [-u] <landing.remote> slice/<bound-id>`, `git fetch
   <landing.remote>` and `gh pr create|view|checks|status` are auto-approved,
   and nothing else that talks to a remote.
+- `needs_human` — `harness memory promote` always goes to the human
+  (D-0.10-02), with or without a bound slice. The adapter asks.
+- A command that names a path in the shared memory folder is never
+  auto-approved, whatever its head (`echo x > .claude/memory/shared/a.md`).
 """
 from __future__ import annotations
 
+import posixpath
 import re
 import shlex
 from fnmatch import fnmatch
 
 from .gates import exempt
+from .shared_memory import SHARED_DIR, in_shared_dir
 
 # git subcommands that stay on this machine
 GIT_LOCAL = {
@@ -66,6 +72,61 @@ _SPLIT = re.compile(r"&&|\|\||[;\n|]")
 # command substitution can hide anything — never auto-approve a command
 # carrying it (this is also why the skills use `--commit HEAD`)
 _SUBSTITUTION = re.compile(r"\$\(|`|<\(")
+
+# Shared memory holds only facts a human chose (D-0.10-02). Matched on the
+# raw text so every spelling counts: `--root` first, `python3 …/harness`,
+# `bash -c`, extra spaces. Over-matching costs one prompt, never a write.
+PROMOTE = re.compile(r"\bmemory\s+[\"']?promote\b")
+
+
+def needs_human(command: str):
+    """The reason a command must go to the human, or None.
+
+    Args:
+        command: The command line the host is asking about.
+
+    Returns:
+        A reason string for `harness memory promote`, else None.
+    """
+    text = command or ""
+    if "harness" in text and PROMOTE.search(text):
+        return ("Permit rule: a human approves each harness memory promote. "
+                "Shared memory holds only facts a human chose.")
+    return None
+
+
+_REDIRECT_LEAD = re.compile(r"^[0-9]*[<>&|]+")
+
+
+def touches_shared_memory(command: str) -> bool:
+    """True when a command names a path inside the shared memory folder.
+
+    Redirects, `cp`, `tee`, heredocs and any other head count: the check reads
+    path-like tokens, not the program. A normalized substring match is the
+    backstop for absolute paths and quoting the tokenizer cannot see.
+
+    Args:
+        command: The command line the host is asking about.
+
+    Returns:
+        Whether any token (or the normalized text) is in the shared folder.
+    """
+    text = (command or "").replace("\\", "/")
+    flat = re.sub(r"/(\./)+", "/", re.sub(r"/{2,}", "/", text)).casefold()
+    if SHARED_DIR.casefold() in flat:
+        return True
+    try:
+        tokens = shlex.split(text)
+    except ValueError:
+        tokens = text.split()
+    for tok in tokens:
+        tok = _REDIRECT_LEAD.sub("", tok).split("=", 1)[-1]
+        if tok and in_shared_dir(posixpath.normpath(tok)):
+            return True
+        if tok and SHARED_DIR.casefold() in \
+                (posixpath.normpath(tok).casefold() + "/"):
+            return True
+    return False
 
 
 def _pr_egress_allowed(parts: list, landing: dict, slice_id: str) -> bool:
@@ -182,7 +243,8 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
         return True
     head = parts[0]
     if head in ("cd", "true", "echo", "ls", "pwd"):
-        return True
+        # `_SPLIT` ignores `>`: a redirect writes a file, so it is no read
+        return ">" not in seg
     base = head.rsplit("/", 1)[-1]
     if base == "harness" or (harness_bin and head.strip('"\'') == harness_bin):
         return True
@@ -388,7 +450,7 @@ def is_egress(command: str) -> bool:
 
 def command_decision(command: str, harness_bin: str | None = None,
                      config=None, slice_id=None) -> tuple:
-    """The host-facing verdict: `allow`, `deny` or `defer`.
+    """The host-facing verdict: `allow`, `deny`, `ask` or `defer`.
 
     `allow` and `defer` are the historical answers (auto-approve, or leave it
     to the human). `deny` exists only for `landing.mode: pr`, where the
@@ -405,6 +467,9 @@ def command_decision(command: str, harness_bin: str | None = None,
     Returns:
         `(decision, allow, reason)`.
     """
+    why = needs_human(command)
+    if why:
+        return "ask", False, why
     from engine.cli.landing import landing_config
     allow, reason = command_allowed(command, harness_bin, config, slice_id)
     if allow:
@@ -446,9 +511,15 @@ def command_allowed(command: str, harness_bin: str | None = None,
     """
     if not command or not command.strip():
         return False, "empty command"
+    why = needs_human(command)
+    if why:
+        return False, why
     if _SUBSTITUTION.search(command):
         return False, ("command substitution is never auto-approved — use "
                        "plain commands (e.g. `--commit HEAD`)")
+    if touches_shared_memory(command):
+        return False, ("a command that names .claude/memory/shared is never "
+                       "auto-approved — a human approves it")
     from engine.cli.landing import landing_config
     landing = landing_config(config)
     segments = _SPLIT.split(command)
@@ -476,6 +547,8 @@ def paths_in_scope(slice_row: dict, registry: list, rels, config=None) -> bool:
     declared = declared_set(slice_row, registry)
     globs = [d for d in declared if "*" in d]
     for rel in rels:
+        if in_shared_dir(rel):
+            return False      # G10 blocks it; never auto-approve it either
         if exempt(rel, config):
             continue
         if rel in declared or any(fnmatch(rel, g) for g in globs):
