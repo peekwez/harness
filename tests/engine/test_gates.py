@@ -35,15 +35,6 @@ def test_g3_default_allow_with_findings(toy):
     assert "UNDECLARED_FILE" in codes(v)
 
 
-def test_g3_block_mode(tmp_path):
-    from conftest import build_toy_repo
-    toy = build_toy_repo(tmp_path / "toy", g3_mode="block")
-    loaded_context(toy, session="g3b")
-    v = handle_event(make_event("pre_change", session="g3b",
-                                files=["rogue.py"]), toy)
-    assert v["verdict"] == "block"
-
-
 def test_g3_radius_mode_same_package_allowed(tmp_path):
     from conftest import build_toy_repo
     toy = build_toy_repo(tmp_path / "toy", g3_mode="radius")
@@ -74,7 +65,7 @@ def _write_orders_using_config(toy, session):
                             files=["orders.py"]), toy)
 
 
-def test_g5_undeclared_use_blocks_and_override_is_auditable(toy):
+def test_g5_undeclared_use_advises_and_override_is_auditable(toy):
     session = "g5n"
     loaded_context(toy, session=session)
     from engine import read_jsonl, write_jsonl
@@ -88,9 +79,10 @@ def test_g5_undeclared_use_blocks_and_override_is_auditable(toy):
                             files=["orders.py"]), toy)
     # unit_complete regenerates the shadow, then G5 sees the undeclared use
     v = handle_event(make_event("unit_complete", session=session), toy)
-    assert v["verdict"] == "block"
+    assert v["verdict"] != "block"
     hits = [f for f in v["findings"] if f["code"] == "UNDECLARED_USE"]
     assert hits and hits[0]["rule_ref"] == "gate:G5"
+    assert hits[0]["severity"] == "advisory"
 
     # builder override with recorded justification -> auditable edge
     from engine.gates.g5_conformance import record_override

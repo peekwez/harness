@@ -143,7 +143,7 @@ def test_review_at_close_can_be_disabled_by_config(toy):
 
 
 def test_a_recorded_g5_override_satisfies_r_uses(toy):
-    """`g5_override: recorded_justification` is a first-class resolution: an
+    """A recorded G5 override is a first-class resolution: an
     undeclared use with a recorded override passes the close's own
     uses ⊆ declares check, so the Layer-1 R-uses rubric must read the same
     override-aware set (`unresolved`), not `undeclared` — otherwise the

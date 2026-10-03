@@ -189,8 +189,7 @@ DEFAULT_EXEMPT_PATHS = (".harness/", "adr/", ".github/", "tests/", "docs/",
 DEFAULT_CONFIG = {
     "schema": 1,
     "gates": {
-        "g3_mode": "allow_with_findings",       # or: block | radius
-        "g5_override": "recorded_justification",  # or: advisory | park
+        "g3_mode": "allow_with_findings",       # or: radius
         "g5_similarity_threshold": 0.6,
         "exempt_paths": list(DEFAULT_EXEMPT_PATHS),
         "acceptance_runner": "pytest",          # or: none (skill-enforced only)

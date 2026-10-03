@@ -57,8 +57,8 @@ def test_bind_backfills_started_at_commit_and_snapshots_baseline(toy):
 
 def test_worktree_close_is_not_vacuous(toy, tmp_path):
     """S1's demonstrated symptom: close inside a worktree saw touched=[] and
-    waved through undeclared, unshadowed files. With bind-in-worktree, G3
-    must block the rogue file and the eventual close must see real touches."""
+    waved through undeclared, unshadowed files. With bind-in-worktree, the
+    close must see real touches and list the rogue file as scope_advisory."""
     wt = toy / ".worktrees" / "slice-042"
     r = git(toy, "worktree", "add", str(wt), "-b", "slice/slice-042")
     assert r.returncode == 0, r.stderr
@@ -72,17 +72,10 @@ def test_worktree_close_is_not_vacuous(toy, tmp_path):
     git(wt, "commit", "-qm", "slice-042 in worktree")
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", "wt",
                    "--commit", "HEAD", root=wt)
-    assert proc.returncode == 1, "undeclared rogue file must block close"
-    assert "rogue_helper.py" in proc.stdout
-    # amend the declaration (the named fix) and re-close
-    rows = read_jsonl(wt / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"] = ["orders.py", "rogue_helper.py"]
-    write_jsonl(wt / ".harness" / "backlog.jsonl", rows)
-    proc = run_cli("close-slice", "--slice", "slice-042", "--session", "wt",
-                   "--commit", "HEAD", root=wt)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     assert "orders.py" in out["touched"] and "rogue_helper.py" in out["touched"]
+    assert out["scope_advisory"] == ["rogue_helper.py"]
 
 
 def test_close_warns_when_started_at_commit_is_missing(toy):

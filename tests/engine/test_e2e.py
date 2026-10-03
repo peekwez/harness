@@ -128,36 +128,6 @@ def test_close_blocked_on_red_acceptance(toy):
     assert "acceptance" in proc.stdout
 
 
-def test_close_blocked_on_unreconciled_g3_touch(toy):
-    """T2: the unit cannot close until touched-file declarations reconcile."""
-    session = "close-g3"
-    run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(GOOD_ORDERS)
-    (toy / "rogue.py").write_text("x = 1\n")
-    handle_event(make_event("post_change", session=session,
-                            files=["orders.py", "rogue.py"]), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "orders and rogue")
-    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   "--commit", "HEAD", root=toy)
-    assert proc.returncode == 1
-    out = json.loads(proc.stdout)
-    assert "rogue.py" in json.dumps(out) and out.get("rule_ref") == "gate:G3"
-
-    # reconciliation path: amend the declaration, then close succeeds
-    from engine import read_jsonl, write_jsonl
-    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"].append("rogue.py")
-    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
-    handle_event(make_event("unit_complete", session=session), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "slice-042 + rogue")
-    proc2 = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                    "--commit", "HEAD", root=toy)
-    assert proc2.returncode == 0, proc2.stdout + proc2.stderr
-
-
 def test_backlog_proposes_authored_children_for_oversized_slice(tmp_path):
     from conftest import build_toy_repo
     toy = build_toy_repo(tmp_path / "toy", oversized=True)  # context over the cap

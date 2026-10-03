@@ -1,8 +1,9 @@
-"""G5 registry-conform: uses ⊆ declares ∪ flagged; no reimplementation above
+"""G5 registry-conform: uses within declares; no reimplementation above the
 similarity threshold vs registry signature_digests.
 
-DEFAULT: block; the builder may override with recorded justification (writes
-an auditable `override` edge). Config g5_override: advisory | park.
+0.10 (D-0.10-01): every G5 finding is advisory. Close still reconciles
+uses within declares (`uses_vs_declares`), and review rubrics R-uses and
+R-dup still block there. An override records an auditable edge.
 """
 from __future__ import annotations
 
@@ -16,15 +17,6 @@ from ..registry import digest_tokens, signature_digest, similarity
 
 GATE = {"id": "G5", "rule_ref": "gate:G5",
         "preferred": ("post_change", "unit_complete"), "fallback": ()}
-
-
-def _severity(ctx) -> str:
-    mode = ctx.config["gates"]["g5_override"]
-    if mode == "advisory":
-        return "advisory"
-    if mode == "park":
-        return "gate"
-    return "block"  # recorded_justification (default)
 
 
 def _override_targets(ctx) -> set:
@@ -52,7 +44,7 @@ def check(ctx) -> list:
     overridden = _override_targets(ctx)
     index = RegistryIndex(ctx.registry)
     threshold = float(ctx.config["gates"].get("g5_similarity_threshold", 0.6))
-    sev = _severity(ctx)
+    sev = "advisory"
 
     touched = [ctx.rel(p) for p in ctx.touched_files()]
     if not touched:

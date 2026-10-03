@@ -25,7 +25,7 @@ def _deterministic_rubrics():
         # `unresolved` = undeclared uses minus recorded G5 overrides — the
         # same set the close ceremony's own uses ⊆ declares check reads.
         # Reading `undeclared` here made a config-sanctioned override
-        # (g5_override: recorded_justification) pass the gate and then
+        # (a recorded G5 override) pass the gate and then
         # block at Layer 1 anyway (kente slice 001, 2026-08-17).
         ud = facts["uses_declares"]
         unresolved = ud.get("unresolved", ud["undeclared"])

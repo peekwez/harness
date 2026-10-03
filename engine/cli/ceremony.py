@@ -257,26 +257,20 @@ def _close_ceremony(args):
 
     touched = prepared_touched
 
-    # Precondition 4: G3 declaration reconciliation (T2: unit cannot close
-    # until every touched file is declared/predicted or overridden).
+    # Precondition 4 (0.10, D-0.10-01): G3 scope is advisory. Close lists
+    # touched files outside the declaration; it does not block on them.
     registry_sources = {e.get("source") for e in load_registry(root)
                         if e["id"] in sl.get("declares_dep", [])}
     declared = set(sl.get("predicted_files", [])) | registry_sources | \
         set(sl.get("acceptance", []))
-    # overrides consult the same ledger as G3/G5: any recorded target
-    # (file:path, boundary:B-x, registry:x) reconciles by bare id (#21)
     from engine.graph import override_targets
     overridden = override_targets(root, args.slice, "gate:G3", {"file", "boundary"})
     from fnmatch import fnmatch
-    rogue = [t for t in touched
-             if not exempt(t, config)
-             and not any(fnmatch(t, pattern) for pattern in declared if pattern)
-             and t not in overridden]
-    if rogue:
-        _fail({"closed": False,
-                "reason": f"G3 unreconciled: touched files not in the declared/"
-                          f"predicted set: {rogue}; amend the slice declaration "
-                          f"or record an override", "rule_ref": "gate:G3"})
+    scope_advisory = sorted(
+        t for t in touched
+        if not exempt(t, config)
+        and not any(fnmatch(t, pattern) for pattern in declared if pattern)
+        and t not in overridden)
 
     # Precondition 8: dependency governance. Third-party deps are outside
     # shadow enforcement — a builder silently adding one is the drift class
@@ -369,7 +363,8 @@ def _close_ceremony(args):
               "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
               "notes_ref": NOTES_REF if note_written else None,
               "notes_hint": (f"view with: git notes --ref={NOTES_REF} show {args.commit}")
-                            if note_written else None, "touched": touched}
+                            if note_written else None, "touched": touched,
+                            "scope_advisory": scope_advisory}
     from engine.cli.closure_state import prepare_journal, finish_closure
     prepare_journal(root, original_slice, result)
     sl["status"] = "closed"

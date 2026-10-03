@@ -1,8 +1,8 @@
-"""G3 spec-bound: touched file ∈ declared/predicted set.
+"""G3 scope: touched files against the slice declaration and the non-goals.
 
-DEFAULT allow_with_findings; the unit cannot close until the declaration is
-reconciled. Config g3_mode: block | radius (same-package auto-allow).
-Non-goal boundaries compiled from Phase 0 always block.
+0.10 (D-0.10-01): a file outside the declaration is an advisory finding.
+Config `g3_mode: radius` also skips files in a declared file's directory.
+Files under `gates.exempt_paths` raise no scope finding.
 """
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ def check(ctx) -> list:
     if not ctx.work_unit_id:
         return findings
 
-    mode = ctx.config["gates"]["g3_mode"]
+    mode = ctx.config["gates"].get("g3_mode", "allow_with_findings")
     declared = _declared_set(ctx)
     declared_dirs = {str(PurePosixPath(d).parent) for d in declared}
     for rel in touched:
@@ -82,10 +82,9 @@ def check(ctx) -> list:
             continue  # reconciled via recorded override
         if mode == "radius" and str(PurePosixPath(rel).parent) in declared_dirs:
             continue  # same-package auto-allow
-        severity = "block" if mode == "block" else "gate"
         findings.append(make_finding(
             "UNDECLARED_FILE", GATE["rule_ref"],
-            f"{rel} is not in slice {ctx.work_unit_id}'s declared/predicted set; "
-            f"amend the slice declaration (reconciliation required before close-slice)",
-            severity=severity, key=rel + "|" + ctx.work_unit_id))
+            f"G3: {rel} is not in the declared files of slice "
+            f"{ctx.work_unit_id}. Add it to predicted_files.",
+            severity="advisory", key=rel + "|" + ctx.work_unit_id))
     return findings

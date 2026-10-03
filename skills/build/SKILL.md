@@ -58,11 +58,10 @@ Loop discipline — in order:
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
 3. **Amend declarations before touching undeclared files.** If you need a
-   file outside `predicted_files`, update the slice row in
-   `.harness/backlog.jsonl` first — G3 findings must be reconciled before
-   close-slice, and wandering is how context dies. (It is also why an
-   undeclared edit is the one file operation that still prompts: declared
-   work is auto-approved, wandering is not.)
+   file outside `predicted_files`, add it to the slice row first with the
+   backlog CLI. G3 reports an undeclared file as an advisory finding and
+   close lists it under `scope_advisory`. Declared work is auto-approved;
+   an undeclared edit still prompts.
 4. **Log abandoned approaches.** Whenever you abandon an approach mid-slice,
    record it before moving on (mandatory, not optional):
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory write --slice $1 --kind attempt --content "<what>"

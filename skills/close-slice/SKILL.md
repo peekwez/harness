@@ -49,8 +49,9 @@ The engine enforces these checks:
 - The review stack runs over this slice's own diff and records its verdict.
   A blocking finding stops the close. That finding can come from the engine
   or from a reviewer agent. Nothing may stay parked for this slice.
-- The unit_complete gates pass: G1 manifest, G3 scope, G5 conformance,
-  G6 drift acknowledged and G8 coverage.
+- The unit_complete gates pass: G1 manifest, G6 drift acknowledged and
+  G8 coverage. G3 scope and G5 conformance advise; close lists undeclared
+  files under `scope_advisory`.
 - Reconciliation passes: uses ⊆ declares.
 - A slice that resolves security-marked decision rows needs a pass verdict
   from an independent forked reviewer (ADR-001). Dispatch the
@@ -59,8 +60,8 @@ The engine enforces these checks:
 Shadows are a gitignored cache under `.harness/cache/`. The engine builds a
 shadow when it needs one. The close commits no shadows.
 If it reports a block, the fix is named in the finding — G6 drift needs
-`"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates ack-drift`, G5 needs a declaration amendment or a recorded
-override with justification.
+`"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates ack-drift`, a use outside `declares_dep` needs a declaration
+amendment or a recorded override with justification.
 
 On success the engine has: written the git note (slice, modules touched,
 registry used, memory ids), flipped registry statuses planned->built,

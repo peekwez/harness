@@ -46,8 +46,8 @@ host request trust when commands change. CI verification remains necessary.
 Each gate finding names its fix. Apply the fix, then retry.
 
 - G1 manifest-complete: `.harness/` needs `config.yaml`, `schema_version`, `registry.jsonl` and `decisions.jsonl`, and each slice needs its red acceptance tests. Run `/harness:init` or write the missing test.
-- G3 spec-bound: a touched file must sit in the slice's declared or predicted files, and must not match a non-goal boundary. Amend the slice declaration. For a non-goal, run `harness gates override --target boundary:<id>` with a justification.
-- G5 registry-conform: a module may use only registry abstractions that the slice declares, and may not reimplement one. Declare the dependency, reuse the entry, or run `harness gates override` with a justification.
+- G3 spec-bound: a touched file outside the slice's declared files is an advisory finding, and close lists it under `scope_advisory`. A file matching a non-goal boundary still blocks. Add the file to `predicted_files`. For a non-goal, run `harness gates override --target boundary:<id>` with a justification.
+- G5 registry-conform: this advisory flags a use outside the slice's declared dependencies, or a reimplemented abstraction. Close reconciles uses against declares and still blocks on a mismatch. Declare the dependency, reuse the entry, or run `harness gates override` with a justification.
 - G6 interface-drift: a changed public interface needs an acknowledgement before close. Run `harness gates ack-drift --slice <id> --module <module>`.
 - G8 coverage-boundary: this advisory lists touched files outside shadow enforcement. No fix is needed; the list keeps unenforced surface visible.
 - Repo-local gates: modules listed under `gates.extra` in `.harness/config.yaml` run beside the builtin gates. A load or run error blocks and names the entry. Fix that module.
