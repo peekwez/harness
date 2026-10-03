@@ -83,3 +83,15 @@ def test_fresh_init_gate_reports_domain_gaps_not_edit_me(tmp_path):
     assert "EDIT ME" not in gaps
     for domain in ("config", "logging", "errors", "telemetry"):
         assert f"domain {domain!r}" in gaps
+
+
+def test_init_creates_no_harness_memory(tmp_path):
+    target = tmp_path / "fresh"
+    target.mkdir()
+    (target / "app.py").write_text("x = 1\n")
+    assert run_cli("init", root=target).returncode == 0
+    assert not (target / ".harness" / "memory").exists()
+    gitignore = (target / ".gitignore").read_text()
+    assert ".harness/memory" not in gitignore
+    assert ".harness/cache/" in gitignore.splitlines()
+    assert "memory" not in (target / ".gitattributes").read_text()

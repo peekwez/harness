@@ -68,7 +68,6 @@ def cmd_init(args):
         return cmd_upgrade(args)
 
     hdir.mkdir(parents=True)
-    (hdir / "memory" / "session").mkdir(parents=True)
 
     # detect languages -> enable packs (relative parts: an ignored name in
     # the ABSOLUTE path — repo under ~/venv, a worktree — must not blank it)
@@ -97,8 +96,7 @@ def cmd_init(args):
     # hand-editing the backlog skill forbids.
     shutil.copy(templates / "registry.seed.jsonl", hdir / "registry.jsonl")
     for empty in ("decisions.jsonl", "backlog.jsonl", "edges.jsonl",
-                  "slice-metrics.jsonl", "boundaries.jsonl", "notes.jsonl",
-                  "memory/durable.jsonl"):
+                  "slice-metrics.jsonl", "boundaries.jsonl", "notes.jsonl"):
         (hdir / empty).touch()
 
     (root / "adr").mkdir(exist_ok=True)
@@ -110,7 +108,7 @@ def cmd_init(args):
     lines = gi.read_text().splitlines() if gi.exists() else []
     for entry in (".harness/sidecar.db", ".harness/sidecar.db-*",
                   ".harness/cache/",
-                  ".harness/memory/session/", ".worktrees/",
+                  ".worktrees/",
                   ".claude/settings.local.json",
                   "__pycache__/", "*.pyc", ".pytest_cache/"):
         if entry not in lines:

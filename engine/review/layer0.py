@@ -74,8 +74,8 @@ def _secret_findings(root, diff_text, slice_id):
 
 
 def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
-    """Substrate + diff only. The reviewer never receives builder session
-    memory — independent derivation from the same ground truth is the point."""
+    """Substrate + diff only. The reviewer never receives the builder's own
+    notes — independent derivation from the same ground truth is the point."""
     root = Path(root)
     registry = load_registry(root)
     files = diff_files(diff_text)

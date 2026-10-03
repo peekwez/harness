@@ -81,8 +81,7 @@ def test_adjudicate_without_decision_id_writes_edge_and_suggests_promote(toy):
     assert out["suggest"].startswith("harness memory promote --text ")
     assert "span names conform to D-041" in out["suggest"]
     assert (toy / ".harness" / "decisions.jsonl").read_text() == before
-    durable = toy / ".harness" / "memory" / "durable.jsonl"
-    assert not (durable.exists() and durable.read_text().strip())
+    assert not (toy / ".harness" / "memory").exists()
     edge = [e for e in load_edges(toy) if e["type"] == "decided_by"][-1]
     assert edge["from"] == f"finding:{fid}" and edge["to"] == f"adjudication:{fid}"
     assert _precedents(toy, "R-decisions") == [

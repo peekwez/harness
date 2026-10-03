@@ -414,7 +414,7 @@ def notes_log(root, slice_id=None) -> list:
 
 
 def write_note(root, commit, payload: dict) -> dict:
-    """Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the
+    """Mirror {slice_id, modules_touched, registry_used} onto the
     commit so provenance travels with the repo. Additive: a second slice on
     the same commit joins the note instead of overwriting it (`notes add -f`
     silently erased the first one); re-noting the same slice replaces its
@@ -455,18 +455,15 @@ def slice_note_payload(root, slice_id: str) -> dict:
         slice_id: The slice to describe.
 
     Returns:
-        `{slice_id, modules_touched, registry_used, memory_ids}`.
+        `{slice_id, modules_touched, registry_used}`.
     """
     from . import get_slice
     sl = get_slice(root, slice_id)
     touched = sorted(e["to"].split(":", 1)[1] for e in load_edges(root)
                      if e["type"] == "touches"
                      and e["from"] == f"slice:{slice_id}")
-    durable = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
     return {"slice_id": slice_id, "modules_touched": touched,
-            "registry_used": sl.get("declares_dep", []),
-            "memory_ids": [m["id"] for m in durable
-                           if m.get("slice") == slice_id]}
+            "registry_used": sl.get("declares_dep", [])}
 
 
 def last_note_payload(root, slice_id: str) -> dict:

@@ -79,7 +79,8 @@ def test_full_close_ceremony(toy):
     assert registry["orders"]["status"] == "built"
     notes = git(toy, "notes", "--ref=refs/notes/harness", "list").stdout
     assert notes.strip(), "git note must exist"
-    assert not (toy / ".harness" / "memory" / "session" / "slice-042.jsonl").exists()
+    assert "memory" not in out
+    assert not (toy / ".harness" / "memory").exists()
 
     # verify stays green after the ceremony (uses ⊆ declares reconciled)
     proc = run_cli("verify", root=toy)

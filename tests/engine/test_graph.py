@@ -96,3 +96,9 @@ def test_git_notes_mirror_and_orphan_detection(toy):
     git(toy, "prune")
     orphans = orphaned_notes(toy)
     assert any(n["commit"] == doomed for n in orphans)
+
+
+def test_note_payload_has_no_memory_ids(toy):
+    from engine.graph import slice_note_payload
+    payload = slice_note_payload(toy, "slice-042")
+    assert set(payload) == {"slice_id", "modules_touched", "registry_used"}

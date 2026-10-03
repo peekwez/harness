@@ -11,13 +11,14 @@ from engine import HarnessError, IGNORED_DIRS
 
 
 def journal_path(root, slice_id):
+    """Close recovery journal. It lives in the gitignored cache, outside the
+    commit that it describes."""
     key = hashlib.sha256(slice_id.encode()).hexdigest()
-    return Path(root) / ".harness/memory/session" / f".close-{key}.json"
+    return Path(root) / ".harness" / "cache" / f"close-{key}.json"
 
 
 FINALIZATION_FILES = ("backlog.jsonl", "registry.jsonl", "edges.jsonl",
-                      "notes.jsonl", "memory/durable.jsonl",
-                      "slice-metrics.jsonl")
+                      "notes.jsonl", "slice-metrics.jsonl")
 
 
 def _save_journal(path, pending):
@@ -84,7 +85,7 @@ def _restore_finalization(root, pending):
 
 
 def finish_closure(root, result):
-    from engine import memory, telemetry
+    from engine import telemetry
     from engine.events import Sidecar
     sid = result["slice"]
     sidecar = Sidecar(root)
@@ -95,9 +96,7 @@ def finish_closure(root, result):
         sidecar.close()
     telemetry.emit(root, "slice_closed", {
         "slice": sid, "flipped": result["registry_flipped"],
-        "flip_skipped": result["flip_skipped"],
-        "memories": result["memory"]["total"]})
-    memory.session_path(root, sid).unlink(missing_ok=True)
+        "flip_skipped": result["flip_skipped"]})
     journal_path(root, sid).unlink(missing_ok=True)
     return result
 

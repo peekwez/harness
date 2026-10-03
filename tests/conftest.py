@@ -136,10 +136,10 @@ def make_config(g3_mode="allow_with_findings"):
 def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     """Substrate + two modules (telemetry built, config planned) + slice-042."""
     hdir = root / ".harness"
-    (hdir / "memory" / "session").mkdir(parents=True)
+    hdir.mkdir(parents=True)
     (hdir / "config.yaml").write_text(make_config(**cfg_kw))
     (hdir / "schema_version").write_text("2\n")
-    for empty in ("edges.jsonl", "slice-metrics.jsonl", "memory/durable.jsonl"):
+    for empty in ("edges.jsonl", "slice-metrics.jsonl"):
         (hdir / empty).touch()
 
     (root / "telemetry.py").write_text(TELEMETRY_PY)
@@ -199,7 +199,6 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     (root / ".gitattributes").write_text(
         ".harness/edges.jsonl merge=union\n"
         ".harness/notes.jsonl merge=union\n"
-        ".harness/memory/durable.jsonl merge=union\n"
         ".harness/backlog.jsonl merge=harness-substrate\n"
         ".harness/registry.jsonl merge=harness-substrate\n"
         ".harness/decisions.jsonl merge=harness-substrate\n"
@@ -207,7 +206,7 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     (root / ".gitignore").write_text(
         ".harness/sidecar.db\n.harness/sidecar.db-*\n"
         ".harness/cache/\n"
-        ".harness/memory/session/\n.worktrees/\n"
+        ".worktrees/\n"
         ".claude/settings.local.json\n"
         "__pycache__/\n*.pyc\n.pytest_cache/\n")
     if oversized:

@@ -63,7 +63,7 @@ def _close_ceremony(args):
     from engine.graph import (append_edge, load_edges, uses_vs_declares,
                               write_note, GraphError)
     from engine.registry import flip_status, load_registry, RegistryError
-    from engine import memory, telemetry
+    from engine import telemetry
     root = _root(args)
     config = load_config(root)
     session = _session(args, root)
@@ -327,14 +327,12 @@ def _close_ceremony(args):
     from engine.graph import record_slice_provenance, record_dependency_snapshot
     record_dependency_snapshot(root, args.slice, ud["uses"], touched, commit=args.commit)
     record_slice_provenance(root, args.slice, args.commit, touched)
-    memory_ids = [m["id"] for m in memory.read_session(root, args.slice)]
     note_written, note_row = False, {}
     if args.commit:
         try:
             note_row = write_note(root, args.commit, {
                 "slice_id": args.slice, "modules_touched": touched,
-                "registry_used": sl.get("declares_dep", []),
-                "memory_ids": memory_ids})
+                "registry_used": sl.get("declares_dep", [])})
             note_written = True
         except GraphError as exc:
             # NOT a warning: an unwritten note means the provenance claim is
@@ -346,9 +344,6 @@ def _close_ceremony(args):
                               f"(stale ref lock? read-only .git?) and "
                               f"re-close — provenance is not optional."})
 
-    compacted = memory.compact_to_durable(root, args.slice, commit=args.commit,
-                                          consume=False)
-
     # D-0.10-11: one committed summary row per slice. Event rows stay local.
     slice_metrics = telemetry.record_slice_summary(root, args.slice)
 
@@ -357,7 +352,7 @@ def _close_ceremony(args):
               "source_commit": args.commit,
               "fork_review": fork_review, "review": review_result,
               "slice_metrics": slice_metrics,
-              "registry_refreshed": refreshed, "flip_skipped": flip_skipped, "memory": compacted,
+              "registry_refreshed": refreshed, "flip_skipped": flip_skipped,
               "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
               "notes_ref": NOTES_REF if note_written else None,
               "notes_hint": (f"view with: git notes --ref={NOTES_REF} show {args.commit}")

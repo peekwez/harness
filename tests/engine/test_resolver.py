@@ -85,16 +85,6 @@ def test_modules_are_pointers_not_shadows_or_guidance(toy):
     assert "SURVIVING-GUIDANCE-MARKER" not in joined
 
 
-def test_durable_memories_are_not_injected(toy):
-    append_jsonl(toy / ".harness" / "memory" / "durable.jsonl", {
-        "id": "mem-aaa", "scope": "durable", "slice_id": "slice-000",
-        "commit": None, "kind": "reasoning",
-        "content": "DURABLE-MEMORY-MARKER: spans must nest", "attempt": None,
-        "edges": [{"type": "remembers", "to": "module:telemetry"}]})
-    out = resolve(toy, "slice-042", load_config(toy))
-    assert "DURABLE-MEMORY-MARKER" not in "\n".join(out["injections"])
-
-
 def test_over_cap_decision_rows_survive_and_pointers_replace_lower_blocks(toy):
     oversize_slice(toy)
     out = resolve(toy, "slice-042", load_config(toy))

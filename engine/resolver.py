@@ -4,8 +4,8 @@ Deterministic: same slice + same substrate -> byte-identical output. Five
 blocks in a fixed priority order (findings, decision rows, non-goals, slice
 card, module pointers). When they do not fit MAX_INJECTION_CHARS the lowest
 priority is cut first and each cut block becomes a one-line pointer. Module
-shadows, guidance and durable memories are never injected: a module is a
-pointer to `harness resolve --module <id>`.
+shadows and guidance are never injected: a module is a pointer to
+`harness resolve --module <id>`.
 """
 from __future__ import annotations
 
