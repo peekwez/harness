@@ -25,3 +25,14 @@ def test_template_points_to_skills_instead_of_long_sections():
                  "## Gates you will meet", "## Independent code review",
                  ".harness/shadows", "memory write"):
         assert gone not in body, gone
+
+
+def test_skill_pointers_resolve_and_removed_gates_are_absent():
+    import re
+    body = TEMPLATE.read_text()
+    names = set(re.findall(r"`harness:([a-z][a-z-]*)`", body))
+    assert names
+    for name in names:
+        assert (PLUGIN_ROOT / "skills" / name / "SKILL.md").is_file(), name
+    for gate in ("G2", "G4", "G7"):
+        assert gate not in body, gate

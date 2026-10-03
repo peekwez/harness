@@ -135,13 +135,16 @@ def test_readme_documents_the_private_engine_repo_setup():
 # ------------------------------------------------- Codex as Layer 3
 def test_codex_is_wired_as_a_second_layer3_advisory():
     """A second independent reviewer is only real if the files the reviewer
-    actually reads say so — and it must inherit the findings contract."""
+    actually reads say so — and it must inherit the findings contract. The
+    short AGENTS.md template only points at the review skill, so it needs the
+    Codex mention alone."""
     missing = []
-    for rel in ("skills/review/SKILL.md", "agents/reviewer.md"):
+    for rel in ("skills/review/SKILL.md", "agents/reviewer.md",
+                "templates/agents-md.md"):
         body = (PLUGIN_ROOT / rel).read_text()
         if "odex" not in body:
             missing.append(f"{rel}: no Codex hand-off")
-        elif "record-finding" not in body:
+        elif rel != "templates/agents-md.md" and "record-finding" not in body:
             missing.append(f"{rel}: Codex findings bypass the findings contract")
     assert not missing, missing
 

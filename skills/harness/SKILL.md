@@ -40,3 +40,14 @@ checks, return explicit per-criterion evidence and actionable gaps. The engine's
 Installing skills does not activate project hooks. Existing Codex hook
 integration uses `adapters/codex/README.md`; preserve other hooks and let the
 host request trust when commands change. CI verification remains necessary.
+
+## Gates
+
+Each gate finding names its fix. Apply the fix, then retry.
+
+- G1 manifest-complete: `.harness/` needs `config.yaml`, `schema_version`, `registry.jsonl` and `decisions.jsonl`, and each slice needs its red acceptance tests. Run `/harness:init` or write the missing test.
+- G3 spec-bound: a touched file must sit in the slice's declared or predicted files, and must not match a non-goal boundary. Amend the slice declaration. For a non-goal, run `harness gates override --target boundary:<id>` with a justification.
+- G5 registry-conform: a module may use only registry abstractions that the slice declares, and may not reimplement one. Declare the dependency, reuse the entry, or run `harness gates override` with a justification.
+- G6 interface-drift: a changed public interface needs an acknowledgement before close. Run `harness gates ack-drift --slice <id> --module <module>`.
+- G8 coverage-boundary: this advisory lists touched files outside shadow enforcement. No fix is needed; the list keeps unenforced surface visible.
+- Repo-local gates: modules listed under `gates.extra` in `.harness/config.yaml` run beside the builtin gates. A load or run error blocks and names the entry. Fix that module.
