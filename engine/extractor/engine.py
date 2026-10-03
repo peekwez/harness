@@ -4,7 +4,7 @@ One driver, per-language query packs (symbols.scm / imports.scm / exports.scm).
 Shadows live in the gitignored `.harness/cache/shadows/` and are built on
 demand by `shadow_for` for files inside the shadow scope (spec §7.2).
 Unchanged derivation inputs -> no work. Unknown language -> degenerate shadow
-+ G8 finding, never silence. Shadows are deterministic: the same source and
++ coverage finding, never silence. Shadows are deterministic: the same source and
 module-resolution context produce byte-identical output.
 """
 
@@ -872,7 +872,7 @@ def extract_path(root, path, config=None, force=False,
     Cache: unchanged source, extractor version, language, module identity, and
     import-resolution context -> no work. A changed derivation input is a
     cache miss by construction; ``force`` bypasses the cache entirely.
-    Unknown language -> degenerate shadow + G8 UNKNOWN_LANGUAGE finding.
+    Unknown language -> degenerate shadow + UNKNOWN_LANGUAGE coverage finding.
     Ignored extensions -> (None, []) — docs/substrate are not modules.
     """
     path = Path(path)
@@ -883,7 +883,7 @@ def extract_path(root, path, config=None, force=False,
     if not in_root(root, path):
         # out-of-root files are visible, never shadowable, never a crash
         return None, [make_finding(
-            "UNSHADOWED_FILE", "gate:G8",
+            "UNSHADOWED_FILE", "doctor:coverage",
             f"{path}: outside the repo root — not shadowed, not enforced",
             severity="advisory", key=f"oor|{path}")]
     source = path.read_bytes()
@@ -933,7 +933,7 @@ def extract_path(root, path, config=None, force=False,
     if lang is None or not enabled.get(lang, True):
         shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
-            "UNKNOWN_LANGUAGE", "gate:G8",
+            "UNKNOWN_LANGUAGE", "doctor:coverage",
             f"{shadow['source_path']}: language for {ext!r} not enforced; "
             f"degenerate shadow written (unenforced surface is enumerated, never invisible)",
             severity="advisory", key=shadow["source_path"]))
@@ -942,7 +942,7 @@ def extract_path(root, path, config=None, force=False,
         # premortem skill hunts is a missing dep turning into a hard block.
         shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
-            "MISSING_DEPENDENCY", "gate:G8",
+            "MISSING_DEPENDENCY", "doctor:coverage",
             f"{shadow['source_path']}: tree-sitter stack unavailable — "
             f"degenerate shadow written; interface enforcement for {lang} is "
             f"degraded until you run `{DEP_INSTALL_HINT}`",

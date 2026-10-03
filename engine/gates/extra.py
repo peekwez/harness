@@ -21,7 +21,7 @@ the builtin gates from running:
 * `EXTRA_GATE_RUN_ERROR` — the gate raised, returned a non-list, or produced a
   finding the engine's own `validate_finding` rejects (a blocking finding with
   no `rule_ref` is the case that matters: D-003/D-007 hold for repo-local
-  gates exactly as for G1-G8).
+  gates exactly as for the builtin gates).
 """
 from __future__ import annotations
 

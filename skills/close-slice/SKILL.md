@@ -49,8 +49,8 @@ The engine enforces these checks:
 - The review stack runs over this slice's own diff and records its verdict.
   A blocking finding stops the close. That finding can come from the engine
   or from a reviewer agent. Nothing may stay parked for this slice.
-- The unit_complete gates pass: G1 manifest, G6 drift acknowledged and
-  G8 coverage. G3 scope and G5 conformance advise; close lists undeclared
+- The unit_complete gates pass: G1 manifest and G6 drift acknowledged.
+  G3 scope and G5 conformance advise; close lists undeclared
   files under `scope_advisory`.
 - Reconciliation passes: uses ⊆ declares.
 - A slice that resolves security-marked decision rows needs a pass verdict

@@ -142,14 +142,3 @@ def test_g6_drift_blocks_until_acknowledged(toy):
     assert edge["meta"]["rule_ref"] == "gate:G6"
     v2 = handle_event(make_event("unit_complete", session=session), toy)
     assert "INTERFACE_DRIFT" not in codes(v2)
-
-
-# ---------------------------------------------------------------- G8
-def test_g8_coverage_advisory_always_emitted(toy):
-    session = "g8"
-    loaded_context(toy, session=session)
-    (toy / "main.rb").write_text("puts 1\n")
-    v = handle_event(make_event("post_change", session=session,
-                                files=["main.rb"]), toy)
-    assert "UNSHADOWED_FILE" in codes(v)
-    assert v["verdict"] == "allow_with_findings"  # advisory, never a block

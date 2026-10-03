@@ -42,6 +42,32 @@ def cmd_doctor(args):
     return 0 if report["healthy"] else 1
 
 
+def _unshadowed_files(root, config) -> list:
+    """Old G8 (spec 4.1): source files in shadow scope that no extractor
+    enforces (unknown or disabled language). Advisory, never a block.
+
+    Args:
+        root: Substrate root.
+        config: Loaded engine config.
+
+    Returns:
+        Sorted repo-relative paths in shadow scope.
+    """
+    from engine import IGNORED_EXTS
+    from engine.extractor.engine import LANG_BY_EXT, scope_files
+    from engine.gates import exempt
+    enabled = config.get("languages", {})
+    out = []
+    for rel in scope_files(root, config):
+        ext = Path(rel).suffix.lower()
+        if ext in IGNORED_EXTS or exempt(rel, config):
+            continue
+        lang = LANG_BY_EXT.get(ext) if ext else None
+        if lang is None or not enabled.get(lang, True):
+            out.append(rel)
+    return out
+
+
 def _substrate_health(root, fix=False) -> dict:
     """Everything that rots quietly: schema drift, bindings pointing at
     closed slices, worktrees for slices nobody is building, findings parked
@@ -52,6 +78,7 @@ def _substrate_health(root, fix=False) -> dict:
     from engine.events import Sidecar
     from engine.schema import validate_substrate
 
+    config = load_config(root)
     problems = {"schema": validate_substrate(root)}
     backlog = {s["id"]: s for s in load_backlog(root)}
 
@@ -119,6 +146,7 @@ def _substrate_health(root, fix=False) -> dict:
         "parked_findings": len(parked),
         "unflushed_telemetry": buffered,
         "missing_notes": missing_notes,
+        "unshadowed_files": _unshadowed_files(root, config),
         "fixed": fixed if fix else None,
         "next": ("harness adjudicate --list" if parked else
                  (f"harness land --slice {missing_notes[0]} (landing.mode: "

@@ -18,7 +18,7 @@ ENGINE_VERSION = "0.9.4"
 
 # Extensions we consider "source modules". Anything else in these families is
 # either substrate/docs (ignored) or unknown-language source (degenerate
-# shadow + G8 finding — never a silent hole).
+# shadow + a coverage finding — never a silent hole).
 IGNORED_EXTS = {
     ".md", ".txt", ".json", ".jsonl", ".toml", ".cfg", ".ini", ".lock",
     ".csv", ".html", ".css", ".svg", ".png", ".jpg", ".gif", ".pdf",

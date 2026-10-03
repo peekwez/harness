@@ -25,5 +25,5 @@ blocks an edit for a stale shadow. To refresh one by hand, run
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" extract <path>`, then reload it.
 
 If you touch a file and its shadow doesn't regenerate (unknown language),
-G8 enumerates it — that surface is unenforced, so flag interface changes
+`harness doctor --substrate` lists it under `unshadowed_files` — that surface is unenforced, so flag interface changes
 there for human review explicitly.

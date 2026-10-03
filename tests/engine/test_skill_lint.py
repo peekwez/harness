@@ -41,7 +41,7 @@ AGENT_GUIDANCE = ("skills/close-slice/SKILL.md", "skills/shadow-context/SKILL.md
                   "agents/builder.md", "adapters/opencode/harness.js",
                   "adapters/opencode/README.md")
 STALE_010 = re.compile(
-    r"\bG[247]\b|G4[-–]G8|\.harness/shadows|shadows_extracted|shadow regen")
+    r"\bG[2478]\b|G4[-–]G8|\.harness/shadows|shadows_extracted|shadow regen")
 
 
 def test_agent_guidance_names_no_removed_gate_or_committed_shadow():

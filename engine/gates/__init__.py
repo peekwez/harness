@@ -4,9 +4,9 @@ Each gate declares preferred/fallback events (T1 portability: post-only
 frameworks run pre_change gates at post_change in degraded revert-and-retry
 mode). Every blocking finding cites a rule_ref — enforced by the engine.
 
-The pack is G1, G3, G5, G6 and G8 plus whatever the repo lists under
-`gates.extra` (ADR-002 / D-007) — see `engine/gates/extra.py`. G2, G4 and
-G7 were removed in 0.10; their ids stay reserved so old override records
+The pack is G1, G3, G5 and G6 plus whatever the repo lists under
+`gates.extra` (ADR-002 / D-007) — see `engine/gates/extra.py`. G2, G4, G7
+and G8 were removed in 0.10; their ids stay reserved so old override records
 keep their meaning.
 """
 from __future__ import annotations
@@ -112,13 +112,13 @@ class GateContext:
         return str(p)
 
 
-RETIRED_GATE_IDS = frozenset({"G2", "G4", "G7"})
+RETIRED_GATE_IDS = frozenset({"G2", "G4", "G7", "G8"})
 
 
 def builtin_gates() -> list:
     """The gates that ship with the engine, in id order."""
-    from . import g1_manifest, g3_scope, g5_conformance, g6_drift, g8_coverage
-    return [g1_manifest, g3_scope, g5_conformance, g6_drift, g8_coverage]
+    from . import g1_manifest, g3_scope, g5_conformance, g6_drift
+    return [g1_manifest, g3_scope, g5_conformance, g6_drift]
 
 
 def reserved_gate_ids() -> set:

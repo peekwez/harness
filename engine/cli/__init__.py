@@ -59,7 +59,7 @@ def main(argv=None):
                                        "(+ --substrate for repo health)")
     sp.add_argument("--substrate", action="store_true",
                     help="also audit substrate health: schemas, stale "
-                         "bindings/worktrees, parks, notes, telemetry")
+                         "bindings/worktrees, parks, notes, unshadowed source files")
     sp.add_argument("--fix", action="store_true",
                     help="clear what is safe to clear (stale bindings, "
                          "unflushed telemetry); never removes worktrees")

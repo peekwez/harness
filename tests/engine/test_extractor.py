@@ -59,7 +59,7 @@ def test_unknown_extension_degenerate_shadow_plus_finding(toy):
     assert "raw_head" in shadow and "puts 1" in shadow["raw_head"]
     codes = [f["code"] for f in findings]
     assert "UNKNOWN_LANGUAGE" in codes  # never silence
-    assert all(f["rule_ref"] == "gate:G8" for f in findings)
+    assert all(f["rule_ref"] == "doctor:coverage" for f in findings)
 
 
 def test_cache_hit_no_work(toy):

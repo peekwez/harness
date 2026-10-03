@@ -91,7 +91,7 @@ def test_the_vendored_engine_runs_verify_by_itself(tmp_path):
 
 def test_the_vendored_engine_is_not_extracted_as_project_source(tmp_path):
     """`.harness/` is substrate; the engine's own .py files must not become
-    shadows, registry gaps or G8 surface in the consumer repo."""
+    shadows, registry gaps or unshadowed surface in the consumer repo."""
     root = _init(tmp_path)
     proc = run_cli("extract", "--all", root=root)
     assert proc.returncode == 0, proc.stderr

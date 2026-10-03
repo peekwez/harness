@@ -314,7 +314,7 @@ def handle_event(raw: dict, root) -> dict:
         if event == "post_change":
             # the tool already ran: these files were really touched.
             # Paths still absolute after normalization — or escaping the
-            # root via `../` traversal — are outside the repo: G8 enumerates
+            # root via `../` traversal — are outside the repo: doctor enumerates
             # them; recording them would poison unit_complete regeneration
             # (field report #19, S5).
             paths = [f["path"] for f in evt["payload"]["files"]

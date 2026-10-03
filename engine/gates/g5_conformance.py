@@ -62,7 +62,7 @@ def check(ctx) -> list:
 
     for rel in touched:
         if Path(rel).is_absolute():
-            continue  # out-of-root/poison rows: G8 territory, never a crash
+            continue  # out-of-root/poison rows: never a crash
         if Path(rel).suffix.lower() not in LANG_BY_EXT:
             continue
         if exempt(rel, ctx.config):
@@ -77,7 +77,7 @@ def check(ctx) -> list:
             # `kente.config` entry, never the bare `kente` one (D-008)
             target = index.match(imp)
             if target is None:
-                continue  # not a registry abstraction; G8 owns coverage
+                continue  # not a registry abstraction
             tid = target["id"]
             own = next((e for e in ctx.registry if e.get("source") == rel), None)
             if own is not None and own["id"] == tid:

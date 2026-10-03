@@ -71,17 +71,36 @@ def test_pre_tool_use_allows_after_session_start(toy):
     assert code == 0 and out is None  # silent allow
 
 
+ADVISE_GATE = '''from engine.events import make_finding
+
+GATE = {"id": "TOY-ADVISE", "rule_ref": "adr:002",
+        "preferred": ["post_change"]}
+
+
+def run(ctx):
+    return [make_finding("TOY_ADVISORY", "adr:002", "toy advisory",
+                         severity="advisory", key="toy")]
+'''
+
+
 def test_post_tool_use_findings_as_context(toy):
+    import yaml
+    (toy / ".harness" / "gates").mkdir(parents=True, exist_ok=True)
+    (toy / ".harness" / "gates" / "advise.py").write_text(ADVISE_GATE)
+    cfg_path = toy / ".harness" / "config.yaml"
+    doc = yaml.safe_load(cfg_path.read_text())
+    doc["gates"]["extra"] = [".harness/gates/advise.py"]
+    cfg_path.write_text(yaml.safe_dump(doc, sort_keys=False))
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-4"},
                 toy, slice_id="slice-042")
-    (toy / "main.rb").write_text("puts 1\n")
+    (toy / "orders.py").write_text("x = 1\n")
     code, out, err = run_adapter(
         {"hook_event_name": "PostToolUse", "session_id": "ac-4",
          "tool_name": "Write",
-         "tool_input": {"file_path": str(toy / "main.rb")}},
+         "tool_input": {"file_path": str(toy / "orders.py")}},
         toy, slice_id="slice-042")
     assert code == 0
-    assert "UNSHADOWED_FILE" in out["hookSpecificOutput"]["additionalContext"]
+    assert "TOY_ADVISORY" in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_stop_maps_to_unit_complete_and_can_block(toy):
