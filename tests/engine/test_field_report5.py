@@ -37,18 +37,6 @@ def test_review_diff_with_missing_file_errors_cleanly(toy):
 
 
 # ---------------------------------------------------------------- X3 + improvement 1
-def test_resolve_accepts_session_and_registers_context(toy):
-    proc = run_cli("resolve", "--slice", "slice-042", "--session", "x3",
-                   root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    sc = Sidecar(toy)
-    try:
-        assert sc.context_get("x3"), \
-            "resolve knows the context set — it must register it (G2)"
-    finally:
-        sc.close()
-
-
 def test_bind_registers_resolved_context_for_the_session(toy):
     """Improvement 1: after `harness slice`, an edit under that session must
     pass G2 without a separate pre_context ceremony."""

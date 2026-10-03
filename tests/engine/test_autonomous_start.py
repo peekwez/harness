@@ -42,10 +42,13 @@ def test_start_provisions_worktree_binding_and_context(toy):
     sc = Sidecar(wt)
     try:
         assert sc.state_get("s-start", "active_slice") == "slice-042"
-        assert sc.context_get("s-start"), "resolved context must be registered"
         assert sc.snapshot_get("slice-042"), "G6 baseline must be snapshotted"
     finally:
         sc.close()
+    from conftest import make_event
+    from engine.events import handle_event
+    assert handle_event(make_event("pre_context", session="s-start"),
+                        wt)["injections"], "the first prompt after binding injects"
     # everything the builder needs, printed once
     assert out["injections"], "Phase-1 context must be emitted by start"
     assert out["acceptance_python"]

@@ -43,7 +43,7 @@ def test_session_start_translates_and_injects(toy):
     assert code == 0, err
     ctx = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
-    assert "shadow:telemetry" in ctx or "emit_span" in ctx  # injection format
+    assert "D-041" in ctx  # decision rows lead the injection
 
 
 def test_pre_tool_use_deny_with_reason(toy):

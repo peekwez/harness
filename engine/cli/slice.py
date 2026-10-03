@@ -150,15 +150,12 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
     # G6 baseline at bind: Phase-1 hook events may never route to this
     # substrate (worktree sessions), so binding is the reliable slice-start
     # moment (S1). INSERT OR IGNORE keeps the earliest baseline on re-bind.
-    # The resolved context is registered for this session ONLY because the
-    # caller emits the injections it names — G2 must never certify context
-    # nobody printed (review finding R3).
+    # The bind prints the capped context; it records no block hashes, so the
+    # first prompt after the binding injects (spec §7.4).
     res = _resolve(root, slice_id, load_config(root))
     sidecar = Sidecar(root)
     try:
         _snapshot_slice_baseline(root, sidecar, slice_id)
-        sidecar.context_add(session, res["context_loaded"],
-                            injections=res["injections"])
     finally:
         sidecar.close()
 
@@ -169,8 +166,8 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
 
     return {"bound": True, "active_slice": slice_id, "session": session,
             "status": sl["status"],
-            "context_registered": len(res["context_loaded"]),
-            "context_loaded": res["context_loaded"],
+            "context_chars": res["chars"],
+            "context_cut": res["cut"],
             "injections": res["injections"],
             "acceptance_python": _acceptance_python(root, load_config(root)),
             "started_at_commit": sl.get("started_at_commit")}

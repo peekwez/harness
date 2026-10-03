@@ -2,7 +2,7 @@
 
 EnforcementEvent (stdin JSON) -> gate dispatch -> EnforcementVerdict (stdout JSON).
 Exit 0: verdict carries semantics. Nonzero exit = engine error only.
-Session-scoped state (context_loaded per session_id) lives in the sidecar.
+Session-scoped state (bindings, per-block injection hashes) lives in the sidecar.
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ FINDING_CODES = {
     "INTERFACE_DRIFT", "UNSHADOWED_FILE", "UNKNOWN_LANGUAGE",
     "HASH_MISMATCH", "ORPHANED_NOTE", "MISSING_DEPENDENCY",
     "UNRECONCILED_SLICE", "MISSING_RULE_REF", "REVIEW_UNCERTAIN",
-    "COMPACTION_REACHED",
+    "COMPACTION_REACHED", "CONTEXT_OVER_CAP",
 }
 
 
@@ -147,9 +147,6 @@ class Sidecar:
         except sqlite3.OperationalError:
             pass  # WAL-unsupported filesystem: default journal is correct, slower
         self.db.executescript("""
-        CREATE TABLE IF NOT EXISTS session_context(
-            session_id TEXT, item TEXT, ts TEXT,
-            UNIQUE(session_id, item));
         CREATE TABLE IF NOT EXISTS session_state(
             session_id TEXT, key TEXT, value TEXT,
             UNIQUE(session_id, key));
@@ -167,33 +164,21 @@ class Sidecar:
     def close(self):
         self.db.close()
 
-    @staticmethod
-    def _context_stamp(items, injections):
-        payload = json.dumps([sorted(items), injections], ensure_ascii=False)
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    def block_hashes_get(self, session_id) -> dict:
+        """`{block key: hash}` of what this session was last sent."""
+        return self.state_get(session_id, "injected_blocks", {}) or {}
 
-    def context_add(self, session_id, items, *, injections=None):
-        ts = now_iso()
-        self.db.executemany(
-            "INSERT OR IGNORE INTO session_context(session_id, item, ts) VALUES(?,?,?)",
-            [(session_id, i, ts) for i in items])
-        if injections is not None:
-            self.db.execute(
-                "INSERT OR REPLACE INTO session_state(session_id, key, value) VALUES(?,?,?)",
-                (session_id, "resolved_context_fingerprint",
-                 json.dumps(self._context_stamp(items, injections))))
-        self.db.commit()
+    def block_hashes_set(self, session_id, hashes: dict) -> None:
+        self.state_set(session_id, "injected_blocks", hashes)
 
-    def context_matches(self, session_id, items, injections):
-        """IDs certify coverage; the stamp certifies the rendered content."""
-        return (set(items) <= self.context_get(session_id)
-                and self.state_get(session_id, "resolved_context_fingerprint")
-                == self._context_stamp(items, injections))
-
-    def context_get(self, session_id) -> set:
+    def block_hashes_clear(self, session_id) -> int:
+        """Forget what this session was sent (PreCompact): the next prompt
+        injects the slice context again. Returns rows cleared."""
         cur = self.db.execute(
-            "SELECT item FROM session_context WHERE session_id=?", (session_id,))
-        return {r[0] for r in cur.fetchall()}
+            "DELETE FROM session_state WHERE session_id=? AND key=?",
+            (session_id, "injected_blocks"))
+        self.db.commit()
+        return cur.rowcount
 
     def state_set(self, session_id, key, value):
         self.db.execute(
@@ -304,23 +289,26 @@ def handle_event(raw: dict, root) -> dict:
         if session not in ("cli", "__default__"):
             sidecar.state_set("__hooks__", "last_session_id", session)
 
-        injections, resolved_manifest = [], []
+        injections, context_findings = [], []
         if event in ("session_start", "pre_context") and slice_id:
-            # Phase 1 — inject early; ~90% of context loading happens here.
-            from .resolver import resolve
+            # Phase 1: one injection per binding, then only the blocks whose
+            # text changed. PreCompact clears the hashes (`resolve --reset`).
+            from .resolver import (BLOCK_SEPARATOR, block_hash,
+                                   over_cap_finding, resolve)
             res = resolve(root, slice_id, config)
-            resolved_manifest = res["context_loaded"]
-            # Dedupe for BOTH Phase-1 events: SessionStart re-runs on resume
-            # (same session_id) and UserPromptSubmit fires every prompt — if
-            # the session carries this exact content, suppress its repetition.
-            # Stable IDs alone cannot detect updated decisions or signatures.
-            if resolved_manifest and sidecar.context_matches(
-                    session, resolved_manifest, res["injections"]):
-                injections = []
-            else:
-                injections = res["injections"]
-            sidecar.context_add(session, resolved_manifest,
-                                injections=res["injections"])
+            sent = sidecar.block_hashes_get(session)
+            current = {}
+            for block, text in zip(res["blocks"], res["injections"]):
+                current[block["key"]] = block_hash(text)
+                if sent.get(block["key"]) != current[block["key"]]:
+                    injections.append(text)
+            sidecar.block_hashes_set(session, current)
+            if injections:
+                sidecar.state_set("__context__", "last_injection_chars",
+                                  len(BLOCK_SEPARATOR.join(injections)))
+                if res["cut"]:
+                    context_findings.append(over_cap_finding(
+                        slice_id, res["cut"], res["demand_chars"]))
             _snapshot_slice_baseline(root, sidecar, slice_id)
 
         if event == "post_change":
@@ -337,7 +325,7 @@ def handle_event(raw: dict, root) -> dict:
         if event == "unit_complete":
             record_touched_uses(root, sidecar, session, slice_id, config)
 
-        findings = run_gates(root, evt, config, sidecar)
+        findings = context_findings + run_gates(root, evt, config, sidecar)
         verdict = merge_verdicts([verdict_for(findings, injections)])
 
         if event == "pre_change" and verdict["verdict"] != "block":

@@ -68,29 +68,6 @@ def test_status_reports_parks_per_slice(toy):
 
 
 # ---------------------------------------------------------------- R3
-def test_resolve_registers_context_only_when_it_emits_it(toy):
-    """G2 must certify what the caller actually printed, never the
-    resolver's intent — otherwise the gate verifies nothing."""
-    proc = run_cli("resolve", "--slice", "slice-042", "--session", "quiet",
-                   "--quiet", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert not json.loads(proc.stdout).get("injections"), \
-        "--quiet suppresses the injections"
-    sc = Sidecar(toy)
-    try:
-        assert not sc.context_get("quiet"), \
-            "context nobody was shown must not be registered"
-    finally:
-        sc.close()
-    # the normal (emitting) path does register
-    run_cli("resolve", "--slice", "slice-042", "--session", "loud", root=toy)
-    sc = Sidecar(toy)
-    try:
-        assert sc.context_get("loud")
-    finally:
-        sc.close()
-
-
 # ---------------------------------------------------------------- R4
 
 

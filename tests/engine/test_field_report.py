@@ -233,7 +233,8 @@ def test_decision_rows_match_dep_id_even_when_kind_coerced(toy):
     from engine import load_config
     from engine.resolver import resolve
     out = resolve(toy, "slice-042", load_config(toy))
-    assert "decision:D-090" in out["context_loaded"], \
+    decisions = next(b["text"] for b in out["blocks"] if b["key"] == "decisions")
+    assert "D-090" in decisions, \
         "rows must match the dep id even when its kind was coerced to 'other'"
 
 

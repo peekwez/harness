@@ -46,28 +46,13 @@ def cmd_extract(args):
 
 # ------------------------------------------------------------------ resolve
 def cmd_resolve(args):
-    from engine.events import Sidecar
-    from engine.resolver import resolve
+    from engine.resolver import render_module, resolve
     root = _root(args)
     config = load_config(root)
-    out = resolve(root, args.slice, config)
-    session = _session(args, root)
-    # G2 certifies what the caller was SHOWN. Registering the manifest while
-    # suppressing the injections would make the gate verify the resolver's
-    # intent instead of the agent's context (review R3) — so --quiet, which
-    # withholds the injections, withholds the registration too.
-    if args.quiet:
-        out["injections"] = []
-        out["context_registered"] = 0
-    else:
-        sidecar = Sidecar(root)
-        try:
-            sidecar.context_add(session, out["context_loaded"],
-                                injections=out["injections"])
-        finally:
-            sidecar.close()
-        out["context_registered"] = len(out["context_loaded"])
-    out["session"] = session
+    if args.module:
+        _print(render_module(root, args.module, config))
+        return 0
+    out = resolve(root, args.slice, config, cap=None)
     # improvement 5: builders should not need the venv path plumbed by hand
     out["acceptance_python"] = _acceptance_python(root, config)
     _print(out)

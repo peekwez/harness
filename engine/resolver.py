@@ -1,21 +1,28 @@
-"""C5 — Resolver: slice -> assembled, ranked, token-budgeted context.
+"""C5 — Resolver: slice -> prioritized context blocks under one cap.
 
-Deterministic: same slice + same substrate -> byte-identical output.
-Budget is never exceeded. Degradation order: drop docstrings before
-dropping modules — a signature without docs beats absence.
+Deterministic: same slice + same substrate -> byte-identical output. Five
+blocks in a fixed priority order (findings, decision rows, non-goals, slice
+card, module pointers). When they do not fit MAX_INJECTION_CHARS the lowest
+priority is cut first and each cut block becomes a one-line pointer. Module
+shadows, guidance and durable memories are never injected: a module is a
+pointer to `harness resolve --module <id>`.
 """
 from __future__ import annotations
 
-import json
+import hashlib
 import re
 from pathlib import Path
 
-from . import (get_slice, harness_dir, load_decisions, read_jsonl,
-               token_estimate)
-from .extractor.modules import RegistryIndex
+from . import (SubstrateMissing, get_slice, harness_dir, load_boundaries,
+               load_decisions, read_jsonl, token_estimate)
 from .registry import load_registry
 
-RANK_DIRECT, RANK_ONEHOP, RANK_MEMORY = 0, 1, 2
+MAX_INJECTION_CHARS = 9000
+BLOCK_SEPARATOR = "\n\n"
+# lower number = higher priority; the cap cuts the highest number first
+BLOCK_PRIORITY = {"findings": 1, "decisions": 2, "non-goals": 3,
+                  "slice": 4, "modules": 5}
+MODULES_TITLE = "modules (full context: harness resolve --module <id>)"
 
 
 def _adr_id(ref: str) -> str:
@@ -162,17 +169,6 @@ def _guidance_candidates(root, entry, superseded: set, dropped=None,
     return out
 
 
-def _render_guidance(root, entry, superseded: set, dropped=None,
-                     loaded_adr_files=None) -> list:
-    """`(gid, block, key)` triples for the resolver, via the shared candidate
-    layer; `key` lets the caller dedupe one section referenced by several
-    declared deps."""
-    return [(f"guidance:{c['ref']}", c["block"], c["key"])
-            for c in _guidance_candidates(root, entry, superseded,
-                                          dropped=dropped,
-                                          loaded_adr_files=loaded_adr_files)]
-
-
 def _ref_superseded(ref: str, superseded: set) -> bool:
     for s in superseded:
         # 'adr/007#s2,s3' covers 'adr/007-telemetry.md#s2' and '#s3'
@@ -194,156 +190,164 @@ def _extract_section(text: str, anchor: str):
     return m.group(1).strip() if m else None
 
 
-def _durable_memories(root, module_ids: set) -> list:
-    rows = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
-    out = []
-    for r in rows:
-        edges = r.get("edges", [])
-        linked = {e.get("to", "").split(":", 1)[-1] for e in edges
-                  if e.get("type") == "remembers"}
-        if linked & module_ids:
-            out.append(r)
-    return sorted(out, key=lambda r: r.get("id", ""))
+def block_hash(text: str) -> str:
+    """Stable hash of one emitted block; the sidecar keeps one per session."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def resolve(root, slice_id: str, config: dict) -> dict:
-    """Assemble injection blocks + the context_loaded manifest they represent."""
-    budget = int(config["resolver"]["budget_tokens"])
+def _open_findings(root, slice_id: str) -> list:
+    """Findings parked for this slice that still wait for a human."""
+    return [row["finding"]
+            for row in read_jsonl(harness_dir(root) / "parked.jsonl")
+            if row.get("slice") == slice_id and isinstance(row.get("finding"), dict)]
+
+
+def _cited_decisions(root, sl: dict, registry: dict) -> list:
+    """Decision rows the slice cites: rows whose domain is a declared dep's
+    id, kind or domain, plus rows authored by an in-force ADR that a
+    declared dep's guidance names. A slice with no deps cites every row."""
+    deps = [registry[d] for d in dict.fromkeys(sl.get("declares_dep", []))
+            if d in registry]
+    keys = set()
+    for e in deps:
+        keys.update(v for v in (e["id"], e.get("kind", "other"), e.get("domain")) if v)
+    out_of_force = _adr_superseded_ids(root)
+    adr_files = set()
+    for e in deps:
+        for ref in e.get("guidance_refs", []):
+            m = re.search(r"adr/(\d+)", ref)
+            if m and (m.group(1) in out_of_force
+                      or m.group(1).lstrip("0") in out_of_force):
+                continue
+            adr_files.add(ref.split("#")[0])
+    rows = []
+    for d in sorted(load_decisions(root), key=lambda r: r.get("id", "")):
+        from_adr = (d.get("adr_ref") or "").split("#")[0] in adr_files
+        if not keys or d.get("domain") in keys or from_adr:
+            rows.append(d)
+    return rows
+
+
+def build_blocks(root, sl: dict, config: dict) -> list:
+    """The slice's context blocks in priority order. Empty blocks are left
+    out; declared ids absent from the registry are ignored here (`resolve`
+    fails closed on them)."""
+    registry = {e["id"]: e for e in load_registry(root)}
+    blocks = []
+
+    def add(key, title, lines):
+        if lines:
+            blocks.append({"key": key, "priority": BLOCK_PRIORITY[key],
+                           "text": f"=== {title} ===\n" + "\n".join(lines)})
+
+    add("findings", "open findings",
+        [f"[{f.get('code')} {f.get('rule_ref')}] {f.get('message')}"
+         for f in _open_findings(root, sl["id"])])
+    add("decisions", "decisions in scope",
+        [f"{d['id']} [{d.get('domain')}] {d.get('question')} -> {d.get('answer')}"
+         for d in _cited_decisions(root, sl, registry)])
+    add("non-goals", "non-goals",
+        [f"{b.get('id')} [{b.get('rule_ref')}] {b.get('text')} "
+         f"({', '.join(b.get('patterns', []))})"
+         for b in load_boundaries(root)])
+    add("slice", f"slice {sl['id']}", [
+        f"goal: {sl.get('title') or sl['id']}",
+        f"statements: {', '.join(sl.get('verifies', [])) or 'none'}",
+        f"predicted files: {', '.join(sl.get('predicted_files', [])) or 'none'}"])
+    add("modules", MODULES_TITLE,
+        [f"{d} ({registry[d].get('status')}, "
+         f"{registry[d].get('source') or 'no source'}): "
+         f"harness resolve --module {d}"
+         for d in dict.fromkeys(sl.get("declares_dep", [])) if d in registry])
+    return blocks
+
+
+def cut_pointer(key: str, slice_id: str) -> str:
+    """The one line that replaces a cut block."""
+    return (f"[harness: the {key} block was cut to fit {MAX_INJECTION_CHARS} "
+            f"characters. Run: harness resolve --slice {slice_id}]")
+
+
+def fit_blocks(blocks: list, slice_id: str, cap=MAX_INJECTION_CHARS) -> tuple:
+    """`(injections, cut)`: one injection per block, in block order; blocks
+    are cut lowest priority first until the joined text fits `cap`.
+    `cap=None` cuts nothing."""
+    cut: list = []
+
+    def render():
+        return [cut_pointer(b["key"], slice_id) if b["key"] in cut else b["text"]
+                for b in blocks]
+
+    if cap is not None:
+        for block in sorted(blocks, key=lambda b: -b["priority"]):
+            if len(BLOCK_SEPARATOR.join(render())) <= cap:
+                break
+            cut.append(block["key"])
+    return render(), cut
+
+
+def resolve(root, slice_id: str, config: dict, *, cap=MAX_INJECTION_CHARS) -> dict:
+    """The slice's context: every block, what fits the cap, and what was cut.
+
+    Raises:
+        SubstrateMissing: a declared dependency is not in the registry.
+    """
     sl = get_slice(root, slice_id)
-    entries = load_registry(root)
-    registry = {e["id"]: e for e in entries}
-    index = RegistryIndex(entries)
-
-    # (1) declares_dep closure -> registry entries (missing dep = hard error).
-    direct_ids = list(dict.fromkeys(sl.get("declares_dep", [])))
-    for d in direct_ids:
-        if d not in registry:
-            from . import SubstrateMissing
+    known = {e["id"] for e in load_registry(root)}
+    for d in sl.get("declares_dep", []):
+        if d not in known:
             raise SubstrateMissing(
                 f"slice {slice_id}: declares_dep {d!r} not in registry (fail closed)")
+    blocks = build_blocks(root, sl, config)
+    injections, cut = fit_blocks(blocks, slice_id, cap)
+    return {"slice": slice_id, "blocks": blocks, "injections": injections,
+            "cut": cut, "chars": len(BLOCK_SEPARATOR.join(injections)),
+            "demand_chars": len(BLOCK_SEPARATOR.join(b["text"] for b in blocks))}
 
-    candidates = []  # (rank, sort_key, kind, id, render_full, render_degraded, manifest_ids)
-    guidance_dropped = []
-    loaded_adr_files: set = set()
-    seen_guidance: set = set()   # (file, anchor) already offered by another dep
 
-    module_ids, domains = set(), set()
-    onehop_seen = set(direct_ids)
-    for did in sorted(direct_ids):
-        entry = registry[did]
-        domains.add(entry.get("kind", "other"))
-        if entry.get("domain"):
-            domains.add(entry["domain"])  # custom domains survive kind coercion (#17)
-        superseded = set(entry.get("supersedes_guidance", []))
-        shadow = _load_shadow(root, entry) if entry.get("status") == "built" else None
+def over_cap_finding(slice_id: str, cut: list, demand_chars: int) -> dict:
+    """Advisory CONTEXT_OVER_CAP: the slice's context did not fit."""
+    from .events import make_finding
+    return make_finding(
+        "CONTEXT_OVER_CAP", "resolver:cap",
+        f"Context cap: slice {slice_id} context is {demand_chars} characters; "
+        f"the cap is {MAX_INJECTION_CHARS}. Cut: {', '.join(cut)}. "
+        f"Split the slice or shorten its rows.",
+        severity="advisory", key=f"{slice_id}|{','.join(cut)}")
+
+
+def render_module(root, module_id: str, config: dict) -> dict:
+    """Full context for one registry module: its shadow (built entries) and
+    its in-force guidance sections. No cap.
+
+    Raises:
+        SubstrateMissing: unknown module id, or a guidance ref names a
+            missing file.
+    """
+    entry = next((e for e in load_registry(root) if e["id"] == module_id), None)
+    if entry is None:
+        raise SubstrateMissing(
+            f"registry has no module {module_id!r}. "
+            f"Run: harness resolve --slice <id> to list the slice's modules")
+    parts, dropped = [], []
+    if entry.get("status") == "built" and entry.get("source"):
+        from .extractor.engine import shadow_for
+        shadow = shadow_for(root, Path(root) / entry["source"], config)
         if shadow is not None:
-            module_ids.add(shadow["module_id"])
-            module_ids.add(did)
-            full = render_shadow(shadow, with_docs=True)
-            degraded = render_shadow(shadow, with_docs=False)
-            candidates.append((RANK_DIRECT, did, "shadow", f"shadow:{did}",
-                               full, degraded, [f"shadow:{did}"]))
-            # (5) one-hop type closure from shadow imports (depth-limited to 1)
-            for imp in shadow.get("imports", []):
-                # dotted imports resolve by longest registry prefix (D-008)
-                hop = index.match(imp)
-                if hop is None or hop["id"] in onehop_seen:
-                    continue
-                onehop_seen.add(hop["id"])
-                hop_shadow = _load_shadow(root, hop) if hop.get("status") == "built" else None
-                if hop_shadow is not None:
-                    candidates.append((RANK_ONEHOP, hop["id"], "shadow",
-                                       f"shadow:{hop['id']}",
-                                       render_shadow(hop_shadow, True),
-                                       render_shadow(hop_shadow, False),
-                                       [f"shadow:{hop['id']}"]))
-        # (2) guidance refs: planned entries fully; built entries only
-        # non-superseded (non-signature-expressible) sections.
-        for gid, block, key in _render_guidance(root, entry, superseded,
-                                                dropped=guidance_dropped,
-                                                loaded_adr_files=loaded_adr_files):
-            if key in seen_guidance:
-                continue          # two deps citing one section inject it once
-            seen_guidance.add(key)
-            candidates.append((RANK_DIRECT, did + "|" + gid, "guidance",
-                               _adr_id(gid.split(":", 1)[1]), block, block,
-                               [_adr_id(gid.split(":", 1)[1])]))
+            parts.append(render_shadow(shadow, with_docs=True))
+    superseded = set(entry.get("supersedes_guidance", []))
+    for c in _guidance_candidates(root, entry, superseded, dropped=dropped):
+        parts.append(c["block"])
+    return {"module": module_id, "text": BLOCK_SEPARATOR.join(parts),
+            "dropped": dropped}
 
-    # (3) decision rows for domains touched. Domain keys are the declared
-    # deps' kinds AND their ids: a row with domain "observability" must reach
-    # a slice declaring the "observability" entry even when its registry kind
-    # was coerced to "other". Rows authored by an ADR already loaded for this
-    # slice ALSO join — the curated decisions block must be a superset of the
-    # binding rules the builder can see in that ADR's frontmatter, regardless
-    # of how the row's domain was authored (re-audit remaining #1).
-    domain_keys = domains | set(direct_ids)
-    dec_lines, dec_ids = [], []
-    for d in sorted(load_decisions(root), key=lambda r: r.get("id", "")):
-        from_loaded_adr = (d.get("adr_ref") or "").split("#")[0] in loaded_adr_files
-        if d.get("domain") in domain_keys or from_loaded_adr or not domain_keys:
-            dec_lines.append(f"{d['id']} [{d.get('domain')}] {d.get('question')} "
-                             f"-> {d.get('answer')}")
-            dec_ids.append(f"decision:{d['id']}")
-    if dec_lines:
-        block = "=== decisions in scope ===\n" + "\n".join(dec_lines)
-        candidates.append((RANK_DIRECT, "zz|decisions", "decisions", "decisions",
-                           block, block, dec_ids))
-
-    # (4) durable memories edged to these modules, ranked below shadows
-    for mem in _durable_memories(root, module_ids | set(direct_ids)):
-        block = (f"=== memory {mem['id']} ({mem.get('kind')}) ===\n"
-                 f"{mem.get('content', '')}")
-        candidates.append((RANK_MEMORY, mem["id"], "memory",
-                           f"memory:{mem['id']}", block, block,
-                           [f"memory:{mem['id']}"]))
-
-    # (6) rank direct > one-hop > memories; deterministic within rank.
-    candidates.sort(key=lambda c: (c[0], c[1]))
-    # the unbounded demand, reported next to what actually fit: an output
-    # that only ever shows what fits conceals the need to split (E6).
-    # `declared_demand` is exactly the figure `backlog` estimates — the
-    # declared deps' own shadows + guidance.
-    demand = sum(token_estimate(c[4]) for c in candidates)
-    declared_demand = sum(token_estimate(c[4]) for c in candidates
-                          if c[0] == RANK_DIRECT and c[2] in ("shadow",
-                                                              "guidance"))
-
-    # (7) cut at budget, degrading per config: docstrings first, then modules.
-    chosen, manifest, dropped = [], [], []
-    used = 0
-    degrade_docs = config["resolver"]["degrade"] == "drop_docstrings_before_modules"
-    for rank, _key, kind, _cid, full, degraded, ids in candidates:
-        cost_full = token_estimate(full)
-        if used + cost_full <= budget:
-            chosen.append(full)
-            used += cost_full
-            manifest.extend(ids)
-            continue
-        cost_deg = token_estimate(degraded)
-        if degrade_docs and degraded != full and used + cost_deg <= budget:
-            chosen.append(degraded)
-            used += cost_deg
-            manifest.extend(ids)
-            continue
-        dropped.append({"kind": kind, "ids": ids, "rank": rank})
-
-    return {
-        "slice": slice_id,
-        "injections": chosen,
-        "context_loaded": list(dict.fromkeys(manifest)),
-        "token_estimate": used,
-        "budget": budget,
-        "demand": demand,
-        "declared_demand": declared_demand,
-        "dropped": dropped + guidance_dropped,
-    }
 
 
 def context_cost_breakdown(root, declares_dep: list, config: dict) -> dict:
     """Backlog-time cost of a slice's declared deps, itemised (spec §5.6, E6).
 
     Built through the same candidate layer the resolver injects from, so
-    the total equals the resolver's `declared_demand` for the same deps:
+    the total is the unbounded demand of the same deps:
     same supersession filtering, same anchor extraction, one count per
     distinct section across all deps. The estimate never applies the
     budget — it is the unbounded demand the budget is compared against.

@@ -233,6 +233,19 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     return root
 
 
+def oversize_slice(root: Path, slice_id: str = "slice-042", n: int = 300) -> None:
+    """Grow one slice card past MAX_INJECTION_CHARS with predicted files."""
+    from engine import read_jsonl
+    path = root / ".harness" / "backlog.jsonl"
+    rows = read_jsonl(path)
+    for row in rows:
+        if row["id"] == slice_id:
+            row["predicted_files"] = list(row["predicted_files"]) + [
+                f"src/generated/module_{i:03d}_with_a_long_descriptive_name.py"
+                for i in range(n)]
+    write_jsonl(path, rows)
+
+
 @pytest.fixture
 def toy(tmp_path):
     return build_toy_repo(tmp_path / "toy")

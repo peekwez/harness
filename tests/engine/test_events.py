@@ -114,58 +114,87 @@ def test_phase1_reinjection_deduped_per_session(toy):
     assert other["injections"]
 
 
-@pytest.mark.parametrize("changed", ["decision", "guidance", "shadow"])
-def test_phase1_reinjects_changed_content_under_existing_ids(toy, changed):
-    from engine import load_config, read_jsonl, write_jsonl
-    from engine.extractor.engine import extract_path
-
+@pytest.mark.parametrize("changed", ["decision", "slice"])
+def test_phase1_resends_only_the_changed_block(toy, changed):
+    from engine import read_jsonl, write_jsonl
     event = make_event("pre_context", session="updated-content")
     first = handle_event(event, toy)
-    assert first["injections"]
+    assert len(first["injections"]) == 4
     if changed == "decision":
         path = toy / ".harness" / "decisions.jsonl"
         rows = read_jsonl(path)
         rows[0]["answer"] = "Always include a trace correlation identifier."
-        write_jsonl(path, rows)
-    elif changed == "guidance":
-        path = toy / "adr" / "007-telemetry.md"
-        path.write_text(path.read_text().replace(
-            "Never log PII", "Always redact PII"))
+        header = "=== decisions in scope ==="
     else:
-        path = toy / "telemetry.py"
-        path.write_text(path.read_text().replace(
-            "attrs: dict", "attrs: dict | None"))
-        extract_path(toy, path, load_config(toy), force=True)
-
+        path = toy / ".harness" / "backlog.jsonl"
+        rows = read_jsonl(path)
+        rows[0]["predicted_files"].append("orders_cli.py")
+        header = "=== slice slice-042 ==="
+    write_jsonl(path, rows)
     updated = handle_event(event, toy)
-    assert updated["injections"], "stable IDs must not hide changed content"
-    assert updated["injections"] != first["injections"]
+    assert [t.splitlines()[0] for t in updated["injections"]] == [header]
     assert handle_event(event, toy)["injections"] == []
 
 
-def test_legacy_context_ids_do_not_certify_content_freshness(toy):
-    from engine import load_config
+def test_fifteen_prompt_session_injects_once_then_only_deltas(toy):
+    from engine import read_jsonl, write_jsonl
+    run_cli("slice", "--slice", "slice-042", "--session", "fifteen", root=toy)
+    sizes = []
+    for i in range(15):
+        if i == 7:
+            path = toy / ".harness" / "decisions.jsonl"
+            rows = read_jsonl(path)
+            rows[0]["answer"] = "Use verb_noun span names."
+            write_jsonl(path, rows)
+        v = handle_event(make_event("pre_context", session="fifteen",
+                                    prompt=f"prompt {i}"), toy)
+        sizes.append(len(v["injections"]))
+    assert sizes[0] == 4      # decisions, non-goals, slice, modules
+    assert sizes[7] == 1      # only the changed decisions block
+    assert sum(sizes) == 5
+
+
+def test_last_injection_size_is_recorded(toy):
     from engine.events import Sidecar
-    from engine.resolver import resolve
-
-    resolved = resolve(toy, "slice-042", load_config(toy))
-    sidecar = Sidecar(toy)
+    v = handle_event(make_event("pre_context", session="size"), toy)
+    sc = Sidecar(toy)
     try:
-        sidecar.context_add("legacy-context", resolved["context_loaded"])
+        assert sc.state_get("__context__", "last_injection_chars") == \
+            len("\n\n".join(v["injections"]))
     finally:
-        sidecar.close()
-    event = make_event("pre_context", session="legacy-context")
-    assert handle_event(event, toy)["injections"]
-    assert handle_event(event, toy)["injections"] == []
+        sc.close()
 
 
-def test_cli_resolve_records_content_for_hook_deduplication(toy):
-    proc = run_cli("resolve", "--slice", "slice-042", "--session", "cli-context",
-                   root=toy)
-    assert proc.returncode == 0, proc.stderr
-    assert json.loads(proc.stdout)["injections"]
-    event = make_event("pre_context", session="cli-context")
-    assert handle_event(event, toy)["injections"] == []
+def test_over_cap_injection_adds_an_advisory_finding(toy):
+    from conftest import oversize_slice
+    oversize_slice(toy)
+    v = handle_event(make_event("pre_context", session="cap"), toy)
+    hits = [f for f in v["findings"] if f["code"] == "CONTEXT_OVER_CAP"]
+    assert hits and hits[0]["severity"] == "advisory"
+    assert v["verdict"] == "allow_with_findings"
+    assert len("\n\n".join(v["injections"])) <= 9000
+
+
+def test_rebinding_mid_session_sends_only_the_changed_blocks(toy):
+    from engine import read_jsonl, write_jsonl
+    path = toy / ".harness" / "backlog.jsonl"
+    rows = read_jsonl(path)
+    rows.append({"id": "slice-043", "spec": "spec-007", "title": "span export",
+                 "status": "planned", "declares_dep": ["telemetry"],
+                 "acceptance": ["tests/slices/042_orders.py"],
+                 "predicted_files": ["spans.py"], "depends_on": [],
+                 "worktree": None})
+    write_jsonl(path, rows)
+    run_cli("slice", "--slice", "slice-042", "--session", "rebind", root=toy)
+    first = handle_event(make_event("pre_context", session="rebind",
+                                    slice_id=None), toy)
+    assert len(first["injections"]) == 4
+    run_cli("slice", "--slice", "slice-043", "--session", "rebind", root=toy)
+    second = handle_event(make_event("pre_context", session="rebind",
+                                     slice_id=None), toy)
+    assert [t.splitlines()[0] for t in second["injections"]] == [
+        "=== slice slice-043 ===",
+        "=== modules (full context: harness resolve --module <id>) ==="]
 
 
 def test_warm_pre_change_under_150ms(toy):

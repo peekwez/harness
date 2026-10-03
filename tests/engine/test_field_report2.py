@@ -44,11 +44,9 @@ def test_resolver_skips_superseded_adr_guidance(toy):
     (toy / "adr" / "009-push-model.md").write_text(
         '---\nid: "009"\nstatus: accepted\nsupersedes: ["007"]\n---\n'
         '# ADR-009\nNew push model replaces ADR-007 guidance.\n')
-    from engine.resolver import resolve
-    out = resolve(toy, "slice-042", load_config(toy))
-    joined = "\n".join(out["injections"])
-    assert "SURVIVING-GUIDANCE-MARKER" not in joined  # adr/007 is out of force
-    assert "adr:007" not in out["context_loaded"]
+    from engine.resolver import render_module
+    out = render_module(toy, "telemetry", load_config(toy))
+    assert "SURVIVING-GUIDANCE-MARKER" not in out["text"]  # adr/007 is out of force
     assert any(d.get("kind") == "guidance-superseded" for d in out["dropped"]), \
         "the drop must be visible, not silent"
 
@@ -236,10 +234,9 @@ def test_decisions_block_includes_rows_from_loaded_adrs(toy):
     write_jsonl(toy / ".harness" / "decisions.jsonl", rows)
     from engine.resolver import resolve
     out = resolve(toy, "slice-042", load_config(toy))
-    assert "decision:D-070" in out["context_loaded"], \
-        "rows from loaded ADRs must join the decisions block"
-    assert "decision:D-071" not in out["context_loaded"], \
-        "rows from unloaded ADRs must not leak in"
+    decisions = next(b["text"] for b in out["blocks"] if b["key"] == "decisions")
+    assert "D-070" in decisions, "rows from cited ADRs must join the decisions block"
+    assert "D-071" not in decisions, "rows from uncited ADRs must not leak in"
 
 
 # ------------------------------------------------- autonomy profile

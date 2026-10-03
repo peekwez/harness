@@ -97,14 +97,15 @@ def main(argv=None):
                     help="bypass the shadow cache (escape hatch for stale/"
                          "corrupted cache entries)")
 
-    sp = sub.add_parser("resolve", help="slice -> assembled context")
-    sp.add_argument("--slice", required=True)
+    sp = sub.add_parser("resolve", help="slice context (no cap) or one "
+                                        "module's full context")
+    target = sp.add_mutually_exclusive_group(required=True)
+    target.add_argument("--slice", help="print the slice's context blocks")
+    target.add_argument("--module", help="print one module's shadow and "
+                                         "guidance")
     sp.add_argument("--session",
-                    help="register the resolved context for this session "
-                         "(default: $CLAUDE_SESSION_ID, then 'cli')")
-    sp.add_argument("--quiet", action="store_true",
-                    help="manifest only, no injections — and therefore no "
-                         "context registration (G2 certifies what was shown)")
+                    help="session id (default: $CLAUDE_SESSION_ID, then the "
+                         "live hook session, then 'cli')")
 
     sp = sub.add_parser("gates", help="run gate pack / record overrides")
     gsub = sp.add_subparsers(dest="gates_cmd")
