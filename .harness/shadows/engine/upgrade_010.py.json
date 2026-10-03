@@ -1,0 +1,187 @@
+{
+ "exports": [
+  "Step",
+  "advice",
+  "always_yes",
+  "plan",
+  "recording_ask",
+  "register",
+  "run",
+  "tty_ask"
+ ],
+ "extractor_version": 4,
+ "import_candidates": [
+  "dataclasses.dataclass",
+  "engine.HarnessError",
+  "pathlib.Path",
+  "typing.Callable"
+ ],
+ "import_resolution_hash": "sha256:78729a450e3fa0cb598edca8e100298165fc582cde0eba2fe47d945da63fd95f",
+ "imports": [
+  "dataclasses",
+  "engine",
+  "pathlib",
+  "sys",
+  "typing"
+ ],
+ "language": "python",
+ "module_id": "engine.upgrade_010",
+ "source_hash": "sha256:5b93b65d2a01f36e0fda0bdd907244b80db09298e569185997ca9f67bcca09f4",
+ "source_path": "engine/upgrade_010.py",
+ "symbols": [
+  {
+   "doc": null,
+   "kind": "class",
+   "name": "Step",
+   "signature": "class Step",
+   "span": [
+    22,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.id",
+   "signature": "id: str",
+   "span": [
+    23,
+    23
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.title",
+   "signature": "title: str",
+   "span": [
+    24,
+    24
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.describe",
+   "signature": "describe: Callable[[Path], list[str]]",
+   "span": [
+    25,
+    25
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.apply",
+   "signature": "apply: Callable[[Path, Ask], list[str]]",
+   "span": [
+    26,
+    26
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.destructive",
+   "signature": "destructive: bool = False",
+   "span": [
+    27,
+    27
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "field",
+   "name": "Step.advise",
+   "signature": "advise: Callable[[Path], list[str]] | None = None",
+   "span": [
+    31,
+    31
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Advice from every step, whether or not it has changes.",
+   "kind": "function",
+   "name": "advice",
+   "signature": "def advice(root: Path) -> list[dict]",
+   "span": [
+    37,
+    38
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Add one step. A second step with the same id is a bug.",
+   "kind": "function",
+   "name": "register",
+   "signature": "def register(step: Step) -> Step",
+   "span": [
+    47,
+    48
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The steps that still have work, with the changes each would make.",
+   "kind": "function",
+   "name": "plan",
+   "signature": "def plan(root: Path) -> list[dict]",
+   "span": [
+    55,
+    56
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Apply every step that has work. A dry run only describes.\n\n    Raises:\n        HarnessError: a destructive step applied without asking, or a step\n            left changes undone without reporting a skip.",
+   "kind": "function",
+   "name": "run",
+   "signature": "def run(root: Path, ask: Ask, *, dry_run: bool) -> list[dict]",
+   "span": [
+    66,
+    67
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": null,
+   "kind": "function",
+   "name": "recording_ask",
+   "signature": "def recording_ask(question: str, _asked=asked) -> bool",
+   "span": [
+    83,
+    84
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "The `--yes` answer: accept every prompt.",
+   "kind": "function",
+   "name": "always_yes",
+   "signature": "def always_yes(question: str) -> bool",
+   "span": [
+    103,
+    104
+   ],
+   "visibility": "public"
+  },
+  {
+   "doc": "Ask on stderr and read stdin. With no terminal the answer is no.",
+   "kind": "function",
+   "name": "tty_ask",
+   "signature": "def tty_ask(question: str) -> bool",
+   "span": [
+    108,
+    109
+   ],
+   "visibility": "public"
+  }
+ ]
+}

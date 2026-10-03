@@ -69,6 +69,7 @@ def test_local_upgrade_dry_run_reports_plan_without_writes(tmp_path):
     assert out["dry_run"] is True
     assert out["plan"] == [
         "migrate substrate schema",
+        "run 0.10 upgrade steps",
         "install merge drivers",
         "refresh vendored engine",
         "refresh harness-generated workflow",

@@ -14,8 +14,12 @@ def current_version(root) -> int:
     return int(sv.read_text().strip())
 
 
+def _stamp_only(root) -> None:
+    """Schema 1 -> 2 rewrites no rows: the 0.10 upgrade steps do the work."""
+
+
 # version -> callable(root) upgrading from that version to version+1
-MIGRATIONS: dict = {}
+MIGRATIONS: dict = {1: _stamp_only}
 
 
 def migrate(root) -> dict:

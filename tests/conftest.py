@@ -147,7 +147,7 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     (hdir / "memory" / "session").mkdir(parents=True)
     (hdir / "shadows").mkdir()
     (hdir / "config.yaml").write_text(make_config(budget=budget, **cfg_kw))
-    (hdir / "schema_version").write_text("1\n")
+    (hdir / "schema_version").write_text("2\n")
     for empty in ("edges.jsonl", "telemetry.jsonl", "memory/durable.jsonl"):
         (hdir / empty).touch()
 

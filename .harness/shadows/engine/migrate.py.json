@@ -17,7 +17,7 @@
  ],
  "language": "python",
  "module_id": "engine.migrate",
- "source_hash": "sha256:dbfe86ca09b6429d293b07582e1b25d9c36c7545be15aa5372ac72581c60c1fd",
+ "source_hash": "sha256:2cde32f84c2b4b00983c2094031497fc25b6440c803599189dfb184d32c95ff9",
  "source_path": "engine/migrate.py",
  "symbols": [
   {
@@ -32,13 +32,24 @@
    "visibility": "public"
   },
   {
+   "doc": "Schema 1 -> 2 rewrites no rows: the 0.10 upgrade steps do the work.",
+   "kind": "function",
+   "name": "_stamp_only",
+   "signature": "def _stamp_only(root) -> None",
+   "span": [
+    17,
+    18
+   ],
+   "visibility": "private"
+  },
+  {
    "doc": null,
    "kind": "function",
    "name": "migrate",
    "signature": "def migrate(root) -> dict",
    "span": [
-    21,
-    22
+    25,
+    26
    ],
    "visibility": "public"
   }

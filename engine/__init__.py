@@ -13,7 +13,7 @@ import os
 import time
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 ENGINE_VERSION = "0.9.4"
 
 # Extensions we consider "source modules". Anything else in these families is

@@ -86,6 +86,8 @@ def main(argv=None):
                     help="Claude installation scope when an id exists in more than one scope")
     sp.add_argument("--dry-run", action="store_true",
                     help="report the exact plan and host commands without writes")
+    sp.add_argument("--yes", action="store_true",
+                    help="accept every upgrade prompt (for CI)")
 
     sp = sub.add_parser("extract", help="tree-sitter -> universal shadows")
     sp.add_argument("paths", nargs="*")

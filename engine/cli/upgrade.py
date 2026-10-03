@@ -19,6 +19,7 @@ from engine.plugin_install import (entry_id, installed_entries,
 
 PROJECT_PLAN = [
     "migrate substrate schema",
+    "run 0.10 upgrade steps",
     "install merge drivers",
     "refresh vendored engine",
     "refresh harness-generated workflow",
@@ -158,10 +159,11 @@ def _refresh_codex_hooks(root: Path, *, dry_run: bool = False) -> dict:
     return report
 
 
-def upgrade_project(root, *, dry_run: bool = False) -> dict:
+def upgrade_project(root, *, dry_run: bool = False, yes: bool = False) -> dict:
     """Upgrade one substrate without rewriting authored project state."""
     root = Path(root).resolve()
     _require_substrate(root)
+    from engine import upgrade_010
     from engine.migrate import MIGRATIONS, migrate
     from engine.overrides import repair_legacy_overrides
 
@@ -182,6 +184,8 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
                 "schema": {"from": version, "to": SCHEMA_VERSION,
                            "would_apply": list(
                                range(version + 1, SCHEMA_VERSION + 1))},
+                "steps": upgrade_010.plan(root),
+                "advice": upgrade_010.advice(root),
                 "engine_version": ENGINE_VERSION,
                 "legacy_overrides": repair_legacy_overrides(root, dry_run=True),
                 "codex_adapter": _refresh_codex_hooks(root, dry_run=True)}
@@ -189,8 +193,15 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
     # Migration is deliberately the first write.  New code must never read
     # old substrate rows as though they already had the current schema.
     schema = migrate(root)
+    # The 0.10 steps run right after the migration: they rewrite old
+    # substrate shapes before any other code reads them.
+    ask = upgrade_010.always_yes if yes else upgrade_010.tty_ask
+    steps = upgrade_010.run(root, ask, dry_run=False)
     config = load_config(root)
     clean, dirty, warnings = _clean_registry_entries(root)
+    warnings.extend(
+        f"{row['id']}: {upgrade_010.SKIPPED}. Run: harness upgrade --yes"
+        for row in steps if upgrade_010.SKIPPED in row.get("report", []))
 
     _install_merge_drivers(root)
     vendored = _vendor_engine(root)
@@ -226,6 +237,8 @@ def upgrade_project(root, *, dry_run: bool = False) -> dict:
                            + "; ".join(problems))
     return {
         "schema": schema,
+        "steps": steps,
+        "advice": upgrade_010.advice(root),
         "vendored_engine": vendored,
         "workflow": workflow,
         "claude": claude,
@@ -285,7 +298,8 @@ def _command_json(command):
 
 
 def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
-                             scope=None, dry_run: bool = False) -> dict:
+                             scope=None, dry_run: bool = False,
+                             yes: bool = False) -> dict:
     """Update one installed Harness plugin, then delegate project upgrade."""
     root = Path(root).resolve()
     _require_substrate(root)
@@ -306,6 +320,8 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
         _plugin_root, binary = prove_engine(host, before)
         delegate = [sys.executable, str(binary), "--root", str(root),
                     "upgrade"]
+        if yes:
+            delegate.append("--yes")
         return {
             "dry_run": True,
             "host": host,
@@ -333,6 +349,8 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
     prevent_downgrade(after.get("version"), ENGINE_VERSION, "project upgrade engine")
     plugin_root, binary = prove_engine(host, after)
     delegate = [sys.executable, str(binary), "--root", str(root), "upgrade"]
+    if yes:
+        delegate.append("--yes")
     project = _command_json(delegate)
     plugin_version = after.get("version")
     engine_version = project.get("engine_version")
@@ -379,10 +397,12 @@ def cmd_upgrade(args):
         report = upgrade_installed_plugin(
             root, host, plugin_id=getattr(args, "plugin_id", None),
             scope=getattr(args, "scope", None),
-            dry_run=getattr(args, "dry_run", False))
+            dry_run=getattr(args, "dry_run", False),
+            yes=getattr(args, "yes", False))
     else:
         if host or getattr(args, "plugin_id", None) or getattr(args, "scope", None):
             raise HarnessError("--host, --plugin-id and --scope require --plugin")
-        report = upgrade_project(root, dry_run=getattr(args, "dry_run", False))
+        report = upgrade_project(root, dry_run=getattr(args, "dry_run", False),
+                                 yes=getattr(args, "yes", False))
     _print(report)
     return 0
