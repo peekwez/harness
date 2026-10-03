@@ -213,3 +213,36 @@ def test_doctor_reports_the_extractor_stack(toy):
     assert out["extractor"]["version"] == EXTRACTOR_VERSION
     assert set(out["extractor"]["stack"]) == {"tree-sitter",
                                               "tree-sitter-language-pack"}
+
+
+def test_malformed_shadows_config_fails_loud_on_post_change(toy):
+    loaded_context(toy, session="badcfg")
+    cfg = toy / ".harness" / "config.yaml"
+    cfg.write_text(cfg.read_text() + 'shadows:\n  include: "libs/**"\n')
+    with pytest.raises(HarnessError, match="shadows.include"):
+        handle_event(make_event("post_change", session="badcfg",
+                                files=["telemetry.py"]), toy)
+
+
+def test_malformed_shadows_config_fails_loud_in_layer0(toy):
+    from engine.review.layer0 import assemble
+    config = load_config(toy)
+    config["shadows"] = {"include": "libs/**"}
+    with pytest.raises(HarnessError, match="shadows.include"):
+        assemble(toy, "", "slice-042", config)
+
+
+def test_g5_scans_module_ids_once_per_run(toy, monkeypatch):
+    import engine.extractor.engine as ex
+    loaded_context(toy, session="cost")
+    files = []
+    for i in range(4):
+        rel = f"pkg/m{i}.py"
+        _write(toy, rel, "import telemetry\n")
+        files.append(rel)
+    calls = []
+    real = ex.python_module_ids
+    monkeypatch.setattr(ex, "python_module_ids",
+                        lambda *a, **k: calls.append(1) or real(*a, **k))
+    handle_event(make_event("post_change", session="cost", files=files), toy)
+    assert len(calls) <= 2, len(calls)     # not one scan per touched file

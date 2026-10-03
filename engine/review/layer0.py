@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 from .. import get_slice, load_decisions
+from ..extractor import engine as _ex
 from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..graph import uses_vs_declares
 from ..registry import load_registry
@@ -111,11 +112,16 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
 
     imported_shadows = {}
     from .. import HarnessError
+    _ex.validate_shadow_config(config)       # loud, outside the catch below
+    known_modules = _ex.python_module_ids(root, config)            # once
+    ignored = _ex.git_ignored_set(
+        root, list(files) + [e["source"] for e in registry if e.get("source")])
+    kw = {"known_modules": known_modules, "ignored": ignored}
     for f in files:
         if Path(f).suffix.lower() not in LANG_BY_EXT:
             continue
         try:
-            shadow = shadow_for(root, root / f, config)
+            shadow = shadow_for(root, root / f, config, **kw)
         except HarnessError:
             continue
         if shadow is None:
@@ -125,7 +131,7 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
             # exact-id matching drops `telemetry.spans` -> `telemetry`
             entry = index.match(imp)
             if entry and entry.get("source"):
-                dep = shadow_for(root, root / entry["source"], config)
+                dep = shadow_for(root, root / entry["source"], config, **kw)
                 if dep is not None:
                     imported_shadows[imp] = dep
 

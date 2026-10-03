@@ -691,14 +691,37 @@ def git_ignored(root, rel: str) -> bool:
     return proc.returncode == 0
 
 
-def in_shadow_scope(root, rel: str, config) -> bool:
-    """Whether one repo-relative file gets a shadow (spec §7.2)."""
+def git_ignored_set(root, rels) -> set:
+    """The subset of `rels` the repo's ignore rules exclude, in one git call."""
+    rels = sorted({str(r) for r in rels})
+    if not rels or not _is_git_repo(root):
+        return set()
+    proc = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "--stdin", "-z"],
+        input="\0".join(rels).encode(), capture_output=True)
+    if proc.returncode not in (0, 1):
+        return set()
+    return {p for p in proc.stdout.decode("utf-8", "replace").split("\0") if p}
+
+
+def validate_shadow_config(config) -> None:
+    """Raise HarnessError when `shadows` in config is malformed."""
+    _shadow_globs(config)
+
+
+def in_shadow_scope(root, rel: str, config, *, ignored=None) -> bool:
+    """Whether one repo-relative file gets a shadow (spec §7.2).
+
+    `ignored`: optional precomputed `git_ignored_set` covering `rel`, so a
+    loop does not spawn one git process per file."""
     rel = PurePosixPath(str(rel).replace("\\", "/")).as_posix()
     if not _rules_allow(rel, config):
         return False
     path = Path(root) / rel
     if not path.is_file() or not _content_allows(path):
         return False
+    if ignored is not None:
+        return rel not in ignored
     return not git_ignored(root, rel)
 
 
@@ -913,7 +936,7 @@ def extract_path(root, path, config=None, force=False,
     return shadow, findings
 
 
-def shadow_for(root, path, config, *, known_modules=None):
+def shadow_for(root, path, config, *, known_modules=None, ignored=None):
     """The interface shadow of one source file, from the cache when fresh.
 
     Args:
@@ -921,6 +944,7 @@ def shadow_for(root, path, config, *, known_modules=None):
         path: Source file, absolute or root-relative.
         config: Loaded engine config (scope globs, languages, src roots).
         known_modules: Optional precomputed `python_module_ids` for loops.
+        ignored: Optional precomputed `git_ignored_set` for loops.
 
     Returns:
         The shadow dict, rebuilt and stored when its source hash, extractor
@@ -934,7 +958,7 @@ def shadow_for(root, path, config, *, known_modules=None):
     if not in_root(root, path):
         return None
     rel = rel_to_root(root, path).as_posix()
-    if not in_shadow_scope(root, rel, config):
+    if not in_shadow_scope(root, rel, config, ignored=ignored):
         return None
     shadow, _findings = extract_path(root, path, config,
                                      _known_modules=known_modules)

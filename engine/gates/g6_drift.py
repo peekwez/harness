@@ -35,6 +35,11 @@ def check(ctx) -> list:
     findings = []
     acked = _acked(ctx)
     registry = {e["id"]: e for e in ctx.registry}
+    from ..extractor import engine as _ex
+    _ex.validate_shadow_config(ctx.config)
+    known_modules = _ex.python_module_ids(ctx.root, ctx.config)   # once
+    ignored = _ex.git_ignored_set(
+        ctx.root, [e["source"] for e in registry.values() if e.get("source")])
     for module_id, old in sorted(baseline.items()):
         entry = registry.get(module_id)
         if entry is None:
@@ -45,7 +50,8 @@ def check(ctx) -> list:
             # skip rather than demand acks for non-events (W8)
             continue
         old_syms = old.get("symbols") or []
-        new_syms = public_symbols(ctx.root, entry, ctx.config)
+        new_syms = public_symbols(ctx.root, entry, ctx.config,
+                               known_modules=known_modules, ignored=ignored)
         if new_syms is None or new_syms == old_syms:
             continue
         # symbols changed but source bytes did not: extractor version skew,

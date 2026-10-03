@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..events import make_finding
+from ..extractor import engine as _ex
 from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..registry import digest_tokens, signature_digest, similarity
 
@@ -32,10 +33,11 @@ def _override_targets(ctx) -> set:
                             {"module", "registry"})
 
 
-def _shadow_for_touched(ctx, rel):
+def _shadow_for_touched(ctx, rel, known_modules, ignored):
     from .. import HarnessError
     try:
-        return shadow_for(ctx.root, ctx.root / rel, ctx.config)
+        return shadow_for(ctx.root, ctx.root / rel, ctx.config,
+                          known_modules=known_modules, ignored=ignored)
     except HarnessError:
         return None  # poison touched row (out-of-root): never crash a gate (S5)
 
@@ -55,6 +57,13 @@ def check(ctx) -> list:
     if not touched:
         touched = sorted(ctx.sidecar.touched_paths(slice_id=ctx.work_unit_id))
 
+    # a malformed `shadows` config fails loud here, outside the poison-row
+    # catch below (a swallowed config error would silently disable G5)
+    _ex.validate_shadow_config(ctx.config)
+    candidates = [r for r in touched if not Path(r).is_absolute()]
+    known_modules = _ex.python_module_ids(ctx.root, ctx.config)   # once
+    ignored = _ex.git_ignored_set(ctx.root, candidates)           # once
+
     for rel in touched:
         if Path(rel).is_absolute():
             continue  # out-of-root/poison rows: G8 territory, never a crash
@@ -62,7 +71,7 @@ def check(ctx) -> list:
             continue
         if rel.startswith((".harness/", "tests/", "adr/", "contracts/", "docs/")):
             continue
-        shadow = _shadow_for_touched(ctx, rel)
+        shadow = _shadow_for_touched(ctx, rel, known_modules, ignored)
         if shadow is None:
             continue
 

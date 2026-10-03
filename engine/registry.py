@@ -157,19 +157,19 @@ def similarity(tokens_a: set, tokens_b: set) -> float:
     return len(tokens_a & tokens_b) / len(tokens_a | tokens_b)
 
 
-def _shadow_of(root, entry, config=None):
+def _shadow_of(root, entry, config=None, **kw):
     """The entry's shadow through the cache, or None (no source / out of scope)."""
     if not entry.get("source"):
         return None
     from . import load_config
     from .extractor.engine import shadow_for
     return shadow_for(root, Path(root) / entry["source"],
-                      config if config is not None else load_config(root))
+                      config if config is not None else load_config(root), **kw)
 
 
-def public_symbols(root, entry, config=None) -> list | None:
+def public_symbols(root, entry, config=None, **kw) -> list | None:
     """Public symbol signatures from an entry's shadow, or None if no shadow."""
-    shadow = _shadow_of(root, entry, config)
+    shadow = _shadow_of(root, entry, config, **kw)
     if shadow is None:
         return None
     return sorted(f"{s['kind']} {s['signature']}" for s in shadow.get("symbols", [])
