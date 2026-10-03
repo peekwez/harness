@@ -1,6 +1,6 @@
 ---
 name: build
-description: Start or resume the slice loop — one command provisions the worktree, sandbox, binding and Phase-1 context, then the slice runs to close without interruption.
+description: Start or resume the slice loop — one command provisions the worktree, sandbox, binding and Phase-1 context, then the slice runs to close without interruption. Also covers loading module context: read a module's shadow before its source.
 allowed-tools: Bash(*/bin/harness *) Bash(git *) Bash(pytest *) Bash(python3 -m pytest *)
 argument-hint: "<slice-id>"
 ---
@@ -33,6 +33,9 @@ guidance, decision rows, durable memories). `acceptance_python` is the
 interpreter for the acceptance tests. **From here on run every command —
 harness, git, pytest — from the `worktree` path in that output.** Mixing
 trees splits substrate state.
+
+Module context: read another module's shadow before its source. A built
+module's shadow replaces the ADR guidance listed in its `supersedes_guidance`.
 
 Loop discipline — in order:
 

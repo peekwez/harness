@@ -1,6 +1,6 @@
 ---
 name: harness
-description: Inspect, upgrade, plan, build and verify projects that use the Harness development substrate.
+description: Inspect, upgrade, plan, build and verify projects that use the Harness development substrate. Includes the status view (slice metrics, gate outcomes, compactions, parks per slice, always-on context cost).
 ---
 
 Use the Harness engine shipped with this plugin. Resolve the plugin root as
@@ -9,7 +9,7 @@ two directories above this skill's directory, then invoke
 Use explicit paths; `${CLAUDE_PLUGIN_ROOT}` and the `!` command substitutions
 in the shared Claude workflow guides are host syntax, not Codex commands.
 
-Start with `doctor --substrate` and `status --json`. Read the project's
+Start with `doctor --substrate` and `status --json`; `status.md` in this skill says how to read them. Read the project's
 working agreement and `.harness/config.yaml`. The guides under `skills/`
 describe the method; use the CLI's `--help` for executable command syntax.
 

@@ -1,8 +1,3 @@
----
-name: decision-tables
-description: When a choice belongs in a decision table row versus a full ADR; the row schema; lookup-never-interpret. Use when handling recurring choices, conventions, style questions, "which pattern should I use", "what's our convention for", error handling style, naming, propagation rules, or any question an agent might answer differently per-file.
----
-
 # Decision tables
 
 The principle: **lookup, never interpret.** Principles get reinterpreted

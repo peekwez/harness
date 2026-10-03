@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Turn the spec and ADRs into dependency-ordered slices with declared deps, red acceptance-test stubs, and context-cost estimates; oversized slices receive decomposition proposals for independently scoped children.
+description: Turn the spec and ADRs into dependency-ordered slices with declared deps, red acceptance-test stubs, and context-cost estimates; oversized slices receive decomposition proposals for independently scoped children. Also for sizing and declaring slices: "break this down", "split this feature", "how big should", declaring dependencies, estimating context cost.
 allowed-tools: Bash(*/bin/harness *)
 ---
 
@@ -27,8 +27,8 @@ Generate slices via the CLI — never hand-edit `.harness/backlog.jsonl`
 --acceptance tests/slices/NNN_x.py --depends <slice-ids…>`
 
 It validates ids and declared deps against the registry, dedupes predicted
-files, and computes the context-cost estimate. Row semantics (schema per
-the slice-decomposition skill):
+files, and computes the context-cost estimate. Row semantics (schema and
+sizing rules in `slice-decomposition.md`):
 
 - `declares_dep`: complete registry closure the slice needs. Foundations
   first — the config/telemetry/errors sequence orders before consumers.

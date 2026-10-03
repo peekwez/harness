@@ -1,6 +1,6 @@
 ---
 name: review
-description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory.
+description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory. Also holds the review rubrics and findings contract (layers, rule_ref, confidence, ensembles) and how a human adjudicates parked findings.
 allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *) Bash(claude -p *)
 context: fork
 agent: reviewer
@@ -20,6 +20,9 @@ read `.harness/memory/session/` (the builder's working memory). Independent
 derivation from the same ground truth is the point; where you and the
 builder disagree, the substrate underdetermined the answer, and that
 disagreement is signal.
+
+Reference files in this skill: `rubrics.md` (the four layers and the
+findings contract) and `adjudicate.md` (how a human resolves parks).
 
 Layer 0 — deterministic facts (gates, uses/declares diff, duplicate
 candidates, decision rows in scope, shadows of everything the diff imports).
@@ -66,9 +69,10 @@ Layers 1–3 — rubric-bound checks over those facts:
 - Every blocking finding MUST cite a `rule_ref` (gate:GN, decision:D-NNN, or
   adr:NNN). No blocking on taste — taste becomes a Layer-3 advisory plus a
   proposed rule. The engine rejects rule-ref-less blocks; do not fight it.
-- If your confidence on a would-block finding is below the ensemble
-  threshold, say so explicitly and mark the finding `uncertain` — it parks
-  for adjudication rather than blocking on a coin flip.
+- If your confidence on a would-block finding is below 0.7, say so
+  explicitly and mark the finding `uncertain` — it parks for adjudication
+  rather than blocking on a coin flip. Ensemble sampling and golden replay
+  are opt-in via `review.ensemble: true`.
 - Layer 3 only: run `superpowers:requesting-code-review` when it is
   installed and treat everything it returns as ADVISORY input. Its
   Critical/Important/Minor severities carry no blocking power here. Promote
@@ -100,4 +104,4 @@ Layers 1–3 — rubric-bound checks over those facts:
 
 Output: AC verification matrix/verdict, findings list (§5.2 schema), review
 verdict, and any Layer-3 proposals.
-Blocking findings gate the merge; disputes park via `/harness:adjudicate`.
+Blocking findings gate the merge; disputes park, and a human resolves them with `adjudicate.md`.

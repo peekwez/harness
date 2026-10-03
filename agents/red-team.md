@@ -12,8 +12,8 @@ Attack surfaces, in priority order:
 
 1. **Silent degradation (the md-file-bug class).** Every artifact the design
    reads: what happens when it's missing, stale, or malformed? Anything that
-   no-ops instead of erroring is a finding. Use the premortem skill's
-   checklist verbatim.
+   no-ops instead of erroring is a finding. Use the checklist in
+   `skills/architect/premortem.md` verbatim.
 2. **Unstated assumptions.** Every [assumption] block: what breaks if it's
    false? Every constraint the document doesn't state but the design relies
    on: name it.

@@ -939,7 +939,7 @@ def extract_path(root, path, config=None, force=False,
             severity="advisory", key=shadow["source_path"]))
     elif not deps_available():
         # Degrade loudly, never crash the session: the exact failure mode the
-        # premortem skill hunts is a missing dep turning into a hard block.
+        # premortem checklist hunts is a missing dep turning into a hard block.
         shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
             "MISSING_DEPENDENCY", "doctor:coverage",

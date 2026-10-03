@@ -1,8 +1,3 @@
----
-name: review-rubrics
-description: The four-layer review stack and the findings contract. Use when reviewing code or diffs, writing review findings, "review this", assessing a PR, blocking a merge, disputing a finding, review confidence, ensembles, or when tempted to block on style or taste.
----
-
 # Review rubrics
 
 The stack (C7):
@@ -13,9 +8,11 @@ The stack (C7):
 - **Layer 1 — rubric-bound checks.** One narrow question per check. Fixed
   output schema: `{answer: pass|fail|uncertain, confidence, evidence}`.
   Retrieve 2–3 precedent exemplars from adjudicated findings first.
-- **Layer 2 — ensemble.** Only when confidence < threshold AND the finding
-  would block: sample 3×. Splits escalate as `uncertain` and park — never
-  average a coin flip into a verdict.
+- **Layer 2 — ensemble (opt-in).** Ensemble sampling and golden replay are
+  opt-in via `review.ensemble: true`. With it on, a finding that would block
+  with confidence below 0.7 is sampled 3×. Splits escalate as `uncertain`
+  and park. With it off (the default), the same finding parks as `uncertain`
+  without resampling. Never average a coin flip into a verdict.
 - **Layer 3 — holistic, advisory-only.** Its findings can only spawn
   proposals (new decision row / ADR / gate). It cannot block anything.
 
@@ -26,5 +23,6 @@ but no rule covers it, that is a Layer-3 advisory plus a proposed rule, and
 next slice it can block legitimately.
 
 Reviewer hygiene: substrate + diff only; never the builder's session memory.
-Golden-set replay (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --replay`) re-runs stored diff+verdict
-pairs whenever rubrics change — reviewer changes get reviewed too.
+Golden-set replay (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --replay`)
+re-runs stored diff+verdict pairs whenever rubrics change. It is part of the
+ensemble opt-in and refuses to run unless `review.ensemble: true`.

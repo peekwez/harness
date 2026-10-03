@@ -59,8 +59,8 @@ def test_every_engine_rule_is_the_path_agnostic_form():
 def test_preflights_may_still_use_the_plugin_root():
     """Only the frontmatter is install-path-sensitive: a `!`…` preflight is
     expanded by the host at invocation time, where the variable is defined."""
-    body = (PLUGIN_ROOT / "skills" / "status" / "SKILL.md").read_text()
-    assert '!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" status --json`' in body
+    body = (PLUGIN_ROOT / "skills" / "backlog" / "SKILL.md").read_text()
+    assert '!`"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog --split`' in body
 
 
 # ------------------------------------------------- generated settings

@@ -1,6 +1,6 @@
 ---
 name: adr-authoring
-description: Write, record, or amend an architecture decision record (ADR). Use whenever the conversation decides anything architectural — "record this decision", "let's go with", "we decided", "write an ADR", "document why we chose", "architecture decision", "design rationale", "tradeoff", "supersede that decision". Also when compiling decisions into decision tables or registry guidance.
+description: Write, record, or amend an architecture decision record (ADR). Use whenever the conversation decides anything architectural — "record this decision", "let's go with", "we decided", "write an ADR", "document why we chose", "architecture decision", "design rationale", "tradeoff", "supersede that decision". Also when compiling decisions into decision tables or registry guidance. Also when a recurring choice belongs in a decision-table row: conventions, "which pattern should I use", "what\'s our convention for", error handling style, naming, propagation rules.
 ---
 
 # ADR authoring
@@ -31,8 +31,8 @@ The split that matters:
 - **Prose is for extrapolation.** Context/Consequences teach an agent how to
   act in situations the frontmatter doesn't cover.
 - **Frontmatter is what the resolver queries.** `domains[]` routes the ADR to
-  slices; `decision_table_rows[]` become atomic lookup rows (see the
-  decision-tables skill for when a choice is a row vs a full ADR);
+  slices; `decision_table_rows[]` become atomic lookup rows (see
+  `decision-tables.md` in this skill for when a choice is a row vs a full ADR);
   `abstractions[]` seed the registry.
 
 Rules:

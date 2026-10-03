@@ -236,8 +236,8 @@ hand-editing it is a bug like any other derived file.
 /harness:review slice-001  # forked reviewer: substrate + diff only
 /harness:close-slice slice-001  # commit + note, registry flips, memory
                        #   compacts, then merge-slice finishes the merge
-/harness:status        # the dashboard that proves human withdrawal is safe
-/harness:adjudicate    # resolve parked disputes into decision rows
+/harness:harness      # status view: slice metrics and gate outcomes
+/harness:review       # review; adjudicate.md resolves parked disputes
 ```
 
 ## Engine CLI (the portability boundary)

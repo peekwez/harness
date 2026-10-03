@@ -37,7 +37,8 @@ def test_preflights_still_exist_where_no_argument_is_needed():
         "expected at least one argument-free preflight to remain"
 
 
-AGENT_GUIDANCE = ("skills/close-slice/SKILL.md", "skills/shadow-context/SKILL.md",
+AGENT_GUIDANCE = ("skills/close-slice/SKILL.md", "skills/build/SKILL.md",
+                  "skills/harness/SKILL.md",
                   "agents/builder.md", "adapters/opencode/harness.js",
                   "adapters/opencode/README.md")
 STALE_010 = re.compile(
@@ -53,3 +54,69 @@ def test_agent_guidance_names_no_removed_gate_or_committed_shadow():
         for i, line in enumerate((PLUGIN_ROOT / rel).read_text().splitlines(), 1)
         if STALE_010.search(line)]
     assert not offenders, "\n".join(offenders)
+
+
+SKILLS_0_10 = {"adr-authoring", "architect", "backlog", "build",
+               "close-slice", "design-review", "harness", "init", "review",
+               "verification"}   # W6 adds "explore" -> the spec's 11
+
+REMOVED_SKILLS = ("adjudicate", "contract-first", "decision-tables",
+                  "premortem", "review-rubrics", "shadow-context",
+                  "slice-decomposition", "status")
+OLD_SKILL_NAME = re.compile(
+    r"harness:(?:%s)(?![\w-])|\b(?:%s) skill\b" % (
+        "|".join(REMOVED_SKILLS),
+        "|".join(n for n in REMOVED_SKILLS if n != "status")))
+TEXT_SUFFIXES = {".md", ".py", ".json", ".yml", ".yaml", ".sh", ".js",
+                 ".toml"}
+
+
+def test_skill_set_follows_the_0_10_merge_map():
+    present = {p.parent.name
+               for p in (PLUGIN_ROOT / "skills").glob("*/SKILL.md")}
+    assert present == SKILLS_0_10
+
+
+def test_absorbed_skills_live_on_as_reference_files():
+    for rel in ("architect/premortem.md", "adr-authoring/decision-tables.md",
+                "backlog/slice-decomposition.md", "review/rubrics.md",
+                "review/adjudicate.md", "harness/status.md"):
+        assert (PLUGIN_ROOT / "skills" / rel).is_file(), rel
+
+
+def test_absorbing_descriptions_carry_the_old_triggers():
+    expect = {"architect": ["premortem", "contract"],
+              "adr-authoring": ["decision-table", "convention"],
+              "backlog": ["break this down", "split"],
+              "build": ["shadow"],
+              "review": ["rubric", "adjudicat"],
+              "harness": ["status"]}
+    for skill, words in expect.items():
+        front = (PLUGIN_ROOT / "skills" / skill / "SKILL.md").read_text() \
+            .split("---")[1]
+        desc = next(line for line in front.splitlines()
+                    if line.startswith("description:")).lower()
+        missing = [w for w in words if w not in desc]
+        assert not missing, (skill, missing)
+
+
+def test_no_text_names_a_removed_skill():
+    offenders = []
+    for sub in ("skills", "agents", "templates", "hooks", "adapters", "engine"):
+        for path in sorted((PLUGIN_ROOT / sub).rglob("*")):
+            if (not path.is_file() or path.suffix not in TEXT_SUFFIXES
+                    or "__pycache__" in path.parts
+                    or path.name == "upgrade_w2.py"):   # holds the rename map
+                continue
+            for i, line in enumerate(
+                    path.read_text(errors="replace").splitlines(), 1):
+                if OLD_SKILL_NAME.search(line):
+                    offenders.append(
+                        f"{path.relative_to(PLUGIN_ROOT)}:{i}: {line.strip()}")
+    assert not offenders, "\n".join(offenders)
+
+
+def test_architect_agent_uses_decision_cards():
+    body = (PLUGIN_ROOT / "agents" / "architect.md").read_text()
+    assert "refuses to solution" not in body
+    assert "decision card" in body

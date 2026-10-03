@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Use for Phase-0 architecture, system design, or importing an existing spec. Guides brainstorming, independent Claude/Codex design review, convergence, compilation and the human author-gate.
+description: Use for Phase-0 architecture, system design, or importing an existing spec. Guides brainstorming, the red-team premortem ("what could go wrong", silent failures, fallback paths), seam decisions such as API contracts, independent Claude/Codex design review, convergence, compilation and the human author-gate.
 allowed-tools: Bash(*/bin/harness *) Bash(codex exec *) Bash(claude -p *)
 ---
 
@@ -50,7 +50,7 @@ marker (default 1 if absent), then follow the matching protocol file:
    superpowers is installed, `superpowers:brainstorming` drives this stage;
    the spec file it writes IS `docs/architecture.md` and the step after the
    design is approved is stage 2 below, never `superpowers:writing-plans`.
-2. Red-team — `stage-redteam.md`
+2. Red-team — `stage-redteam.md` (with `premortem.md`)
 3. Converge — `stage-converge.md`
 4. Compile — `stage-compile.md`
 5. Author-gate — run:
