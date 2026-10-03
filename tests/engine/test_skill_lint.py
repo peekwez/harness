@@ -35,3 +35,21 @@ def test_preflights_still_exist_where_no_argument_is_needed():
     deleting preflights wholesale. Argument-free ones must survive."""
     assert any(True for _ in _preflights()), \
         "expected at least one argument-free preflight to remain"
+
+
+AGENT_GUIDANCE = ("skills/close-slice/SKILL.md", "skills/shadow-context/SKILL.md",
+                  "agents/builder.md", "adapters/opencode/harness.js",
+                  "adapters/opencode/README.md")
+STALE_010 = re.compile(
+    r"\bG[247]\b|G4[-–]G8|\.harness/shadows|shadows_extracted|shadow regen")
+
+
+def test_agent_guidance_names_no_removed_gate_or_committed_shadow():
+    """0.10 removed G2, G4 and G7, and shadows became a gitignored cache.
+    Guidance an agent reads must not send it after either."""
+    offenders = [
+        f"{rel}:{i}: {line.strip()}"
+        for rel in AGENT_GUIDANCE
+        for i, line in enumerate((PLUGIN_ROOT / rel).read_text().splitlines(), 1)
+        if STALE_010.search(line)]
+    assert not offenders, "\n".join(offenders)

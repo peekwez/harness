@@ -1,13 +1,13 @@
 ---
 name: shadow-context
-description: How to load module context — shadows, guidance, the supersession rule. Use when reading another module's interface, importing, "what does this module export", "load context", "what's the signature", working with .harness/shadows, resolver output, or before pasting source code into context.
+description: How to load module context — shadows, guidance, the supersession rule. Use when reading another module's interface, importing, "what does this module export", "load context", "what's the signature", working with shadows, resolver output, or before pasting source code into context.
 ---
 
 # Shadow context
 
 A shadow is the derived interface summary of a module — the `.h` to the
 source's `.c`: signatures, docs, imports, exports in a language-neutral
-schema, content-hash keyed under `.harness/shadows/`.
+schema. Shadows live in a gitignored cache under `.harness/cache/`.
 
 Resolution order for any module you need to understand:
 
@@ -20,8 +20,9 @@ Resolution order for any module you need to understand:
    express survives alongside — e.g. "never log PII into span attributes".
    Don't reload superseded guidance; it may contradict the built interface.
 
-Freshness: G4 blocks edits when a loaded shadow's hash no longer matches
-source. The fix is mechanical: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" extract <path>`, reload, continue.
+Freshness: the engine rebuilds a stale shadow when it reads it. No gate
+blocks an edit for a stale shadow. To refresh one by hand, run
+`"${CLAUDE_PLUGIN_ROOT}/bin/harness" extract <path>`, then reload it.
 
 If you touch a file and its shadow doesn't regenerate (unknown language),
 G8 enumerates it — that surface is unenforced, so flag interface changes

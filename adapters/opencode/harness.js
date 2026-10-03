@@ -9,13 +9,13 @@
  *   session.created (event)  -> session_start   (G1 + G6 baseline snapshot)
  *   tool.execute.before      -> pre_change      (throw = deny; edit/write/patch/bash)
  *   tool.execute.after       -> post_change     (touch recording)
- *   session.idle (event)     -> unit_complete   (shadow regen, edges, G4-G8)
+ *   session.idle (event)     -> unit_complete   (edges, G5 + G6)
  *   session.compacted (event)-> clear injection hashes, COMPACTION_REACHED telemetry
  *
  * Context injection: OpenCode has no additionalContext hook — Phase-1
  * context arrives via AGENTS.md plus the build workflow running
- * `harness resolve --slice <id>` (see README). G2 still verifies at
- * pre_change and denies with a pointer if context wasn't loaded.
+ * `harness resolve --slice <id>` (see README). No gate denies an edit for
+ * missing context: the build workflow loads it first.
  *
  * Contract: repos without a .harness/ substrate are inert; engine errors in
  * an initialised repo fail closed (throw).

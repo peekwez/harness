@@ -43,17 +43,21 @@ from the wrong tree closes against the wrong substrate.
    slice's provenance note is written onto that commit, and a close that
    records no provenance is not a close.)
 
-The engine enforces: the review stack runs over this slice's own diff and
-its verdict is recorded (blocking findings — engine-side or reviewer-agent
-recorded — stop the close, and nothing may still be parked for this slice),
-unit_complete gates pass (G4 freshness, G5 conformance,
-G6 drift acknowledged, G7 derivation integrity), uses ⊆ declares reconciled,
-and — for slices resolving security-marked decision rows — an independent
-forked reviewer's pass verdict (ADR-001; dispatch the harness:reviewer
-agent, which records `harness review --record-fork`).
-Documented contract: touched files MISSING a shadow get one extracted by the
-ceremony itself (`shadows_extracted` in the output) — derived artifacts are
-the engine's job; G7 still blocks anything stale or hand-edited.
+The engine enforces these checks:
+
+- The acceptance tests pass. The cumulative regression suite passes.
+- The review stack runs over this slice's own diff and records its verdict.
+  A blocking finding stops the close. That finding can come from the engine
+  or from a reviewer agent. Nothing may stay parked for this slice.
+- The unit_complete gates pass: G1 manifest, G3 scope, G5 conformance,
+  G6 drift acknowledged and G8 coverage.
+- Reconciliation passes: uses ⊆ declares.
+- A slice that resolves security-marked decision rows needs a pass verdict
+  from an independent forked reviewer (ADR-001). Dispatch the
+  harness:reviewer agent. It records `harness review --record-fork`.
+
+Shadows are a gitignored cache under `.harness/cache/`. The engine builds a
+shadow when it needs one. The close commits no shadows.
 If it reports a block, the fix is named in the finding — G6 drift needs
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates ack-drift`, G5 needs a declaration amendment or a recorded
 override with justification.
@@ -99,10 +103,10 @@ squash), pushes, and skips the PR command because the row already has one.
 **`landing.mode: local`** (the default) — merge, one command, run from the
 MAIN tree:
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" merge-slice --slice $1`
-   It merges `slice/$1`, regenerates + commits shadows from the merged
-   sources (they never content-merge, `merge=ours`), re-runs the
-   unit_complete gates (G4 is the parallel-agent safety net), and removes
-   the worktree + branch. Parallel closes conflicting on `.harness/*.jsonl`
+   It merges `slice/$1` and runs the accumulated acceptance suite and the
+   unit_complete gates on the merged tree. Then it commits the substrate and
+   removes the worktree + branch. It commits no shadows: they are a
+   gitignored cache. Parallel closes conflicting on `.harness/*.jsonl`
    resolve mechanically via the merge drivers (union for append-only logs,
    `harness merge-substrate` for keyed rows); a real keyed-row conflict is
    reported with the ids and left for you.
