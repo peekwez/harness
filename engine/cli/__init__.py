@@ -292,19 +292,18 @@ def main(argv=None):
     ed.add_argument("type"); ed.add_argument("frm"); ed.add_argument("to")
     ed.add_argument("--commit"); ed.add_argument("--meta")
 
-    sp = sub.add_parser("memory", help="working-memory write/flush/compact")
+    sp = sub.add_parser("memory", help="shared memory: promote a fact (human "
+                                       "only); list changed personal memory")
     ms = sp.add_subparsers(dest="memory_cmd", required=True)
-    w = ms.add_parser("write")
-    w.add_argument("--slice", required=True)
-    w.add_argument("--kind", required=True)
-    w.add_argument("--content", required=True)
-    w.add_argument("--approach"); w.add_argument("--outcome"); w.add_argument("--why")
-    w.add_argument("--edge", nargs="*")
-    fl = ms.add_parser("flush")
-    fl.add_argument("--slice"); fl.add_argument("--session")
-    fl.add_argument("--compaction", action="store_true")
-    co = ms.add_parser("compact")
-    co.add_argument("--slice", required=True); co.add_argument("--commit")
+    pm = ms.add_parser("promote", help="copy one fact into "
+                                       ".claude/memory/shared/")
+    pm.add_argument("file", nargs="?", help="a memory file to promote")
+    pm.add_argument("--text", help="the fact itself")
+    pm.add_argument("--name", help="fact file name (default: from the fact)")
+    ch = ms.add_parser("changed", help="personal memory files changed since "
+                                       "a slice started")
+    ch.add_argument("--slice")
+    ch.add_argument("--since", help="ISO time; wins over --slice")
 
     sp = sub.add_parser("precompact", help="PreCompact hook: reset context "
                                            "hashes, count the compaction")

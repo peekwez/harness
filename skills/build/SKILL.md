@@ -65,10 +65,9 @@ Loop discipline — in order:
    slice row in `.harness/backlog.jsonl` first. G3 reports an undeclared file as an advisory finding and
    close lists it under `scope_advisory`. Declared work is auto-approved;
    an undeclared edit still prompts.
-4. **Log abandoned approaches.** Whenever you abandon an approach mid-slice,
-   record it before moving on (mandatory, not optional):
-   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory write --slice $1 --kind attempt --content "<what>"
-   --approach "<what you tried>" --outcome abandoned --why "<why>"`
+4. **Memory is automatic.** Claude Code keeps personal memory itself. Do not
+   write attempt logs by hand. A human promotes a lasting fact with
+   `harness memory promote`.
 5. **Session cycling, not compaction.** When context nears its limit:
    checkpoint at a Stop boundary, end the session, start fresh — `harness
    start --slice $1` resumes from substrate. If compaction fires, a compaction

@@ -42,20 +42,12 @@ def test_session_cycling_resumes_from_substrate_alone(toy):
                                    "    return telemetry.emit_span('o', {})\n")
     handle_event(make_event("post_change", session="dying",
                             files=["orders.py"]), toy)
-    run_cli("memory", "write", "--slice", "slice-042", "--kind", "attempt",
-            "--content", "tried dataclass orders",
-            "--approach", "dataclass", "--outcome", "abandoned",
-            "--why", "dict is the decided row", root=toy)
     # session dies here. New session: resolver rebuilds everything.
     fresh = loaded_context(toy, session="fresh")
     assert fresh["injections"]
     v = handle_event(make_event("pre_change", session="fresh",
                                 files=["orders.py"]), toy)
     assert v["verdict"] == "allow", v["findings"]
-    # the attempt memory survived the cycle in substrate
-    from engine import memory
-    entries = memory.read_session(toy, "slice-042")
-    assert any(e["kind"] == "attempt" for e in entries)
 
 
 def test_full_close_ceremony(toy):

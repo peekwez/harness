@@ -1,7 +1,7 @@
 """Substrate read/write commands.
 
-extract, resolve, gates, registry, merge-substrate, graph, memory and
-status: the commands that read or mutate `.harness/` directly, without a
+extract, resolve, gates, registry, merge-substrate, graph, memory,
+precompact and status: the commands that read or mutate `.harness/` directly, without a
 ceremony around them.
 """
 from __future__ import annotations
@@ -213,33 +213,40 @@ def cmd_graph(args):
 
 # ------------------------------------------------------------------ memory
 def cmd_memory(args):
-    from engine import memory, telemetry
+    """Shared memory (D-0.10-02). `promote` copies one fact into
+    `.claude/memory/shared/`; the permit layer always asks a human first.
+    `changed` lists personal memory files changed since a slice started."""
+    from datetime import datetime, timezone
+    from engine import shared_memory
     root = _root(args)
-    if args.memory_cmd == "write":
-        entry = memory.make_entry(
-            args.slice, args.kind, args.content,
-            attempt={"approach": args.approach, "outcome": args.outcome,
-                     "why": args.why} if args.kind == "attempt" else None,
-            edges=[{"type": "remembers", "to": t} for t in (args.edge or [])])
-        _print(memory.write_entry(root, entry))
-    elif args.memory_cmd == "flush":
-        slice_id = args.slice
-        if not slice_id and args.session:
-            # resolve the session's bound slice from the sidecar
-            from engine.events import Sidecar
-            sidecar = Sidecar(root)
-            try:
-                slice_id = sidecar.state_get(args.session, "active_slice")
-            finally:
-                sidecar.close()
-        result = memory.flush(root, slice_id)
-        if args.compaction:
-            # PreCompact: flush + COMPACTION_REACHED telemetry ONLY (§1.5).
-            telemetry.emit(root, "COMPACTION_REACHED",
-                           {"slice": slice_id, "session": args.session})
-        _print(result)
-    elif args.memory_cmd == "compact":
-        _print(memory.compact_to_durable(root, args.slice, commit=args.commit))
+    if args.memory_cmd == "promote":
+        if bool(args.file) == bool(args.text):
+            print("error: memory promote: pass one fact. "
+                  "Fix: give a file or --text \"<fact>\".", file=sys.stderr)
+            return 2
+        source = None
+        if args.file:
+            source = Path(args.file).expanduser()
+            if not source.is_absolute():
+                source = Path.cwd() / source
+        _print(shared_memory.promote(root, source=source, text=args.text,
+                                     name=args.name))
+        return 0
+    if args.since:
+        stamp = datetime.fromisoformat(args.since.replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=timezone.utc)
+        since = stamp.timestamp()
+    elif args.slice:
+        since = shared_memory.slice_started_epoch(root, args.slice)
+    else:
+        print("error: memory changed: no start given. "
+              "Fix: pass --slice <id> or --since <ISO time>.", file=sys.stderr)
+        return 2
+    directory = shared_memory.personal_memory_dir(root)
+    _print({"dir": str(directory),
+            "since": datetime.fromtimestamp(since, timezone.utc).isoformat(),
+            "files": shared_memory.changed_since(directory, since)})
     return 0
 
 
