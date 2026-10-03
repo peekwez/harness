@@ -197,3 +197,13 @@ def test_compaction_clears_hashes_so_session_start_reinjects(toy, name):
     assert code == 0, err
     code, out, err = run_adapter(name, spec["session_start"], toy, session=session)
     assert "D-041" in spec["ctx_of"](out)
+
+
+@pytest.mark.parametrize("name", sorted(ADAPTERS))
+def test_shared_memory_write_denied_on_every_host(toy, name):
+    spec = SPEC[name]
+    code, out, err = run_adapter(name,
+                                 spec["pre_change"](".claude/memory/shared/x.md"),
+                                 toy, session="g10")
+    assert spec["is_deny"](out), (out, err)
+    assert "G10" in spec["deny_reason"](out)

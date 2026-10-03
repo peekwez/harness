@@ -11,9 +11,9 @@ GOOD_ORDERS = ("import telemetry\n\n\ndef create_order(sku: str) -> dict:\n"
                "    return {'sku': sku}\n")
 
 
-def test_builtin_pack_is_g1_g3_g5_g6():
+def test_builtin_pack_is_g1_g3_g5_g6_g10():
     from engine.gates import builtin_gates
-    assert [g.GATE["id"] for g in builtin_gates()] == ["G1", "G3", "G5", "G6"]
+    assert [g.GATE["id"] for g in builtin_gates()] == ["G1", "G3", "G5", "G6", "G10"]
 
 
 def test_retired_ids_stay_reserved_for_repo_gates():

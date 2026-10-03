@@ -376,3 +376,17 @@ def test_common_record_compaction_reports_failure(
     calls = log.read_text()
     assert "precompact" in calls and "memory flush" not in calls
     assert "clear exploded" in capsys.readouterr().err
+
+
+def test_agent_write_into_shared_memory_is_denied(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "g10-1",
+         "tool_name": "Write",
+         "tool_input": {"file_path": str(toy / ".claude" / "memory" / "shared"
+                                         / "x.md"), "content": "x"}},
+        toy)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"
+    assert "gate:G10" in hso["permissionDecisionReason"]
+    assert "harness memory promote" in hso["permissionDecisionReason"]
