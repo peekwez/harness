@@ -1,11 +1,7 @@
-"""Regression coverage for backlog, binding, and campaign hardening."""
+"""Regression coverage for backlog and binding hardening."""
 from __future__ import annotations
 
 import json
-import os
-import time
-
-import yaml
 
 from conftest import build_toy_repo, git, run_cli
 from engine import read_jsonl, write_jsonl
@@ -157,79 +153,3 @@ def test_closed_slice_cannot_be_bound_for_more_writes(toy):
     out = json.loads(proc.stdout)
     assert out["bound"] is False
     assert "closed" in out["reason"]
-
-
-NOISY_BUILDER = """\
-import json, os, subprocess, sys
-
-sys.stdout.write("x" * 2_000_000)
-sys.stdout.write("\\nNOISY_OUTPUT_COMPLETE\\n")
-sys.stdout.flush()
-hb = os.environ["HARNESS_BIN"]
-wt = os.environ["HARNESS_WORKTREE"]
-sid = os.environ["HARNESS_SLICE"]
-with open(os.path.join(wt, "impl.json")) as fh:
-    fname, content = json.load(fh)[sid]
-with open(os.path.join(wt, fname), "w") as fh:
-    fh.write(content)
-def h(*args):
-    return subprocess.run([sys.executable, hb, "--root", wt, *args],
-                          capture_output=True, text=True)
-h("extract", os.path.join(wt, fname))
-subprocess.run(["git", "-C", wt, "add", "-A"], capture_output=True)
-subprocess.run(["git", "-C", wt, "commit", "-qm", sid], capture_output=True)
-p = h("close-slice", "--slice", sid, "--session", "builder", "--commit", "HEAD")
-out = json.loads(p.stdout) if p.stdout.strip() else {}
-sys.stdout.write("BUILDER_CLOSED\\n" if out.get("closed") else "BUILDER_FAILED\\n")
-sys.stdout.flush()
-sys.exit(0 if out.get("closed") else 1)
-"""
-
-
-def test_campaign_drains_output_beyond_pipe_capacity_and_builder_closes(toy):
-    from test_dispatcher import _campaign, _run
-
-    _campaign(toy, builder=NOISY_BUILDER)
-    proc = _run(toy)
-
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    out = json.loads(proc.stdout)
-    assert out["completed"] == ["slice-a", "slice-b", "slice-c"]
-    assert out["parked"] == []
-
-
-def test_campaign_timeout_reaps_process_group_and_reports_actual_rc(tmp_path):
-    toy = build_toy_repo(tmp_path / "timeout")
-    marker = toy / "orphan-finished"
-    script = toy / "slow_builder.py"
-    script.write_text(
-        "import subprocess, sys, time\n"
-        "subprocess.Popen([sys.executable, '-c', "
-        "\"import pathlib,time; time.sleep(3); "
-        f"pathlib.Path({str(marker)!r}).write_text('orphan')\"])\n"
-        "print('builder-started', flush=True)\n"
-        "time.sleep(30)\n"
-    )
-    config_path = toy / ".harness" / "config.yaml"
-    config = yaml.safe_load(config_path.read_text())
-    config["run"] = {"builder_cmd": "python3 slow_builder.py; :",
-                     "max_slice_attempts": 1, "builder_timeout": 1}
-    config_path.write_text(yaml.safe_dump(config))
-    git(toy, "add", "-A")
-    assert git(toy, "commit", "-qm", "timeout campaign").returncode == 0
-
-    env = dict(os.environ)
-    env["CLAUDE_SESSION_ID"] = ""
-    started = time.monotonic()
-    proc = run_cli("run", root=toy, env=env)
-    elapsed = time.monotonic() - started
-
-    assert proc.returncode == 2, proc.stdout + proc.stderr
-    assert elapsed < 5
-    row = next(r for r in read_jsonl(toy / ".harness" / "backlog.jsonl")
-               if r["id"] == "slice-042")
-    assert "timed out" in row["parked_reason"]
-    assert "rc=None" not in row["parked_reason"]
-    assert "rc=" in row["parked_reason"]
-    time.sleep(3.2)
-    assert not marker.exists(), "the timed-out builder's child survived"

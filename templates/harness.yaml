@@ -72,7 +72,7 @@ gates:
 #   #     nothing leaves the machine.
 #   #   pr — `close-slice` IS the landing: after its substrate commit and
 #   #     provenance note it pushes `slice/<id>` to `remote` and runs
-#   #     `pr_cmd`; `merge-slice` and `run` refuse. Use this when the base
+#   #     `pr_cmd`; `merge-slice` refuses. Use this when the base
 #   #     branch is PR-protected.
 #   # In pr mode the permit layer and the generated autonomy profile
 #   # auto-approve exactly `git push [-u] <remote> slice/<bound-slice>`,

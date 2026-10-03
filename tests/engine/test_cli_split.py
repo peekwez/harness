@@ -17,7 +17,7 @@ def test_bin_is_thin_dispatcher():
 
 def test_every_subcommand_has_a_cli_module():
     from engine.cli import COMMANDS
-    for name in ("init", "verify", "close-slice", "start", "review", "run",
+    for name in ("init", "verify", "close-slice", "start", "review",
                  "compile"):
         assert name in COMMANDS
 
@@ -32,3 +32,19 @@ def test_help_still_lists_all_subcommands():
                           "--help"], capture_output=True, text=True).stdout
     for name in ("init", "verify", "close-slice", "merge-slice", "permit"):
         assert name in out
+
+
+def test_run_is_removed():
+    """0.10 (spec 10.2): campaign mode had 0 dispatches in the field."""
+    from engine.cli import COMMANDS
+    assert "run" not in COMMANDS
+    assert not (ROOT / "engine" / "cli" / "run.py").exists()
+    proc = subprocess.run([sys.executable, str(ROOT / "bin" / "harness"),
+                           "run"], capture_output=True, text=True)
+    assert proc.returncode == 2
+    assert "invalid choice: 'run'" in proc.stderr
+
+
+def test_run_builder_templates_are_removed():
+    for name in ("claude-builder.sh", "claude-builder-sdk.py"):
+        assert not (ROOT / "templates" / name).exists(), name

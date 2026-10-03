@@ -19,7 +19,6 @@ from engine.cli.close import cmd_close_slice, cmd_merge_slice
 from engine.cli.init import cmd_init
 from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
-from engine.cli.run import cmd_run
 from engine.cli.slice import cmd_permit, cmd_start
 from engine.cli.substrate import (cmd_extract, cmd_gates, cmd_graph,
                                   cmd_memory, cmd_merge_substrate,
@@ -39,7 +38,7 @@ COMMANDS = {
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
     "backlog": cmd_backlog, "slice": cmd_slice,
-    "start": cmd_start, "run": cmd_run, "permit": cmd_permit,
+    "start": cmd_start, "permit": cmd_permit,
     "close-slice": cmd_close_slice, "merge-slice": cmd_merge_slice,
     "land": cmd_land,
     "review": cmd_review,
@@ -210,17 +209,6 @@ def main(argv=None):
                     help="start despite unclosed depends_on (records an "
                          "auditable override; requires --justification)")
     sp.add_argument("--justification")
-
-    sp = sub.add_parser("run",
-                        help="campaign dispatcher: build every ready slice "
-                             "via run.builder_cmd until the backlog is "
-                             "empty or a park needs a human")
-    sp.add_argument("--lanes", default=1,
-                    help="parallel builder lanes (merges always serialize)")
-    sp.add_argument("--builder-cmd", dest="builder_cmd",
-                    help="override run.builder_cmd for this invocation")
-    sp.add_argument("--dry-run", dest="dry_run", action="store_true",
-                    help="print the dependency waves and exit; mutates nothing")
 
     sp = sub.add_parser("permit",
                         help="host permission query: would the harness "

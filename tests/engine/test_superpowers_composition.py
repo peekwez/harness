@@ -90,9 +90,7 @@ def test_the_three_attempts_debugging_rule_is_gone():
     """It told the agent to retry blind twice before thinking; D-014 replaces
     it with systematic-debugging on the FIRST red."""
     offenders = []
-    for rel in ("skills/build/SKILL.md", "agents/builder.md",
-                "templates/claude-builder.sh",
-                "templates/claude-builder-sdk.py"):
+    for rel in ("skills/build/SKILL.md", "agents/builder.md"):
         body = (PLUGIN_ROOT / rel).read_text()
         if "superpowers:systematic-debugging" not in body:
             offenders.append(f"{rel}: no systematic-debugging hand-off")

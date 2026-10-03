@@ -194,14 +194,6 @@ def test_merge_slice_refuses_in_pr_mode(tmp_path):
     assert finding["severity"] == "block"
 
 
-def test_run_refuses_in_pr_mode(tmp_path):
-    toy, _ = _pr_repo(tmp_path, pr_cmd="true")
-    for extra in ([], ["--dry-run"]):
-        proc = run_cli("run", *extra, root=toy, env=NO_ENV)
-        assert proc.returncode == 1, proc.stdout
-        assert "landing.mode" in proc.stderr
-
-
 def test_local_mode_close_never_pushes(tmp_path):
     """Backward compatibility: no landing key -> nothing leaves the machine."""
     toy = build_toy_repo(tmp_path / "local")
