@@ -79,12 +79,12 @@ def check(ctx) -> list:
         if rel in declared or any(fnmatch(rel, d) for d in declared if "*" in d):
             continue
         if rel in overridden:
-            continue  # reconciled via recorded override
+            continue  # a recorded override silences the advisory
         if mode == "radius" and str(PurePosixPath(rel).parent) in declared_dirs:
             continue  # same-package auto-allow
         findings.append(make_finding(
             "UNDECLARED_FILE", GATE["rule_ref"],
             f"G3: {rel} is not in the declared files of slice "
-            f"{ctx.work_unit_id}. Add it to predicted_files.",
+            f"{ctx.work_unit_id}. Add it to predicted_files in .harness/backlog.jsonl.",
             severity="advisory", key=rel + "|" + ctx.work_unit_id))
     return findings

@@ -58,8 +58,8 @@ Loop discipline — in order:
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
 3. **Amend declarations before touching undeclared files.** If you need a
-   file outside `predicted_files`, add it to the slice row first with the
-   backlog CLI. G3 reports an undeclared file as an advisory finding and
+   file outside `predicted_files`, add it to `predicted_files` on the
+   slice row in `.harness/backlog.jsonl` first. G3 reports an undeclared file as an advisory finding and
    close lists it under `scope_advisory`. Declared work is auto-approved;
    an undeclared edit still prompts.
 4. **Log abandoned approaches.** Whenever you abandon an approach mid-slice,
