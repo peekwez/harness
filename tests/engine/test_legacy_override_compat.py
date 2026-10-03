@@ -92,14 +92,14 @@ def test_existing_file_named_like_a_registry_id_is_not_aliased(toy):
 
 
 def test_upgrade_appends_auditable_aliases_once_and_preserves_authored_rows(toy):
-    from engine.telemetry import aggregate
+    from engine.telemetry import override_counts
     undeclared_use(toy)
     original = legacy_override(toy)
     legacy_override(toy, target="deps:pyproject.toml")
     legacy_override(toy, target="deps:config", rule="gate:G6")
     edges_path = toy / ".harness/edges.jsonl"
     before = edges_path.read_bytes()
-    override_counts = aggregate(toy)["override_counts"]
+    before_counts = override_counts(load_edges(toy))
     authored = {name: (toy / ".harness" / name).read_bytes()
                 for name in ("backlog.jsonl", "decisions.jsonl", "config.yaml")}
 
@@ -127,7 +127,7 @@ def test_upgrade_appends_auditable_aliases_once_and_preserves_authored_rows(toy)
     assert again.returncode == 0, again.stdout + again.stderr
     assert json.loads(again.stdout)["legacy_overrides"]["edges_added"] == 0
     assert edges_path.read_bytes() == after
-    assert aggregate(toy)["override_counts"] == override_counts
+    assert override_counts(load_edges(toy)) == before_counts
     assert {name: (toy / ".harness" / name).read_bytes() for name in authored} == authored
 
 

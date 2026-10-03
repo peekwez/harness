@@ -71,10 +71,10 @@ def _unshadowed_files(root, config) -> list:
 def _substrate_health(root, fix=False) -> dict:
     """Everything that rots quietly: schema drift, bindings pointing at
     closed slices, worktrees for slices nobody is building, findings parked
-    and never adjudicated, telemetry never flushed, closed slices with no
+    and never adjudicated, closed slices with no
     provenance note."""
     import subprocess
-    from engine import read_jsonl, telemetry
+    from engine import read_jsonl
     from engine.events import Sidecar
     from engine.schema import validate_substrate
 
@@ -89,7 +89,6 @@ def _substrate_health(root, fix=False) -> dict:
         bindings = [(s, json.loads(v)) for s, v in cur.fetchall()]
         stale_bindings = [{"session": s, "slice": sid} for s, sid in bindings
                           if backlog.get(sid, {}).get("status") == "closed"]
-        buffered = len(sidecar.telemetry_peek())
     finally:
         sidecar.close()
 
@@ -114,7 +113,7 @@ def _substrate_health(root, fix=False) -> dict:
     from engine.cli.init import vendored_engine_status
     vendored = vendored_engine_status(root)
 
-    fixed = {"bindings_released": 0, "telemetry_flushed": 0}
+    fixed = {"bindings_released": 0}
     if fix:
         sidecar = Sidecar(root)
         try:
@@ -126,8 +125,7 @@ def _substrate_health(root, fix=False) -> dict:
             sidecar.db.commit()
         finally:
             sidecar.close()
-        fixed["telemetry_flushed"] = telemetry.flush(root)
-        stale_bindings, buffered = [], 0
+        stale_bindings = []
 
     healthy = not (problems["schema"] or stale_bindings or stale_worktrees
                    or parked or missing_notes
@@ -144,7 +142,6 @@ def _substrate_health(root, fix=False) -> dict:
         "stale_bindings": stale_bindings,
         "stale_worktrees": stale_worktrees,      # never auto-removed: destructive
         "parked_findings": len(parked),
-        "unflushed_telemetry": buffered,
         "missing_notes": missing_notes,
         "unshadowed_files": _unshadowed_files(root, config),
         "fixed": fixed if fix else None,

@@ -64,11 +64,11 @@ Discipline:
   the moment you abandon it — the next session only knows what substrate
   knows.
 - When context nears its limit, checkpoint at a Stop boundary and end the
-  session. Session cycling is the strategy; compaction firing is a defect
-  that gets logged against your slice's decomposition.
+  session. Session cycling is the strategy; a compaction is counted in
+  slice metrics as a sizing hint for the decomposition.
 - Do not edit derived files by hand. The shadow cache under
   `.harness/cache/` is gitignored, and the engine rebuilds it. The engine
-  also writes edges.jsonl and telemetry.jsonl.
+  also writes edges.jsonl and slice-metrics.jsonl.
 - Composing with superpowers (ADR-002, D-014): reuse the worktree
   `harness start` provisioned rather than letting
   `superpowers:using-git-worktrees` create another;

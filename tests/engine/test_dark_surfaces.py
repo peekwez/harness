@@ -1,12 +1,11 @@
 """Surfaces the suite never exercised: TypeScript/HCL/YAML shadows, the
-scaffolded CI workflow, non-Claude adapter permission parity, and telemetry
-retention."""
+scaffolded CI workflow, and non-Claude adapter permission parity."""
 import json
 import subprocess
 import sys
 
 from conftest import PLUGIN_ROOT, run_cli
-from engine import load_config, read_jsonl
+from engine import load_config
 
 
 # ---------------------------------------------------------------- TypeScript
@@ -194,38 +193,3 @@ def test_non_claude_adapters_auto_approve_declared_work(toy):
         out = json.loads(proc.stdout) if proc.stdout.strip() else {}
         blob = json.dumps(out)
         assert "allow" in blob, f"{name} should auto-approve declared work: {blob}"
-
-
-# ---------------------------------------------------------------- retention
-def test_telemetry_rotates_into_an_archive(toy):
-    from engine import telemetry
-    cap = 25
-    import yaml
-    cfg_path = toy / ".harness" / "config.yaml"
-    cfg = yaml.safe_load(cfg_path.read_text())
-    cfg.setdefault("telemetry", {})["max_rows"] = cap
-    cfg_path.write_text(yaml.safe_dump(cfg))
-    for i in range(cap + 10):
-        telemetry.emit(toy, "slice_closed", {"slice": f"s-{i}"})
-    moved = telemetry.rotate(toy, load_config(toy))
-    assert moved > 0
-    live = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    archive = read_jsonl(toy / ".harness" / "telemetry.archive.jsonl")
-    assert len(live) <= cap and archive, (len(live), len(archive))
-    # nothing is lost, only moved
-    assert len(live) + len(archive) == cap + 10
-    # the newest rows stay live
-    assert live[-1]["meta"]["slice"] == f"s-{cap + 9}"
-
-
-def test_status_since_filters_the_window(toy):
-    from engine import telemetry
-    telemetry.emit(toy, "slice_closed", {"slice": "old"})
-    rows = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    rows[0]["ts"] = "2020-01-01T00:00:00+00:00"
-    from engine import write_jsonl
-    write_jsonl(toy / ".harness" / "telemetry.jsonl", rows)
-    telemetry.emit(toy, "slice_closed", {"slice": "new"})
-    out = json.loads(run_cli("status", "--since", "2021-01-01", root=toy).stdout)
-    assert out["window"]["since"] == "2021-01-01"
-    assert out["window"]["rows"] == 1

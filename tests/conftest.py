@@ -131,8 +131,6 @@ def make_config(g3_mode="allow_with_findings"):
           typescript: true
           yaml: true
           hcl: true
-        telemetry:
-          compaction_is_defect: true
         """)
 
 
@@ -142,7 +140,7 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     (hdir / "memory" / "session").mkdir(parents=True)
     (hdir / "config.yaml").write_text(make_config(**cfg_kw))
     (hdir / "schema_version").write_text("2\n")
-    for empty in ("edges.jsonl", "telemetry.jsonl", "memory/durable.jsonl"):
+    for empty in ("edges.jsonl", "slice-metrics.jsonl", "memory/durable.jsonl"):
         (hdir / empty).touch()
 
     (root / "telemetry.py").write_text(TELEMETRY_PY)
@@ -200,13 +198,13 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     flip_status(root, "telemetry")
 
     (root / ".gitattributes").write_text(
-        ".harness/telemetry.jsonl merge=union\n"
         ".harness/edges.jsonl merge=union\n"
         ".harness/notes.jsonl merge=union\n"
         ".harness/memory/durable.jsonl merge=union\n"
         ".harness/backlog.jsonl merge=harness-substrate\n"
         ".harness/registry.jsonl merge=harness-substrate\n"
-        ".harness/decisions.jsonl merge=harness-substrate\n")
+        ".harness/decisions.jsonl merge=harness-substrate\n"
+        ".harness/slice-metrics.jsonl merge=harness-substrate\n")
     (root / ".gitignore").write_text(
         ".harness/sidecar.db\n.harness/sidecar.db-*\n"
         ".harness/cache/\n"

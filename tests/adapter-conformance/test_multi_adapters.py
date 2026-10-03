@@ -119,10 +119,11 @@ def test_non_goal_boundary_denied(toy, name):
 @pytest.mark.parametrize("name", sorted(ADAPTERS))
 def test_compaction_flush_and_telemetry_only(toy, name):
     spec = SPEC[name]
-    before = (toy / ".harness" / "telemetry.jsonl").read_text()
+    events = toy / ".harness" / "cache" / "events.jsonl"
+    before = events.read_text() if events.exists() else ""
     code, out, err = run_adapter(name, spec["compact"], toy)
     assert code == 0 and out is None, (out, err)
-    after = (toy / ".harness" / "telemetry.jsonl").read_text()
+    after = events.read_text()
     assert "COMPACTION_REACHED" in after and "COMPACTION_REACHED" not in before
 
 

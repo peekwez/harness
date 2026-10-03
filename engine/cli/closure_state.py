@@ -16,7 +16,8 @@ def journal_path(root, slice_id):
 
 
 FINALIZATION_FILES = ("backlog.jsonl", "registry.jsonl", "edges.jsonl",
-                      "notes.jsonl", "memory/durable.jsonl")
+                      "notes.jsonl", "memory/durable.jsonl",
+                      "slice-metrics.jsonl")
 
 
 def _save_journal(path, pending):
@@ -94,8 +95,8 @@ def finish_closure(root, result):
         sidecar.close()
     telemetry.emit(root, "slice_closed", {
         "slice": sid, "flipped": result["registry_flipped"],
-        "flip_skipped": result["flip_skipped"], "memories": result["memory"]["total"]},
-        buffered=True, event_id=f"closure:{sid}:{result.get('source_commit')}")
+        "flip_skipped": result["flip_skipped"],
+        "memories": result["memory"]["total"]})
     memory.session_path(root, sid).unlink(missing_ok=True)
     journal_path(root, sid).unlink(missing_ok=True)
     return result

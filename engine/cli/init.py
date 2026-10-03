@@ -97,7 +97,7 @@ def cmd_init(args):
     # hand-editing the backlog skill forbids.
     shutil.copy(templates / "registry.seed.jsonl", hdir / "registry.jsonl")
     for empty in ("decisions.jsonl", "backlog.jsonl", "edges.jsonl",
-                  "telemetry.jsonl", "boundaries.jsonl", "notes.jsonl",
+                  "slice-metrics.jsonl", "boundaries.jsonl", "notes.jsonl",
                   "memory/durable.jsonl"):
         (hdir / empty).touch()
 

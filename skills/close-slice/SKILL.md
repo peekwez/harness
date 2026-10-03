@@ -111,4 +111,4 @@ MAIN tree:
    resolve mechanically via the merge drivers (union for append-only logs,
    `harness merge-substrate` for keyed rows); a real keyed-row conflict is
    reported with the ids and left for you.
-5. Show the user `"${CLAUDE_PLUGIN_ROOT}/bin/harness" status --json` deltas for this slice.
+5. Show the user this slice's row in `.harness/slice-metrics.jsonl` (close wrote it): gates fired, overrides, compactions, parks and the maximum injection size.

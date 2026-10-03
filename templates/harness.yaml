@@ -99,5 +99,3 @@ ensemble:
   samples: 3
 languages:
 {{languages}}
-telemetry:
-  compaction_is_defect: false

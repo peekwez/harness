@@ -349,16 +349,14 @@ def _close_ceremony(args):
     compacted = memory.compact_to_durable(root, args.slice, commit=args.commit,
                                           consume=False)
 
-    # hook-frequency events buffered in the sidecar land here, once, so the
-    # tracked file doesn't churn on every edit (review R8)
-    telemetry_flushed = telemetry.flush(root)
-    telemetry_archived = telemetry.rotate(root, config)
+    # D-0.10-11: one committed summary row per slice. Event rows stay local.
+    slice_metrics = telemetry.record_slice_summary(root, args.slice)
 
     result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
               "acceptance_gate": acceptance_gate, "substrate_commit": None,
               "source_commit": args.commit,
               "fork_review": fork_review, "review": review_result,
-              "telemetry_flushed": telemetry_flushed, "telemetry_archived": telemetry_archived,
+              "slice_metrics": slice_metrics,
               "registry_refreshed": refreshed, "flip_skipped": flip_skipped, "memory": compacted,
               "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
               "notes_ref": NOTES_REF if note_written else None,
@@ -376,7 +374,7 @@ def _close_ceremony(args):
     save_slice(root, sl)
 
     # The ceremony itself just mutated substrate (backlog flip, registry,
-    # edges, telemetry) AFTER the commit it stamps — commit those mutations
+    # edges, slice metrics) AFTER the commit it stamps — commit those mutations
     # or they ride as uncommitted worktree state and the flip is lost on
     # merge (parallel-worktree field report W4). A follow-up commit, never
     # an amend: amending args.commit would orphan its git note.

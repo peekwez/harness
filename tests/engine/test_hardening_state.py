@@ -119,8 +119,8 @@ def test_failed_substrate_commit_is_retryable(toy):
     hook.chmod(0o755)
     p, out = close(toy)
     assert p.returncode == 1 and out["closed"] is False
-    from engine.telemetry import aggregate
-    assert aggregate(toy)["outcome_counts"].get("slice_closed", 0) == 0
+    assert not [r for r in read_jsonl(toy / ".harness/slice-metrics.jsonl")
+                if r["id"] == "slice-042"]
     indexed = [json.loads(line) for line in git(toy, "show", ":.harness/backlog.jsonl").stdout.splitlines()]
     assert indexed[0]["status"] != "closed"
     orders = next(e for e in read_jsonl(toy / ".harness/registry.jsonl") if e["id"] == "orders")

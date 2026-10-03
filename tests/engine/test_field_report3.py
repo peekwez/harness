@@ -73,7 +73,7 @@ def test_hook_adapter_stop_regenerates_shadows_in_the_worktree(toy, tmp_path):
 
 # ---------------------------------------------------------------- W4
 def test_close_commits_its_own_substrate_mutations(toy):
-    """The backlog status flip + telemetry land AFTER the commit the
+    """The backlog status flip + slice metrics land AFTER the commit the
     ceremony stamps — close must commit its substrate mutations itself or
     the flip is lost on worktree merge."""
     session = "close-commit"
@@ -148,7 +148,7 @@ def test_init_installs_substrate_merge_drivers(tmp_path):
     proc = run_cli("init", root=root)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     ga = (root / ".gitattributes").read_text()
-    assert ".harness/telemetry.jsonl merge=union" in ga
+    assert ".harness/slice-metrics.jsonl merge=harness-substrate" in ga
     assert ".harness/edges.jsonl merge=union" in ga
     assert ".harness/backlog.jsonl merge=harness-substrate" in ga
     assert ".harness/registry.jsonl merge=harness-substrate" in ga
@@ -158,7 +158,7 @@ def test_init_installs_substrate_merge_drivers(tmp_path):
 
 def test_parallel_close_branches_merge_without_conflict(tmp_path):
     """The W5 scenario end-to-end: two branches each flip their own backlog
-    row and append telemetry; the second merge must not conflict."""
+    row and add a slice-metrics row; the second merge must not conflict."""
     root = tmp_path / "para"
     root.mkdir()
     (root / "app.py").write_text("x = 1\n")
@@ -179,8 +179,9 @@ def test_parallel_close_branches_merge_without_conflict(tmp_path):
         git(root, "checkout", "-qb", branch)
         write_jsonl(backlog, [{"id": branch, "status": "closed"},
                               {"id": other, "status": "in_progress"}])
-        with (root / ".harness" / "telemetry.jsonl").open("a") as fh:
-            fh.write(json.dumps({"ev": branch}) + "\n")
+        metrics = root / ".harness" / "slice-metrics.jsonl"
+        write_jsonl(metrics, read_jsonl(metrics) + [
+            {"id": branch, "closed_at": "2026-10-02T00:00:00+00:00"}])
         git(root, "commit", "-qam", branch)
 
     git(root, "checkout", "-q", default)
@@ -189,8 +190,8 @@ def test_parallel_close_branches_merge_without_conflict(tmp_path):
     assert second.returncode == 0, second.stdout + second.stderr
     merged = {r["id"]: r["status"] for r in read_jsonl(backlog)}
     assert merged == {"slice-a": "closed", "slice-b": "closed"}
-    tel = (root / ".harness" / "telemetry.jsonl").read_text()
-    assert '"slice-a"' in tel and '"slice-b"' in tel  # union kept both
+    rows = read_jsonl(root / ".harness" / "slice-metrics.jsonl")
+    assert sorted(r["id"] for r in rows) == ["slice-a", "slice-b"]
 
 
 # ---------------------------------------------------------------- W6b

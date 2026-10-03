@@ -6,7 +6,7 @@ Read this file before you edit.
 
 ## Binding rules
 
-1. Authored files hold human judgment: ADRs, `.harness/config.yaml`, decision rows. The engine writes derived files: `edges.jsonl`, `boundaries.jsonl`, telemetry. Do not edit a derived file.
+1. Authored files hold human judgment: ADRs, `.harness/config.yaml`, decision rows. The engine writes derived files: `edges.jsonl`, `boundaries.jsonl`, `slice-metrics.jsonl`. Do not edit a derived file.
 2. Work only inside a bound slice from `.harness/backlog.jsonl`. Amend its declarations before you touch other files.
 3. When a row in `.harness/decisions.jsonl` answers your question, obey it. When no row exists and the question will recur, park it.
 4. To read another module's interface, run `harness resolve --module <id>`. Do not paste its source.

@@ -106,13 +106,13 @@ def _acceptance_python(root, config):
 # Parallel worktree closes conflict on .harness JSONL by construction (W5).
 # Append-only logs union-merge; keyed-by-id rows go through the
 # `harness merge-substrate` 3-way driver.
-SUBSTRATE_UNION_MERGE = (".harness/telemetry.jsonl", ".harness/edges.jsonl",
-                         ".harness/notes.jsonl",
+SUBSTRATE_UNION_MERGE = (".harness/edges.jsonl", ".harness/notes.jsonl",
                          ".harness/memory/durable.jsonl")
 
 
 SUBSTRATE_KEYED_MERGE = (".harness/backlog.jsonl", ".harness/registry.jsonl",
-                         ".harness/decisions.jsonl")
+                         ".harness/decisions.jsonl",
+                         ".harness/slice-metrics.jsonl")
 
 
 def _write_merge_attributes(root):

@@ -42,6 +42,16 @@ SCHEMAS = {
                    ("origin", str, False)],
         "enums": {"origin": DECISION_ORIGIN},
     },
+    "slice-metrics.jsonl": {
+        "id_field": "id",
+        "fields": [("id", str, True), ("closed_at", str, True),
+                   ("gates_fired", dict, False), ("overrides", dict, False),
+                   ("reversals", dict, False),
+                   ("max_injection_chars", int, False),
+                   ("compactions", int, False), ("parks", int, False),
+                   ("source", str, False)],
+        "enums": {"source": ("close", "upgrade")},
+    },
 }
 
 

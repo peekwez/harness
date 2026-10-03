@@ -21,7 +21,7 @@ Sizing rules:
 - `context_cost_estimate` = declared deps run through the resolver's budget
   logic (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog` computes it). Anything above budget × 0.8 splits
   at decomposition time, not mid-build.
-- COMPACTION_REACHED in telemetry = a slice that lied about its size; fix
+- A compaction counted in slice metrics = a slice that lied about its size; fix
   the decomposition, don't handle the compaction.
 
 Declaration completeness:

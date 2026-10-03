@@ -68,8 +68,8 @@ Loop discipline — in order:
    --approach "<what you tried>" --outcome abandoned --why "<why>"`
 5. **Session cycling, not compaction.** When context nears its limit:
    checkpoint at a Stop boundary, end the session, start fresh — `harness
-   start --slice $1` resumes from substrate. If compaction fires, that is a
-   defect signal in telemetry, not a convenience.
+   start --slice $1` resumes from substrate. If compaction fires, a compaction
+   is counted in slice metrics as a sizing hint, not a convenience.
 
 ## Autonomous slice completion — do not stop for permission
 

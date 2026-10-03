@@ -5,9 +5,8 @@ import json
 import subprocess
 import sys
 
-from conftest import PLUGIN_ROOT, git, loaded_context, make_event, run_cli
-from engine import load_config, read_jsonl
-from engine.events import Sidecar, handle_event
+from conftest import PLUGIN_ROOT, run_cli
+from engine import read_jsonl
 
 
 # ---------------------------------------------------------------- R1/R2
@@ -116,59 +115,3 @@ def test_spec_glossary_resolves_every_referenced_marker():
                                p.read_text()))
     missing = sorted(r for r in refs if r not in glossary)
     assert not missing, f"SPEC.md does not define: {missing}"
-
-
-# ---------------------------------------------------------------- R7
-def test_rule_samples_report_observations_without_automatic_promotion(toy):
-    """Sparse telemetry is evidence for review, not a promotion decision."""
-    from engine import telemetry
-    from engine.gates.g5_conformance import record_override
-    for _ in range(3):
-        telemetry.emit(toy, "event", {"event": "pre_change", "session": "s",
-                                      "slice": "slice-042", "verdict": "block",
-                                      "codes": ["UNDECLARED_FILE"],
-                                      "gates": ["gate:G3"]})
-    telemetry.emit(toy, "event", {"event": "pre_change", "session": "s",
-                                  "slice": "slice-042", "verdict": "block",
-                                  "codes": ["UNDECLARED_USE"],
-                                  "gates": ["gate:G5"]})
-    record_override(toy, "slice-042", "registry:telemetry", "needed",
-                    rule_ref="gate:G5")
-    agg = telemetry.aggregate(toy)
-    assert agg["rule_samples"]["gate:G3"] == {
-        "firings": 3, "overrides": 0, "reversals": 0}
-    assert agg["rule_samples"]["gate:G5"] == {
-        "firings": 1, "overrides": 1, "reversals": 0}
-    assert agg["layer0_promotion_candidates"] == []
-
-
-# ---------------------------------------------------------------- R8
-def test_telemetry_buffers_in_the_sidecar_and_flushes_at_close(toy):
-    """Hook events appending to a tracked file forced churn commits before
-    every merge; buffer them and flush once at close."""
-    session = "buf"
-    run_cli("start", "--slice", "slice-042", "--session", session,
-            "--no-worktree", root=toy)
-    before = len(read_jsonl(toy / ".harness" / "telemetry.jsonl"))
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(
-        "import telemetry\n\n\ndef create_order(sku: str) -> dict:\n"
-        "    telemetry.emit_span('create_order', {'sku': sku})\n"
-        "    return {'sku': sku}\n")
-    for _ in range(3):
-        handle_event(make_event("post_change", session=session,
-                                files=["orders.py"]), toy)
-    assert len(read_jsonl(toy / ".harness" / "telemetry.jsonl")) == before, \
-        "hook events must not churn the tracked file"
-    handle_event(make_event("unit_complete", session=session), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "x")
-    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   "--commit", "HEAD", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    rows = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    assert len(rows) > before, "buffered events must land at close"
-    assert any(r["kind"] == "event" for r in rows)
-    # and the dashboard still sees buffered-but-unflushed events
-    out = json.loads(run_cli("status", root=toy).stdout)
-    assert out["pre_change_events"] >= 0

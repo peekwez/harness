@@ -201,7 +201,6 @@ DEFAULT_CONFIG = {
     "shadows": {"include": [], "exclude": []},
     "languages": {"python": True, "typescript": True, "rust": True,
                   "go": True, "yaml": True, "hcl": True},
-    "telemetry": {"compaction_is_defect": False},
 }
 
 

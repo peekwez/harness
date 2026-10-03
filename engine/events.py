@@ -134,9 +134,9 @@ def validate_event(raw: dict) -> dict:
 
 # ---------------------------------------------------------------- sidecar
 class Sidecar:
-    """Gitignored session state, touched files, baseline/cache data and
-    pending telemetry. Git-backed baselines recover after loss; transient
-    session observations and unflushed telemetry do not."""
+    """Gitignored session state, touched files and baseline/cache data.
+    Git-backed baselines recover after loss; transient
+    session observations do not."""
 
     def __init__(self, root):
         self.path = harness_dir(root) / "sidecar.db"
@@ -156,8 +156,6 @@ class Sidecar:
         CREATE TABLE IF NOT EXISTS touched(
             session_id TEXT, slice_id TEXT, path TEXT,
             UNIQUE(session_id, slice_id, path));
-        CREATE TABLE IF NOT EXISTS telemetry_buffer(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, row TEXT);
         """)
         self.db.commit()
 
@@ -205,23 +203,6 @@ class Sidecar:
                 (json.dumps(slice_id),))
         self.db.commit()
         return cur.rowcount
-
-    def telemetry_buffer(self, row: dict) -> None:
-        """Hook-frequency telemetry parks here (gitignored) instead of
-        churning the tracked file on every event (review R8)."""
-        self.db.execute("INSERT INTO telemetry_buffer(row) VALUES(?)",
-                        (json.dumps(row, sort_keys=True),))
-        self.db.commit()
-
-    def telemetry_peek(self) -> list:
-        return [json.loads(r[0]) for r in
-                self.db.execute("SELECT row FROM telemetry_buffer ORDER BY id")]
-
-    def telemetry_drain(self) -> list:
-        rows = self.telemetry_peek()
-        self.db.execute("DELETE FROM telemetry_buffer")
-        self.db.commit()
-        return rows
 
     def release_snapshots(self, slice_id) -> int:
         """Drop a slice's G6 baselines at close — stale baselines cause
@@ -341,12 +322,14 @@ def handle_event(raw: dict, root) -> dict:
             # adapters ask `harness permit` (engine/permits.py). The verdict
             # contract is the portability boundary; it does not grow fields.
 
+        from .resolver import BLOCK_SEPARATOR
         telemetry.emit(root, "event", {
             "event": event, "session": session, "slice": slice_id,
             "verdict": verdict["verdict"],
             "codes": sorted({f["code"] for f in verdict["findings"]}),
             "gates": sorted({f["rule_ref"] for f in verdict["findings"]
                              if f["rule_ref"].startswith("gate:")}),
+            "injection_chars": len(BLOCK_SEPARATOR.join(verdict["injections"])),
         })
         return verdict
     finally:

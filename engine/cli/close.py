@@ -286,11 +286,6 @@ def cmd_merge_slice(args):
         return changed
     telemetry.emit(root, "slice_merged", {
         "slice": args.slice, "gates": verdict["verdict"]})
-    telemetry.flush(root)      # buffered hook events land with the merge
-    changed = reject_uncommitted_product_changes(
-        "merge telemetry", merged_head)
-    if changed is not None:
-        return changed
 
     substrate_commit = None
     if _git("status", "--porcelain", "--", ".harness").stdout.strip():

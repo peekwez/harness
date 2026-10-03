@@ -124,6 +124,9 @@ def test_merge_rolls_back_when_substrate_commit_hook_fails(toy):
     hook = toy / ".git" / "hooks" / "pre-commit"
     hook.write_text("#!/bin/sh\nexit 1\n")
     hook.chmod(0o755)
+    # Merge no longer flushes telemetry, so stage substrate output directly:
+    # a regenerated file under .harness/ forces the substrate commit.
+    (toy / ".harness" / "regenerated.jsonl").write_text("{}\n")
 
     proc = run_cli("merge-slice", "--slice", "slice-042", root=toy,
                    env=NO_ENV)

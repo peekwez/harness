@@ -156,14 +156,14 @@ def test_injection_clipped_under_hook_output_cap():
 
 
 def test_precompact_flush_and_telemetry_only(toy):
-    telemetry_file = toy / ".harness" / "telemetry.jsonl"
-    before = telemetry_file.read_text()
+    events = toy / ".harness" / "cache" / "events.jsonl"
+    before = events.read_text() if events.exists() else ""
     code, out, err = run_adapter(
         {"hook_event_name": "PreCompact", "session_id": "ac-6"},
         toy, slice_id="slice-042")
     assert code == 0, err
     assert out is None, "PreCompact must not inject anything"
-    after = telemetry_file.read_text()
+    after = events.read_text()
     assert "COMPACTION_REACHED" in after and "COMPACTION_REACHED" not in before
 
 
