@@ -167,3 +167,51 @@ def test_quoted_hazards_are_not_auto_approved(command):
 def test_quoted_promote_asks():
     assert command_decision("harness memory 'promote' --text x",
                             slice_id="s1")[:2] == ("ask", False)
+
+
+# Round 4: under the shipped profile a `defer` runs the command, so every
+# protective outcome is `ask`.
+@pytest.mark.parametrize("command", [
+    "/plug/bin/harness me${x}mory promote a", "/plug/bin/harness mem$'o'ry promote a",
+    "/plug/bin/harness $'\\x6demory' promote a",
+    "/plug/bin/har${x}ness memory promote a", "/plug/bin/harnes? memory promote a",
+    "/plug/bin/harnes[s] memory promote a", "/plug/bin/HARNESS me${x}mory promote a",
+    "/plug/bin/HARNESS memory promote a",
+])
+def test_unresolved_harness_spellings_ask(command):
+    assert command_decision(command, slice_id="s1")[:2] == ("ask", False)
+
+
+@pytest.mark.parametrize("command", [
+    "echo x > .claude/memory/shared/a.md", "cp a.md .claude/memory/shared/",
+    "git mv a.md .claude/memory/shared/a.md",
+])
+def test_shared_memory_touch_asks(command):
+    assert command_decision(command, slice_id="s1")[:2] == ("ask", False)
+
+
+@pytest.mark.parametrize("command", [
+    'harness memory "changed"', "harness memory 'changed'",
+    "harness memory changed; git status", "harness memory changed&&git status",
+    "git diff HEAD~1", "git log HEAD~3..HEAD", "git show HEAD^",
+    "git reset --hard HEAD~1",
+])
+def test_round4_plain_commands_are_allowed(command):
+    assert command_decision(command, slice_id="s1")[0] == "allow"
+
+
+@pytest.mark.parametrize("command", [
+    "ls ~", "ls ~/x", "git diff ~1", "X=~/a git status", "git log a:~/b",
+    "git show ^HEAD", "git log @{u}",
+])
+def test_tilde_and_caret_that_bash_expands_are_not_allowed(command):
+    assert command_decision(command, slice_id="s1")[0] != "allow"
+
+
+def test_permit_cli_asks_for_shared_memory_without_a_bound_slice(toy):
+    proc = run_cli("permit", "--command", "cp a.md .claude/memory/shared/",
+                   "--session", "nobody", root=toy,
+                   env={"CLAUDE_SESSION_ID": ""})
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["decision"] == "ask" and out["allow"] is False

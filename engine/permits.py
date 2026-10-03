@@ -18,8 +18,10 @@ Two surfaces:
   and nothing else that talks to a remote.
 - `needs_human` — `harness memory promote` always goes to the human
   (D-0.10-02), with or without a bound slice. The adapter asks.
-- A command that names a path in the shared memory folder is never
-  auto-approved, whatever its head (`echo x > .claude/memory/shared/a.md`).
+- `ask_reason` — the shipped profile runs a deferred command unprompted, so
+  protective outcomes are `ask`: a promotion, a command that names the shared
+  memory folder (`echo x > .claude/memory/shared/a.md`), and a command that
+  is not plain and may spell `harness` (`har${x}ness`, `harnes?`).
 """
 from __future__ import annotations
 
@@ -76,7 +78,9 @@ _SUBSTITUTION = re.compile(r"\$\(|`|<\(")
 # Shared memory holds only facts a human chose (D-0.10-02). Matched on the
 # raw text so every spelling counts: `--root` first, `python3 …/harness`,
 # `bash -c`, extra spaces. Over-matching costs one prompt, never a write.
-PROMOTE = re.compile(r"\bmemory\s+[\"']?promote\b")
+PROMOTE = re.compile(r"\bmemory\s+[\"']?promote\b", re.I)
+# the sub-word after `memory`, ending at a blank or a shell separator
+_MEMORY_SUB = re.compile(r"\bmemory\b[ \t]*([^\s;&|<>()]*)", re.I)
 
 
 def needs_human(command: str):
@@ -85,6 +89,7 @@ def needs_human(command: str):
     `harness memory promote` always asks. So does every other `harness memory`
     subcommand but `changed`, and any spelling we cannot resolve (`pro${x}mote`,
     `$'promote'`): the sub-word is read de-quoted and must equal `changed`.
+    Case is ignored: macOS paths are case-insensitive.
 
     Args:
         command: The command line the host is asking about.
@@ -93,12 +98,12 @@ def needs_human(command: str):
         A reason string, else None.
     """
     raw = command or ""
-    for text in (raw, re.sub(r"[\\'\"]", "", raw)):
-        if "harness" not in text:
-            continue
-        if PROMOTE.search(text):
+    dequoted = re.sub(r"[\\'\"]", "", raw)
+    for text in (raw, dequoted):
+        if "harness" in text.casefold() and PROMOTE.search(text):
             return _PROMOTE_REASON
-        for m in re.finditer(r"\bmemory\b\s*(\S*)", text):
+    if "harness" in dequoted.casefold():
+        for m in _MEMORY_SUB.finditer(dequoted):
             if m.group(1) != "changed":
                 return _PROMOTE_REASON
     return None
@@ -114,7 +119,8 @@ _PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
 # Single quotes are literal. Double quotes are literal except $ ` \\ !, which
 # bash expands or escapes, so they are refused. Adjacent quoted and unquoted
 # parts form one word (`pro''mote` is `promote`); the token checks then run
-# on the de-quoted words. Anything else goes to the human.
+# on the de-quoted words. `~` and `^` pass mid-word (`HEAD~1`), never at a
+# word start or after `=`/`:`. Anything else goes to the human.
 _BARE_OK = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                      "0123456789_./:=@%+,-")
 _SAFE_REDIRECT_TOKENS = {"2>&1", "1>&2", "2>/dev/null", ">/dev/null",
@@ -200,6 +206,10 @@ def plain_segments(command: str, harness_bin=None):
             i = j + 1
             continue
         elif ch in _BARE_OK:
+            word.append(ch)
+        elif ch in "~^" and (word or quoted) and text[i - 1] not in "=:":
+            # bash expands `~` only at a word start or after `=`/`:`, and `^`
+            # is history only at the start: `HEAD~1`, `HEAD^` stay plain
             word.append(ch)
         elif ch in "<>&":
             word.append(ch)
@@ -627,7 +637,56 @@ def command_decision(command: str, harness_bin: str | None = None,
             "slice/<bound-slice>`, `git fetch <remote>` and `gh pr "
             "create|view|checks|status` (ADR-002 / D-011) — this command is "
             f"outside that surface: {reason}")
+    why = ask_reason(command, harness_bin)
+    if why:
+        return "ask", False, why
     return "defer", False, reason
+
+
+def ask_reason(command: str, harness_bin: str | None = None):
+    """Why a command must be put to the human, or None.
+
+    The shipped profile runs a deferred command in the sandbox without a
+    prompt, so these outcomes have to be `ask`, not `defer`.
+
+    Args:
+        command: The command line the host is asking about.
+        harness_bin: Absolute path of the engine binary, when known.
+
+    Returns:
+        A reason string for a promotion or other non-`changed` memory
+        subcommand, a command that names the shared memory folder, or a
+        command that is not plain and may spell `harness`; else None.
+    """
+    why = needs_human(command)
+    if why:
+        return why
+    if touches_shared_memory(command):
+        return _SHARED_REASON
+    if _may_spell_harness(command) and \
+            plain_segments(command, harness_bin) is None:
+        return _UNRESOLVED_REASON
+    return None
+
+
+_SHARED_REASON = ("A command that names .claude/memory/shared needs a human. "
+                  "Shared memory holds only facts a human chose.")
+_UNRESOLVED_REASON = ("This harness command uses expansion, globs or escapes, "
+                      "so the permit cannot read it. A human approves it.")
+
+
+def _may_spell_harness(command: str) -> bool:
+    """True when the text could name `harness` once the shell expands it.
+
+    Reads the raw text, the de-quoted text, and the text with `${...}`,
+    `$name`, quotes, escapes and glob characters removed (`har${x}ness`,
+    `harnes[s]`), case-insensitive. A glob tail (`harnes?`) counts too.
+    """
+    raw = (command or "").casefold()
+    stripped = re.sub(r"\$\{[^}]*\}|\$[a-z_][a-z0-9_]*", "", raw)
+    stripped = re.sub(r"[\\'\"$?*\[\]{}]", "", stripped)
+    return any("harnes" in t for t in
+               (raw, re.sub(r"[\\'\"]", "", raw), stripped))
 
 
 def command_allowed(command: str, harness_bin: str | None = None,
