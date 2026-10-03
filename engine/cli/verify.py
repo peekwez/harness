@@ -264,29 +264,6 @@ def cmd_verify(args):
                     f"registry {e['id']!r}: guidance_ref {ref!r} missing",
                     severity="block", key=e["id"] + "|" + ref))
 
-    # contract lint: contracts/ is scaffolded as the FE/BE seam — an
-    # unparseable or shapeless contract silently disables that seam
-    contracts = root / "contracts"
-    if contracts.is_dir():
-        import yaml as _yaml
-        for c in sorted(contracts.glob("*.y*ml")):
-            rel = str(c.relative_to(root))
-            try:
-                doc = _yaml.safe_load(c.read_text())
-            except _yaml.YAMLError as exc:
-                findings.append(make_finding(
-                    "CONTRACT_INVALID", "gate:G1",
-                    f"{rel}: unparseable YAML: {exc}"[:300],
-                    severity="block", key=rel))
-                continue
-            if not isinstance(doc, dict) or "openapi" not in doc \
-                    or "paths" not in doc:
-                findings.append(make_finding(
-                    "CONTRACT_INVALID", "gate:G1",
-                    f"{rel}: not an OpenAPI document (needs `openapi` and "
-                    f"`paths` keys) — fix it or delete the contract",
-                    severity="block", key=rel))
-
     # orphaned-notes detection (git failures are loud; only a non-repo skips).
     # A squash/rebase merge rewrites the sha a note was written on, so an
     # unreachable note is only a hole when the derived notes log cannot

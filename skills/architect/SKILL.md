@@ -65,7 +65,7 @@ Stage-5 rules: if the gate reports gaps, walk the human through each gap and
 loop back to the stage that owns it (missing decision rows -> converge;
 unresolved open questions -> brainstorm). Progression is blocked until every
 sliceable domain has at least one decision row, every open question is
-resolved or deferred-with-owner, contracts lint, and the registry covers the
+resolved or deferred-with-owner, and the registry covers the
 spec's dependency mentions. **The human signs here — this is the one
 deliberate checkpoint.** Fully agent-authored Day 0 is out of scope; do not
 offer to sign on the human's behalf.

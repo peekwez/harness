@@ -155,8 +155,9 @@ def test_init_scaffolds_and_refuses_overwrite(tmp_path):
     for p in (".harness/config.yaml", ".harness/schema_version",
               ".harness/registry.jsonl", ".harness/decisions.jsonl",
               ".harness/backlog.jsonl", "adr/000-template.md",
-              "contracts/api.yaml", ".github/workflows/harness-verify.yml"):
+              ".github/workflows/harness-verify.yml"):
         assert (target / p).exists(), p
+    assert not (target / "contracts").exists()
     cfg = (target / ".harness" / "config.yaml").read_text()
     assert "python: true" in cfg  # detected from app.py
     gi = (target / ".gitignore").read_text()

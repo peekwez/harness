@@ -1,6 +1,6 @@
 """Phase-0 authoring commands: architect, compile, author-gate, backlog, slice.
 
-Authored artifacts (ADRs, contracts, the working document) become substrate
+Authored artifacts (ADRs and the working document) become substrate
 here, and slice rows are appended through `backlog add` rather than
 hand-edited.
 """

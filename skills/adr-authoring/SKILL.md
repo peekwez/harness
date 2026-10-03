@@ -33,7 +33,7 @@ The split that matters:
 - **Frontmatter is what the resolver queries.** `domains[]` routes the ADR to
   slices; `decision_table_rows[]` become atomic lookup rows (see the
   decision-tables skill for when a choice is a row vs a full ADR);
-  `abstractions[]` seed the registry; `api_surface[]` seeds contracts.
+  `abstractions[]` seed the registry.
 
 Rules:
 
@@ -56,9 +56,6 @@ Rules:
   prose. Superseded ADRs (status: superseded, or listed in another ADR's
   `supersedes`) compile to nothing — their decisions, refs, and boundaries
   drop on the next compile.
-- `contract_mode: generated` in frontmatter declares the contract is
-  produced by the build (code-first); compile and author-gate then skip
-  api_surface coverage for that ADR.
 - Abstraction `kind` must be one of
   `logging|telemetry|config|errors|util|component|other`; anything else is
   coerced to `other` with a warning (decision rows still match by the

@@ -26,16 +26,12 @@ extrapolation; the compiled form is what gates read:
   dotted module id, else G5 and the resolver cannot see them. An id claimed
   by both an ADR and the doc is a hard error naming both sources; a
   malformed row names the document and the line. Fix the source and re-run
-- ADR frontmatter `api_surface` -> `contracts/*.yaml` stubs for NEW
-  contracts only. Existing contracts are authored and never rewritten:
-  compile reports uncovered surface as `contract_gaps` (and author-gate
-  blocks until the contract covers them or the ADR drops them)
 - `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 boundaries; advisory unless a `gates.extra` gate cites them).
   boundaries.jsonl is REGENERATED on every run from ADRs + this doc — fix
   the source, recompile, stale boundaries disappear
 
 Read out the compile report's `warnings` (pattern-less non-goals, advisory-only non-goals, coerced
-kinds, contract gaps) to the human — each one is a silent-degradation
+kinds) to the human — each one is a silent-degradation
 candidate the compiler refused to hide.
 - `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 boundaries; advisory unless a `gates.extra` gate cites them)
 

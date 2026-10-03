@@ -149,11 +149,6 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     (root / "config.py").write_text(CONFIG_PY)
     (root / "adr").mkdir()
     (root / "adr" / "007-telemetry.md").write_text(ADR_007)
-    (root / "contracts").mkdir()
-    (root / "contracts" / "api.yaml").write_text(
-        "openapi: 3.0.3\ninfo: {title: api, version: 0.1.0}\n"
-        "paths:\n  /health:\n    get:\n      responses:\n        '200':\n"
-        "          description: ok\n")
     tests_dir = root / "tests" / "slices"
     tests_dir.mkdir(parents=True)
     (tests_dir / "042_orders.py").write_text(

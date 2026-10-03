@@ -1,6 +1,6 @@
 """Stage-4 transform (`harness compile`): authored artifacts -> enforcement
 substrate. ADR frontmatter -> decision rows; abstraction mentions -> registry
-skeleton (all planned); API surface -> contract stubs; [non-goal]s -> G3
+skeleton (all planned); [non-goal]s -> G3
 scope boundaries. Prose is for extrapolation; compiled form is what gates read.
 
 Rows and abstractions may also be authored in the working document's typed
@@ -140,8 +140,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     decisions = {d["id"]: d for d in read_jsonl(harness_dir(root) / "decisions.jsonl")}
     registry = {e["id"]: e for e in read_jsonl(harness_dir(root) / "registry.jsonl")}
     boundaries: dict = {}  # regenerated from scratch: derived files never accumulate
-    report = {"decisions": [], "registry": [], "boundaries": [], "contracts": [],
-              "contract_gaps": [], "pruned": [], "warnings": [], "adrs": [],
+    report = {"decisions": [], "registry": [], "boundaries": [],
+              "pruned": [], "warnings": [], "adrs": [],
               "skipped_superseded": [], "advisory_only": []}
     now = now_iso()
     superseded_adrs = _out_of_force(root)
@@ -277,49 +277,6 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 report["warnings"].append(
                     f"{adr_ref}: non-goal {b['id']} has no backticked path/glob — "
                     f"it documents intent but G3 cannot enforce it")
-
-        # API surface -> contract stubs (new contracts only; existing
-        # contracts are authored — report gaps instead of rewriting them).
-        # contract_mode: generated declares the contract is produced by the
-        # build (code-first); compile then owns neither stubs nor gaps (#16).
-        surface = fm.get("api_surface", []) or []
-        if surface and str(fm.get("contract_mode", "")).lower() == "generated":
-            report["warnings"].append(
-                f"{adr_ref}: contract_mode=generated — api_surface is "
-                f"informational; coverage is the build's responsibility, not "
-                f"author-gate's")
-            surface = []
-        if surface:
-            cdir = root / "contracts"
-            cdir.mkdir(exist_ok=True)
-            stub = cdir / f"{fm.get('contract', 'api')}.yaml"
-            ops = []
-            for op in surface:
-                parts = op.split(None, 1)
-                if len(parts) == 2:
-                    ops.append((parts[0].lower(), parts[1]))
-            import yaml
-            if not stub.exists():
-                paths: dict = {}
-                for method, route in ops:
-                    paths.setdefault(route, {})[method] = {
-                        "summary": f"stub from {adr_ref}",
-                        "responses": {"200": {"description": "ok"}}}
-                stub.write_text(yaml.safe_dump({
-                    "openapi": "3.0.3",
-                    "info": {"title": "generated stub", "version": "0.1.0"},
-                    "paths": paths}, sort_keys=True), encoding="utf-8")
-                report["contracts"].append(str(stub.relative_to(root)))
-            else:
-                doc = yaml.safe_load(stub.read_text()) or {}
-                have = doc.get("paths") or {}
-                for method, route in ops:
-                    if route not in have or method not in (have.get(route) or {}):
-                        gap = (f"{stub.relative_to(root)}: api_surface op "
-                               f"'{method.upper()} {route}' ({adr_ref}) is not in "
-                               f"the contract")
-                        report["contract_gaps"].append(gap)
-                        report["warnings"].append(gap)
 
     # typed fenced tables in the working document (ADR-002 D-013) are a
     # second authoring surface for the SAME rows — merged before reconcile
@@ -497,40 +454,6 @@ def author_gate(root, working_doc=None) -> dict:
         else:
             for q in _unresolved_open_questions(doc.read_text(encoding="utf-8")):
                 gaps.append(f"open question unresolved and not deferred-with-owner: {q}")
-
-    # contracts lint + api_surface coverage
-    cdir = root / "contracts"
-    contract_paths: dict = {}
-    if cdir.exists():
-        import yaml
-        for c in sorted(cdir.glob("*.yaml")):
-            try:
-                doc = yaml.safe_load(c.read_text())
-                if not isinstance(doc, dict) or "paths" not in doc:
-                    gaps.append(f"{c.relative_to(root)}: not a valid OpenAPI doc "
-                                f"(missing 'paths')")
-                else:
-                    contract_paths[c.stem] = doc.get("paths") or {}
-            except Exception as exc:
-                gaps.append(f"{c.relative_to(root)}: YAML parse error: {exc}")
-    in_force = _out_of_force(root)
-    for adr in _adr_files(root):
-        fm, _body = parse_frontmatter(adr.read_text(encoding="utf-8"))
-        if str(fm.get("id", "")) in in_force or \
-                str(fm.get("status", "")).lower() == "superseded":
-            continue  # superseded ADRs impose no coverage obligations
-        if str(fm.get("contract_mode", "")).lower() == "generated":
-            continue  # code-generated contract: coverage is the build's job (#16)
-        for op in fm.get("api_surface", []) or []:
-            parts = op.split(None, 1)
-            if len(parts) != 2:
-                continue
-            method, route = parts[0].lower(), parts[1]
-            covered = any(route in paths and method in (paths.get(route) or {})
-                          for paths in contract_paths.values())
-            if not covered:
-                gaps.append(f"api_surface op '{op}' (adr/{adr.name}) is not "
-                            f"covered by any contract in contracts/")
 
     # registry closure covers guidance refs
     for e in registry:

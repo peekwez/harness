@@ -128,30 +128,6 @@ def test_replaces_prunes_scaffolded_planned_entries(toy):
     assert any("not pruned" in w for w in report["warnings"])
 
 
-# ---------------------------------------------------------------- #6
-def test_api_surface_gaps_reported_and_gate_blocks(toy):
-    adr = toy / "adr" / "011-api.md"
-    adr.write_text('---\nid: "011"\napi_surface:\n  - "GET /orders"\n---\nbody\n')
-    report = compile_substrate(toy)
-    # contracts/api.yaml exists (authored) and lacks /orders -> gap, not rewrite
-    assert any("/orders" in g for g in report["contract_gaps"])
-    before = (toy / "contracts" / "api.yaml").read_text()
-    assert "/orders" not in before, "authored contract must not be rewritten"
-    result = author_gate(toy)
-    assert any("GET /orders" in g for g in result["gaps"])
-
-
-def test_api_surface_stub_created_for_new_contract(toy):
-    adr = toy / "adr" / "012-newapi.md"
-    adr.write_text('---\nid: "012"\ncontract: billing\n'
-                   'api_surface:\n  - "POST /invoices"\n---\nbody\n')
-    report = compile_substrate(toy)
-    assert "contracts/billing.yaml" in report["contracts"]
-    import yaml
-    doc = yaml.safe_load((toy / "contracts" / "billing.yaml").read_text())
-    assert "post" in doc["paths"]["/invoices"]
-
-
 # ---------------------------------------------------------------- #7
 def test_epoch_timestamp_never_propagates(toy):
     rows = read_jsonl(toy / ".harness" / "decisions.jsonl")

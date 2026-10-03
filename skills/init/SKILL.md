@@ -1,6 +1,6 @@
 ---
 name: init
-description: Scaffold the harness substrate (.harness/, adr/, contracts/, CI verify workflow) into this repo, detect languages, enable query packs, stamp the schema version, and install hook wiring.
+description: Scaffold the harness substrate (.harness/, adr/, CI verify workflow) into this repo, detect languages, enable query packs, stamp the schema version, and install hook wiring.
 allowed-tools: Bash(*/bin/harness *)
 ---
 

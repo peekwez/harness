@@ -103,9 +103,6 @@ def cmd_init(args):
 
     (root / "adr").mkdir(exist_ok=True)
     shutil.copy(templates / "adr.md", root / "adr" / "000-template.md")
-    (root / "contracts").mkdir(exist_ok=True)
-    if not any((root / "contracts").glob("*.yaml")):
-        shutil.copy(templates / "contract.stub.yaml", root / "contracts" / "api.yaml")
     _write_workflow(root)
     _vendor_engine(root)
 

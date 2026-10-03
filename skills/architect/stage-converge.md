@@ -54,7 +54,7 @@ compile error naming both.
 Mark each resolved question `[resolved: adr/NNN]` in the working document.
 
 Before accepting the resulting ADRs, batch material changes into the one
-focused design-review follow-up, including the proposed ADRs and contracts.
+focused design-review follow-up, including the proposed ADRs.
 Read its existing round count across sessions. If the budget is spent or the
 peer is unavailable, record unreviewed changes and surface them with remaining
 choices under the human/delegation contract; do not claim current peer coverage.

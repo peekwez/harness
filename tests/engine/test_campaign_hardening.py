@@ -1,5 +1,5 @@
 """Unattended-mode hardening: cumulative regression ratchet, attempt caps
-with auto-park, Layer-0 secret scan, dependency governance, contract lint."""
+with auto-park, Layer-0 secret scan, dependency governance."""
 import json
 
 from conftest import git, loaded_context, make_event, run_cli
@@ -174,14 +174,3 @@ def test_new_dependencies_require_a_recorded_override(toy):
             root=toy)
     proc = _close(toy, session)
     assert proc.returncode == 0, proc.stdout + proc.stderr
-
-
-# ---------------------------------------------------------------- E: contracts
-def test_verify_lints_contracts(toy):
-    (toy / "contracts" / "api.yaml").write_text("openapi: 3.0.3\n[broken")
-    proc = run_cli("verify", root=toy)
-    assert proc.returncode == 1
-    assert "CONTRACT_INVALID" in proc.stdout
-    (toy / "contracts" / "api.yaml").write_text("info: {title: x}\n")
-    proc = run_cli("verify", root=toy)
-    assert "CONTRACT_INVALID" in proc.stdout, "missing openapi/paths keys"

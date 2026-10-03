@@ -5,7 +5,6 @@ domains: []
 supersedes: []
 decision_table_rows: []
 abstractions: []
-api_surface: []
 ---
 
 # ADR-NNN: Title

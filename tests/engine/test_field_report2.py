@@ -271,17 +271,6 @@ def test_init_without_autonomy_writes_no_settings(tmp_path):
     assert not (target / ".claude" / "settings.json").exists()
 
 
-# ---------------------------------------------------------------- #16
-def test_generated_contract_mode_exempts_coverage(toy):
-    (toy / "adr" / "012-genapi.md").write_text(
-        '---\nid: "012"\nstatus: accepted\ncontract_mode: generated\n'
-        'api_surface:\n  - "GET /metrics"\n---\nbody\n')
-    report = compile_substrate(toy)
-    assert not any("/metrics" in g for g in report["contract_gaps"])
-    result = author_gate(toy)
-    assert not any("GET /metrics" in g for g in result["gaps"]), result["gaps"]
-
-
 # ---------------------------------------------------------------- #17
 def test_custom_domain_preserved_and_gate_checks_coverage(toy):
     (toy / "adr" / "013-data.md").write_text(
