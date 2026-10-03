@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 
 from . import (SubstrateMissing, get_slice, harness_dir, load_boundaries,
-               load_decisions, read_jsonl, token_estimate)
+               load_decisions, read_jsonl)
 from .registry import load_registry
 
 MAX_INJECTION_CHARS = 9000
@@ -29,15 +29,6 @@ def _adr_id(ref: str) -> str:
     """'adr/007-telemetry.md#s2' -> 'adr:007'."""
     m = re.search(r"adr/(\d+)", ref)
     return f"adr:{m.group(1)}" if m else f"adr:{ref}"
-
-
-def _load_shadow(root, entry):
-    """A built entry's shadow through the cache (rebuilt when stale)."""
-    if entry.get("status") != "built" or not entry.get("source"):
-        return None
-    from . import load_config
-    from .extractor.engine import shadow_for
-    return shadow_for(root, Path(root) / entry["source"], load_config(root))
 
 
 def render_shadow(shadow: dict, with_docs: bool = True) -> str:
@@ -340,62 +331,3 @@ def render_module(root, module_id: str, config: dict) -> dict:
         parts.append(c["block"])
     return {"module": module_id, "text": BLOCK_SEPARATOR.join(parts),
             "dropped": dropped}
-
-
-
-def context_cost_breakdown(root, declares_dep: list, config: dict) -> dict:
-    """Backlog-time cost of a slice's declared deps, itemised (spec §5.6, E6).
-
-    Built through the same candidate layer the resolver injects from, so
-    the total is the unbounded demand of the same deps:
-    same supersession filtering, same anchor extraction, one count per
-    distinct section across all deps. The estimate never applies the
-    budget — it is the unbounded demand the budget is compared against.
-
-    Args:
-        root: Substrate root.
-        declares_dep: The slice's declared registry ids.
-        config: The merged engine config (unused today; kept for the
-            resolver's signature symmetry).
-
-    Returns:
-        `{"total", "shadows", "guidance", "guidance_refs", "anchor_fallbacks",
-        "missing_refs", "superseded", "unknown_deps"}` — tokens for the
-        first three; the rest are the refs counted, the refs that fell back
-        to a whole file, the refs whose file is missing (cost 0 here; the
-        resolver fails closed on them), the refs skipped as superseded, and
-        declared ids absent from the registry.
-    """
-    registry = {e["id"]: e for e in load_registry(root)}
-    shadows = guidance = 0
-    refs, fallbacks, missing, superseded_refs, unknown = [], [], [], [], []
-    seen: set = set()
-    for did in sorted(dict.fromkeys(declares_dep)):
-        entry = registry.get(did)
-        if entry is None:
-            unknown.append(did)
-            continue
-        if entry.get("status") == "built":
-            shadow = _load_shadow(root, entry)
-            if shadow is not None:
-                shadows += token_estimate(render_shadow(shadow, True))
-        superseded = set(entry.get("supersedes_guidance", []))
-        for c in _guidance_candidates(root, entry, superseded,
-                                      missing_refs=missing,
-                                      superseded_out=superseded_refs):
-            if c["key"] in seen:
-                continue
-            seen.add(c["key"])
-            guidance += token_estimate(c["block"])
-            refs.append(c["ref"])
-            if c["anchor_missing"]:
-                fallbacks.append(c["ref"])
-    return {"total": shadows + guidance, "shadows": shadows,
-            "guidance": guidance, "guidance_refs": refs,
-            "anchor_fallbacks": fallbacks, "missing_refs": missing,
-            "superseded": superseded_refs, "unknown_deps": unknown}
-
-
-def context_cost_estimate(root, declares_dep: list, config: dict) -> int:
-    """Backlog-time cost: the `total` of `context_cost_breakdown`."""
-    return context_cost_breakdown(root, declares_dep, config)["total"]

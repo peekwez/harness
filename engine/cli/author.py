@@ -168,11 +168,23 @@ def cmd_author_gate(args):
 
 
 # ------------------------------------------------------------------ backlog
+def _slice_context(root, row: dict, config) -> dict:
+    """One slice's context against MAX_INJECTION_CHARS: what fits, what the
+    uncapped blocks need, which blocks the cap cuts, estimated tokens."""
+    from engine import token_estimate
+    from engine.resolver import BLOCK_SEPARATOR, build_blocks, fit_blocks
+    blocks = build_blocks(root, row, config)
+    injections, cut = fit_blocks(blocks, row["id"])
+    demand = BLOCK_SEPARATOR.join(b["text"] for b in blocks)
+    return {"chars": len(BLOCK_SEPARATOR.join(injections)),
+            "demand_chars": len(demand), "cut": cut,
+            "tokens": token_estimate(demand)}
+
+
 def _backlog_add(args):
     """imp-3: slice rows were the last hand-edited substrate (the historical
     EDIT-ME defect source) — append them through the CLI, validated."""
     from engine.registry import load_registry
-    from engine.resolver import context_cost_estimate
     root = _root(args)
     config = load_config(root)
     rows = load_backlog(root)
@@ -196,8 +208,7 @@ def _backlog_add(args):
            "depends_on": list(args.depends or []), "worktree": None}
     if getattr(args, "linear", None):
         row["linear"] = validate_linear(args.linear)
-    row["context_cost_estimate"] = context_cost_estimate(
-        root, row["declares_dep"], config)
+    row["context_cost_estimate"] = _slice_context(root, row, config)["tokens"]
     rows.append(row)
     write_jsonl(harness_dir(root) / "backlog.jsonl", rows)
     _print(row)
@@ -207,11 +218,9 @@ def _backlog_add(args):
 def cmd_backlog(args):
     if getattr(args, "backlog_cmd", None) == "add":
         return _backlog_add(args)
-    from engine.resolver import context_cost_breakdown
+    from engine.resolver import MAX_INJECTION_CHARS, over_cap_finding
     root = _root(args)
     config = load_config(root)
-    budget = int(config["resolver"]["budget_tokens"])
-    limit = budget * 0.8
     rows = load_backlog(root)
     # who depends on whom: replacing a parent with -a/-b would leave every
     # dependent's `depends_on` pointing at a row that no longer exists
@@ -219,20 +228,23 @@ def cmd_backlog(args):
     for r in rows:
         for d in r.get("depends_on") or []:
             dependents.setdefault(d, []).append(r["id"])
-    out, split, refused, proposals, estimates = [], [], [], [], {}
+    out, split, refused, proposals = [], [], [], []
 
-    # Work out every split candidate and reserve its proposed ids before
-    # changing backlog.jsonl.  A collision must leave even routine estimate
-    # updates unwritten: otherwise a rejected split still mutates substrate.
-    breakdowns = {}
-    candidates = []
+    # Size every slice and reserve proposed split ids before changing
+    # backlog.jsonl. A slice is oversized when its context does not fit
+    # MAX_INJECTION_CHARS: the plan-time twin of CONTEXT_OVER_CAP. A
+    # collision must leave even routine estimate updates unwritten.
+    contexts, warnings, oversized_ids, candidates = {}, [], set(), []
     for s in rows:
-        breakdown = context_cost_breakdown(root, s.get("declares_dep", []),
-                                           config)
-        breakdowns[s["id"]] = breakdown
-        oversized = (breakdown["total"] > limit
-                     and len(s.get("declares_dep", [])) > 1)
-        if (args.split and oversized and s.get("status") == "planned"
+        ctx = _slice_context(root, s, config)
+        contexts[s["id"]] = ctx
+        if ctx["cut"]:
+            warnings.append(over_cap_finding(s["id"], ctx["cut"],
+                                             ctx["demand_chars"]))
+            if len(s.get("declares_dep", [])) > 1:
+                oversized_ids.add(s["id"])
+        if (args.split and s["id"] in oversized_ids
+                and s.get("status") == "planned"
                 and not dependents.get(s["id"])):
             candidates.append(s)
     existing_ids = {s["id"] for s in rows}
@@ -245,17 +257,15 @@ def cmd_backlog(args):
                       f"and author the child contracts explicitly")
             _print({"slices": [row["id"] for row in rows], "split": [],
                     "split_refused": [{"id": s["id"], "reason": reason}],
-                    "split_proposals": [], "estimates": breakdowns,
-                    "budget": budget, "limit": limit, "reason": reason})
+                    "split_proposals": [], "context": contexts,
+                    "warnings": warnings, "cap": MAX_INJECTION_CHARS,
+                    "reason": reason})
             return 1
 
     for s in rows:
+        oversized = s["id"] in oversized_ids
         s = dict(s)
-        breakdown = breakdowns[s["id"]]
-        est = breakdown["total"]
-        s["context_cost_estimate"] = est
-        estimates[s["id"]] = breakdown
-        oversized = est > limit and len(s.get("declares_dep", [])) > 1
+        s["context_cost_estimate"] = contexts[s["id"]]["tokens"]
         if not (args.split and oversized):
             # acceptance paths are implicitly predicted during ordinary
             # estimation.  A refused split keeps the parent's authored work
@@ -297,8 +307,8 @@ def cmd_backlog(args):
     write_jsonl(harness_dir(root) / "backlog.jsonl", out)
     _print({"slices": [s["id"] for s in out], "split": split,
             "split_refused": refused, "split_proposals": proposals,
-            "estimates": estimates,
-            "budget": budget, "limit": limit})
+            "context": contexts, "warnings": warnings,
+            "cap": MAX_INJECTION_CHARS})
     return 0
 
 

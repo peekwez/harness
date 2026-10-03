@@ -7,9 +7,7 @@
 - E1: one closed-slice acceptance selector shared by close, merge and the
   new `harness acceptance --closed` entry point; a declared suite that
   disappeared fails loud, naming the slice and pattern.
-- E6: the resolver and the backlog estimate build guidance candidates
-  through one layer — same supersession, anchors and dedup — and a missing
-  anchor is a reported fallback, not a silent whole-file load.
+- E6: guidance candidates go through one layer (see test_resolver.py).
 - Proposed ADRs that carry frontmatter decision rows are warned about at
   compile: rows bind regardless of `status`, so say so.
 """
@@ -46,7 +44,7 @@ def _closed(sid, acceptance, **extra):
 
 # =============================================================== E5: split
 def test_split_never_rewrites_a_closed_slice(tmp_path):
-    toy = build_toy_repo(tmp_path / "toy", budget=100)   # everything is oversized
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     rows = _backlog(toy)
     rows[0]["status"] = "closed"
     _set_backlog(toy, rows)
@@ -60,7 +58,7 @@ def test_split_never_rewrites_a_closed_slice(tmp_path):
 
 def test_split_never_rewrites_a_bound_or_parked_slice(tmp_path):
     for status in ("in_progress", "parked"):
-        toy = build_toy_repo(tmp_path / status, budget=100)
+        toy = build_toy_repo(tmp_path / status, oversized=True)
         rows = _backlog(toy)
         rows[0]["status"] = status
         _set_backlog(toy, rows)
@@ -72,7 +70,7 @@ def test_split_never_rewrites_a_bound_or_parked_slice(tmp_path):
 def test_split_refuses_a_parent_other_slices_depend_on(tmp_path):
     """Replacing slice-042 with -a/-b would leave slice-043's depends_on
     pointing at a row that no longer exists."""
-    toy = build_toy_repo(tmp_path / "toy", budget=100)
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     rows = _backlog(toy)
     rows.append({"id": "slice-043", "spec": "s", "title": "after",
                  "status": "planned", "declares_dep": ["orders"],
@@ -91,7 +89,7 @@ def test_split_refuses_a_parent_other_slices_depend_on(tmp_path):
 
 
 def test_split_of_a_free_planned_slice_requires_authored_child_contracts(tmp_path):
-    toy = build_toy_repo(tmp_path / "toy", budget=100)
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     out = json.loads(run_cli("backlog", root=toy).stdout)
     assert out["split"] == []
     assert out["split_proposals"][0]["child_ids"] == ["slice-042-a",
@@ -297,35 +295,6 @@ def test_ci_template_offers_closed_acceptance_opt_in():
     assert (PLUGIN_ROOT / ".github" / "workflows" /
             "harness-verify.yml").read_text() == \
         (PLUGIN_ROOT / "templates" / "ci-verify.yml").read_text()
-
-
-# =================================================== E6: context estimate
-def test_missing_guidance_file_is_reported_by_the_estimate(toy):
-    from engine.resolver import context_cost_breakdown
-    rows = read_jsonl(toy / ".harness" / "registry.jsonl")
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/099-gone.md#s1"]
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    est = context_cost_breakdown(toy, ["orders"], load_config(toy))
-    assert est["missing_refs"] == ["adr/099-gone.md#s1"]
-    assert est["guidance"] == 0
-
-
-def test_backlog_output_carries_the_breakdown(toy):
-    out = json.loads(run_cli("backlog", "--no-split", root=toy).stdout)
-    est = out["estimates"]["slice-042"]
-    assert set(est) >= {"total", "shadows", "guidance", "guidance_refs",
-                        "anchor_fallbacks", "missing_refs", "superseded"}
-    assert est["total"] == _backlog(toy)[0]["context_cost_estimate"]
-
-
-def test_estimate_is_deterministic(toy):
-    from engine.resolver import context_cost_breakdown
-    config = load_config(toy)
-    a = context_cost_breakdown(toy, ["config", "telemetry"], config)
-    b = context_cost_breakdown(toy, ["telemetry", "config"], config)
-    assert a == b
 
 
 # =================================================== compile: proposed ADRs

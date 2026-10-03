@@ -116,14 +116,10 @@ Bare logging.
 '''
 
 
-def make_config(budget=8000, g3_mode="allow_with_findings",
+def make_config(g3_mode="allow_with_findings",
                 g5_override="recorded_justification"):
     return textwrap.dedent(f"""\
         schema: 1
-        resolver:
-          budget_tokens: {budget}
-          ranking: [direct_deps, one_hop_types, durable_memories]
-          degrade: drop_docstrings_before_modules
         gates:
           g3_mode: {g3_mode}
           g5_override: {g5_override}
@@ -141,11 +137,11 @@ def make_config(budget=8000, g3_mode="allow_with_findings",
         """)
 
 
-def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
+def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     """Substrate + two modules (telemetry built, config planned) + slice-042."""
     hdir = root / ".harness"
     (hdir / "memory" / "session").mkdir(parents=True)
-    (hdir / "config.yaml").write_text(make_config(budget=budget, **cfg_kw))
+    (hdir / "config.yaml").write_text(make_config(**cfg_kw))
     (hdir / "schema_version").write_text("2\n")
     for empty in ("edges.jsonl", "telemetry.jsonl", "memory/durable.jsonl"):
         (hdir / empty).touch()
@@ -223,6 +219,8 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
         ".harness/memory/session/\n.worktrees/\n"
         ".claude/settings.local.json\n"
         "__pycache__/\n*.pyc\n.pytest_cache/\n")
+    if oversized:
+        oversize_slice(root)
     git(root, "init", "-q")
     git(root, "config", "user.email", "t@t")
     git(root, "config", "user.name", "t")

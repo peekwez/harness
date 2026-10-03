@@ -33,7 +33,7 @@ def _override_edges(root):
 
 
 def test_split_child_id_collision_is_refused_before_any_write(tmp_path):
-    toy = build_toy_repo(tmp_path / "split", budget=100)
+    toy = build_toy_repo(tmp_path / "split", oversized=True)
     rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
     rows.append({
         "id": "slice-042-a", "spec": "other", "title": "existing child id",
@@ -57,7 +57,7 @@ def test_split_child_id_collision_is_refused_before_any_write(tmp_path):
 
 
 def test_split_reports_proposal_without_cloning_parent_contract(tmp_path):
-    toy = build_toy_repo(tmp_path / "proposal", budget=100)
+    toy = build_toy_repo(tmp_path / "proposal", oversized=True)
     backlog = toy / ".harness" / "backlog.jsonl"
     parent_before = read_jsonl(backlog)[0]
 

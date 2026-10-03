@@ -160,7 +160,7 @@ def test_close_blocked_on_unreconciled_g3_touch(toy):
 
 def test_backlog_proposes_authored_children_for_oversized_slice(tmp_path):
     from conftest import build_toy_repo
-    toy = build_toy_repo(tmp_path / "toy", budget=100)  # tiny budget
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)  # context over the cap
     proc = run_cli("backlog", root=toy)
     out = json.loads(proc.stdout)
     assert out["split"] == []
