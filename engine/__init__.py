@@ -229,4 +229,7 @@ def load_config(root) -> dict:
     # otherwise be shared with DEFAULT_CONFIG, and one caller mutating
     # `config["extractor"]["src_roots"]` would move every module id in the
     # process (fail loud, never quietly global)
-    return _deep_merge(copy.deepcopy(DEFAULT_CONFIG), loaded)
+    config = _deep_merge(copy.deepcopy(DEFAULT_CONFIG), loaded)
+    from engine.review.rubrics import ensemble_enabled
+    ensemble_enabled(config)   # fail loud on a non-bool review.ensemble
+    return config

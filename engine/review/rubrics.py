@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .. import HarnessError, harness_dir, read_jsonl
+from .. import HarnessError, SchemaError, harness_dir, read_jsonl
 from ..events import make_finding, validate_finding
 from .ensemble import run_ensemble
 
@@ -24,7 +24,11 @@ ENSEMBLE_SAMPLES = 3
 
 def ensemble_enabled(config) -> bool:
     """True when the repo opted into ensemble sampling and golden replay."""
-    return bool(((config or {}).get("review") or {}).get("ensemble", False))
+    value = ((config or {}).get("review") or {}).get("ensemble", False)
+    if not isinstance(value, bool):
+        raise SchemaError(f"review.ensemble must be true or false, got "
+                          f"{value!r}. Fix .harness/config.yaml.")
+    return value
 
 
 def _deterministic_rubrics():
@@ -149,8 +153,9 @@ def run_review(root, facts: dict, config: dict, model=None,
             out = _validate_model_output(model(rubric["question"], ctx), rubric["id"])
             layer = rubric.get("layer", 1)
             would_block = rubric["severity_if_fail"] == "block" and out["answer"] == "fail"
-            # Layer 2: ensemble only when confidence < threshold AND severity
-            # would block. Splits escalate as uncertain — never averaged.
+            # Layer 2: only a would-block answer below ENSEMBLE_TRIGGER_BELOW
+            # is touched. review.ensemble on: resample, splits escalate as
+            # uncertain (never averaged). Off: park it unresampled.
             if would_block and out["confidence"] < ENSEMBLE_TRIGGER_BELOW:
                 if ensemble_enabled(config):
                     out = run_ensemble(

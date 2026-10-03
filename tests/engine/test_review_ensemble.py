@@ -73,3 +73,56 @@ def test_replay_cli_runs_when_on(toy):
     proc = run_cli("review", "--replay", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(proc.stdout)["passed"] is True
+
+
+def _write_ensemble(toy, value):
+    cfg_path = toy / ".harness" / "config.yaml"
+    doc = yaml.safe_load(cfg_path.read_text())
+    doc["review"] = value
+    cfg_path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def test_string_value_is_rejected(toy):
+    import pytest
+    from engine import SchemaError
+    _write_ensemble(toy, {"ensemble": "false"})
+    with pytest.raises(SchemaError, match="review.ensemble must be true or false"):
+        load_config(toy)
+
+
+def test_review_null_means_off(toy):
+    from engine.review.rubrics import ensemble_enabled
+    _write_ensemble(toy, None)
+    assert ensemble_enabled(load_config(toy)) is False
+    assert ensemble_enabled({"review": None}) is False
+    assert ensemble_enabled({}) is False
+
+
+def test_off_does_not_park_a_non_blocking_low_confidence_answer(toy):
+    # Q_HOLISTIC is not a would-block rubric: a pass at low confidence
+    # must not park when the ensemble is off.
+    low_pass = {"answer": "pass", "confidence": 0.3, "evidence": "unsure"}
+    model = CountingModel({Q_DECISIONS: PASS, Q_HOLISTIC: low_pass})
+    result = run_review(toy, dict(FACTS_EMPTY), _config(toy, False), model=model)
+    assert not [f for f in result["findings"] if f["code"] == "REVIEW_UNCERTAIN"]
+
+
+def test_replay_forces_the_ensemble_on(toy, monkeypatch):
+    from engine.review import golden, rubrics
+    seen = []
+    real = rubrics.run_review
+
+    def spy(root, facts, config, **kw):
+        seen.append(config["review"]["ensemble"])
+        return real(root, facts, config, **kw)
+
+    monkeypatch.setattr(rubrics, "run_review", spy)
+    config = _config(toy, False)
+    golden.replay(toy, golden_dir(), config)
+    assert seen and all(seen)
+    assert config["review"]["ensemble"] is False   # caller's config untouched
+
+
+def golden_dir():
+    from pathlib import Path
+    return Path(__file__).resolve().parents[1] / "fixtures" / "golden-set"
