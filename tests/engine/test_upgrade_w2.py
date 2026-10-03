@@ -5,8 +5,9 @@ import sqlite3
 import pytest
 import yaml
 
+from conftest import git
 from engine import HarnessError, read_jsonl, write_jsonl
-from engine import upgrade_010
+from engine import upgrade_010, upgrade_w2
 
 YES = lambda _question: True   # noqa: E731
 NO = lambda _question: False   # noqa: E731
@@ -108,6 +109,20 @@ def test_metrics_step_rewrites_gitattributes(toy):
     assert step.describe(toy) == []
 
 
+def test_metrics_step_ignores_rule_spacing(toy):
+    ga = toy / ".gitattributes"
+    ga.write_text(ga.read_text().replace(
+        ".harness/slice-metrics.jsonl merge=harness-substrate",
+        ".harness/slice-metrics.jsonl  merge=harness-substrate"))
+    assert _step("w2.slice-metrics").describe(toy) == []
+    ga.write_text(ga.read_text() + ".harness/telemetry.jsonl   merge=union\n")
+    step = _step("w2.slice-metrics")
+    assert len(step.describe(toy)) == 1
+    step.apply(toy, NO)
+    assert "telemetry.jsonl" not in ga.read_text()
+    assert ga.read_text().count("slice-metrics.jsonl") == 1
+
+
 def test_metrics_step_keeps_existing_summary_rows(toy):
     write_jsonl(toy / ".harness" / "slice-metrics.jsonl", [{"id": "s-1"}])
     (toy / ".gitattributes").write_text("")
@@ -153,12 +168,137 @@ def test_telemetry_step_converts_then_deletes(toy):
     for name in ("telemetry.jsonl", "telemetry.archive.jsonl",
                  "telemetry.quarantine.jsonl"):
         assert not (toy / ".harness" / name).exists(), name
+        # untracked by git: moved to the cache, not deleted
+        assert (toy / ".harness" / "cache" / "legacy-telemetry" / name).exists()
+    assert not any("git history keeps" in line for line in report)
     con = sqlite3.connect(str(toy / ".harness" / "sidecar.db"))
     assert con.execute("SELECT name FROM sqlite_master WHERE "
                        "name='telemetry_buffer'").fetchone() is None
     con.close()
     assert any("skipped 1 unreadable" in line for line in report)
     assert step.describe(toy) == []
+
+
+def _write_telemetry(toy, *rows, raw=""):
+    (toy / ".harness" / "telemetry.jsonl").write_text(
+        "".join(json.dumps(r) + "\n" for r in rows) + raw)
+
+
+def _close_042(toy):
+    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
+    rows[0]["status"] = "closed"
+    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
+
+
+def test_telemetry_step_describes_quarantine_as_delete(toy):
+    (toy / ".harness" / "telemetry.quarantine.jsonl").write_text("{}\n")
+    assert _step("w2.telemetry").describe(toy) == [
+        "delete .harness/telemetry.quarantine.jsonl"]
+
+
+def test_telemetry_step_deletes_tracked_files(toy):
+    _close_042(toy)
+    _write_telemetry(toy, {"ts": "t", "kind": "event",
+                           "meta": {"slice": "slice-042", "gates": ["g"]}})
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "0.9 telemetry")
+    report = _step("w2.telemetry").apply(toy, YES)
+    assert not (toy / ".harness" / "telemetry.jsonl").exists()
+    assert not (toy / ".harness" / "cache" / "legacy-telemetry").exists()
+    assert "deleted .harness/telemetry.jsonl; git history keeps it" in report
+
+
+def test_telemetry_step_counts_odd_rows_as_unreadable(toy):
+    _close_042(toy)
+    _write_telemetry(
+        toy,
+        {"id": "a", "kind": "event", "meta": "oops"},
+        {"id": "b", "kind": "event", "meta": {"slice": ["x"]}},
+        {"id": "c", "kind": "event",
+         "meta": {"slice": "slice-042", "gates": "gate:G3"}},
+        {"id": "d", "kind": "event",
+         "meta": {"slice": "slice-042", "gates": {"gate:G5": 1}}},
+        ["not", "a", "row"])
+    report = _step("w2.telemetry").apply(toy, YES)
+    row = read_jsonl(toy / ".harness" / "slice-metrics.jsonl")[0]
+    assert row["id"] == "slice-042"
+    assert row["gates_fired"] == {"gate:G3": 1}
+    assert "skipped 3 unreadable telemetry lines" in report
+    assert _step("w2.telemetry").describe(toy) == []
+
+
+def test_telemetry_step_counts_unreadable_buffer_rows(toy):
+    con = sqlite3.connect(str(toy / ".harness" / "sidecar.db"))
+    con.execute("CREATE TABLE telemetry_buffer("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, row TEXT)")
+    con.executemany("INSERT INTO telemetry_buffer(row) VALUES(?)",
+                    [("{torn",), (None,), (json.dumps({"kind": "event"}),)])
+    con.commit()
+    con.close()
+    report = _step("w2.telemetry").apply(toy, YES)
+    assert "skipped 2 unreadable telemetry lines" in report
+    assert "dropped the sidecar telemetry_buffer table" in report
+
+
+def test_telemetry_step_refuses_a_malformed_backlog(toy):
+    _write_telemetry(toy, {"id": "a", "ts": "t", "kind": "slice_closed",
+                           "meta": {"slice": "slice-042"}})
+    _legacy_buffer = sqlite3.connect(str(toy / ".harness" / "sidecar.db"))
+    _legacy_buffer.execute("CREATE TABLE telemetry_buffer("
+                           "id INTEGER PRIMARY KEY AUTOINCREMENT, row TEXT)")
+    _legacy_buffer.commit()
+    _legacy_buffer.close()
+    (toy / ".harness" / "backlog.jsonl").write_text("{bad\n")
+    with pytest.raises(HarnessError, match="backlog.jsonl is not valid"):
+        _step("w2.telemetry").apply(toy, YES)
+    assert (toy / ".harness" / "telemetry.jsonl").exists()
+    assert read_jsonl(toy / ".harness" / "slice-metrics.jsonl") == []
+    assert not (toy / ".harness" / "cache" / "events.jsonl").exists()
+    assert upgrade_w2._has_buffer(toy)
+
+
+def test_telemetry_step_without_a_backlog_uses_close_events(toy):
+    (toy / ".harness" / "backlog.jsonl").unlink()
+    _write_telemetry(toy, {"id": "a", "ts": "2026-09-02T00:00:00+00:00",
+                           "kind": "slice_closed",
+                           "meta": {"slice": "slice-042"}})
+    report = _step("w2.telemetry").apply(toy, YES)
+    assert [r["id"] for r in read_jsonl(
+        toy / ".harness" / "slice-metrics.jsonl")] == ["slice-042"]
+    assert any("found no .harness/backlog.jsonl" in line for line in report)
+
+
+def test_telemetry_step_treats_a_close_event_as_closed(toy):
+    _write_telemetry(
+        toy,
+        {"ts": "2026-09-01T00:00:00+00:00", "kind": "event",
+         "meta": {"slice": "slice-gone", "gates": ["gate:G3"]}},
+        {"ts": "2026-09-02T00:00:00+00:00", "kind": "slice_closed",
+         "meta": {"slice": "slice-gone"}})
+    _step("w2.telemetry").apply(toy, YES)
+    rows = read_jsonl(toy / ".harness" / "slice-metrics.jsonl")
+    assert [r["id"] for r in rows] == ["slice-gone"]
+    assert rows[0]["closed_at"] == "2026-09-02T00:00:00+00:00"
+    assert not (toy / ".harness" / "cache" / "events.jsonl").exists()
+
+
+def test_telemetry_step_deletes_nothing_when_the_sidecar_is_locked(
+        toy, monkeypatch):
+    _legacy_telemetry(toy)
+    monkeypatch.setattr(upgrade_w2, "SIDECAR_TIMEOUT", 0.05)
+    holder = sqlite3.connect(str(toy / ".harness" / "sidecar.db"),
+                             isolation_level=None)
+    holder.execute("BEGIN IMMEDIATE")
+    try:
+        with pytest.raises(HarnessError, match="Nothing was deleted"):
+            _step("w2.telemetry").apply(toy, YES)
+    finally:
+        holder.execute("ROLLBACK")
+        holder.close()
+    for name in ("telemetry.jsonl", "telemetry.archive.jsonl",
+                 "telemetry.quarantine.jsonl"):
+        assert (toy / ".harness" / name).exists(), name
+    assert upgrade_w2._has_buffer(toy)
 
 
 def test_telemetry_step_keeps_a_close_written_summary(toy):
@@ -363,3 +503,20 @@ def test_dry_run_plan_shows_w2_advice(toy):
     (toy / "contracts").mkdir()
     ids = [row["id"] for row in upgrade_010.advice(toy)]
     assert "w2.contracts" in ids
+
+
+def test_a_09_substrate_converges_in_one_run(toy):
+    _close_042(toy)
+    (toy / ".harness" / "config.yaml").write_text(
+        "schema: 1\r\ngates:\r\n  g3_mode: block\r\n  g5_override: x\r\n"
+        "ensemble:\r\n  samples: 3\r\ntelemetry:\r\n"
+        "  compaction_is_defect: true\r\n")
+    _write_telemetry(toy, {"id": "a", "ts": "t", "kind": "event",
+                           "meta": {"slice": "slice-042",
+                                    "gates": ["gate:G3"]}})
+    upgrade_010.run(toy, YES, dry_run=False)
+    assert upgrade_010.plan(toy) == []
+    assert yaml.safe_load((toy / ".harness" / "config.yaml").read_text()) == {
+        "schema": 1, "review": {"ensemble": False},
+        "gates": {"exempt_paths": DEFAULT_EXEMPT}}
+    assert upgrade_010.run(toy, YES, dry_run=False) == []

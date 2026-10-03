@@ -7,10 +7,11 @@ import copy
 import json
 import re
 import sqlite3
+import subprocess
 from pathlib import Path
 
-from . import (DEFAULT_EXEMPT_PATHS, HarnessError, append_jsonl, harness_dir,
-               load_backlog, now_iso)
+from . import (DEFAULT_EXEMPT_PATHS, HarnessError, SubstrateMissing,
+               append_jsonl, harness_dir, load_backlog, now_iso)
 from .upgrade_010 import SKIPPED, Ask, Step, register
 from .upgrade_w1 import strip_child_keys
 
@@ -50,14 +51,19 @@ def _ga_lines(root: Path) -> list:
     return ga.read_text().splitlines() if ga.exists() else []
 
 
+def _same_rule(line: str, rule: str) -> bool:
+    """Whitespace-insensitive: `a  merge=b` is the same rule as `a merge=b`."""
+    return line.split() == rule.split()
+
+
 def _metrics_describe(root: Path) -> list:
     out = []
     if not (harness_dir(root) / "slice-metrics.jsonl").exists():
         out.append("create .harness/slice-metrics.jsonl")
-    lines = [line.strip() for line in _ga_lines(root)]
-    if OLD_UNION_LINE in lines:
+    lines = _ga_lines(root)
+    if any(_same_rule(line, OLD_UNION_LINE) for line in lines):
         out.append(f"remove '{OLD_UNION_LINE}' from .gitattributes")
-    if METRICS_LINE not in lines:
+    if not any(_same_rule(line, METRICS_LINE) for line in lines):
         out.append(f"add '{METRICS_LINE}' to .gitattributes")
     return out
 
@@ -69,14 +75,19 @@ def _metrics_apply(root: Path, ask: Ask) -> list:
     metrics = harness_dir(root) / "slice-metrics.jsonl"
     if not metrics.exists():
         metrics.touch()
-    lines = [line for line in _ga_lines(root) if line.strip() != OLD_UNION_LINE]
-    if METRICS_LINE not in (line.strip() for line in lines):
+    lines = [line for line in _ga_lines(root)
+             if not _same_rule(line, OLD_UNION_LINE)]
+    if not any(_same_rule(line, METRICS_LINE) for line in lines):
         lines.append(METRICS_LINE)
     (Path(root) / ".gitattributes").write_text("\n".join(lines) + "\n")
     return changes
 
 
 # ---------------------------------------------------------- w2.telemetry
+LEGACY_MOVE_DIR = ".harness/cache/legacy-telemetry"
+SIDECAR_TIMEOUT = 5.0     # seconds to wait for a sidecar lock
+
+
 def _sidecar(root: Path) -> Path:
     return harness_dir(root) / "sidecar.db"
 
@@ -96,123 +107,214 @@ def _has_buffer(root: Path) -> bool:
         return False          # unreadable cache: nothing to convert
 
 
-def _buffer_rows(root: Path) -> list:
-    if not _has_buffer(root):
-        return []
-    con = sqlite3.connect(str(_sidecar(root)))
-    try:
-        raw_rows = con.execute(
-            "SELECT row FROM telemetry_buffer ORDER BY id").fetchall()
-    finally:
-        con.close()
-    out = []
-    for (raw,) in raw_rows:
-        try:
-            row = json.loads(raw)
-        except (TypeError, json.JSONDecodeError):
-            continue
-        if isinstance(row, dict):
-            out.append(row)
-    return out
+def _sidecar_error(exc: Exception) -> HarnessError:
+    return HarnessError(
+        f"w2.telemetry: could not read or drop the sidecar telemetry_buffer "
+        f"table: {exc}. Nothing was deleted. Close other harness sessions, "
+        f"then run: harness upgrade")
 
 
-def _drop_buffer(root: Path) -> None:
-    if not _has_buffer(root):
-        return
-    con = sqlite3.connect(str(_sidecar(root)))
-    try:
-        con.execute("DROP TABLE telemetry_buffer")
-        con.commit()
-    finally:
-        con.close()
+def _clean_row(row):
+    """The row with a dict meta, a str-or-None slice and list gates, or None
+    when it cannot be read as a telemetry row."""
+    if not isinstance(row, dict):
+        return None
+    meta = row.get("meta")
+    if meta is None:
+        meta = {}
+    if not isinstance(meta, dict):
+        return None
+    slice_id = meta.get("slice")
+    if slice_id is not None and not isinstance(slice_id, str):
+        return None
+    meta = dict(meta)
+    gates = meta.get("gates")
+    if isinstance(gates, str):
+        meta["gates"] = [gates]
+    elif isinstance(gates, list):
+        meta["gates"] = [g for g in gates if isinstance(g, str)]
+    elif "gates" in meta:
+        meta.pop("gates")
+    return {**row, "meta": meta}
 
 
-def _tolerant_rows(path: Path) -> tuple:
-    """(rows, unreadable line count). Torn and non-object lines are counted."""
+def _parse_lines(lines) -> tuple:
+    """(clean rows, unreadable count) from raw JSON lines."""
     rows, bad = [], 0
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
+    for line in lines:
+        if isinstance(line, str) and not line.strip():
+            continue                  # blank line; a NULL buffer row is bad
         try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
+            row = _clean_row(json.loads(line))
+        except (TypeError, json.JSONDecodeError):
+            row = None
+        if row is None:
             bad += 1
-            continue
-        if isinstance(row, dict):
-            rows.append(row)
         else:
-            bad += 1
+            rows.append(row)
     return rows, bad
 
 
+def _tracked(root: Path, rel: str) -> bool:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
+        capture_output=True, text=True)
+    return proc.returncode == 0
+
+
+def _legacy_files(root: Path) -> list:
+    """[(name, tracked)] for the legacy telemetry files that exist."""
+    return [(name, _tracked(root, f".harness/{name}")) for name in
+            LEGACY_TELEMETRY if (harness_dir(root) / name).exists()]
+
+
 def _telemetry_describe(root: Path) -> list:
-    out = [f"convert and delete .harness/{name}" for name in LEGACY_TELEMETRY
-           if (harness_dir(root) / name).exists()]
+    out = []
+    for name in LEGACY_TELEMETRY:
+        if (harness_dir(root) / name).exists():
+            verb = ("delete" if name == "telemetry.quarantine.jsonl"
+                    else "convert and delete")
+            out.append(f"{verb} .harness/{name}")
     if _has_buffer(root):
         out.append("convert and drop the sidecar telemetry_buffer table")
     return out
 
 
+def _closed_slices(root: Path, rows: list) -> tuple:
+    """(closed slice ids, report notes). A slice with a slice_closed event
+    counts as closed even when the backlog no longer lists it."""
+    notes = []
+    try:
+        backlog = load_backlog(root)
+    except SubstrateMissing:
+        backlog = []
+        notes.append("found no .harness/backlog.jsonl; used slice_closed "
+                     "events alone to find closed slices")
+    except HarnessError as exc:
+        raise HarnessError(
+            f"w2.telemetry: .harness/backlog.jsonl is not valid: {exc}. "
+            f"Nothing was changed. Fix it, then run: harness upgrade") from exc
+    closed = {s.get("id") for s in backlog
+              if isinstance(s, dict) and s.get("status") == "closed"
+              and isinstance(s.get("id"), str)}
+    closed |= {r["meta"]["slice"] for r in rows
+               if r.get("kind") == "slice_closed" and r["meta"].get("slice")}
+    return closed, notes
+
+
+def _remove_legacy(root: Path, files: list) -> list:
+    report = []
+    for name, tracked in files:
+        path = harness_dir(root) / name
+        if not path.exists():
+            continue
+        if tracked:
+            path.unlink()
+            report.append(f"deleted .harness/{name}; git history keeps it")
+            continue
+        dest_dir = Path(root) / LEGACY_MOVE_DIR
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / name
+        n = 1
+        while dest.exists():
+            dest = dest_dir / f"{name}.{n}"
+            n += 1
+        path.replace(dest)
+        report.append(f"moved untracked .harness/{name} to "
+                      f"{dest.relative_to(root).as_posix()}")
+    return report
+
+
 def _telemetry_apply(root: Path, ask: Ask) -> list:
     from . import telemetry
     from .graph import load_edges
+    files = _legacy_files(root)
+    keep_note = ("Git history keeps tracked files; untracked ones move to "
+                 f"{LEGACY_MOVE_DIR}/." if any(not t for _n, t in files)
+                 else "Git history keeps them.")
     if not ask("Convert old telemetry into .harness/slice-metrics.jsonl and "
-               "delete the old files? Git history keeps them."):
+               f"remove the old files? {keep_note}"):
         return [SKIPPED]
     rows, bad = [], 0
     for name in ("telemetry.archive.jsonl", "telemetry.jsonl"):
         path = harness_dir(root) / name
         if path.exists():
-            got, skipped = _tolerant_rows(path)
+            got, skipped = _parse_lines(path.read_text(
+                encoding="utf-8", errors="replace").splitlines())
             rows += got
             bad += skipped
-    rows += _buffer_rows(root)
-    seen, unique = set(), []
-    for row in rows:              # the buffer may repeat a flushed row
-        rid = row.get("id")
-        if rid is not None and rid in seen:
-            continue
-        if rid is not None:
-            seen.add(rid)
-        unique.append(row)
-    try:
-        closed = {s.get("id") for s in load_backlog(root)
-                  if isinstance(s, dict) and s.get("status") == "closed"}
-    except HarnessError:
-        closed = set()
-    # computed before any write: a malformed slice-metrics file fails here
-    have = {r.get("id") for r in telemetry.load_summaries(root)}
-    edges = load_edges(root)
-    summaries = []
-    for sid in sorted(s for s in closed - have if s):
-        mine = [r for r in unique if (r.get("meta") or {}).get("slice") == sid]
-        if not mine:
-            continue
-        summary = telemetry.summarize(sid, unique, edges)
-        closes = [r["ts"] for r in mine
-                  if r.get("kind") == "slice_closed" and r.get("ts")]
-        summary.update({"closed_at": max(closes) if closes else now_iso(),
-                        "source": "upgrade"})
-        summaries.append(summary)
-    kept = [r for r in unique
-            if (r.get("meta") or {}).get("slice") not in closed]
 
-    for summary in summaries:
-        telemetry.write_summary(root, summary)
-    events = Path(root) / telemetry.EVENTS_PATH
-    for row in kept:
-        append_jsonl(events, {"ts": row.get("ts") or now_iso(),
-                              "kind": row.get("kind"),
-                              "meta": row.get("meta") or {}})
-    for name in LEGACY_TELEMETRY:
-        (harness_dir(root) / name).unlink(missing_ok=True)
-    _drop_buffer(root)
+    con = None
+    if _has_buffer(root):
+        try:
+            con = sqlite3.connect(str(_sidecar(root)), isolation_level=None,
+                                  timeout=SIDECAR_TIMEOUT)
+            con.execute("BEGIN IMMEDIATE")
+            raw = [r for (r,) in con.execute(
+                "SELECT row FROM telemetry_buffer ORDER BY id").fetchall()]
+        except sqlite3.Error as exc:
+            if con is not None:
+                con.close()
+            raise _sidecar_error(exc) from exc
+        got, skipped = _parse_lines(raw)
+        rows += got
+        bad += skipped
+    try:
+        seen, unique = set(), []
+        for row in rows:              # the buffer may repeat a flushed row
+            rid = row.get("id")
+            if isinstance(rid, (str, int)):
+                if rid in seen:
+                    continue
+                seen.add(rid)
+            unique.append(row)
+        # everything below is computed before any write, so a malformed
+        # backlog or slice-metrics file fails with nothing changed
+        closed, notes = _closed_slices(root, unique)
+        have = {r.get("id") for r in telemetry.load_summaries(root)}
+        edges = load_edges(root)
+        summaries = []
+        for sid in sorted(closed - have):
+            mine = [r for r in unique if r["meta"].get("slice") == sid]
+            if not mine:
+                continue
+            summary = telemetry.summarize(sid, unique, edges)
+            closes = [r["ts"] for r in mine if r.get("kind") == "slice_closed"
+                      and isinstance(r.get("ts"), str)]
+            summary.update({"closed_at": max(closes) if closes else now_iso(),
+                            "source": "upgrade"})
+            summaries.append(summary)
+        kept = [r for r in unique if r["meta"].get("slice") not in closed]
+
+        for summary in summaries:
+            telemetry.write_summary(root, summary)
+        events = Path(root) / telemetry.EVENTS_PATH
+        for row in kept:
+            append_jsonl(events, {"ts": row.get("ts") or now_iso(),
+                                  "kind": row.get("kind"),
+                                  "meta": row["meta"]})
+        if con is not None:   # drop before any legacy file goes
+            try:
+                con.execute("DROP TABLE telemetry_buffer")
+                con.execute("COMMIT")
+            except sqlite3.Error as exc:
+                raise _sidecar_error(exc) from exc
+    except BaseException:
+        if con is not None and con.in_transaction:
+            con.execute("ROLLBACK")
+        raise
+    finally:
+        if con is not None:
+            con.close()
+
     written = [s["id"] for s in summaries]
     report = [f"wrote {len(written)} slice-metrics rows: "
               f"{', '.join(written) or 'none'}",
               f"kept {len(kept)} unclosed-slice event rows in "
-              f"{telemetry.EVENTS_PATH}",
-              "deleted the old telemetry files; git history keeps them"]
+              f"{telemetry.EVENTS_PATH}"] + notes
+    if con is not None:
+        report.append("dropped the sidecar telemetry_buffer table")
+    report += _remove_legacy(root, files)
     if bad:
         report.append(f"skipped {bad} unreadable telemetry lines")
     return report
