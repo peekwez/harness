@@ -198,3 +198,11 @@ def test_summary_counts_reversals(toy):
                                          "finding_id": "F-1"}}]
     row = telemetry.summarize("slice-042", events, edges)
     assert row["reversals"] == {"gate:G3": 1, "adjudication": 1}
+
+
+def test_reversal_counts_prefer_edge_slice_meta():
+    from engine.telemetry import reversal_counts
+    edges = [{"type": "decided_by", "from": "finding:F1", "to": "adjudication:F1",
+              "meta": {"kind": "adjudication", "reverses": "x", "slice": "s-1"}}]
+    assert reversal_counts(edges, "s-1", set()) == {"adjudication": 1}
+    assert reversal_counts(edges, "s-2", {"F1"}) == {}

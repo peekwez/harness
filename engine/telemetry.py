@@ -81,8 +81,9 @@ def override_counts(edges, slice_id=None) -> dict:
 def reversal_counts(edges, slice_id=None, findings=None) -> dict:
     """Reversed overrides per rule ref, plus reversed adjudications under
     `adjudication`. Alias edges are skipped, as in `override_counts`. With a
-    slice, an adjudication counts when its finding is in `findings` (the
-    finding ids the slice parked); a decided_by edge carries no slice."""
+    slice, an adjudication counts when its edge meta names that slice, or
+    (older edges without one) when its finding is in `findings`, the finding
+    ids the slice parked."""
     counts: dict = {}
     for edge in edges:
         meta = edge.get("meta") or {}
@@ -94,9 +95,14 @@ def reversal_counts(edges, slice_id=None, findings=None) -> dict:
                 continue
             rule = meta.get("rule_ref") or "unknown"
         elif kind == "decided_by":
-            if slice_id is not None and edge.get("from") not in {
-                    f"finding:{f}" for f in findings or ()}:
-                continue
+            if slice_id is not None:
+                owner = meta.get("slice")
+                if owner is not None:
+                    if owner != slice_id:
+                        continue
+                elif edge.get("from") not in {
+                        f"finding:{f}" for f in findings or ()}:
+                    continue
             rule = "adjudication"
         else:
             continue

@@ -93,14 +93,18 @@ def _model_rubrics(root):
 
 
 def _precedents(root, rubric_id: str, limit: int = 3) -> list:
-    """Nearest adjudicated exemplars: the targets of adjudication edges
-    (a decision row, or an edge-only ruling), in recorded order."""
+    """Nearest adjudicated exemplars as "<target>: <resolution>", from
+    adjudication edges. Edges for this rubric (matched on the parked
+    finding's code or rule_ref) win; otherwise the most recent edges."""
     from ..graph import load_edges
     rows = [e for e in load_edges(root) if e.get("type") == "decided_by"
             and (e.get("meta") or {}).get("kind") == "adjudication"]
-    hits = [e for e in rows if rubric_id in e.get("from", "")
-            or rubric_id in json.dumps(e.get("meta") or {})]
-    return [e["to"] for e in (hits or rows)[:limit]]
+    hits = [e for e in rows
+            if rubric_id in ((e.get("meta") or {}).get("code"),
+                             (e.get("meta") or {}).get("rule_ref"))]
+    chosen = (hits or rows)[-limit:]
+    return [f"{e['to']}: {(e.get('meta') or {}).get('resolution', '')}".rstrip(": ")
+            for e in chosen]
 
 
 def _validate_model_output(out: dict, rubric_id: str) -> dict:

@@ -175,7 +175,9 @@ def cmd_adjudicate(args):
     append_edge(root, "decided_by", f"finding:{args.finding_id}", back_ref,
                 meta={"kind": "adjudication", "resolution": args.resolution,
                       "reverses": args.reverses,
-                      "slice": target.get("slice")})
+                      "slice": target.get("slice"),
+                      "code": target["finding"].get("code"),
+                      "rule_ref": target["finding"].get("rule_ref")})
     remaining = [p for p in parked if p["finding"]["finding_id"] != args.finding_id]
     write_jsonl(parked_path, remaining)
     out = {"adjudicated": args.finding_id, "wrote": back_ref,
