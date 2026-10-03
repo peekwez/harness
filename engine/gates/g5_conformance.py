@@ -6,12 +6,10 @@ an auditable `override` edge). Config g5_override: advisory | park.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from ..events import make_finding
-from ..extractor.engine import (LANG_BY_EXT, RegistryIndex,
-                                shadow_path_for)
+from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..registry import digest_tokens, signature_digest, similarity
 
 GATE = {"id": "G5", "rule_ref": "gate:G5",
@@ -37,12 +35,9 @@ def _override_targets(ctx) -> set:
 def _shadow_for_touched(ctx, rel):
     from .. import HarnessError
     try:
-        sp = shadow_path_for(ctx.root, ctx.root / rel)
+        return shadow_for(ctx.root, ctx.root / rel, ctx.config)
     except HarnessError:
         return None  # poison touched row (out-of-root): never crash a gate (S5)
-    if sp.exists():
-        return json.loads(sp.read_text())
-    return None
 
 
 def check(ctx) -> list:

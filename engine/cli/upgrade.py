@@ -27,7 +27,6 @@ PROJECT_PLAN = [
     "refresh Harness-owned Codex hook commands",
     "canonicalize legacy G5 dependency overrides",
     "repair legacy graph provenance",
-    "force-regenerate shadows",
     "refresh clean registry derivations",
     "validate substrate schema",
 ]
@@ -220,9 +219,6 @@ def upgrade_project(root, *, dry_run: bool = False, yes: bool = False) -> dict:
     from engine.graph import repair_legacy_provenance
     legacy_overrides = repair_legacy_overrides(root)
     graph = repair_legacy_provenance(root)
-    from engine.extractor.engine import extract_all
-    shadows = extract_all(root, config, force=True)
-    warnings.extend(f["message"] for f in shadows.get("findings", []))
 
     from engine.registry import refresh_built
     refreshed = []
@@ -245,7 +241,6 @@ def upgrade_project(root, *, dry_run: bool = False, yes: bool = False) -> dict:
         "codex_adapter": codex,
         "graph": graph,
         "legacy_overrides": legacy_overrides,
-        "shadows": shadows,
         "registry": {"refreshed": refreshed, "skipped_dirty": dirty},
         "schema_validation": {"problems": [], "passed": True},
         "warnings": warnings,

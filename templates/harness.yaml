@@ -61,6 +61,15 @@ gates:
 #   # always shadowed whole (`kente.telemetry.decorators`), and G5 + the
 #   # resolver match those ids by longest dotted prefix.
 #   src_roots: ["src", "packages/*/src"]
+# shadows:
+#   # Which files get an interface shadow. Shadows are a cache under the
+#   # gitignored .harness/cache/shadows/, built when G5, G6, review or
+#   # `harness resolve --module` need one. Git-ignored files, tests,
+#   # generated or minified files, media and archives, files over 1 MB and
+#   # binary files are always out. A file that matches `exclude` is out
+#   # unless `include` matches it. `*` crosses directories.
+#   exclude: ["*"]
+#   include: ["libs/**/src/**"]
 # landing:
 #   # How a closed slice reaches the base branch (ADR-002 / D-009).
 #   #   local (default) — `merge-slice` merges into the checked-out base;

@@ -25,24 +25,12 @@ def _adr_id(ref: str) -> str:
 
 
 def _load_shadow(root, entry):
-    """Fail closed: a built entry whose shadow is missing is the md-file-bug
-    class — never a silent omission from Phase-1 context."""
-    if not entry.get("shadow"):
-        if entry.get("status") == "built":
-            from . import SubstrateMissing
-            raise SubstrateMissing(
-                f"registry {entry['id']!r} is built but has no shadow path; "
-                f"run `harness extract {entry.get('source')}`")
+    """A built entry's shadow through the cache (rebuilt when stale)."""
+    if entry.get("status") != "built" or not entry.get("source"):
         return None
-    sp = Path(root) / entry["shadow"]
-    if not sp.exists():
-        if entry.get("status") == "built":
-            from . import SubstrateMissing
-            raise SubstrateMissing(
-                f"registry {entry['id']!r}: shadow {entry['shadow']!r} missing "
-                f"(derived artifact deleted?); run `harness extract --all`")
-        return None
-    return json.loads(sp.read_text())
+    from . import load_config
+    from .extractor.engine import shadow_for
+    return shadow_for(root, Path(root) / entry["source"], load_config(root))
 
 
 def render_shadow(shadow: dict, with_docs: bool = True) -> str:

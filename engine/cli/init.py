@@ -69,7 +69,6 @@ def cmd_init(args):
 
     hdir.mkdir(parents=True)
     (hdir / "memory" / "session").mkdir(parents=True)
-    (hdir / "shadows").mkdir()
 
     # detect languages -> enable packs (relative parts: an ignored name in
     # the ABSOLUTE path — repo under ~/venv, a worktree — must not blank it)
@@ -113,6 +112,7 @@ def cmd_init(args):
     gi = root / ".gitignore"
     lines = gi.read_text().splitlines() if gi.exists() else []
     for entry in (".harness/sidecar.db", ".harness/sidecar.db-*",
+                  ".harness/cache/",
                   ".harness/memory/session/", ".worktrees/",
                   ".claude/settings.local.json",
                   "__pycache__/", "*.pyc", ".pytest_cache/"):

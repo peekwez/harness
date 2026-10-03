@@ -177,8 +177,6 @@ def slice_provenance_requirements(root, slice_id, files, *, governance=True):
             require("touches", f"slice:{slice_id}", node)
             if has_revision_store:
                 require("produced_by", node, _CLOSED_COMMIT)
-            if entry.get("shadow"):
-                require("shadows", node, f"file:{entry['shadow']}")
             for decision in decisions:
                 require("governs", f"decision:{decision['id']}", node)
     for test in sl.get("acceptance", []) if governance else []:

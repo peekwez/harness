@@ -95,7 +95,7 @@ def test_the_vendored_engine_is_not_extracted_as_project_source(tmp_path):
     root = _init(tmp_path)
     proc = run_cli("extract", "--all", root=root)
     assert proc.returncode == 0, proc.stderr
-    shadows = list((root / ".harness" / "shadows").rglob("*.json"))
+    shadows = list((root / ".harness" / "cache" / "shadows").rglob("*.json"))
     assert not any("engine" in p.parts[p.parts.index("shadows") + 1:]
                    for p in shadows), shadows
     cfg = (root / ".harness" / "config.yaml").read_text()

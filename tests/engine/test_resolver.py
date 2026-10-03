@@ -96,13 +96,6 @@ def test_missing_guidance_file_fails_loud(toy):
         resolve(toy, "slice-042", load_config(toy))
 
 
-def test_missing_built_shadow_fails_loud(toy):
-    from engine import SubstrateMissing
-    (toy / ".harness" / "shadows" / "telemetry.py.json").unlink()
-    with pytest.raises(SubstrateMissing, match="shadow"):
-        resolve(toy, "slice-042", load_config(toy))
-
-
 def test_missing_declared_dep_fails_loud(toy):
     from engine import read_jsonl, write_jsonl, SubstrateMissing
     rows = read_jsonl(toy / ".harness" / "backlog.jsonl")

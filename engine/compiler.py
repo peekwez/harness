@@ -242,7 +242,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                     "id": aid, "kind": kind, "domain": requested_kind,
                     "status": "planned",
                     "module_id": None, "source": ab.get("source"),
-                    "source_hash": None, "shadow": None,
+                    "source_hash": None,
                     "guidance_refs": [ref],
                     "supersedes_guidance": ab.get("supersedes_guidance", []),
                     "manifest": ab.get("manifest", []),

@@ -11,16 +11,6 @@ GATE = {"id": "G6", "rule_ref": "gate:G6",
         "preferred": ("unit_complete",), "fallback": ()}
 
 
-def _shadow_source_hash(root, entry):
-    import json
-    from pathlib import Path
-    sp = Path(root) / (entry.get("shadow") or "")
-    try:
-        return json.loads(sp.read_text()).get("source_hash")
-    except (OSError, json.JSONDecodeError):
-        return None
-
-
 def _acked(ctx) -> set:
     from ..graph import load_edges
     s = f"slice:{ctx.work_unit_id}"
@@ -55,12 +45,14 @@ def check(ctx) -> list:
             # skip rather than demand acks for non-events (W8)
             continue
         old_syms = old.get("symbols") or []
-        new_syms = public_symbols(ctx.root, entry)
+        new_syms = public_symbols(ctx.root, entry, ctx.config)
         if new_syms is None or new_syms == old_syms:
             continue
         # symbols changed but source bytes did not: extractor version skew,
         # not interface drift — the ack ledger stays clean (W8)
-        cur_hash = _shadow_source_hash(ctx.root, entry)
+        from .. import sha256_file
+        src = ctx.root / entry["source"] if entry.get("source") else None
+        cur_hash = sha256_file(src) if src is not None and src.is_file() else None
         if old.get("source_hash") and cur_hash == old["source_hash"]:
             continue
         if f"module:{module_id}" in acked:

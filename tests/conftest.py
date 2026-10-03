@@ -145,7 +145,6 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     """Substrate + two modules (telemetry built, config planned) + slice-042."""
     hdir = root / ".harness"
     (hdir / "memory" / "session").mkdir(parents=True)
-    (hdir / "shadows").mkdir()
     (hdir / "config.yaml").write_text(make_config(budget=budget, **cfg_kw))
     (hdir / "schema_version").write_text("2\n")
     for empty in ("edges.jsonl", "telemetry.jsonl", "memory/durable.jsonl"):
@@ -168,18 +167,17 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
     registry = [
         {"id": "telemetry", "kind": "telemetry", "status": "planned",
          "module_id": None, "source": "telemetry.py", "source_hash": None,
-         "shadow": None,
          "guidance_refs": ["adr/007-telemetry.md#s2", "adr/007-telemetry.md#s3"],
          "supersedes_guidance": ["adr/007#s2"],
          "manifest": ["telemetry.py"], "signature_digest": None},
         {"id": "config", "kind": "config", "status": "planned",
          "module_id": None, "source": "config.py", "source_hash": None,
-         "shadow": None, "guidance_refs": ["adr/007-telemetry.md#s1"],
+         "guidance_refs": ["adr/007-telemetry.md#s1"],
          "supersedes_guidance": [], "manifest": ["config.py"],
          "signature_digest": None},
         {"id": "orders", "kind": "component", "status": "planned",
          "module_id": None, "source": "orders.py", "source_hash": None,
-         "shadow": None, "guidance_refs": [], "supersedes_guidance": [],
+         "guidance_refs": [], "supersedes_guidance": [],
          "manifest": [], "signature_digest": None},
     ]
     write_jsonl(hdir / "registry.jsonl", registry)
@@ -218,10 +216,10 @@ def build_toy_repo(root: Path, budget=8000, **cfg_kw) -> Path:
         ".harness/memory/durable.jsonl merge=union\n"
         ".harness/backlog.jsonl merge=harness-substrate\n"
         ".harness/registry.jsonl merge=harness-substrate\n"
-        ".harness/decisions.jsonl merge=harness-substrate\n"
-        ".harness/shadows/** merge=ours\n")
+        ".harness/decisions.jsonl merge=harness-substrate\n")
     (root / ".gitignore").write_text(
         ".harness/sidecar.db\n.harness/sidecar.db-*\n"
+        ".harness/cache/\n"
         ".harness/memory/session/\n.worktrees/\n"
         ".claude/settings.local.json\n"
         "__pycache__/\n*.pyc\n.pytest_cache/\n")

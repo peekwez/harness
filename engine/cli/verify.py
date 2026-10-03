@@ -29,7 +29,10 @@ def cmd_doctor(args):
     import platform
     deps = _dep_status()
     missing = sorted(k for k, v in deps.items() if v == "MISSING")
+    from engine.extractor.engine import EXTRACTOR_VERSION, stack_versions
     report = {"python": platform.python_version(), "deps": deps,
+              "extractor": {"version": EXTRACTOR_VERSION,
+                            "stack": stack_versions()},
               "healthy": not missing,
               "fix": f"pip install {' '.join(missing)}" if missing else None}
     if args.substrate:

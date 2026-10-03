@@ -89,12 +89,13 @@ def main(argv=None):
     sp.add_argument("--yes", action="store_true",
                     help="accept every upgrade prompt (for CI)")
 
-    sp = sub.add_parser("extract", help="tree-sitter -> universal shadows")
+    sp = sub.add_parser("extract", help="warm the shadow cache (--all) or "
+                                        "extract the named files")
     sp.add_argument("paths", nargs="*")
     sp.add_argument("--all", action="store_true")
     sp.add_argument("--force", action="store_true",
                     help="bypass the shadow cache (escape hatch for stale/"
-                         "corrupted shadows)")
+                         "corrupted cache entries)")
 
     sp = sub.add_parser("resolve", help="slice -> assembled context")
     sp.add_argument("--slice", required=True)

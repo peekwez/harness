@@ -5,13 +5,11 @@ scope, shadows of everything the diff imports. No model, no judgment.
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
 from .. import get_slice, load_decisions
-from ..extractor.engine import (LANG_BY_EXT, RegistryIndex,
-                                shadow_path_for)
+from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..graph import uses_vs_declares
 from ..registry import load_registry
 
@@ -112,19 +110,24 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
     dup_candidates = [f for f in gate_findings if f["code"] == "DUPLICATE_CANDIDATE"]
 
     imported_shadows = {}
+    from .. import HarnessError
     for f in files:
         if Path(f).suffix.lower() not in LANG_BY_EXT:
             continue
-        sp = shadow_path_for(root, root / f)
-        if not sp.exists():
+        try:
+            shadow = shadow_for(root, root / f, config)
+        except HarnessError:
             continue
-        shadow = json.loads(sp.read_text())
+        if shadow is None:
+            continue
         for imp in shadow.get("imports", []):
             # longest dotted prefix, like G5 and the resolver (D-008):
             # exact-id matching drops `telemetry.spans` -> `telemetry`
             entry = index.match(imp)
-            if entry and entry.get("shadow") and (root / entry["shadow"]).exists():
-                imported_shadows[imp] = json.loads((root / entry["shadow"]).read_text())
+            if entry and entry.get("source"):
+                dep = shadow_for(root, root / entry["source"], config)
+                if dep is not None:
+                    imported_shadows[imp] = dep
 
     return {
         "slice": slice_id,

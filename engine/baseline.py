@@ -56,13 +56,14 @@ def ensure_baseline(root, sidecar, slice_id, *, starting=False):
     elif starting:
         # Non-Git substrates can retain a session baseline, but its loss
         # cannot be reconstructed from source that has already changed.
+        from . import sha256_file
         for entry in load_registry(root):
-            if entry.get("status") == "built" and entry.get("shadow"):
-                symbols = public_symbols(root, entry)
+            if entry.get("status") == "built" and entry.get("source"):
+                symbols = public_symbols(root, entry, config)
                 if symbols is not None:
-                    stored = json.loads((root / entry["shadow"]).read_text())
-                    sidecar.snapshot_set(slice_id, entry["id"],
-                                         {"symbols": symbols, "source_hash": stored.get("source_hash")})
+                    sidecar.snapshot_set(slice_id, entry["id"], {
+                        "symbols": symbols,
+                        "source_hash": sha256_file(root / entry["source"])})
     elif sidecar.snapshot_get(slice_id):
         return  # legacy sidecar already has its original baseline
     elif any(e.get("status") == "built" for e in load_registry(root)):

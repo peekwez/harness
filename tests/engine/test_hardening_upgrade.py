@@ -77,7 +77,6 @@ def test_local_upgrade_dry_run_reports_plan_without_writes(tmp_path):
         "refresh Harness-owned Codex hook commands",
         "canonicalize legacy G5 dependency overrides",
         "repair legacy graph provenance",
-        "force-regenerate shadows",
         "refresh clean registry derivations",
         "validate substrate schema",
     ]

@@ -198,6 +198,7 @@ DEFAULT_CONFIG = {
     "ensemble": {"trigger_confidence_below": 0.7, "samples": 3},
     "review": {"fork_for_security_rows": True},   # ADR-001
     "extractor": {"src_roots": list(DEFAULT_SRC_ROOTS)},
+    "shadows": {"include": [], "exclude": []},
     "languages": {"python": True, "typescript": True, "rust": True,
                   "go": True, "yaml": True, "hcl": True},
     "telemetry": {"compaction_is_defect": False},

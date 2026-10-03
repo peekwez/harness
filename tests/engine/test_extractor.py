@@ -17,13 +17,13 @@ def test_byte_identical_across_two_runs(toy):
         (toy / name).write_text(src)
     extract_all(toy, config)
     first = {p: p.read_bytes()
-             for p in (toy / ".harness" / "shadows").rglob("*.json")}
+             for p in (toy / ".harness" / "cache" / "shadows").rglob("*.json")}
     # force re-extract from scratch (kill the cache by deleting shadows)
     for p in first:
         p.unlink()
     extract_all(toy, config)
     second = {p: p.read_bytes()
-              for p in (toy / ".harness" / "shadows").rglob("*.json")}
+              for p in (toy / ".harness" / "cache" / "shadows").rglob("*.json")}
     assert first == second
 
 

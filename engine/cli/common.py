@@ -115,12 +115,6 @@ SUBSTRATE_KEYED_MERGE = (".harness/backlog.jsonl", ".harness/registry.jsonl",
                          ".harness/decisions.jsonl")
 
 
-# Shadows are derived: content-merging them is semantically meaningless
-# (W10). Keep ours, then regenerate from the merged sources — extract --all
-# actually rewrites stale ones now that the cache is version-aware (W7).
-SUBSTRATE_OURS_MERGE = (".harness/shadows/**",)
-
-
 def _write_merge_attributes(root):
     """The .gitattributes half — travels with the repo; written at init/
     migrate only (a bind must never mutate the working tree mid-slice, or
@@ -135,10 +129,6 @@ def _write_merge_attributes(root):
         entry = f"{f} merge=harness-substrate"
         if entry not in lines:
             lines.append(entry)
-    for f in SUBSTRATE_OURS_MERGE:
-        entry = f"{f} merge=ours"
-        if entry not in lines:
-            lines.append(entry)
     ga.write_text("\n".join(lines) + "\n")
 
 
@@ -148,9 +138,8 @@ def _config_merge_drivers(root):
     if not (root / ".git").exists():
         return
     import subprocess
-    # `ours` is NOT a built-in low-level driver (only text/binary/union
-    # are) — it must be defined or the attribute silently degrades to
-    # a normal text merge
+    # kept defined: a repo upgraded from 0.9 may still name merge=ours until
+    # its .gitattributes line is removed
     subprocess.run(["git", "-C", str(root), "config",
                     "merge.ours.driver", "true"], capture_output=True)
     subprocess.run(["git", "-C", str(root), "config",

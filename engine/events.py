@@ -335,7 +335,7 @@ def handle_event(raw: dict, root) -> dict:
                 sidecar.touch(session, slice_id, paths)
 
         if event == "unit_complete":
-            _regenerate_touched(root, sidecar, session, slice_id, config)
+            record_touched_uses(root, sidecar, session, slice_id, config)
 
         findings = run_gates(root, evt, config, sidecar)
         verdict = merge_verdicts([verdict_for(findings, injections)])
@@ -399,30 +399,35 @@ def _snapshot_slice_baseline(root, sidecar, slice_id):
     ensure_baseline(root, sidecar, slice_id, starting=True)
 
 
-def _regenerate_touched(root, sidecar, session, slice_id, config):
-    """Stop hook duties: regenerate shadows for touched files, append
-    touches + uses edges (feeding G5 and the close-slice reconciliation)."""
-    from .extractor.engine import RegistryIndex, extract_path
+def record_touched_uses(root, sidecar, session, slice_id, config):
+    """Stop hook duty: record `touches` and `uses` edges for touched files.
+
+    A gitignored file is not slice work and records nothing. `uses` edges
+    come from the file's shadow; a file outside shadow scope has none. The
+    shadow cache fills as a side effect; nothing is committed for it.
+    """
+    from .extractor.engine import RegistryIndex, git_ignored, shadow_for
+    from .extractor.modules import python_module_ids
     from .graph import append_edge, load_edges, record_dependency_snapshot
     from .registry import load_registry
-    if slice_id:
-        from . import get_slice
-        if get_slice(root, slice_id).get("status") == "closed":
-            return  # historical closure evidence must not change on a later merge/Stop
-    touched = (sidecar.touched_paths(slice_id=slice_id) if slice_id
-               else sidecar.touched_paths(session_id=session))
+    if not slice_id:
+        return
+    from . import get_slice
+    if get_slice(root, slice_id).get("status") == "closed":
+        return  # historical closure evidence must not change on a later merge/Stop
+    touched = sidecar.touched_paths(slice_id=slice_id)
     edges = load_edges(root)
-    if slice_id:
-        touched |= {e["to"][5:] for e in edges
-                    if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
-                    and e["to"].startswith("file:")}
+    touched |= {e["to"][5:] for e in edges
+                if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
+                and e["to"].startswith("file:")}
+    # legacy poison rows (absolute OR traversal) and gitignored files drop out
+    touched = {rel for rel in touched
+               if rel_in_root(root, rel) and not git_ignored(root, rel)}
     if not touched:
-        if slice_id:
-            record_dependency_snapshot(root, slice_id, set(), set())
+        record_dependency_snapshot(root, slice_id, set(), set())
         return
     registry = load_registry(root)
     index = RegistryIndex(registry)
-    from .extractor.modules import python_module_ids
     known_modules = python_module_ids(root, config)
     existing = {(e["type"], e["from"], e["to"]) for e in edges}
     uses = set()
@@ -433,17 +438,13 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
             existing.add((etype, frm, to))
 
     for rel in sorted(touched):
-        if not rel_in_root(root, rel):
-            continue  # legacy poison rows (absolute OR traversal): skip, never crash
         p = Path(root) / rel
-        if not p.exists():
-            from .extractor.engine import shadow_path_for
-            shadow_path_for(root, p).unlink(missing_ok=True)
-            continue
-        shadow, _f = extract_path(root, p, config, _known_modules=known_modules)
-        if shadow is None or not slice_id:
-            continue
+        if not p.is_file():
+            continue            # deleted or renamed before Stop
         add_once("touches", f"slice:{slice_id}", f"file:{rel}")
+        shadow = shadow_for(root, p, config, known_modules=known_modules)
+        if shadow is None:
+            continue
         own = next((e for e in registry if e.get("source") == rel), None)
         for imp in shadow.get("imports", []):
             target = index.match(imp)
@@ -451,8 +452,7 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
                 node = f"module:{target['id']}"
                 uses.add(node)
                 add_once("uses", f"slice:{slice_id}", node)
-    if slice_id:
-        record_dependency_snapshot(root, slice_id, uses, touched)
+    record_dependency_snapshot(root, slice_id, uses, touched)
 
 
 # ---------------------------------------------------------------- CLI shim

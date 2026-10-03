@@ -52,13 +52,20 @@ def test_hook_adapter_stop_regenerates_shadows_in_the_worktree(toy, tmp_path):
     wt = build_toy_repo(tmp_path / "wt-slice-009")
     (wt / "orders.py").write_text(GOOD_ORDERS)
     loaded_context(wt, session="wt-sess")
+    sc = Sidecar(wt)
+    try:
+        # the Stop hook records edges for the bound slice
+        sc.state_set("wt-sess", "active_slice", "slice-042")
+    finally:
+        sc.close()
     run_adapter({"hook_event_name": "PostToolUse", "session_id": "wt-sess",
                  "cwd": str(wt),
                  "tool_input": {"file_path": str(wt / "orders.py")}}, cwd=toy)
     proc = run_adapter({"hook_event_name": "Stop", "session_id": "wt-sess",
                         "cwd": str(wt)}, cwd=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert (wt / ".harness" / "shadows" / "orders.py.json").exists()
+    from engine.extractor.engine import shadow_path_for
+    assert shadow_path_for(wt, wt / "orders.py").exists()
 
 
 # ---------------------------------------------------------------- W3

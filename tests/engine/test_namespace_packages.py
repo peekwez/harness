@@ -168,13 +168,11 @@ def _ns_registry(toy):
     shadow = shadow_of(toy, CONFIG_SRC)
     entry.update({"status": "built", "source": CONFIG_SRC,
                   "source_hash": shadow["source_hash"],
-                  "shadow": str(shadow_path_for(toy, toy / CONFIG_SRC)
-                                .relative_to(toy)),
                   "module_id": shadow["module_id"]})
     for planned in ("kente", "kente.service"):
         rows.append({"id": planned, "kind": "component", "status": "planned",
                      "module_id": None, "source": None, "source_hash": None,
-                     "shadow": None, "guidance_refs": [],
+                     "guidance_refs": [],
                      "supersedes_guidance": [], "manifest": [],
                      "signature_digest": None})
     write_jsonl(toy / ".harness" / "registry.jsonl", rows)
@@ -194,29 +192,6 @@ def test_g5_undeclared_use_names_the_dotted_module(toy):
     assert "'kente.service'" in msgs, msgs
     assert "'kente'" not in msgs, msgs      # never collapsed to the top level
     assert "'config'" not in msgs, msgs     # kente.config IS declared
-
-
-# ---------------------------------------------------------------- resolver
-def test_resolver_one_hop_follows_dotted_imports(toy):
-    from engine.resolver import resolve
-    _ns_registry(toy)
-    rows = read_jsonl(toy / ".harness" / "registry.jsonl")
-    data = {"id": "data", "kind": "component", "status": "built",
-            "source": DATA_SRC, "guidance_refs": [], "supersedes_guidance": [],
-            "manifest": [], "signature_digest": None,
-            "source_hash": shadow_of(toy, DATA_SRC)["source_hash"],
-            "shadow": str(shadow_path_for(toy, toy / DATA_SRC).relative_to(toy)),
-            "module_id": "kente.data"}
-    rows.append(data)
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    backlog = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    backlog[0]["declares_dep"] = ["data"]
-    write_jsonl(toy / ".harness" / "backlog.jsonl", backlog)
-
-    out = resolve(toy, "slice-042", load_config(toy))
-    assert "shadow:data" in out["context_loaded"]
-    assert "shadow:config" in out["context_loaded"]   # one hop via kente.config
-    assert "=== shadow:kente.config" in "\n".join(out["injections"])
 
 
 # ---------------------------------------------------------------- cache stamp

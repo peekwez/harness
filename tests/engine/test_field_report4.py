@@ -41,7 +41,8 @@ def test_explicit_extract_reports_cache_hits_as_cached(toy):
 
 
 def test_extract_force_bypasses_the_cache(toy):
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     corrupted = json.loads(sp.read_text())
     corrupted["symbols"] = []
     sp.write_text(json.dumps(corrupted, sort_keys=True, indent=1) + "\n")
@@ -73,7 +74,8 @@ def test_g6_silent_on_extractor_format_skew(toy):
     version skew, not interface drift — no ack-drift ceremony for non-events."""
     session = "skew"
     loaded_context(toy, session=session)   # baseline snapshot
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     shadow = json.loads(sp.read_text())
     shadow["symbols"].append({                      # "new extractor emits more"
         "kind": "field", "name": "Cfg.max_count",
@@ -121,40 +123,6 @@ def test_override_records_the_actual_rule_ref(toy):
 
 
 # ---------------------------------------------------------------- W10
-def test_merge_drivers_never_content_merge_shadows(tmp_path):
-    """Shadows are derived: content-merging them is semantically meaningless.
-    ours-merge keeps our version; post-merge extract regenerates from the
-    merged sources."""
-    root = tmp_path / "shad"
-    root.mkdir()
-    (root / "app.py").write_text("x = 1\n")
-    git(root, "init", "-q")
-    git(root, "config", "user.email", "t@t")
-    git(root, "config", "user.name", "t")
-    proc = run_cli("init", root=root)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert ".harness/shadows/** merge=ours" in \
-        (root / ".gitattributes").read_text()
-    sp = root / ".harness" / "shadows" / "app.py.json"
-    sp.parent.mkdir(parents=True, exist_ok=True)
-    sp.write_text('{"v": "base"}\n')
-    git(root, "add", "-A")
-    git(root, "commit", "-qm", "base")
-    default = git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-    git(root, "checkout", "-qb", "a")
-    sp.write_text('{"v": "ours"}\n')
-    git(root, "commit", "-qam", "a")
-    git(root, "checkout", "-q", default)
-    git(root, "checkout", "-qb", "b")
-    sp.write_text('{"v": "theirs"}\n')
-    git(root, "commit", "-qam", "b")
-    git(root, "checkout", "-q", default)
-    assert git(root, "merge", "-q", "--no-edit", "a").returncode == 0
-    merged = git(root, "merge", "--no-edit", "b")
-    assert merged.returncode == 0, merged.stdout + merged.stderr
-    assert json.loads(sp.read_text())["v"] == "ours"
-
-
 # ---------------------------------------------------------------- W11
 def test_close_uses_git_diff_as_touch_ground_truth(toy):
     """A bash-side edit the hooks never saw must still land in the close
