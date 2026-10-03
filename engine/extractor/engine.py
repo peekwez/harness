@@ -677,8 +677,26 @@ def _content_allows(path: Path) -> bool:
         return False
 
 
+_GIT_WORK_TREES: set = set()
+
+
 def _is_git_repo(root) -> bool:
-    return (Path(root) / ".git").exists()       # a worktree's .git is a file
+    """True when `root` sits inside a git work tree, at its top or in a
+    subdirectory (a monorepo app). Git answers, once per root: only a
+    positive answer is cached, so a repo created later is still seen."""
+    key = str(Path(root).resolve())
+    if key in _GIT_WORK_TREES:
+        return True
+    try:
+        proc = subprocess.run(
+            ["git", "-C", key, "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, text=True)
+    except OSError:
+        return False
+    if proc.returncode == 0 and proc.stdout.strip() == "true":
+        _GIT_WORK_TREES.add(key)
+        return True
+    return False
 
 
 def git_ignored(root, rel: str) -> bool:

@@ -246,3 +246,34 @@ def test_g5_scans_module_ids_once_per_run(toy, monkeypatch):
                         lambda *a, **k: calls.append(1) or real(*a, **k))
     handle_event(make_event("post_change", session="cost", files=files), toy)
     assert len(calls) <= 2, len(calls)     # not one scan per touched file
+
+
+def _monorepo(tmp_path):
+    """A git repo at the top with the harness root in a child directory;
+    the ignore rule lives only in the parent's .gitignore."""
+    top = tmp_path / "mono"
+    app = build_toy_repo(top / "app")
+    shutil.rmtree(app / ".git")
+    (top / ".gitignore").write_text("dist/\n")
+    git(top, "init", "-q")
+    git(top, "config", "user.email", "t@t")
+    git(top, "config", "user.name", "t")
+    git(top, "add", "-A")
+    git(top, "commit", "-qm", "monorepo baseline")
+    _write(app, "dist/gen.py")
+    _write(app, "pkg/service.py")
+    return top, app
+
+
+def test_gitignored_files_out_of_scope_when_root_is_a_repo_subdirectory(tmp_path):
+    from engine.extractor.engine import git_ignored, git_ignored_set
+    _top, app = _monorepo(tmp_path)
+    config = load_config(app)
+    assert git_ignored(app, "dist/gen.py")
+    assert not git_ignored(app, "pkg/service.py")
+    assert git_ignored_set(app, ["dist/gen.py", "pkg/service.py"]) == {"dist/gen.py"}
+    assert not in_shadow_scope(app, "dist/gen.py", config)
+    assert in_shadow_scope(app, "pkg/service.py", config)
+    assert shadow_for(app, app / "dist" / "gen.py", config) is None
+    files = scope_files(app, config)
+    assert "pkg/service.py" in files and "dist/gen.py" not in files
