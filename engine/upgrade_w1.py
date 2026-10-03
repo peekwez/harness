@@ -132,14 +132,17 @@ def _resolver_keys_in(data) -> list:
     return [k for k in RESOLVER_KEYS if k in resolver]
 
 
-def _strip_resolver_keys(text: str) -> str:
-    """Remove resolver.budget_tokens / ranking / degrade lines. Comments and
-    every other key stay; the `resolver:` line goes when nothing is left."""
+def strip_child_keys(text: str, parent: str, keys) -> str:
+    """Remove `parent.<key>` lines (and their continuation lines) for each
+    key in `keys`. Comments and every other key stay; the `parent:` line
+    goes when nothing is left. A flow-style parent is left unchanged, so
+    callers must compare the parsed result against the expected data."""
     lines = text.splitlines(keepends=True)
     out, i = [], 0
+    header = re.compile(rf"^{re.escape(parent)}:\s*(#.*)?$")
     while i < len(lines):
         line = lines[i]
-        if not re.match(r"^resolver:\s*(#.*)?$", line.rstrip("\r\n")):
+        if not header.match(line.rstrip("\r\n")):
             out.append(line)
             i += 1
             continue
@@ -158,7 +161,7 @@ def _strip_resolver_keys(text: str) -> str:
                 continue                     # continuation of a removed key
             skip_indent = None
             m = re.match(r"^(\s+)([A-Za-z_][A-Za-z0-9_]*)\s*:", child)
-            if m and m.group(2) in RESOLVER_KEYS:
+            if m and m.group(2) in keys:
                 skip_indent = len(m.group(1))
                 continue
             kept.append(child)
@@ -169,6 +172,11 @@ def _strip_resolver_keys(text: str) -> str:
             out.extend(c for c in kept if not c.strip())
         i = j
     return "".join(out)
+
+
+def _strip_resolver_keys(text: str) -> str:
+    """Remove resolver.budget_tokens / ranking / degrade lines."""
+    return strip_child_keys(text, "resolver", RESOLVER_KEYS)
 
 
 def _describe_resolver(root: Path) -> list:
