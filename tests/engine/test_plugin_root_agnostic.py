@@ -137,8 +137,7 @@ def test_codex_is_wired_as_a_second_layer3_advisory():
     """A second independent reviewer is only real if the files the reviewer
     actually reads say so — and it must inherit the findings contract."""
     missing = []
-    for rel in ("skills/review/SKILL.md", "agents/reviewer.md",
-                "templates/agents-md.md"):
+    for rel in ("skills/review/SKILL.md", "agents/reviewer.md"):
         body = (PLUGIN_ROOT / rel).read_text()
         if "odex" not in body:
             missing.append(f"{rel}: no Codex hand-off")

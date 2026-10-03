@@ -10,8 +10,6 @@ import yaml
 
 from conftest import PLUGIN_ROOT
 
-PRECEDENCE_HEADING = "## Precedence when superpowers is installed"
-
 # superpowers 6.3.0 skill names. Nothing outside this set may be referenced.
 SUPERPOWERS_SKILLS = {
     "brainstorming",
@@ -44,23 +42,11 @@ def _norm(text):
     return " ".join(text.split())
 
 
-def test_agents_md_template_carries_the_precedence_section():
+def test_agents_md_template_points_to_the_d014_precedence_rule():
+    """0.10 keeps AGENTS.md short: the precedence rule lives in decision row
+    D-014 and the build skill; the template carries a one-line pointer."""
     body = (PLUGIN_ROOT / "templates" / "agents-md.md").read_text()
-    assert PRECEDENCE_HEADING in body, (
-        "the generated AGENTS.md is the one file both plugins' agents read; "
-        f"it must carry the section {PRECEDENCE_HEADING!r}")
-
-
-def test_precedence_section_states_the_d014_decision_verbatim():
-    """The working agreement must not paraphrase the decision row — a
-    paraphrase is how the two plugins drift back into contradiction."""
-    adr = (PLUGIN_ROOT / "adr"
-           / "002-kente-capable-superpowers-composable.md").read_text()
-    front = yaml.safe_load(adr.split("---", 2)[1])
-    d014 = next(r for r in front["decision_table_rows"] if r["id"] == "D-014")
-    template = (PLUGIN_ROOT / "templates" / "agents-md.md").read_text()
-    assert _norm(d014["answer"]) in _norm(template), \
-        "templates/agents-md.md must quote the D-014 answer verbatim"
+    assert "D-014" in body and "harness:build" in body
 
 
 def test_every_superpowers_skill_reference_names_a_real_skill():
