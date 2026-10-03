@@ -108,36 +108,109 @@ _PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
                    "and any harness memory command but `changed`. Shared "
                    "memory holds only facts a human chose.")
 
-# A segment is auto-approved only when it is plain text: no quoting, expansion,
-# globbing, redirection or grouping. Pattern-matching shell syntax cannot be
-# made complete, so everything outside this alphabet goes to the human.
-_PLAIN = re.compile(r"^[A-Za-z0-9_./:=@%+,\s-]*$")
+# A command is auto-approved only when it is plain: judged by a small
+# shell-quoting state machine, not a pattern list. Outside quotes only
+# [A-Za-z0-9_./:=@%+,-], blanks, the separators and the safe redirects pass.
+# Single quotes are literal. Double quotes are literal except $ ` \\ !, which
+# bash expands or escapes, so they are refused. Adjacent quoted and unquoted
+# parts form one word (`pro''mote` is `promote`); the token checks then run
+# on the de-quoted words. Anything else goes to the human.
+_BARE_OK = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                     "0123456789_./:=@%+,-")
 _SAFE_REDIRECT_TOKENS = {"2>&1", "1>&2", "2>/dev/null", ">/dev/null",
                          "&>/dev/null"}
+_DQUOTE_BAD = frozenset("$`\\!")
 # literal engine spellings the skills document; the host leaves them as typed
 _PLUGIN_BIN = ("${CLAUDE_PLUGIN_ROOT}/bin/harness",)
 
 
-def is_plain_segment(seg: str, harness_bin=None) -> bool:
-    """True when a segment is plain text once its safe parts are removed.
+def plain_segments(command: str, harness_bin=None):
+    """Split a command into segments of de-quoted words, or None if not plain.
 
     Args:
-        seg: One shell segment (split on `&&`, `||`, `;`, `|`, newline).
-        harness_bin: Absolute engine path, allowed as the head in any quoting.
+        command: The full command line.
+        harness_bin: Absolute engine path, allowed as a segment head as typed.
 
     Returns:
-        Whether nothing but [A-Za-z0-9_./:=@%+,-] and whitespace remains.
+        A list of segments (each a list of words), or None when anything
+        outside the plain rules appears.
     """
-    seg = seg.strip()
+    text = command or ""
     heads = list(_PLUGIN_BIN) + ([harness_bin] if harness_bin else [])
-    for h in heads:
-        for form in (f'"{h}"', f"'{h}'", h):
-            if seg.startswith(form):
-                seg = seg[len(form):] or " "
-                seg = "harness" + seg
-                break
-    tokens = [t for t in seg.split() if t not in _SAFE_REDIRECT_TOKENS]
-    return bool(_PLAIN.match(" ".join(tokens)))
+    segments, words = [], []
+    word, quoted, redir = [], False, False
+    i, n = 0, len(text)
+
+    def end_word():
+        nonlocal word, quoted, redir
+        if word or quoted:
+            value = "".join(word)
+            if redir:
+                if quoted or value not in _SAFE_REDIRECT_TOKENS:
+                    return False
+            else:
+                words.append(value)
+        word, quoted, redir = [], False, False
+        return True
+
+    def end_segment():
+        nonlocal words
+        if words:
+            segments.append(words)
+        words = []
+
+    while i < n:
+        ch = text[i]
+        if not word and not quoted and not words:
+            hit = next((f for h in heads for f in (f'"{h}"', f"'{h}'", h)
+                        if text.startswith(f, i)
+                        and (i + len(f) == n or text[i + len(f)] in " \t\n;&|")),
+                       None)
+            if hit:
+                words.append("harness")
+                i += len(hit)
+                continue
+        if ch in " \t":
+            if not end_word():
+                return None
+        elif ch in "\n;" or text.startswith(("&&", "||"), i) or ch == "|":
+            if not end_word():
+                return None
+            end_segment()
+            i += 2 if text.startswith(("&&", "||"), i) else 1
+            continue
+        elif ch == "'":
+            j = text.find("'", i + 1)
+            if j < 0:
+                return None
+            word.append(text[i + 1:j])
+            quoted = True
+            i = j + 1
+            continue
+        elif ch == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                if text[j] in _DQUOTE_BAD:
+                    return None
+                j += 1
+            if j >= n:
+                return None
+            word.append(text[i + 1:j])
+            quoted = True
+            i = j + 1
+            continue
+        elif ch in _BARE_OK:
+            word.append(ch)
+        elif ch in "<>&":
+            word.append(ch)
+            redir = True
+        else:
+            return None
+        i += 1
+    if not end_word():
+        return None
+    end_segment()
+    return segments
 
 
 def _under_claude_dir(token: str) -> bool:
@@ -295,20 +368,13 @@ def is_config_escalation(command: str) -> bool:
     return False
 
 
-def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
+def _segment_allowed(parts: list, harness_bin: str | None, landing=None,
                      slice_id=None) -> bool:
-    seg = seg.strip()
-    if not seg:
-        return True
-    try:
-        parts = shlex.split(seg)
-    except ValueError:
-        return False          # unbalanced quotes: not something to auto-approve
+    """Judge one plain segment, given as de-quoted words."""
     if not parts:
         return True
-    if not is_plain_segment(seg, harness_bin):
-        # quoting, expansion, globs and redirects can hide a write into
-        # .claude/memory/shared; the cwd is not ours to track
+    seg = " ".join(parts)
+    if needs_human(seg):
         return False
     if any(_under_claude_dir(t) for t in parts[1:] if not t.startswith("-")):
         return False
@@ -597,10 +663,14 @@ def command_allowed(command: str, harness_bin: str | None = None,
                        "auto-approved — a human approves it")
     from engine.cli.landing import landing_config
     landing = landing_config(config)
-    segments = _SPLIT.split(command)
-    for seg in segments:
-        if not _segment_allowed(seg, harness_bin, landing, slice_id):
-            return False, f"segment not in the slice loop's command surface: {seg.strip()!r}"
+    segments = plain_segments(command, harness_bin)
+    if segments is None:
+        return False, ("expansion, escapes, globs, redirects and grouping are "
+                       "never auto-approved — use plain commands")
+    for parts in segments:
+        if not _segment_allowed(parts, harness_bin, landing, slice_id):
+            return False, ("segment not in the slice loop's command surface: "
+                           f"{' '.join(parts)!r}")
     return True, "slice loop command surface"
 
 

@@ -143,3 +143,27 @@ def test_plain_commands_stay_auto_approved(command):
 ])
 def test_other_memory_subcommands_and_claude_dir_are_not_auto_approved(command):
     assert command_decision(command, slice_id="s1")[0] != "allow"
+
+
+@pytest.mark.parametrize("command", [
+    'git commit -m "multi word"', "git commit -m 'it''s fine'",
+    'pytest -k "a and b"', "git commit -m 'a > b; c | d'",
+    'git commit -m "a && b"', "git add -A && git commit -m 'both'",
+])
+def test_quoted_arguments_stay_auto_approved(command):
+    assert command_decision(command, slice_id="s1")[0] == "allow"
+
+
+@pytest.mark.parametrize("command", [
+    'echo "$HOME" > f', 'git commit -m "$(cat x)"', 'git commit -m "a\\"b"',
+    "echo 'a' > f", "cd '.claude/memory'", 'cd ".claude"', "git commit -m 'x",
+    'git commit -m "a`id`b"', 'git commit -m "hi!"', "echo a\\ b",
+    "git log --output='x.txt'", "harness verify 'a;b' > f", "echo 'a'>x",
+])
+def test_quoted_hazards_are_not_auto_approved(command):
+    assert command_decision(command, slice_id="s1")[0] != "allow"
+
+
+def test_quoted_promote_asks():
+    assert command_decision("harness memory 'promote' --text x",
+                            slice_id="s1")[:2] == ("ask", False)

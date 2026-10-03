@@ -148,15 +148,17 @@ def test_loop_commands_are_auto_allowed(toy):
             "permissionDecision") == "allow", f"should not prompt: {cmd}"
 
 
-def test_quoted_or_expanded_commands_go_to_the_human(toy):
+def test_quoted_messages_are_allowed_but_expansion_goes_to_the_human(toy):
     run_cli("start", "--slice", "slice-042", "--session", "cmd3", "--no-worktree",
             root=toy)
-    proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd3",
-                        "tool_name": "Bash", "cwd": str(toy),
-                        "tool_input": {"command": "git commit -m 'two words'"}},
-                       toy)
-    assert out_of(proc).get("hookSpecificOutput", {}).get(
-        "permissionDecision") != "allow"
+    for cmd, want in (("git commit -m 'two words'", "allow"),
+                      ('git commit -m "two words"', "allow"),
+                      ('git commit -m "$(cat x)"', None)):
+        proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd3",
+                            "tool_name": "Bash", "cwd": str(toy),
+                            "tool_input": {"command": cmd}}, toy)
+        got = out_of(proc).get("hookSpecificOutput", {}).get("permissionDecision")
+        assert got == want, cmd
 
 
 def test_egress_and_unknown_commands_are_never_auto_allowed(toy):
