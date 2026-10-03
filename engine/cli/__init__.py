@@ -319,7 +319,7 @@ def main(argv=None):
     co = ms.add_parser("compact")
     co.add_argument("--slice", required=True); co.add_argument("--commit")
 
-    sp = sub.add_parser("status", help="telemetry rendering")
+    sp = sub.add_parser("status", help="telemetry and the always-on context cost")
     sp.add_argument("--json", action="store_true")
     sp.add_argument("--since", help="only events at/after this ISO timestamp "
                                     "(e.g. 2026-07-01)")

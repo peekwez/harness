@@ -246,6 +246,9 @@ def cmd_memory(args):
 # ------------------------------------------------------------------ status
 def cmd_status(args):
     from engine import telemetry
+    from engine.context_cost import always_on_cost
     root = _root(args)
-    _print(telemetry.aggregate(root, since=args.since))
+    report = telemetry.aggregate(root, since=args.since)
+    report["always_on"] = always_on_cost(root)
+    _print(report)
     return 0
