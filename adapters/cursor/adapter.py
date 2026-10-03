@@ -8,7 +8,7 @@ Bindings (register via adapters/cursor/hooks.json):
   preToolUse         -> pre_change     (permission deny; matcher Write|Delete)
   afterFileEdit      -> post_change    (observe-only in Cursor)
   stop               -> unit_complete  (followup_message to continue)
-  preCompact         -> memory flush + COMPACTION_REACHED telemetry ONLY
+  preCompact         -> clear injection hashes, memory flush + COMPACTION_REACHED
 
 Set "failClosed": true on preToolUse (Cursor hooks default to fail-open).
 Cursor CLI (headless) does not fire preToolUse yet — it runs harness in

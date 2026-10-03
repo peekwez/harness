@@ -206,3 +206,14 @@ def test_warm_pre_change_under_150ms(toy):
     elapsed = time.perf_counter() - t0
     assert v["verdict"] == "allow", v["findings"]
     assert elapsed < 0.150, f"warm pre_change took {elapsed*1000:.0f} ms"
+
+
+def test_resolve_reset_makes_the_next_prompt_inject_again(toy):
+    event = make_event("pre_context", session="compact")
+    assert handle_event(event, toy)["injections"]
+    assert handle_event(event, toy)["injections"] == []
+    proc = run_cli("resolve", "--reset", "--session", "compact", root=toy)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert json.loads(proc.stdout) == {"reset": True, "session": "compact",
+                                       "cleared": 1}
+    assert len(handle_event(event, toy)["injections"]) == 4

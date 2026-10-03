@@ -103,9 +103,12 @@ def main(argv=None):
     target.add_argument("--slice", help="print the slice's context blocks")
     target.add_argument("--module", help="print one module's shadow and "
                                          "guidance")
+    target.add_argument("--reset", action="store_true",
+                        help="forget the context blocks this session was "
+                             "sent (PreCompact): the next prompt injects again")
     sp.add_argument("--session",
-                    help="session id (default: $CLAUDE_SESSION_ID, then the "
-                         "live hook session, then 'cli')")
+                    help="session id for --reset (default: $CLAUDE_SESSION_ID, "
+                         "then the live hook session, then 'cli')")
 
     sp = sub.add_parser("gates", help="run gate pack / record overrides")
     gsub = sp.add_subparsers(dest="gates_cmd")

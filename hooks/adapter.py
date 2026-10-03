@@ -6,8 +6,8 @@ another agent framework means writing one new file like this one.
 
 Bindings: SessionStart->session_start, UserPromptSubmit->pre_context,
 PreToolUse(Edit|Write|MultiEdit)->pre_change, PostToolUse(same)->post_change,
-Stop->unit_complete, PreCompact->memory flush + COMPACTION_REACHED telemetry
-ONLY (no re-injection: session cycling, not compaction, is the strategy).
+Stop->unit_complete, PreCompact->clear the per-block injection hashes, then
+memory flush + COMPACTION_REACHED telemetry (the next prompt re-injects).
 """
 import json
 import os
@@ -220,17 +220,20 @@ def main():
                         hook.get("cwd"))
 
     if hook_name == "PreCompact":
-        # Flush + telemetry only. Compaction firing is a defect signal (§1.5).
+        # Clear the per-block injection hashes so the next prompt injects
+        # the slice context again, then flush memory + COMPACTION_REACHED.
         cmd = [sys.executable, HARNESS]
         if root:
             cmd += ["--root", str(root)]
-        proc = subprocess.run(cmd + ["memory", "flush",
-                                     "--session", session, "--compaction"],
-                              capture_output=True, text=True)
-        if proc.returncode != 0:
-            err = proc.stdout.strip() or proc.stderr.strip()
-            if "no .harness substrate" not in err:
-                print(f"harness PreCompact flush failed: {err}", file=sys.stderr)
+        for args in (["resolve", "--reset", "--session", session],
+                     ["memory", "flush", "--session", session, "--compaction"]):
+            proc = subprocess.run(cmd + args, capture_output=True, text=True)
+            if proc.returncode != 0:
+                err = proc.stdout.strip() or proc.stderr.strip()
+                if "no .harness substrate" in err:
+                    return 0
+                print(f"harness PreCompact {args[0]} failed: {err}",
+                      file=sys.stderr)
                 return 1  # fail loud: losing the defect signal is itself a defect
         return 0
 

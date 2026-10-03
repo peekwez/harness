@@ -140,7 +140,7 @@ def test_precompact_flush_and_telemetry_only(toy):
     code, out, err = run_adapter(
         {"hook_event_name": "PreCompact", "session_id": "ac-6"},
         toy, slice_id="slice-042")
-    assert code == 0
+    assert code == 0, err
     assert out is None, "PreCompact must not inject anything"
     after = telemetry_file.read_text()
     assert "COMPACTION_REACHED" in after and "COMPACTION_REACHED" not in before
@@ -297,3 +297,20 @@ def test_engine_error_in_local_mode_stays_silent(toy, tmp_path):
                            harness_bin=_broken_engine(tmp_path))
     assert code == 0, err
     assert out is None, out
+
+
+def test_precompact_clears_hashes_so_the_next_prompt_reinjects(toy):
+    run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-pc"},
+                toy, slice_id="slice-042")
+    code, out, err = run_adapter(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "ac-pc",
+         "prompt": "next"}, toy, slice_id="slice-042")
+    assert out is None, "unchanged blocks are not sent again"
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreCompact", "session_id": "ac-pc"},
+        toy, slice_id="slice-042")
+    assert code == 0 and out is None, err
+    code, out, err = run_adapter(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "ac-pc",
+         "prompt": "after compaction"}, toy, slice_id="slice-042")
+    assert "D-041" in out["hookSpecificOutput"]["additionalContext"]

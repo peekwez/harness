@@ -10,7 +10,7 @@ translation. Bindings (register via adapters/codex/hooks.json):
                                         apply_patch aliases Edit|Write)
   PostToolUse       -> post_change     (decision block replaces tool result)
   Stop              -> unit_complete   (decision block forces continuation)
-  PreCompact        -> memory flush + COMPACTION_REACHED telemetry ONLY
+  PreCompact        -> clear injection hashes, memory flush + COMPACTION_REACHED
 
 Codex documents PreToolUse as "a guardrail rather than a complete
 enforcement boundary" (unified_exec paths not yet intercepted) — keep

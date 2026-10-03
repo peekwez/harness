@@ -180,3 +180,17 @@ def test_pi_extension_parses_as_typescript():
     proc = subprocess.run(["node", "--input-type=module", "--check", "-"],
                           input=js, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr[:800]
+
+
+@pytest.mark.parametrize("name", sorted(ADAPTERS))
+def test_compaction_clears_hashes_so_session_start_reinjects(toy, name):
+    spec = SPEC[name]
+    session = f"{name}-compact"
+    code, out, err = run_adapter(name, spec["session_start"], toy, session=session)
+    assert "D-041" in spec["ctx_of"](out)
+    code, out, err = run_adapter(name, spec["session_start"], toy, session=session)
+    assert out is None, "unchanged blocks are not sent again"
+    code, out, err = run_adapter(name, spec["compact"], toy, session=session)
+    assert code == 0, err
+    code, out, err = run_adapter(name, spec["session_start"], toy, session=session)
+    assert "D-041" in spec["ctx_of"](out)

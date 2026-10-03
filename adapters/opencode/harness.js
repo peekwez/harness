@@ -10,7 +10,7 @@
  *   tool.execute.before      -> pre_change      (throw = deny; edit/write/patch/bash)
  *   tool.execute.after       -> post_change     (touch recording)
  *   session.idle (event)     -> unit_complete   (shadow regen, edges, G4-G8)
- *   session.compacted (event)-> COMPACTION_REACHED telemetry (defect signal)
+ *   session.compacted (event)-> clear injection hashes, COMPACTION_REACHED telemetry
  *
  * Context injection: OpenCode has no additionalContext hook — Phase-1
  * context arrives via AGENTS.md plus the build workflow running
@@ -122,8 +122,15 @@ export const HarnessPlugin = async ({ directory, worktree }) => {
           console.error(`harness: unit_complete blocked — ${reasons(v)}`);
         }
       } else if (event.type === "session.compacted") {
-        // compaction is a decomposition-defect signal, recorded loudly
+        // compaction: forget the injected blocks (the next prompt
+        // re-injects), then record the COMPACTION_REACHED signal
         if (process.env.HARNESS_BIN) {
+          spawnSync(
+            "python3",
+            [process.env.HARNESS_BIN, "--root", root, "resolve", "--reset",
+             "--session", sid],
+            { encoding: "utf-8" },
+          );
           spawnSync(
             "python3",
             [process.env.HARNESS_BIN, "--root", root, "memory", "flush",

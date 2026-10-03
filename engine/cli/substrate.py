@@ -48,6 +48,16 @@ def cmd_extract(args):
 def cmd_resolve(args):
     from engine.resolver import render_module, resolve
     root = _root(args)
+    if args.reset:
+        from engine.events import Sidecar
+        session = _session(args, root)
+        sidecar = Sidecar(root)
+        try:
+            cleared = sidecar.block_hashes_clear(session)
+        finally:
+            sidecar.close()
+        _print({"reset": True, "session": session, "cleared": cleared})
+        return 0
     config = load_config(root)
     if args.module:
         _print(render_module(root, args.module, config))

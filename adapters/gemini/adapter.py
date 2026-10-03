@@ -8,7 +8,7 @@ Bindings (register via adapters/gemini/settings-hooks.json):
   BeforeTool   -> pre_change      (decision deny; matcher write_file|replace)
   AfterTool    -> post_change     (additionalContext feedback)
   AfterAgent   -> unit_complete   (decision block forces another turn)
-  PreCompress  -> memory flush + COMPACTION_REACHED telemetry ONLY
+  PreCompress  -> clear injection hashes, memory flush + COMPACTION_REACHED
 
 CAVEAT: Gemini CLI hooks are fail-open by design — a crashed hook lets the
 action proceed with only a warning. harness compensates because `harness

@@ -156,21 +156,22 @@ def clip(text: str, slice_id=None) -> str:
 
 
 def flush_compaction(session: str) -> int:
-    """PreCompact duty: memory flush + COMPACTION_REACHED telemetry only."""
+    """PreCompact duty: clear the per-block injection hashes (the next prompt
+    re-injects), then memory flush + COMPACTION_REACHED telemetry."""
     root = resolve_root()
     cmd = [sys.executable, HARNESS]
     if root:
         cmd += ["--root", str(root)]
-    proc = subprocess.run(cmd + ["memory", "flush",
-                                 "--session", session or "unknown-session",
-                                 "--compaction"],
-                          capture_output=True, text=True)
-    if proc.returncode != 0:
-        err = proc.stdout.strip() or proc.stderr.strip()
-        if "no .harness substrate" in err:
-            return 0
-        print(f"harness compaction flush failed: {err}", file=sys.stderr)
-        return 1
+    session = session or "unknown-session"
+    for args in (["resolve", "--reset", "--session", session],
+                 ["memory", "flush", "--session", session, "--compaction"]):
+        proc = subprocess.run(cmd + args, capture_output=True, text=True)
+        if proc.returncode != 0:
+            err = proc.stdout.strip() or proc.stderr.strip()
+            if "no .harness substrate" in err:
+                return 0
+            print(f"harness compaction {args[0]} failed: {err}", file=sys.stderr)
+            return 1
     return 0
 
 
