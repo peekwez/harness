@@ -163,7 +163,7 @@ def source_matches_commit(root, commit):
 def prepare_files(root, sl, sidecar, session, commit, config):
     """Discover all changes before any review or conformance check."""
     from engine.events import record_touched_uses, rel_in_root
-    from engine.extractor.engine import git_ignored
+    from engine.extractor.engine import git_ignored_set
     from engine.graph import load_edges
     touched = sidecar.touched_paths(slice_id=sl["id"])
     touched |= {e["to"][5:] for e in load_edges(root)
@@ -178,8 +178,8 @@ def prepare_files(root, sl, sidecar, session, commit, config):
                 else ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", commit])
         touched |= {p for p in _git(root, *args).split("\0") if p}
     touched = {p for p in touched if rel_in_root(root, p)
-               and not any(part in IGNORED_DIRS for part in Path(p).parts)
-               and not git_ignored(root, p)}
+               and not any(part in IGNORED_DIRS for part in Path(p).parts)}
+    touched -= git_ignored_set(root, touched)         # one git call, not N
     sidecar.touch(session, sl["id"], sorted(touched))
     record_touched_uses(root, sidecar, session, sl["id"], config)
     return sorted(touched)

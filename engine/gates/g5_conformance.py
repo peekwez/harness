@@ -61,7 +61,10 @@ def check(ctx) -> list:
     # catch below (a swallowed config error would silently disable G5)
     _ex.validate_shadow_config(ctx.config)
     candidates = [r for r in touched if not Path(r).is_absolute()]
-    known_modules = _ex.python_module_ids(ctx.root, ctx.config)   # once
+    # module ids only matter for a Python file: scan once, and only then
+    known_modules = (_ex.python_module_ids(ctx.root, ctx.config)
+                     if any(_ex.LANG_BY_EXT.get(Path(r).suffix.lower())
+                            == "python" for r in candidates) else None)
     ignored = _ex.git_ignored_set(ctx.root, candidates)           # once
 
     for rel in touched:

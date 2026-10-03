@@ -277,3 +277,117 @@ def test_gitignored_files_out_of_scope_when_root_is_a_repo_subdirectory(tmp_path
     assert shadow_for(app, app / "dist" / "gen.py", config) is None
     files = scope_files(app, config)
     assert "pkg/service.py" in files and "dist/gen.py" not in files
+
+
+def _count_module_scans(monkeypatch):
+    import engine.extractor.engine as ex
+    import engine.extractor.modules as mods
+    calls = []
+    real = mods.python_module_ids
+
+    def spy(*a, **k):
+        calls.append(1)
+        return real(*a, **k)
+
+    monkeypatch.setattr(ex, "python_module_ids", spy)
+    monkeypatch.setattr(mods, "python_module_ids", spy)
+    return calls
+
+
+def _count_check_ignore(monkeypatch):
+    import subprocess
+    calls = []
+    real = subprocess.run
+
+    def spy(cmd, *a, **k):
+        if isinstance(cmd, (list, tuple)) and "check-ignore" in cmd:
+            calls.append(list(cmd))
+        return real(cmd, *a, **k)
+
+    monkeypatch.setattr(subprocess, "run", spy)
+    return calls
+
+
+def test_non_python_post_change_scans_no_module_ids(toy, monkeypatch):
+    loaded_context(toy, session="nopy")
+    _write(toy, "web/app.ts", "export const A = 1;\n")
+    _write(toy, "notes.txt", "hello\n")
+    calls = _count_module_scans(monkeypatch)
+    handle_event(make_event("post_change", session="nopy",
+                            files=["web/app.ts", "notes.txt"]), toy)
+    assert calls == []
+
+
+def test_g6_without_python_built_entries_scans_no_module_ids(toy, monkeypatch):
+    from types import SimpleNamespace
+    from engine.gates import g6_drift
+    calls = _count_module_scans(monkeypatch)
+    sidecar = Sidecar(toy)
+    try:
+        ctx = SimpleNamespace(
+            root=toy, sidecar=sidecar, work_unit_id="slice-042",
+            config=load_config(toy),
+            registry=[{"id": "web", "status": "built", "source": "web/app.ts"}])
+        monkeypatch.setattr("engine.baseline.ensure_baseline",
+                            lambda *a, **k: None)
+        monkeypatch.setattr(sidecar, "snapshot_get",
+                            lambda slice_id: {"web": {"symbols": []}})
+        monkeypatch.setattr(g6_drift, "_acked", lambda ctx: set())
+        _write(toy, "web/app.ts", "export const A = 1;\n")
+        g6_drift.check(ctx)
+    finally:
+        sidecar.close()
+    assert calls == []
+
+
+def test_module_id_scan_never_descends_into_ignored_dirs(toy, monkeypatch):
+    import os
+    from engine.extractor.modules import python_module_ids
+    _write(toy, "node_modules/pkg/deep/mod.py")
+    _write(toy, "pkg/service.py")
+    seen = []
+    real = os.scandir
+
+    def spy(path="."):
+        seen.append(str(path))
+        return real(path)
+
+    monkeypatch.setattr(os, "scandir", spy)
+    ids = python_module_ids(toy, load_config(toy))
+    assert "pkg.service" in ids
+    assert not any(i.startswith("node_modules") for i in ids)
+    assert not any("node_modules" in p for p in seen), seen
+
+
+def test_stop_checks_ignore_rules_once_for_many_files(toy, monkeypatch):
+    from engine.events import record_touched_uses
+    files = [f"pkg/m{i}.py" for i in range(5)]
+    for rel in files:
+        _write(toy, rel, "import telemetry\n")
+    sidecar = Sidecar(toy)
+    try:
+        sidecar.touch("many", "slice-042", files)
+        calls = _count_check_ignore(monkeypatch)
+        record_touched_uses(toy, sidecar, "many", "slice-042", load_config(toy))
+    finally:
+        sidecar.close()
+    assert len(calls) <= 1, calls
+    assert {e["to"] for e in load_edges(toy) if e["type"] == "touches"} >= {
+        f"file:{rel}" for rel in files}
+
+
+def test_close_preparation_checks_ignore_rules_in_batches(toy, monkeypatch):
+    from engine.cli.closure_state import prepare_files
+    files = [f"pkg/m{i}.py" for i in range(5)]
+    for rel in files:
+        _write(toy, rel, "import telemetry\n")
+    sidecar = Sidecar(toy)
+    try:
+        sidecar.touch("prep", "slice-042", files)
+        calls = _count_check_ignore(monkeypatch)
+        out = prepare_files(toy, get_slice(toy, "slice-042"), sidecar,
+                            "prep", None, load_config(toy))
+    finally:
+        sidecar.close()
+    assert set(files) <= set(out)
+    assert len(calls) <= 2, calls

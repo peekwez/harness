@@ -4,6 +4,8 @@ Blocks unit_complete until acknowledged; the ack is recorded as an edge.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from ..events import make_finding
 from ..registry import public_symbols
 
@@ -37,7 +39,12 @@ def check(ctx) -> list:
     registry = {e["id"]: e for e in ctx.registry}
     from ..extractor import engine as _ex
     _ex.validate_shadow_config(ctx.config)
-    known_modules = _ex.python_module_ids(ctx.root, ctx.config)   # once
+    # module ids only matter for a Python source: scan once, and only then
+    python_entries = any(
+        _ex.LANG_BY_EXT.get(Path(registry[m].get("source") or "").suffix.lower())
+        == "python" for m in baseline if m in registry)
+    known_modules = (_ex.python_module_ids(ctx.root, ctx.config)
+                     if python_entries else None)
     ignored = _ex.git_ignored_set(
         ctx.root, [e["source"] for e in registry.values() if e.get("source")])
     for module_id, old in sorted(baseline.items()):

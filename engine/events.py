@@ -394,7 +394,8 @@ def record_touched_uses(root, sidecar, session, slice_id, config):
     come from the file's shadow; a file outside shadow scope has none. The
     shadow cache fills as a side effect; nothing is committed for it.
     """
-    from .extractor.engine import RegistryIndex, git_ignored, shadow_for
+    from .extractor.engine import (LANG_BY_EXT, RegistryIndex,
+                                   git_ignored_set, shadow_for)
     from .extractor.modules import python_module_ids
     from .graph import append_edge, load_edges, record_dependency_snapshot
     from .registry import load_registry
@@ -409,14 +410,18 @@ def record_touched_uses(root, sidecar, session, slice_id, config):
                 if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
                 and e["to"].startswith("file:")}
     # legacy poison rows (absolute OR traversal) and gitignored files drop out
-    touched = {rel for rel in touched
-               if rel_in_root(root, rel) and not git_ignored(root, rel)}
+    touched = {rel for rel in touched if rel_in_root(root, rel)}
+    ignored = git_ignored_set(root, touched)          # one git call, not N
+    touched -= ignored
     if not touched:
         record_dependency_snapshot(root, slice_id, set(), set())
         return
     registry = load_registry(root)
     index = RegistryIndex(registry)
-    known_modules = python_module_ids(root, config)
+    # module ids only matter for a Python file: scan once, and only then
+    known_modules = (python_module_ids(root, config)
+                     if any(LANG_BY_EXT.get(Path(rel).suffix.lower()) == "python"
+                            for rel in touched) else None)
     existing = {(e["type"], e["from"], e["to"]) for e in edges}
     uses = set()
 
@@ -430,7 +435,8 @@ def record_touched_uses(root, sidecar, session, slice_id, config):
         if not p.is_file():
             continue            # deleted or renamed before Stop
         add_once("touches", f"slice:{slice_id}", f"file:{rel}")
-        shadow = shadow_for(root, p, config, known_modules=known_modules)
+        shadow = shadow_for(root, p, config, known_modules=known_modules,
+                            ignored=ignored)
         if shadow is None:
             continue
         own = next((e for e in registry if e.get("source") == rel), None)
