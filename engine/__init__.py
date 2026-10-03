@@ -183,11 +183,6 @@ DEFAULT_SRC_ROOTS = ["src", "packages/*/src"]
 
 DEFAULT_CONFIG = {
     "schema": 1,
-    "resolver": {
-        "budget_tokens": 8000,
-        "ranking": ["direct_deps", "one_hop_types", "durable_memories"],
-        "degrade": "drop_docstrings_before_modules",
-    },
     "gates": {
         "g3_mode": "allow_with_findings",       # or: block | radius
         "g5_override": "recorded_justification",  # or: advisory | park

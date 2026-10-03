@@ -115,3 +115,4 @@ def tty_ask(question: str) -> bool:
 
 
 # Workstream step modules, in workstream order. Each import registers steps.
+from . import upgrade_w1  # noqa: E402,F401
