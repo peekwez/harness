@@ -335,9 +335,20 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     # spec 4.1: a non-goal blocks only when a gates.extra gate cites it
     from .gates import reserved_gate_ids
     from .gates.extra import cited_rules, load_extra_gates
-    extra, _load_errors = load_extra_gates(
+    extra, load_errors = load_extra_gates(
         root, config, reserved_ids=reserved_gate_ids())
+    # a broken citing gate must be named, not just leave its non-goals
+    # listed as advisory only
+    report["warnings"].extend(f["message"] for f in load_errors)
     cited = cited_rules(extra)
+    # a boundary id is a hash of the non-goal text: editing the text
+    # orphans a cite of the old id, so a cite that matches nothing is named
+    known = ({b["id"] for b in boundaries.values()}
+             | {b.get("rule_ref") for b in boundaries.values()})
+    for entry in sorted(cited - known):
+        report["warnings"].append(
+            f"cites entry {entry} matches no non-goal. Fix the cite or the "
+            f"non-goal.")
     for b in sorted(boundaries.values(), key=lambda b: b["id"]):
         if not b.get("patterns"):
             continue
@@ -345,8 +356,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
             continue
         report["advisory_only"].append(b["id"])
         report["warnings"].append(
-            f"non-goal {b['id']} is advisory only. Cite it in a gates.extra "
-            f"GATE[\"cites\"] to make G3 block it.")
+            f"non-goal {b['id']} is advisory only. Cite {b.get('rule_ref')} "
+            f"in a gates.extra GATE[\"cites\"] to make G3 block it.")
 
     write_jsonl(harness_dir(root) / "decisions.jsonl",
                 sorted(decisions.values(), key=lambda d: d["id"]))

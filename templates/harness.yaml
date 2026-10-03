@@ -14,11 +14,14 @@ gates:
   #
   #   GATE = {"id": "K1", "rule_ref": "adr:002",
   #           "preferred": ["pre_change"], "fallback": ["post_change"],
-  #           "cites": ["B-1a2b3c4d", "adr:007"]}
+  #           "cites": ["adr:007"]}
   #
-  # `cites` (optional) names non-goal boundary ids or rule refs. G3 blocks a
+  # `cites` (optional) names non-goal rule refs or boundary ids. G3 blocks a
   # non-goal only when some gate cites it; other non-goals are advisory, and
-  # `harness compile` lists them under `advisory_only`.
+  # `harness compile` lists them under `advisory_only`. Prefer the ADR rule
+  # ref (`adr:NNN`): a boundary id is a hash of the non-goal text and
+  # changes when the text does. `harness compile` warns on a cite that
+  # matches no non-goal.
   #
   #   def run(ctx) -> list[finding]
   #       # ctx is engine.gates.GateContext:

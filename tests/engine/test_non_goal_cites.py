@@ -25,7 +25,7 @@ def test_uncited_non_goal_is_advisory(toy):
     assert hits and all(f["severity"] == "advisory" for f in hits)
     assert v["verdict"] == "allow_with_findings"
     assert "B-legacy" in hits[0]["message"]
-    assert hits[0]["message"].endswith('GATE["cites"].')
+    assert hits[0]["message"].endswith('cite adr:007 in a gates.extra GATE["cites"].')
 
 
 def test_non_goal_cited_by_boundary_id_blocks(toy):
@@ -88,3 +88,37 @@ def test_compile_does_not_flag_cited_non_goals(toy):
     cite_non_goals(toy, "adr:007")
     report = compile_substrate(toy)
     assert report["advisory_only"] == []
+
+
+def test_compile_advisory_warning_names_the_rule_ref(toy):
+    report = compile_substrate(toy)
+    advisory = [w for w in report["warnings"] if "advisory only" in w]
+    assert advisory and all("Cite adr:007" in w for w in advisory)
+
+
+def test_compile_warns_on_a_stale_cite(toy):
+    """I1: an edited non-goal gets a new hash id; the old cite must not go
+    quiet."""
+    cite_non_goals(toy, "B-deadbeef", "adr:007")
+    report = compile_substrate(toy)
+    assert ("cites entry B-deadbeef matches no non-goal. Fix the cite or "
+            "the non-goal.") in report["warnings"]
+    assert not any("cites entry adr:007" in w for w in report["warnings"])
+
+
+def test_compile_reports_extra_gate_load_errors(toy):
+    """R4: a broken citing gate is named, not just its non-goals listed as
+    advisory only."""
+    cite_non_goals(toy, "adr:007")
+    (toy / ".harness" / "gates" / "toy_cites.py").write_text(
+        "raise ImportError('deliberate')\n")
+    report = compile_substrate(toy)
+    assert any("toy_cites.py" in w and "failed to load" in w
+               and "deliberate" in w for w in report["warnings"])
+
+
+def test_template_example_cites_a_rule_ref_not_a_hash_id():
+    from conftest import PLUGIN_ROOT
+    text = (PLUGIN_ROOT / "templates" / "harness.yaml").read_text()
+    assert "B-1a2b3c4d" not in text
+    assert '"cites": ["adr:007"]' in text

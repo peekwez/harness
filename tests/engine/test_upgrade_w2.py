@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 import yaml
 
-from conftest import git
+from conftest import cite_non_goals, git
 from engine import HarnessError, read_jsonl, write_jsonl
 from engine import upgrade_010, upgrade_w2
 
@@ -70,6 +70,10 @@ def _legacy_telemetry(toy):
     con.close()
 
 
+def _no_non_goals(toy):
+    write_jsonl(toy / ".harness" / "boundaries.jsonl", [])
+
+
 def _advice(step_id, root):
     step = _step(step_id)
     return step.advise(root) if step.advise else []
@@ -86,6 +90,7 @@ def test_w2_steps_are_registered_in_order():
 
 
 def test_toy_repo_is_already_on_the_w2_shape(toy):
+    cite_non_goals(toy, "adr:007")
     for step_id in W2_IDS:
         assert _step(step_id).describe(toy) == [], step_id
         assert _advice(step_id, toy) == [], step_id
@@ -362,6 +367,7 @@ def test_config_step_keeps_other_telemetry_keys(toy):
 
 def test_config_step_drops_block_mode_and_advises(toy):
     cfg = toy / ".harness" / "config.yaml"
+    _no_non_goals(toy)
     cfg.write_text("schema: 1\ngates:\n  g3_mode: block\n"
                    "  exempt_paths: [docs/]\nreview:\n  ensemble: false\n")
     step = _step("w2.config")
@@ -375,6 +381,7 @@ def test_config_step_drops_block_mode_and_advises(toy):
 
 
 def test_config_step_keeps_radius_mode(toy):
+    _no_non_goals(toy)
     cfg = toy / ".harness" / "config.yaml"
     cfg.write_text("schema: 1\ngates:\n  g3_mode: radius\n")
     _step("w2.config").apply(toy, NO)
@@ -388,6 +395,50 @@ def test_config_step_adds_contracts_prefix_when_contracts_exist(toy):
     _step("w2.config").apply(toy, NO)
     doc = yaml.safe_load((toy / ".harness" / "config.yaml").read_text())
     assert doc["gates"]["exempt_paths"] == DEFAULT_EXEMPT + ["contracts/"]
+
+
+def test_config_step_reports_the_added_contracts_prefix(toy):
+    """I2 (spec 12 step 4): the report says contracts/ is no longer checked."""
+    (toy / ".harness" / "config.yaml").write_text(OLD_CONFIG)
+    (toy / "contracts").mkdir()
+    step = _step("w2.config")
+    assert ("add gates.exempt_paths to .harness/config.yaml, including "
+            "contracts/ (harness no longer checks it)") in step.describe(toy)
+    assert ("added gates.exempt_paths to .harness/config.yaml, including "
+            "contracts/ (harness no longer checks it)") in step.apply(toy, NO)
+
+
+def test_config_step_does_not_mention_contracts_without_the_folder(toy):
+    (toy / ".harness" / "config.yaml").write_text(OLD_CONFIG)
+    assert "add gates.exempt_paths to .harness/config.yaml" in \
+        _step("w2.config").describe(toy)
+
+
+UNCITED_ADVICE = ("check: 1 non-goals no longer block. Cite them from a "
+                  "gates.extra gate to keep them blocking.")
+
+
+def test_config_advice_counts_uncited_non_goals(toy):
+    """R7: non-goals that blocked in 0.9 turn advisory unless a gate cites
+    them."""
+    assert _advice("w2.config", toy) == [UNCITED_ADVICE]
+
+
+def test_config_advice_skips_cited_and_pathless_non_goals(toy):
+    write_jsonl(toy / ".harness" / "boundaries.jsonl", [
+        {"id": "B-legacy", "source_adr": "007", "rule_ref": "adr:007",
+         "text": "legacy", "patterns": ["legacy/**"]},
+        {"id": "B-prose", "source_adr": "008", "rule_ref": "adr:008",
+         "text": "no paths", "patterns": []}])
+    cite_non_goals(toy, "B-legacy")
+    assert _advice("w2.config", toy) == []
+
+
+def test_config_advice_ignores_a_gate_that_fails_to_load(toy):
+    cite_non_goals(toy, "adr:007")
+    (toy / ".harness" / "gates" / "toy_cites.py").write_text(
+        "raise ImportError('deliberate')\n")
+    assert _advice("w2.config", toy) == [UNCITED_ADVICE]
 
 
 def test_config_step_adds_missing_parents(toy):
@@ -495,6 +546,15 @@ def test_contracts_advice_drops_the_exempt_hint_once_exempt(toy):
     (toy / "contracts").mkdir()
     cfg = toy / ".harness" / "config.yaml"
     cfg.write_text(cfg.read_text().replace('"explore/"]', '"explore/", "contracts/"]'))
+    advice = _advice("w2.contracts", toy)
+    assert len(advice) == 1 and "exempt_paths" not in advice[0]
+
+
+def test_contracts_advice_counts_the_prefix_w2_config_will_add(toy):
+    """R3: when w2.config is about to add contracts/, do not tell the user
+    to add it by hand."""
+    (toy / ".harness" / "config.yaml").write_text(OLD_CONFIG)
+    (toy / "contracts").mkdir()
     advice = _advice("w2.contracts", toy)
     assert len(advice) == 1 and "exempt_paths" not in advice[0]
 

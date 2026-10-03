@@ -44,9 +44,28 @@ def exempt_paths(config) -> tuple:
     return tuple(raw)
 
 
+def _strip_dot(path: str) -> str:
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
 def exempt(rel: str, config) -> bool:
-    """True when a repo-relative path starts with an exempt prefix."""
-    return str(rel).replace("\\", "/").startswith(exempt_paths(config))
+    """True when a repo-relative path falls under an exempt entry.
+
+    An entry ending in `/` is a prefix. An entry without one names a whole
+    path segment: `docs` matches `docs` and `docs/x`, never `docsite/`. A
+    leading `./` on the entry or the path is ignored.
+    """
+    rel = _strip_dot(str(rel).replace("\\", "/"))
+    for entry in exempt_paths(config):
+        entry = _strip_dot(entry.replace("\\", "/"))
+        if entry.endswith("/"):
+            if rel.startswith(entry):
+                return True
+        elif rel == entry or rel.startswith(entry + "/"):
+            return True
+    return False
 
 
 class GateContext:

@@ -90,6 +90,18 @@ def test_string_value_is_rejected(toy):
         load_config(toy)
 
 
+def test_non_mapping_review_is_a_schema_error(toy):
+    import pytest
+    from engine import SchemaError
+    from engine.review.rubrics import ensemble_enabled
+    for value in (["ensemble"], "on"):
+        _write_ensemble(toy, value)
+        with pytest.raises(SchemaError, match="review must be a mapping"):
+            load_config(toy)
+        with pytest.raises(SchemaError, match="review must be a mapping"):
+            ensemble_enabled({"review": value})
+
+
 def test_review_null_means_off(toy):
     from engine.review.rubrics import ensemble_enabled
     _write_ensemble(toy, None)

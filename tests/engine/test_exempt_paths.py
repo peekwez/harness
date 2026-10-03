@@ -92,3 +92,25 @@ def test_permit_auto_approves_exempt_paths(toy):
 def test_hardcoded_prefixes_are_gone():
     import engine.gates.g3_scope as g3
     assert not hasattr(g3, "SUBSTRATE_PREFIXES")
+
+
+def test_entry_without_slash_matches_a_whole_segment():
+    cfg = {"gates": {"exempt_paths": ["docs"]}}
+    assert exempt("docs/notes.md", cfg)
+    assert exempt("docs", cfg)
+    assert not exempt("docsite/index.html", cfg)
+    assert not exempt("docs.md", cfg)
+
+
+def test_entry_with_slash_keeps_prefix_semantics():
+    cfg = {"gates": {"exempt_paths": ["docs/"]}}
+    assert exempt("docs/notes.md", cfg)
+    assert not exempt("docsite/index.html", cfg)
+
+
+def test_leading_dot_slash_is_ignored():
+    cfg = {"gates": {"exempt_paths": ["./docs/", "./generated"]}}
+    assert exempt("docs/notes.md", cfg)
+    assert exempt("./docs/notes.md", cfg)
+    assert exempt("generated/client.py", cfg)
+    assert exempt("./tests/test_x.py", {})

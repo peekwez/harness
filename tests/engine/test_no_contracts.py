@@ -1,4 +1,6 @@
 """D-0.10-09: contracts leave core. No scaffold, stubs, lint or skill."""
+import json
+
 from conftest import PLUGIN_ROOT, git, run_cli
 from engine.compiler import author_gate, compile_substrate
 
@@ -31,7 +33,10 @@ def test_verify_does_not_lint_contracts(toy):
     (toy / "contracts").mkdir(exist_ok=True)
     (toy / "contracts" / "api.yaml").write_text("openapi: 3.0.3\n[broken")
     proc = run_cli("verify", root=toy)
-    assert "CONTRACT_INVALID" not in proc.stdout
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["passed"] is True
+    assert not any(f["code"] == "CONTRACT_INVALID" for f in out["findings"])
 
 
 def test_no_skill_or_template_describes_the_contract_scaffold():

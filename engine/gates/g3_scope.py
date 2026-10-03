@@ -64,7 +64,7 @@ def _non_goal_finding(rel, pat, boundary, overridden, cited) -> dict:
     return make_finding(
         "NON_GOAL_VIOLATION", rule_ref,
         f"G3: {rel} is inside non-goal {bid}, which no gate cites. To block "
-        f"it, cite {bid} in a gates.extra GATE[\"cites\"].",
+        f"it, cite {rule_ref} in a gates.extra GATE[\"cites\"].",
         severity="advisory", key=rel + "|" + pat + "|uncited")
 
 

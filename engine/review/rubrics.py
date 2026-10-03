@@ -24,7 +24,10 @@ ENSEMBLE_SAMPLES = 3
 
 def ensemble_enabled(config) -> bool:
     """True when the repo opted into ensemble sampling and golden replay."""
-    value = ((config or {}).get("review") or {}).get("ensemble", False)
+    review = (config or {}).get("review") or {}
+    if not isinstance(review, dict):
+        raise SchemaError("review must be a mapping. Fix .harness/config.yaml.")
+    value = review.get("ensemble", False)
     if not isinstance(value, bool):
         raise SchemaError(f"review.ensemble must be true or false, got "
                           f"{value!r}. Fix .harness/config.yaml.")

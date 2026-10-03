@@ -120,3 +120,12 @@ def test_architect_agent_uses_decision_cards():
     body = (PLUGIN_ROOT / "agents" / "architect.md").read_text()
     assert "refuses to solution" not in body
     assert "decision card" in body
+
+
+def test_close_slice_names_every_blocking_unit_complete_source():
+    """R6: close blocks on G1, G6, cited non-goals (G3) and gates.extra."""
+    text = (PLUGIN_ROOT / "skills" / "close-slice" / "SKILL.md").read_text()
+    para = text[text.index("The unit_complete gates pass"):]
+    para = para[:para.index("Reconciliation passes")]
+    for needle in ("G1", "G6", "gates.extra", "cites", "(G3)"):
+        assert needle in para, needle

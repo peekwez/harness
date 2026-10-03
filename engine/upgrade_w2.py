@@ -390,8 +390,12 @@ def _config_plan(root: Path, doc) -> tuple:
         want["review"] = {**(review or {}), "ensemble": False}
         changes.append("add review.ensemble: false to .harness/config.yaml")
     if gates is None or "exempt_paths" not in gates:
-        want["gates"] = {**(gates or {}), "exempt_paths": _exempt_default(root)}
-        changes.append("add gates.exempt_paths to .harness/config.yaml")
+        paths = _exempt_default(root)
+        want["gates"] = {**(gates or {}), "exempt_paths": paths}
+        line = "add gates.exempt_paths to .harness/config.yaml"
+        if "contracts/" in paths:   # spec 12 step 4: say so
+            line += ", including contracts/ (harness no longer checks it)"
+        changes.append(line)
     return want, strip, changes
 
 
@@ -494,15 +498,40 @@ def _config_apply(root: Path, ask: Ask) -> list:
     return report
 
 
+def _uncited_non_goals(root: Path) -> int:
+    """Non-goals with path patterns that no loadable gates.extra gate
+    cites. In 0.9 they blocked; in 0.10 they only advise."""
+    from . import load_config, read_jsonl
+    from .gates import reserved_gate_ids
+    from .gates.extra import cited_rules, load_extra_gates
+    rows = [b for b in read_jsonl(harness_dir(root) / "boundaries.jsonl")
+            if isinstance(b, dict) and b.get("patterns")]
+    if not rows:
+        return 0
+    try:
+        gates, _errors = load_extra_gates(
+            root, load_config(root), reserved_ids=reserved_gate_ids())
+    except HarnessError:
+        gates = []           # no loadable gate: nothing cites them
+    cited = cited_rules(gates)
+    return sum(1 for b in rows
+               if b.get("id") not in cited and b.get("rule_ref") not in cited)
+
+
 def _config_advise(root: Path) -> list:
     path = _config_path(root)
     if not path.exists():
         return []
     doc = _load_yaml(path.read_text())
+    out = []
     gates = doc.get("gates") if isinstance(doc, dict) else None
     if isinstance(gates, dict) and gates.get("g3_mode") == "block":
-        return [f"check: {G3_BLOCK_NOTE}"]
-    return []
+        out.append(f"check: {G3_BLOCK_NOTE}")
+    uncited = _uncited_non_goals(root)
+    if uncited:
+        out.append(f"check: {uncited} non-goals no longer block. Cite them "
+                   f"from a gates.extra gate to keep them blocking.")
+    return out
 
 
 # --------------------------------------------------------- w2.skill-names
@@ -562,6 +591,8 @@ def _exempt_paths(root: Path) -> list:
     gates = doc.get("gates") if isinstance(doc, dict) else None
     if isinstance(gates, dict) and "exempt_paths" in gates:
         return list(gates["exempt_paths"] or [])
+    if path.exists():
+        return _exempt_default(root)   # what w2.config is about to add
     return list(DEFAULT_EXEMPT_PATHS)
 
 

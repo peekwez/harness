@@ -424,8 +424,8 @@ def _validate_gate(gate, taken: set) -> None:
     if (isinstance(cites, str) or not isinstance(cites, (list, tuple))
             or not all(isinstance(c, str) and c.strip() for c in cites)):
         raise TypeError(
-            "GATE['cites'] must be a list of non-goal boundary ids or rule "
-            "refs, for example [\"B-1a2b3c4d\", \"adr:007\"]")
+            "GATE['cites'] must be a list of non-goal rule refs or boundary "
+            "ids, for example [\"adr:007\"]")
 
 
 def cited_rules(gates: list) -> set:
