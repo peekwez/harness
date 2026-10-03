@@ -13,7 +13,7 @@ are the guardrails; drive through them, don't wait at them. A gate block
 names its own mechanical fix — apply it and continue. Stop ONLY for: a
 parked review finding, an author-gate gap, or a gate still blocking after
 `superpowers:systematic-debugging` named a root cause you cannot fix inside
-the slice's declared scope (log an attempt memory, then report the finding
+the slice's declared scope (note it in personal memory, then report the finding
 verbatim).
 
 Also stop with NOT VERIFIED when a required runtime/check remains unavailable
@@ -60,7 +60,7 @@ Discipline:
   abstraction outside declares_dep, declare it or record an override with a
   written justification (`harness gates override`). Gates will enforce this
   anyway; volunteering beats being blocked.
-- Log every abandoned approach as an attempt memory (approach, outcome, why)
+- Log every abandoned approach in personal memory (approach, outcome, why)
   the moment you abandon it — the next session only knows what substrate
   knows.
 - When context nears its limit, checkpoint at a Stop boundary and end the

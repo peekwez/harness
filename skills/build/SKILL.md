@@ -65,9 +65,8 @@ Loop discipline — in order:
    slice row in `.harness/backlog.jsonl` first. G3 reports an undeclared file as an advisory finding and
    close lists it under `scope_advisory`. Declared work is auto-approved;
    an undeclared edit still prompts.
-4. **Memory is automatic.** Claude Code keeps personal memory itself. Do not
-   write attempt logs by hand. A human promotes a lasting fact with
-   `harness memory promote`.
+4. **Record abandoned approaches.** Record abandoned approaches in your personal
+   memory. Never write `.claude/memory/shared/`; a human promotes facts there.
 5. **Session cycling, not compaction.** When context nears its limit:
    checkpoint at a Stop boundary, end the session, start fresh — `harness
    start --slice $1` resumes from substrate. If compaction fires, a compaction
@@ -116,7 +115,7 @@ resolves (`close-slice --commit HEAD`), never `$(git rev-parse HEAD)`.
    diagnosis and authorized in-scope repair (report NOT VERIFIED with the exact
    missing prerequisite and next action), or a gate still blocking after
    `superpowers:systematic-debugging` named a root cause you cannot fix
-   inside this slice's declared scope (log an attempt memory first, then
+   inside this slice's declared scope (note it in personal memory first, then
    report the finding verbatim).
 9. Close releases the binding. How the slice LANDS depends on
    `landing.mode` in `.harness/config.yaml`: in `local` mode (the default)

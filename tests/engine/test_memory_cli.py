@@ -87,3 +87,11 @@ def test_memory_changed_needs_a_start(toy, tmp_path):
     proc = run_cli("memory", "changed", "--slice", "slice-042", root=toy, env=env)
     assert proc.returncode == 1
     assert "--since" in json.loads(proc.stderr)["error"]
+
+
+def test_memory_changed_rejects_a_bad_since(toy, tmp_path):
+    env = {"HOME": str(tmp_path / "home")}
+    proc = run_cli("memory", "changed", "--since", "garbage", root=toy, env=env)
+    assert proc.returncode == 2
+    assert "Traceback" not in proc.stderr
+    assert "Fix:" in proc.stderr

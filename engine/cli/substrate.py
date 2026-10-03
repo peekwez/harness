@@ -233,7 +233,12 @@ def cmd_memory(args):
                                      name=args.name))
         return 0
     if args.since:
-        stamp = datetime.fromisoformat(args.since.replace("Z", "+00:00"))
+        try:
+            stamp = datetime.fromisoformat(args.since.replace("Z", "+00:00"))
+        except ValueError:
+            print("error: memory changed: --since is not an ISO time. "
+                  "Fix: pass e.g. 2026-10-02T09:00:00Z.", file=sys.stderr)
+            return 2
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=timezone.utc)
         since = stamp.timestamp()
