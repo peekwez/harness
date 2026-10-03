@@ -317,7 +317,7 @@ def cmd_permit(args):
                     return 0
             rels.append(str(pp))
         sl = get_slice(root, slice_id)
-        ok = paths_in_scope(sl, load_registry(root), rels)
+        ok = paths_in_scope(sl, load_registry(root), rels, load_config(root))
         _print({"allow": ok, "decision": "allow" if ok else "defer",
                 "slice": slice_id,
                 "reason": (f"gate-approved for slice {slice_id} (declared "

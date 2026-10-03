@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..events import make_finding
+from . import exempt
 from ..extractor import engine as _ex
 from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..registry import digest_tokens, signature_digest, similarity
@@ -72,7 +73,7 @@ def check(ctx) -> list:
             continue  # out-of-root/poison rows: G8 territory, never a crash
         if Path(rel).suffix.lower() not in LANG_BY_EXT:
             continue
-        if rel.startswith((".harness/", "tests/", "adr/", "contracts/", "docs/")):
+        if exempt(rel, ctx.config):
             continue
         shadow = _shadow_for_touched(ctx, rel, known_modules, ignored)
         if shadow is None:

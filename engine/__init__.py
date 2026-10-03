@@ -181,12 +181,18 @@ def load_boundaries(root) -> list:
 # path it always had.
 DEFAULT_SRC_ROOTS = ["src", "packages/*/src"]
 
+# Spec 5.6: prefixes G3 and G5 never treat as slice work. A repo replaces
+# the whole list with `gates.exempt_paths` in .harness/config.yaml.
+DEFAULT_EXEMPT_PATHS = (".harness/", "adr/", ".github/", "tests/", "docs/",
+                        ".claude/", "explore/")
+
 DEFAULT_CONFIG = {
     "schema": 1,
     "gates": {
         "g3_mode": "allow_with_findings",       # or: block | radius
         "g5_override": "recorded_justification",  # or: advisory | park
         "g5_similarity_threshold": 0.6,
+        "exempt_paths": list(DEFAULT_EXEMPT_PATHS),
         "acceptance_runner": "pytest",          # or: none (skill-enforced only)
         "acceptance_python": None,              # default: .venv/bin/python if present
     },

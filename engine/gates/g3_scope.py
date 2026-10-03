@@ -10,17 +10,10 @@ from fnmatch import fnmatch
 from pathlib import PurePosixPath
 
 from ..events import make_finding
+from . import exempt
 
 GATE = {"id": "G3", "rule_ref": "gate:G3",
         "preferred": ("pre_change",), "fallback": ("post_change",)}
-
-# Authored substrate + meta surfaces are Phase-0-editable and never count as
-# slice wandering: docs/ included per field report #18/#21.
-# `.claude/` is harness-provisioned host config (the autonomy profile
-# `harness start` writes into the slice's worktree) — substrate, not slice work.
-SUBSTRATE_PREFIXES = (".harness/", "adr/", "contracts/", ".github/", "tests/",
-                      "docs/", ".claude/")
-
 
 def _overridden(ctx) -> set:
     """Bare ids of recorded overrides for this slice (boundary:B-x, file:path,
@@ -81,7 +74,7 @@ def check(ctx) -> list:
     declared = _declared_set(ctx)
     declared_dirs = {str(PurePosixPath(d).parent) for d in declared}
     for rel in touched:
-        if rel.startswith(SUBSTRATE_PREFIXES):
+        if exempt(rel, ctx.config):
             continue
         if rel in declared or any(fnmatch(rel, d) for d in declared if "*" in d):
             continue

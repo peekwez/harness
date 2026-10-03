@@ -124,6 +124,7 @@ def make_config(g3_mode="allow_with_findings",
           g3_mode: {g3_mode}
           g5_override: {g5_override}
           g5_similarity_threshold: 0.6
+          exempt_paths: [".harness/", "adr/", ".github/", "tests/", "docs/", ".claude/", "explore/"]
         ensemble:
           trigger_confidence_below: 0.7
           samples: 3

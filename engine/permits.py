@@ -23,7 +23,7 @@ import re
 import shlex
 from fnmatch import fnmatch
 
-from .gates.g3_scope import SUBSTRATE_PREFIXES
+from .gates import exempt
 
 # git subcommands that stay on this machine
 GIT_LOCAL = {
@@ -469,14 +469,14 @@ def declared_set(slice_row: dict, registry: list) -> set:
     return declared
 
 
-def paths_in_scope(slice_row: dict, registry: list, rels) -> bool:
-    """True when every path is substrate or inside the slice's declaration.
-    Wandering keeps its prompt — auto-approval is scoped to what the slice
-    said it would touch, which is exactly what G3 reconciles at close."""
+def paths_in_scope(slice_row: dict, registry: list, rels, config=None) -> bool:
+    """True when every path is exempt or inside the slice's declaration.
+    Wandering keeps its prompt: auto-approval is scoped to what the slice
+    said it would touch. `config` supplies `gates.exempt_paths`."""
     declared = declared_set(slice_row, registry)
     globs = [d for d in declared if "*" in d]
     for rel in rels:
-        if rel.startswith(SUBSTRATE_PREFIXES):
+        if exempt(rel, config):
             continue
         if rel in declared or any(fnmatch(rel, g) for g in globs):
             continue

@@ -59,7 +59,7 @@ def _security_rows_for_slice(root, sl):
 
 def _close_ceremony(args):
     from engine.events import Sidecar, handle_event
-    from engine.gates.g3_scope import SUBSTRATE_PREFIXES
+    from engine.gates import exempt
     from engine.graph import (append_edge, load_edges, uses_vs_declares,
                               write_note, GraphError)
     from engine.registry import flip_status, load_registry, RegistryError
@@ -269,7 +269,7 @@ def _close_ceremony(args):
     overridden = override_targets(root, args.slice, "gate:G3", {"file", "boundary"})
     from fnmatch import fnmatch
     rogue = [t for t in touched
-             if not t.startswith(SUBSTRATE_PREFIXES)
+             if not exempt(t, config)
              and not any(fnmatch(t, pattern) for pattern in declared if pattern)
              and t not in overridden]
     if rogue:

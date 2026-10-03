@@ -13,9 +13,40 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .. import get_slice, load_boundaries, load_decisions
+from .. import (DEFAULT_EXEMPT_PATHS, HarnessError, get_slice,
+                load_boundaries, load_decisions)
 from ..registry import load_registry
 from .extra import ExtraGate, load_extra_gates, run_gate
+
+
+def exempt_paths(config) -> tuple:
+    """The `gates.exempt_paths` prefixes in force (spec 5.6).
+
+    Args:
+        config: Loaded engine config, or None.
+
+    Returns:
+        The configured prefixes, or `DEFAULT_EXEMPT_PATHS` when the key is
+        absent.
+
+    Raises:
+        HarnessError: The key is present but is not a list of non-empty
+            strings. A gate must never guess which files are exempt.
+    """
+    raw = ((config or {}).get("gates") or {}).get("exempt_paths")
+    if raw is None:
+        return DEFAULT_EXEMPT_PATHS
+    if (isinstance(raw, str) or not isinstance(raw, (list, tuple))
+            or not all(isinstance(p, str) and p.strip() for p in raw)):
+        raise HarnessError(
+            "gates.exempt_paths must be a list of path prefixes, for "
+            "example [\"docs/\", \"tests/\"]. Fix .harness/config.yaml.")
+    return tuple(raw)
+
+
+def exempt(rel: str, config) -> bool:
+    """True when a repo-relative path starts with an exempt prefix."""
+    return str(rel).replace("\\", "/").startswith(exempt_paths(config))
 
 
 class GateContext:
