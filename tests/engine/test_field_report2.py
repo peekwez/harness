@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from conftest import git, loaded_context, make_event, run_cli
+from conftest import cite_non_goals, git, loaded_context, make_event, run_cli
 from engine import load_config, read_jsonl, write_jsonl
 from engine.compiler import author_gate, compile_substrate, extract_non_goals
 from engine.events import Sidecar, handle_event
@@ -110,6 +110,7 @@ def test_descriptive_path_compiles_to_warning_not_block(toy):
 
 
 def test_g3_non_goal_block_is_overridable(toy):
+    cite_non_goals(toy, "adr:007")
     session = "g3ovr"
     loaded_context(toy, session=session)
     v = handle_event(make_event("pre_change", session=session,

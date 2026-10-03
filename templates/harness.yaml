@@ -13,7 +13,12 @@ gates:
   # `../` traversal and escaping symlinks are rejected. A gate module exposes:
   #
   #   GATE = {"id": "K1", "rule_ref": "adr:002",
-  #           "preferred": ["pre_change"], "fallback": ["post_change"]}
+  #           "preferred": ["pre_change"], "fallback": ["post_change"],
+  #           "cites": ["B-1a2b3c4d", "adr:007"]}
+  #
+  # `cites` (optional) names non-goal boundary ids or rule refs. G3 blocks a
+  # non-goal only when some gate cites it; other non-goals are advisory, and
+  # `harness compile` lists them under `advisory_only`.
   #
   #   def run(ctx) -> list[finding]
   #       # ctx is engine.gates.GateContext:

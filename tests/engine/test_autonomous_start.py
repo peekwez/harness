@@ -5,7 +5,7 @@ import json
 import subprocess
 import sys
 
-from conftest import PLUGIN_ROOT, git, run_cli
+from conftest import PLUGIN_ROOT, cite_non_goals, git, run_cli
 from engine import read_jsonl
 from engine.events import Sidecar
 
@@ -120,6 +120,7 @@ def test_undeclared_file_still_prompts(toy):
 def test_blocked_edit_still_denies(toy):
     """Auto-approval never softens a real block: the non-goal boundary
     denies even inside a bound slice."""
+    cite_non_goals(toy, "adr:007")
     run_cli("start", "--slice", "slice-042", "--session", "denied",
             "--no-worktree", root=toy)
     (toy / "legacy").mkdir(exist_ok=True)

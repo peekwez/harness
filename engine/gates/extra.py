@@ -420,6 +420,28 @@ def _validate_gate(gate, taken: set) -> None:
             raise ValueError(
                 f"GATE[{field!r}] names unknown events {unknown}; "
                 f"expected {list(EVENTS)}")
+    cites = gate.get("cites", [])
+    if (isinstance(cites, str) or not isinstance(cites, (list, tuple))
+            or not all(isinstance(c, str) and c.strip() for c in cites)):
+        raise TypeError(
+            "GATE['cites'] must be a list of non-goal boundary ids or rule "
+            "refs, for example [\"B-1a2b3c4d\", \"adr:007\"]")
+
+
+def cited_rules(gates: list) -> set:
+    """Every boundary id or rule ref that a loaded gate lists in
+    `GATE["cites"]` (spec 4.1). G3 blocks only the non-goals named here.
+
+    Args:
+        gates: Loaded gates (builtin modules or `ExtraGate`s).
+
+    Returns:
+        The union of their `cites` entries.
+    """
+    out = set()
+    for gate in gates:
+        out.update(gate.GATE.get("cites") or ())
+    return out
 
 
 def _load_error(entry, exc: BaseException) -> dict:

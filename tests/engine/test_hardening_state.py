@@ -1,7 +1,7 @@
 """Regression coverage for the September behavior audit."""
 import json
 
-from conftest import git, make_event, run_cli
+from conftest import cite_non_goals, git, make_event, run_cli
 from engine import read_jsonl, write_jsonl
 from engine.events import Sidecar, handle_event
 from engine.gates.g6_drift import acknowledge
@@ -134,6 +134,7 @@ def test_failed_substrate_commit_is_retryable(toy):
 
 
 def test_close_checks_hookless_non_goal_even_when_declared(toy):
+    cite_non_goals(toy, "adr:007")
     bind(toy)
     rows = read_jsonl(toy / ".harness/backlog.jsonl")
     rows[0]["predicted_files"].append("legacy/export.py")

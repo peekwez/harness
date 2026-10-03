@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from conftest import loaded_context, make_event
+from conftest import cite_non_goals, loaded_context, make_event
 from engine import load_config, token_estimate
 from engine.events import handle_event
 
@@ -44,7 +44,8 @@ def test_g3_radius_mode_same_package_allowed(tmp_path):
     assert "UNDECLARED_FILE" not in codes(v)
 
 
-def test_g3_non_goal_boundary_always_blocks(toy):
+def test_g3_cited_non_goal_blocks(toy):
+    cite_non_goals(toy, "adr:007")
     loaded_context(toy, session="g3ng")
     v = handle_event(make_event("pre_change", session="g3ng",
                                 files=["legacy/exporter.py"]), toy)

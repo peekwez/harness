@@ -142,7 +142,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     boundaries: dict = {}  # regenerated from scratch: derived files never accumulate
     report = {"decisions": [], "registry": [], "boundaries": [], "contracts": [],
               "contract_gaps": [], "pruned": [], "warnings": [], "adrs": [],
-              "skipped_superseded": []}
+              "skipped_superseded": [], "advisory_only": []}
     now = now_iso()
     superseded_adrs = _out_of_force(root)
     # per-compile authored view of each abstraction, rebuilt from in-force ADRs
@@ -374,6 +374,22 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 report["warnings"].append(
                     f"working-doc: non-goal {b['id']} has no backticked path/glob — "
                     f"G3 cannot enforce it")
+
+    # spec 4.1: a non-goal blocks only when a gates.extra gate cites it
+    from .gates import reserved_gate_ids
+    from .gates.extra import cited_rules, load_extra_gates
+    extra, _load_errors = load_extra_gates(
+        root, config, reserved_ids=reserved_gate_ids())
+    cited = cited_rules(extra)
+    for b in sorted(boundaries.values(), key=lambda b: b["id"]):
+        if not b.get("patterns"):
+            continue
+        if b["id"] in cited or b.get("rule_ref") in cited:
+            continue
+        report["advisory_only"].append(b["id"])
+        report["warnings"].append(
+            f"non-goal {b['id']} is advisory only. Cite it in a gates.extra "
+            f"GATE[\"cites\"] to make G3 block it.")
 
     write_jsonl(harness_dir(root) / "decisions.jsonl",
                 sorted(decisions.values(), key=lambda d: d["id"]))

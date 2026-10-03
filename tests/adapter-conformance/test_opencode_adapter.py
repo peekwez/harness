@@ -14,6 +14,7 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PLUGIN_ROOT / "tests"))
 sys.path.insert(0, str(PLUGIN_ROOT))
+from conftest import cite_non_goals  # noqa: E402
 
 NODE = shutil.which("node")
 
@@ -92,6 +93,7 @@ def run_driver(toy, env_extra=None):
 
 @pytest.mark.skipif(NODE is None, reason="node not available")
 def test_opencode_plugin_full_flow(toy):
+    cite_non_goals(toy, "adr:007")
     r = run_driver(toy)
     assert r["deny-before-phase1"] == "NO-THROW"
     assert r["allow-after-inject"] == "ok"

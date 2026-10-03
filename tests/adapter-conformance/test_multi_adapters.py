@@ -12,6 +12,7 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PLUGIN_ROOT / "tests"))
 sys.path.insert(0, str(PLUGIN_ROOT))
+from conftest import cite_non_goals  # noqa: E402
 
 ADAPTERS = {
     "codex": PLUGIN_ROOT / "adapters" / "codex" / "adapter.py",
@@ -105,6 +106,7 @@ def test_allow_then_inject_then_allow(toy, name):
 
 @pytest.mark.parametrize("name", sorted(ADAPTERS))
 def test_non_goal_boundary_denied(toy, name):
+    cite_non_goals(toy, "adr:007")
     spec = SPEC[name]
     session = f"{name}-ng"
     run_adapter(name, spec["session_start"], toy, session=session)

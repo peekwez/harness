@@ -23,7 +23,7 @@ Order of operations:
    Completeness pressure is visible, not vibes.
 3. **Typed blocks.** Every answer lands in the working document as one of:
    `[constraint]`, `[assumption]`, `[open-question]`, `[non-goal]`.
-   Non-goals with backticked paths/globs become G3 boundaries at compile time,
+   Non-goals with backticked paths/globs become G3 boundaries at compile time (advisory unless a gate cites them),
    so capture concrete paths when the human names them.
 4. **Verification design.** As the feature takes shape, use
    `../verification/design.md` to make the happy path and relevant edge cases

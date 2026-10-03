@@ -230,6 +230,34 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
     return root
 
 
+CITE_GATE = '''"""Test helper gate: cites non-goals so G3 blocks them (spec 4.1)."""
+GATE = {"id": "TOY-CITES", "rule_ref": "adr:007",
+        "preferred": ["unit_complete"], "cites": %r}
+
+
+def run(ctx):
+    return []
+'''
+
+
+def cite_non_goals(root, *rules):
+    """Install a `gates.extra` gate whose GATE["cites"] lists `rules`
+    (boundary ids or rule refs). In 0.10 G3 blocks only cited non-goals."""
+    import yaml
+    root = Path(root)
+    gates_dir = root / ".harness" / "gates"
+    gates_dir.mkdir(parents=True, exist_ok=True)
+    (gates_dir / "toy_cites.py").write_text(CITE_GATE % (list(rules),))
+    cfg_path = root / ".harness" / "config.yaml"
+    doc = yaml.safe_load(cfg_path.read_text()) or {}
+    gates = doc.setdefault("gates", {})
+    extra = list(gates.get("extra") or [])
+    if ".harness/gates/toy_cites.py" not in extra:
+        extra.append(".harness/gates/toy_cites.py")
+    gates["extra"] = extra
+    cfg_path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
 def oversize_slice(root: Path, slice_id: str = "slice-042", n: int = 300) -> None:
     """Grow one slice card past MAX_INJECTION_CHARS with predicted files."""
     from engine import read_jsonl

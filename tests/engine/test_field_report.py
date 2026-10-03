@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from conftest import loaded_context, make_event, run_cli
+from conftest import cite_non_goals, loaded_context, make_event, run_cli
 from engine import read_jsonl, write_jsonl
 from engine.compiler import (author_gate, compile_substrate, extract_non_goals,
                              _unresolved_open_questions)
@@ -299,6 +299,7 @@ def test_compile_adopts_source_into_seeded_planned_entries(toy):
 def test_denied_pre_change_records_no_phantom_touch(toy):
     """A blocked edit never happened: it must not demand G3 reconciliation
     at close-slice (found live in the todo-api walkthrough)."""
+    cite_non_goals(toy, "adr:007")
     from engine.events import Sidecar, handle_event
     loaded_context(toy, session="phantom")
     v = handle_event(make_event("pre_change", session="phantom",

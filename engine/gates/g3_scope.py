@@ -1,8 +1,11 @@
 """G3 scope: touched files against the slice declaration and the non-goals.
 
 0.10 (D-0.10-01): a file outside the declaration is an advisory finding.
-Config `g3_mode: radius` also skips files in a declared file's directory.
-Files under `gates.exempt_paths` raise no scope finding.
+A non-goal blocks only when a `gates.extra` gate cites its boundary id or
+rule ref in `GATE["cites"]`; otherwise it is advisory. A recorded override
+downgrades a cited block to an audited advisory. Config `g3_mode: radius`
+also skips files in a declared file's directory. Files under
+`gates.exempt_paths` raise no scope finding.
 """
 from __future__ import annotations
 
@@ -38,34 +41,45 @@ def _declared_set(ctx) -> set:
     return declared
 
 
+def _non_goal_finding(rel, pat, boundary, overridden, cited) -> dict:
+    """One NON_GOAL_VIOLATION. Blocks only when a gates.extra gate cites the
+    boundary id or its rule ref; a recorded override downgrades a block to
+    an audited advisory (spec 4.1)."""
+    rule_ref = (boundary.get("rule_ref")
+                or f"adr:{boundary.get('source_adr', 'phase0')}")
+    bid = boundary.get("id")
+    if bid in overridden or rel in overridden:
+        return make_finding(
+            "NON_GOAL_VIOLATION", rule_ref,
+            f"{rel} matches non-goal boundary {pat!r} but carries a "
+            f"recorded override (audited)",
+            severity="advisory", key=rel + "|" + pat + "|ovr")
+    if bid in cited or rule_ref in cited:
+        return make_finding(
+            "NON_GOAL_VIOLATION", rule_ref,
+            f"{rel} matches non-goal boundary {pat!r}: "
+            f"{boundary.get('text', '')} (override with `harness gates "
+            f"override --target boundary:{bid}` + justification)",
+            severity="block", key=rel + "|" + pat)
+    return make_finding(
+        "NON_GOAL_VIOLATION", rule_ref,
+        f"G3: {rel} is inside non-goal {bid}, which no gate cites. To block "
+        f"it, cite {bid} in a gates.extra GATE[\"cites\"].",
+        severity="advisory", key=rel + "|" + pat + "|uncited")
+
+
 def check(ctx) -> list:
     findings = []
     touched = [ctx.rel(p) for p in ctx.touched_files()]
     overridden = _overridden(ctx)
 
-    # Non-goal boundaries always bind, slice or no slice — but a recorded
-    # override (boundary id or file path) downgrades the block to an
-    # auditable advisory, same escape hatch as G5.
+    # Non-goals bind slice or no slice; only cited ones block (spec 4.1).
     for rel in touched:
         for b in ctx.boundaries:
             for pat in b.get("patterns", []):
-                if not fnmatch(rel, pat):
-                    continue
-                if b.get("id") in overridden or rel in overridden:
-                    findings.append(make_finding(
-                        "NON_GOAL_VIOLATION",
-                        b.get("rule_ref") or f"adr:{b.get('source_adr', 'phase0')}",
-                        f"{rel} matches non-goal boundary {pat!r} but carries a "
-                        f"recorded override (audited)",
-                        severity="advisory", key=rel + "|" + pat + "|ovr"))
-                    continue
-                findings.append(make_finding(
-                    "NON_GOAL_VIOLATION",
-                    b.get("rule_ref") or f"adr:{b.get('source_adr', 'phase0')}",
-                    f"{rel} matches non-goal boundary {pat!r}: {b.get('text', '')} "
-                    f"(override with `harness gates override --target "
-                    f"boundary:{b.get('id')}` + justification)",
-                    severity="block", key=rel + "|" + pat))
+                if fnmatch(rel, pat):
+                    findings.append(_non_goal_finding(rel, pat, b, overridden,
+                                                      ctx.cited))
 
     if not ctx.work_unit_id:
         return findings

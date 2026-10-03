@@ -16,7 +16,7 @@ from pathlib import Path
 from .. import (DEFAULT_EXEMPT_PATHS, HarnessError, get_slice,
                 load_boundaries, load_decisions)
 from ..registry import load_registry
-from .extra import ExtraGate, load_extra_gates, run_gate
+from .extra import ExtraGate, cited_rules, load_extra_gates, run_gate
 
 
 def exempt_paths(config) -> tuple:
@@ -64,6 +64,7 @@ class GateContext:
         self._slice = None
         self._decisions = None
         self._boundaries = None
+        self._cited = None
 
     @property
     def registry(self):
@@ -88,6 +89,15 @@ class GateContext:
         if self._boundaries is None:
             self._boundaries = load_boundaries(self.root)
         return self._boundaries
+
+    @property
+    def cited(self) -> set:
+        """Non-goal ids and rule refs that a `gates.extra` gate cites."""
+        if self._cited is None:
+            extra, _errors = load_extra_gates(
+                self.root, self.config, reserved_ids=reserved_gate_ids())
+            self._cited = cited_rules(extra)
+        return self._cited
 
     def touched_files(self) -> list:
         return [f["path"] for f in self.payload.get("files", [])]
@@ -176,6 +186,7 @@ def run_gates(root, event: dict, config: dict, sidecar) -> list:
     extra, findings = load_extra_gates(
         root, config, reserved_ids=reserved_gate_ids())
     findings = list(findings)
+    ctx._cited = cited_rules(extra)
     for gate in select_gates(builtins + extra, event["event"], degraded):
         if isinstance(gate, ExtraGate):
             findings.extend(run_gate(gate, ctx))

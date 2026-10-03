@@ -48,7 +48,11 @@ Rules:
   (`services/legacy/**`) or `forbid:`-marked paths (forbid: `infra/x.yaml`)
   compile into blocking patterns. A path merely NAMED in prose ("wiring
   lives in `infra/x.yaml`") is descriptive — compile warns and does NOT
-  block it. Non-goals are paragraph-scoped; tokens inside code spans are
+  block it.
+  A compiled non-goal blocks only when a `gates.extra` gate lists its
+  boundary id or its rule ref (`adr:NNN`) in `GATE["cites"]`; otherwise G3
+  reports it as advisory and `compile` lists it under `advisory_only`.
+  Non-goals are paragraph-scoped; tokens inside code spans are
   prose. Superseded ADRs (status: superseded, or listed in another ADR's
   `supersedes`) compile to nothing — their decisions, refs, and boundaries
   drop on the next compile.

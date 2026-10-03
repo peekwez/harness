@@ -30,14 +30,14 @@ extrapolation; the compiled form is what gates read:
   contracts only. Existing contracts are authored and never rewritten:
   compile reports uncovered surface as `contract_gaps` (and author-gate
   blocks until the contract covers them or the ADR drops them)
-- `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 scope boundaries).
+- `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 boundaries; advisory unless a `gates.extra` gate cites them).
   boundaries.jsonl is REGENERATED on every run from ADRs + this doc — fix
   the source, recompile, stale boundaries disappear
 
-Read out the compile report's `warnings` (pattern-less non-goals, coerced
+Read out the compile report's `warnings` (pattern-less non-goals, advisory-only non-goals, coerced
 kinds, contract gaps) to the human — each one is a silent-degradation
 candidate the compiler refused to hide.
-- `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 scope boundaries)
+- `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 boundaries; advisory unless a `gates.extra` gate cites them)
 
 Show the human the diff of each substrate file and confirm nothing compiled
 surprisingly. If a decision row reads wrong, correct its authored source:

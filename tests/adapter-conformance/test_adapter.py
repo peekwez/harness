@@ -10,6 +10,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PLUGIN_ROOT / "tests"))
 sys.path.insert(0, str(PLUGIN_ROOT))
+from conftest import cite_non_goals  # noqa: E402
 
 ADAPTER = PLUGIN_ROOT / "hooks" / "adapter.py"
 
@@ -47,6 +48,7 @@ def test_session_start_translates_and_injects(toy):
 
 
 def test_pre_tool_use_deny_with_reason(toy):
+    cite_non_goals(toy, "adr:007")
     code, out, err = run_adapter(
         {"hook_event_name": "PreToolUse", "session_id": "ac-2",
          "tool_name": "Edit",
