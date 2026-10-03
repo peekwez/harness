@@ -16,6 +16,16 @@ from .ensemble import run_ensemble
 
 RUBRIC_SCHEMA_FIELDS = ("answer", "confidence", "evidence")
 
+# Layer 2 is opt-in (spec 10.3): `review.ensemble: true` resamples a
+# low-confidence would-block answer. Off, that answer parks unresampled.
+ENSEMBLE_TRIGGER_BELOW = 0.7
+ENSEMBLE_SAMPLES = 3
+
+
+def ensemble_enabled(config) -> bool:
+    """True when the repo opted into ensemble sampling and golden replay."""
+    return bool(((config or {}).get("review") or {}).get("ensemble", False))
+
 
 def _deterministic_rubrics():
     """Rubrics answerable from Layer-0 facts alone. Each returns
@@ -131,8 +141,6 @@ def run_review(root, facts: dict, config: dict, model=None,
                 key=facts["slice"] + "|" + rubric["id"]))
 
     if model is not None:
-        threshold = float(config["ensemble"]["trigger_confidence_below"])
-        samples = int(config["ensemble"]["samples"])
         for rubric in _model_rubrics(root):
             ctx = {"facts": {k: facts[k] for k in
                              ("diff_files", "uses_declares", "decisions_in_scope",
@@ -143,9 +151,18 @@ def run_review(root, facts: dict, config: dict, model=None,
             would_block = rubric["severity_if_fail"] == "block" and out["answer"] == "fail"
             # Layer 2: ensemble only when confidence < threshold AND severity
             # would block. Splits escalate as uncertain — never averaged.
-            if would_block and out["confidence"] < threshold:
-                out = run_ensemble(model, rubric["question"], ctx, samples,
-                                   validate=lambda o: _validate_model_output(o, rubric["id"]))
+            if would_block and out["confidence"] < ENSEMBLE_TRIGGER_BELOW:
+                if ensemble_enabled(config):
+                    out = run_ensemble(
+                        model, rubric["question"], ctx, ENSEMBLE_SAMPLES,
+                        validate=lambda o: _validate_model_output(o, rubric["id"]))
+                else:
+                    out = {"answer": "uncertain", "confidence": out["confidence"],
+                           "evidence": (
+                               f"confidence {out['confidence']:.2f} is below "
+                               f"{ENSEMBLE_TRIGGER_BELOW}; review.ensemble is "
+                               f"off, so this parks without resampling. "
+                               f"{out['evidence']}")}
             if layer >= 3:
                 # Layer 3 is advisory-only: findings can only spawn proposals.
                 if out["answer"] != "pass":
@@ -165,7 +182,7 @@ def run_review(root, facts: dict, config: dict, model=None,
             elif out["answer"] == "uncertain":
                 f = make_finding(
                     "REVIEW_UNCERTAIN", rubric["rule_ref"],
-                    f"{rubric['question']} -> ensemble split; parked for "
+                    f"{rubric['question']} -> uncertain; parked for "
                     f"adjudication. {out['evidence']}",
                     severity="gate", layer=2,
                     precedents=ctx["precedents"],

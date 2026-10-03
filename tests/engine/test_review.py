@@ -145,6 +145,7 @@ def test_ensemble_split_escalates_uncertain_never_average():
 def test_ensemble_split_parks_with_gate_severity(toy):
     """A split on a would-block rubric produces severity gate -> park."""
     config = load_config(toy)
+    config["review"]["ensemble"] = True   # this test pins the sampling path
     outputs = {Q_DECISIONS: [
         {"answer": "fail", "confidence": 0.4, "evidence": "low-confidence fail"},
         {"answer": "pass", "confidence": 0.9, "evidence": "looks fine"},

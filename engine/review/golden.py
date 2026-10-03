@@ -34,6 +34,10 @@ def replay(root, golden_dir, config) -> dict:
     from .layer0 import assemble
     from .rubrics import run_review
 
+    # Replay is the ensemble's regression check: it always runs that path.
+    config = {**config, "review": {**(config.get("review") or {}),
+                                   "ensemble": True}}
+
     golden_dir = Path(golden_dir)
     pairs = sorted(golden_dir.glob("*.json"))
     if not pairs:

@@ -195,8 +195,8 @@ DEFAULT_CONFIG = {
         "acceptance_runner": "pytest",          # or: none (skill-enforced only)
         "acceptance_python": None,              # default: .venv/bin/python if present
     },
-    "ensemble": {"trigger_confidence_below": 0.7, "samples": 3},
-    "review": {"fork_for_security_rows": True},   # ADR-001
+    "review": {"fork_for_security_rows": True,   # ADR-001
+               "ensemble": False},               # spec 10.3: opt-in
     "extractor": {"src_roots": list(DEFAULT_SRC_ROOTS)},
     "shadows": {"include": [], "exclude": []},
     "languages": {"python": True, "typescript": True, "rust": True,

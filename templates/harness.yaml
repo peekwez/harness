@@ -94,8 +94,10 @@ gates:
 #   remote: origin
 #   base: main
 #   pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
-ensemble:
-  trigger_confidence_below: 0.7
-  samples: 3
+review:
+  # Ensemble sampling and golden replay (opt-in, default off). On, a
+  # low-confidence would-block rubric answer is resampled 3 times and a
+  # split parks; `harness review --replay` runs the golden set.
+  ensemble: false
 languages:
 {{languages}}

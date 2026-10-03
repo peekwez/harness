@@ -77,6 +77,12 @@ def cmd_review(args):
                 "edge": edge})
         return 0
     if args.replay:
+        from engine.review.rubrics import ensemble_enabled
+        if not ensemble_enabled(config):
+            print("error: golden replay is opt-in. Set review.ensemble: true "
+                  "in .harness/config.yaml, then run it again.",
+                  file=sys.stderr)
+            return 2
         golden = Path(args.golden or (PLUGIN_ROOT / "tests" / "fixtures" / "golden-set"))
         result = replay(root, golden, config)
         _print(result)
