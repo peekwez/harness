@@ -225,6 +225,9 @@ def main():
         cmd = [sys.executable, HARNESS]
         if root:
             cmd += ["--root", str(root)]
+        # Run both, always: a failed reset must not drop the flush and its
+        # COMPACTION_REACHED signal. Report each failure, then fail loud.
+        failed = False
         for args in (["resolve", "--reset", "--session", session],
                      ["memory", "flush", "--session", session, "--compaction"]):
             proc = subprocess.run(cmd + args, capture_output=True, text=True)
@@ -234,8 +237,8 @@ def main():
                     return 0
                 print(f"harness PreCompact {args[0]} failed: {err}",
                       file=sys.stderr)
-                return 1  # fail loud: losing the defect signal is itself a defect
-        return 0
+                failed = True
+        return 1 if failed else 0
 
     # Bash is a permission question, not an EnforcementEvent: the five-event
     # contract is about file changes. A bound slice's own loop commands are

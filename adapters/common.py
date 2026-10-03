@@ -163,6 +163,9 @@ def flush_compaction(session: str) -> int:
     if root:
         cmd += ["--root", str(root)]
     session = session or "unknown-session"
+    # Run both, always: a failed reset must not drop the flush and its
+    # COMPACTION_REACHED signal. Report each failure, then fail loud.
+    failed = False
     for args in (["resolve", "--reset", "--session", session],
                  ["memory", "flush", "--session", session, "--compaction"]):
         proc = subprocess.run(cmd + args, capture_output=True, text=True)
@@ -171,8 +174,8 @@ def flush_compaction(session: str) -> int:
             if "no .harness substrate" in err:
                 return 0
             print(f"harness compaction {args[0]} failed: {err}", file=sys.stderr)
-            return 1
-    return 0
+            failed = True
+    return 1 if failed else 0
 
 
 def emit(obj) -> None:

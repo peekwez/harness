@@ -314,3 +314,46 @@ def test_precompact_clears_hashes_so_the_next_prompt_reinjects(toy):
         {"hook_event_name": "UserPromptSubmit", "session_id": "ac-pc",
          "prompt": "after compaction"}, toy, slice_id="slice-042")
     assert "D-041" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def _failing_reset_bin(tmp_path):
+    """A stand-in engine: `resolve --reset` fails, everything is logged."""
+    log = tmp_path / "calls.log"
+    fake = tmp_path / "fake_harness.py"
+    fake.write_text(
+        "import sys\n"
+        f"open({str(log)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "if 'resolve' in sys.argv:\n"
+        "    print('reset exploded', file=sys.stderr)\n"
+        "    sys.exit(1)\n")
+    return fake, log
+
+
+def test_precompact_flushes_memory_even_when_reset_fails(toy, tmp_path):
+    """A failed reset must not drop COMPACTION_REACHED: both run, the hook
+    names the failure and exits non-zero."""
+    fake, log = _failing_reset_bin(tmp_path)
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreCompact", "session_id": "ac-reset"},
+        toy, slice_id="slice-042", harness_bin=fake)
+    calls = log.read_text()
+    assert "resolve --reset" in calls
+    assert "memory flush" in calls and "--compaction" in calls
+    assert code != 0 and "resolve" in err and "reset exploded" in err
+
+
+def test_common_flush_compaction_flushes_even_when_reset_fails(
+        toy, tmp_path, monkeypatch, capsys):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "harness_adapters_common_m2", PLUGIN_ROOT / "adapters" / "common.py")
+    common = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(common)
+    fake, log = _failing_reset_bin(tmp_path)
+    monkeypatch.setattr(common, "HARNESS", str(fake))
+    monkeypatch.setattr(common, "resolve_root", lambda *a, **k: toy)
+    assert common.flush_compaction("ac-reset") != 0
+    calls = log.read_text()
+    assert "resolve --reset" in calls
+    assert "memory flush" in calls and "--compaction" in calls
+    assert "reset exploded" in capsys.readouterr().err
