@@ -68,23 +68,34 @@ def run_adapter(name, hook_json, cwd, slice_id="slice-042", session="mc-1"):
     return proc.returncode, out, proc.stderr
 
 
+def _drift_and_touch(toy, session):
+    """Bind a G6 baseline, change telemetry's interface, record the touch."""
+    from conftest import loaded_context, make_event
+    from engine.events import handle_event
+    loaded_context(toy, session=session)
+    src = toy / "telemetry.py"
+    src.write_text(src.read_text().replace(
+        "def emit_span(name: str, attrs: dict) -> dict:",
+        "def emit_span(name: str, attrs: dict, level: int = 0) -> dict:"))
+    handle_event(make_event("post_change", session=session,
+                            files=["telemetry.py"]), toy)
+
+
 @pytest.mark.parametrize("name", sorted(ADAPTERS))
-def test_deny_before_phase1_then_inject_then_allow(toy, name):
+def test_allow_then_inject_then_allow(toy, name):
     spec = SPEC[name]
     session = f"{name}-flow"
-    # 1. pre-change before Phase 1 -> G2 deny in the host's verdict dialect
+    # 1. an edit before Phase 1 is allowed: context does not gate edits
     code, out, err = run_adapter(name, spec["pre_change"]("orders.py"), toy,
                                  session=session)
     assert code == 0, err
-    assert spec["is_deny"](out), out
-    assert "gate:G2" in spec["deny_reason"](out)
+    assert out is None or not spec["is_deny"](out), out
     # 2. session start -> context injection in the host's dialect
     code, out, err = run_adapter(name, spec["session_start"], toy,
                                  session=session)
     assert code == 0
-    ctx = spec["ctx_of"](out)
-    assert "shadow:telemetry" in ctx or "emit_span" in ctx
-    # 3. same edit now allowed
+    assert "D-041" in spec["ctx_of"](out)
+    # 3. the same edit is still allowed
     code, out, err = run_adapter(name, spec["pre_change"]("orders.py"), toy,
                                  session=session)
     assert code == 0
@@ -125,35 +136,26 @@ def test_inert_without_substrate(tmp_path, name):
 
 
 def test_codex_stop_loop_guard(toy):
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
+    _drift_and_touch(toy, "mc-1")
     code, out, err = run_adapter("codex", {"hook_event_name": "Stop"}, toy)
-    assert out["decision"] == "block" and "DERIVATION_MISMATCH" in out["reason"]
+    assert out["decision"] == "block" and "INTERFACE_DRIFT" in out["reason"]
     code, out, err = run_adapter(
         "codex", {"hook_event_name": "Stop", "stop_hook_active": True}, toy)
     assert out is None  # never re-block
 
 
 def test_cursor_stop_uses_followup_and_loop_count(toy):
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
+    _drift_and_touch(toy, "mc-1")
     code, out, err = run_adapter("cursor", {"hook_event_name": "stop",
                                             "loop_count": 0}, toy)
-    assert "followup_message" in out and "DERIVATION_MISMATCH" in out["followup_message"]
+    assert "followup_message" in out and "INTERFACE_DRIFT" in out["followup_message"]
     code, out, err = run_adapter("cursor", {"hook_event_name": "stop",
                                             "loop_count": 5}, toy)
     assert out is None  # loop guard
 
 
 def test_gemini_after_agent_blocks_once(toy):
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
+    _drift_and_touch(toy, "mc-1")
     code, out, err = run_adapter("gemini", {"hook_event_name": "AfterAgent"}, toy)
     assert out["decision"] == "block"
     code, out, err = run_adapter("gemini", {"hook_event_name": "AfterAgent",

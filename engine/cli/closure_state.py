@@ -163,7 +163,6 @@ def source_matches_commit(root, commit):
 def prepare_files(root, sl, sidecar, session, commit, config):
     """Discover all changes before any review or conformance check."""
     from engine.events import _regenerate_touched, rel_in_root
-    from engine.extractor.engine import shadow_path_for
     from engine.graph import load_edges
     touched = sidecar.touched_paths(slice_id=sl["id"])
     touched |= {e["to"][5:] for e in load_edges(root)
@@ -179,9 +178,6 @@ def prepare_files(root, sl, sidecar, session, commit, config):
         touched |= {p for p in _git(root, *args).split("\0") if p}
     touched = {p for p in touched if rel_in_root(root, p)
                and not any(part in IGNORED_DIRS for part in Path(p).parts)}
-    missing = {p for p in touched if (Path(root) / p).is_file()
-               and not shadow_path_for(root, Path(root) / p).exists()}
     sidecar.touch(session, sl["id"], sorted(touched))
     _regenerate_touched(root, sidecar, session, sl["id"], config)
-    extracted = sorted(p for p in missing if shadow_path_for(root, Path(root) / p).exists())
-    return sorted(touched), extracted
+    return sorted(touched)

@@ -15,14 +15,6 @@ def test_clean_repo_passes(toy):
     assert code == 0 and out["passed"], out["findings"]
 
 
-def test_stale_shadow_fails_with_derivation_mismatch(toy):
-    (toy / "telemetry.py").write_text(
-        open(toy / "telemetry.py").read() + "\ndef added(x):\n    return x\n")
-    code, out = verify(toy)
-    assert code == 1
-    codes = {f["code"] for f in out["findings"]}
-    assert "DERIVATION_MISMATCH" in codes
-    assert "HASH_MISMATCH" in codes  # built entry's recorded hash is stale too
 
 
 def test_missing_manifest_file_fails(toy):
@@ -73,13 +65,6 @@ def test_unreconciled_closed_slice_fails(toy):
     assert hits and "ghost" in hits[0]["message"]
 
 
-def test_deleted_built_shadow_fails(toy):
-    """The md-file-bug limit case: a missing derived artifact must fail CI."""
-    (toy / ".harness" / "shadows" / "telemetry.py.json").unlink()
-    code, out = verify(toy)
-    assert code == 1
-    hits = [f for f in out["findings"] if f["code"] == "MISSING_SHADOW"]
-    assert hits and "telemetry" in hits[0]["message"]
 
 
 def test_corrupt_backlog_fails_loud(toy):
@@ -89,15 +74,6 @@ def test_corrupt_backlog_fails_loud(toy):
     assert any(f["code"] == "SCHEMA_MISMATCH" for f in out["findings"])
 
 
-def test_reformatted_shadow_fails_derivation(toy):
-    """'Regenerates identically' is byte-level: reformatting a derived file
-    is still a hand-edit."""
-    import json as j
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    sp.write_text(j.dumps(j.loads(sp.read_text()), indent=4))
-    code, out = verify(toy)
-    assert code == 1
-    assert any(f["code"] == "DERIVATION_MISMATCH" for f in out["findings"])
 
 
 def test_schema_mismatch_fails(toy):

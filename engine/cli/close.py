@@ -95,9 +95,10 @@ def cmd_close_slice(args):
 # ------------------------------------------------------------------ merge-slice
 def cmd_merge_slice(args):
     """imp-4: the mechanical tail after an in-worktree close, one command —
-    merge the slice branch into the current (main) tree, regenerate and
-    commit shadows from the merged sources, run the G4 safety net, remove
-    the worktree and branch."""
+    merge the slice branch into the current (main) tree, run the accumulated
+    acceptance suite and the unit_complete gates on the merged tree, commit
+    the substrate, remove the worktree and branch. Shadows are a gitignored
+    cache: nothing is regenerated or committed for them."""
     import subprocess
     from engine import telemetry
     root = _root(args)
@@ -264,20 +265,6 @@ def cmd_merge_slice(args):
     if changed is not None:
         return changed
 
-    # shadows never content-merge (W10): regenerate from the merged tree,
-    # THEN run the G4 safety net, THEN commit — every byte this ceremony
-    # writes (shadows, telemetry) rides in its own substrate commit
-    from engine.extractor.engine import extract_all
-    try:
-        ex = extract_all(root, config)
-    except Exception as exc:
-        return rollback(
-            f"merged-tree extraction failed — merge rolled back: {exc}")
-    changed = reject_uncommitted_product_changes(
-        "merged-tree extraction", merged_head)
-    if changed is not None:
-        return changed
-
     from engine.events import handle_event
     try:
         verdict = handle_event({
@@ -292,16 +279,13 @@ def cmd_merge_slice(args):
         return rollback(
             "merged tree failed unit_complete gates — merge rolled back; "
             f"fix on branch {branch} and re-run merge-slice",
-            gates="block", findings=verdict["findings"],
-            shadows={"written": len(ex["written"]),
-                     "pruned": ex["pruned"]})
+            gates="block", findings=verdict["findings"])
     changed = reject_uncommitted_product_changes(
         "merged-tree event checks", merged_head)
     if changed is not None:
         return changed
     telemetry.emit(root, "slice_merged", {
-        "slice": args.slice, "gates": verdict["verdict"],
-        "shadows_written": len(ex["written"]), "pruned": ex["pruned"]})
+        "slice": args.slice, "gates": verdict["verdict"]})
     telemetry.flush(root)      # buffered hook events land with the merge
     changed = reject_uncommitted_product_changes(
         "merge telemetry", merged_head)
@@ -319,7 +303,7 @@ def cmd_merge_slice(args):
                 findings=[f["code"] for f in verdict["findings"]],
                 substrate_commit=None)
         c = _git("commit", "-q", "-m",
-                 f"harness: merge-slice {args.slice} substrate regen",
+                 f"harness: merge-slice {args.slice} substrate",
                  "--", ".harness")
         if c.returncode == 0:
             substrate_commit = _git("rev-parse", "HEAD").stdout.strip()
@@ -352,7 +336,5 @@ def cmd_merge_slice(args):
     _print({"merged": True, "slice": args.slice,
             "gates": verdict["verdict"],
             "findings": [f["code"] for f in verdict["findings"]],
-            "shadows": {"written": len(ex["written"]),
-                        "pruned": ex["pruned"]},
             "substrate_commit": substrate_commit, **cleanup})
     return 0

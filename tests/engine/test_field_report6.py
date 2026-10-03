@@ -104,9 +104,8 @@ def test_backlog_estimate_still_works_without_subcommand(toy):
 
 # ---------------------------------------------------------------- imp-4
 def test_merge_slice_finishes_the_mechanical_tail(toy):
-    """The whole post-close ceremony in one command: merge the branch,
-    regenerate+commit shadows, run the G4 safety net, remove worktree and
-    branch."""
+    """The whole post-close ceremony in one command: merge the branch, run the
+    merged-tree checks, commit substrate, remove worktree and branch."""
     wt = toy / ".worktrees" / "slice-042"
     assert git(toy, "worktree", "add", str(wt), "-b",
                "slice/slice-042").returncode == 0
@@ -123,6 +122,7 @@ def test_merge_slice_finishes_the_mechanical_tail(toy):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     assert out["merged"] is True
+    assert "shadows" not in out
     assert (toy / "orders.py").exists(), "slice work must land in main"
     rows = {r["id"]: r for r in read_jsonl(toy / ".harness" / "backlog.jsonl")}
     assert rows["slice-042"]["status"] == "closed"

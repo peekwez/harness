@@ -107,22 +107,18 @@ def test_close_warns_when_started_at_commit_is_missing(toy):
 
 # ---------------------------------------------------------------- S3
 def test_cache_invalidated_when_language_is_toggled_off(toy):
-    """Language toggled off: the cached real shadow must not be served while
-    G7 regenerates a degenerate one — that's the W7 deadlock again."""
-    from engine.gates.g7_derivation import derivation_findings
+    """Language toggled off: the cached real shadow must not be served."""
+    from engine.extractor.engine import shadow_path_for
     import yaml
     cfg_path = toy / ".harness" / "config.yaml"
     cfg = yaml.safe_load(cfg_path.read_text())
     cfg["languages"]["python"] = False
     cfg_path.write_text(yaml.safe_dump(cfg))
-    config = load_config(toy)
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "telemetry.py" in json.loads(proc.stdout)["written"]
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     assert json.loads(sp.read_text())["language"] == "unknown"
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, config))
 
 
 def test_cache_invalidated_when_deps_arrive_after_degenerate_shadow(toy):
@@ -130,7 +126,6 @@ def test_cache_invalidated_when_deps_arrive_after_degenerate_shadow(toy):
     cache MISS once the deps exist."""
     from engine.extractor.engine import (EXTRACTOR_VERSION, _degenerate_shadow,
                                          write_shadow)
-    from engine.gates.g7_derivation import derivation_findings
     src = toy / "telemetry.py"
     shadow = _degenerate_shadow(toy, src, src.read_bytes())
     assert shadow["extractor_version"] == EXTRACTOR_VERSION
@@ -139,42 +134,42 @@ def test_cache_invalidated_when_deps_arrive_after_degenerate_shadow(toy):
     out = json.loads(proc.stdout)
     assert "telemetry.py" in out["written"], \
         "same hash + same version but wrong KIND must not cache-hit"
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
 
 
-# ---------------------------------------------------------------- S4
 def test_extract_all_prunes_shadows_of_deleted_sources(toy):
-    """A slice that deletes a source must be closable: the orphaned shadow is
-    stale derived state and --all removes it (never hand-delete)."""
-    from engine.gates.g7_derivation import derivation_findings
+    """A deleted source leaves a stale cache entry; --all removes it."""
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "config.py")
     (toy / "config.py").unlink()
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     assert "config.py" in out.get("pruned", []), out
-    assert not (toy / ".harness" / "shadows" / "config.py.json").exists()
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
+    assert not sp.exists()
 
 
-# ---------------------------------------------------------------- S5
-def test_g7_reports_out_of_root_shadow_instead_of_crashing(toy):
-    from engine.gates.g7_derivation import derivation_findings
-    evil = toy / ".harness" / "shadows" / "evil.json"
+def test_extract_all_prunes_a_corrupt_out_of_root_shadow(toy):
+    from engine.extractor.engine import shadow_path_for
+    evil = shadow_path_for(toy, toy / "evil")       # <cache>/evil.json
+    evil.parent.mkdir(parents=True, exist_ok=True)
     evil.write_text(json.dumps({"source_path": "../outside.py",
                                 "source_hash": "sha256:0", "symbols": []}))
     (toy.parent / "outside.py").write_text("x = 1\n")
-    findings = derivation_findings(toy, load_config(toy))   # must not raise
-    assert any(f["code"] == "DERIVATION_MISMATCH" and "evil" in f["message"]
-               for f in findings)
     proc = run_cli("gates", "--event", "unit_complete", "--slice", "slice-042",
                    root=toy)
     assert proc.returncode in (0, 1), proc.stderr
     assert "verdict" in proc.stdout, "hooks must get a verdict, not an error"
-    # and extract --all is the universal fix: it prunes the corrupt artifact
     run_cli("extract", "--all", root=toy)
     assert not evil.exists()
+
+
+
+
+
+# ---------------------------------------------------------------- S4
+
+
+# ---------------------------------------------------------------- S5
 
 
 def test_relative_traversal_paths_never_poison_the_sidecar(toy):
@@ -328,31 +323,3 @@ def test_adapter_routes_by_any_file_not_just_the_first(toy, tmp_path):
         sc.close()
 
 
-def test_close_covers_extensionless_touched_files(toy):
-    """Makefile-class files are enforced surface too: a touched one with no
-    shadow gets one at close (the W3 auto-extract contract), never a silent
-    pass."""
-    session = "mkfile"
-    run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
-    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"] = ["orders.py", "Makefile"]
-    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(GOOD_ORDERS)
-    (toy / "Makefile").write_text("all:\n\techo hi\n")
-    handle_event(make_event("post_change", session=session,
-                            files=["orders.py", "Makefile"]), toy)
-    handle_event(make_event("unit_complete", session=session), toy)
-    # delete Makefile's shadow to simulate the hook-less path, and close
-    # under an explicitly DIFFERENT session (Y2 would otherwise join the
-    # live one) so the ceremony's session-scoped regeneration cannot cover
-    # it — the auto-extract contract must
-    (toy / ".harness" / "shadows" / "Makefile.json").unlink(missing_ok=True)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "x")
-    proc = run_cli("close-slice", "--slice", "slice-042",
-                   "--session", "someone-else", "--commit", "HEAD", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    out = json.loads(proc.stdout)
-    assert "Makefile" in out["shadows_extracted"]
-    assert (toy / ".harness" / "shadows" / "Makefile.json").exists()

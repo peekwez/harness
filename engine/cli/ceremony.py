@@ -114,7 +114,7 @@ def _close_ceremony(args):
         source_matches_commit(root, args.commit)
         sidecar = Sidecar(root)
         try:
-            prepared_touched, prepared_shadows = prepare_files(
+            prepared_touched = prepare_files(
                 root, sl, sidecar, session, args.commit, config)
         finally:
             sidecar.close()
@@ -278,41 +278,6 @@ def _close_ceremony(args):
                           f"predicted set: {rogue}; amend the slice declaration "
                           f"or record an override", "rule_ref": "gate:G3"})
 
-    # Precondition 5 → the W3 ruling, now the documented contract: derived
-    # artifacts are the ENGINE's job. A touched shadow-eligible file with no
-    # shadow (the md-file-bug class) gets extracted HERE, deterministically,
-    # and reported; the close only blocks if extraction itself fails. G7
-    # still blocks anything stale or hand-edited.
-    from engine import IGNORED_EXTS
-    from engine.extractor.engine import extract_path, shadow_path_for
-    shadows_extracted, shadow_failures = list(prepared_shadows), []
-    for rel in sorted(touched):
-        if rel.startswith(SUBSTRATE_PREFIXES):
-            continue
-        p = root / rel
-        # extensionless files (Makefile, scripts) get degenerate shadows —
-        # enforced surface too, not a loophole. Dotfiles (.gitignore,
-        # .gitattributes…) are config, not modules.
-        if (not p.is_file() or p.suffix.lower() in IGNORED_EXTS
-                or p.name.startswith(".")):
-            continue
-        if shadow_path_for(root, p).exists():
-            continue
-        try:
-            shadow, _sf = extract_path(root, p, config)
-        except HarnessError as exc:
-            shadow_failures.append({"path": rel, "reason": str(exc)})
-            continue
-        if shadow is None:
-            shadow_failures.append({"path": rel, "reason": "not shadowable"})
-        else:
-            shadows_extracted.append(rel)
-    if shadow_failures:
-        _fail({"closed": False,
-                "reason": f"touched files could not be shadowed: "
-                          f"{shadow_failures} — fix the named cause and "
-                          f"re-close", "rule_ref": "gate:G7"})
-
     # Precondition 8: dependency governance. Third-party deps are outside
     # shadow enforcement — a builder silently adding one is the drift class
     # G5 exists to stop, one level down. Added lines in dependency manifests
@@ -397,7 +362,7 @@ def _close_ceremony(args):
 
     result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
               "acceptance_gate": acceptance_gate, "substrate_commit": None,
-              "source_commit": args.commit, "shadows_extracted": shadows_extracted,
+              "source_commit": args.commit,
               "fork_review": fork_review, "review": review_result,
               "telemetry_flushed": telemetry_flushed, "telemetry_archived": telemetry_archived,
               "registry_refreshed": refreshed, "flip_skipped": flip_skipped, "memory": compacted,

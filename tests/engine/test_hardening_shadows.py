@@ -1,4 +1,4 @@
-"""Regression coverage for shadow identity and incremental G7 inputs."""
+"""Regression coverage for shadow identity."""
 from __future__ import annotations
 
 import json
@@ -11,8 +11,6 @@ from engine.events import Sidecar
 from engine.extractor.engine import (RegistryIndex, extract_all, extract_path,
                                      shadow_path_for)
 from engine.extractor.modules import python_module_ids
-from engine.gates.g7_derivation import (check as check_derivation,
-                                        derivation_findings)
 
 
 def _codes(findings):
@@ -116,103 +114,11 @@ def test_shadow_cache_invalidates_when_src_roots_change_module_identity(toy):
     assert rebuilt["module_id"] == "src.acme.service"
 
 
-def test_incremental_g7_rechecks_when_source_changes_but_shadow_mtime_does_not(
-        toy):
-    source = toy / "config.py"
-    sidecar = Sidecar(toy)
-    try:
-        ctx = SimpleNamespace(root=toy, config=load_config(toy), sidecar=sidecar)
-        assert not check_derivation(ctx)
-        shadow = shadow_path_for(toy, source)
-        old_mtime = shadow.stat().st_mtime_ns
-
-        source.write_text(source.read_text() + "\nCHANGED = True\n")
-        os.utime(shadow, ns=(old_mtime, old_mtime))
-
-        assert "DERIVATION_MISMATCH" in _codes(check_derivation(ctx))
-    finally:
-        sidecar.close()
 
 
-def test_incremental_g7_rechecks_when_config_changes_module_identity(toy):
-    source = _package_source(toy)
-    config = load_config(toy)
-    extract_all(toy, config)
-    sidecar = Sidecar(toy)
-    try:
-        ctx = SimpleNamespace(root=toy, config=config, sidecar=sidecar)
-        assert not check_derivation(ctx)
-        shadow = shadow_path_for(toy, source)
-        old_mtime = shadow.stat().st_mtime_ns
-
-        changed_config = load_config(toy)
-        changed_config["extractor"]["src_roots"] = []
-        changed_ctx = SimpleNamespace(
-            root=toy, config=changed_config, sidecar=sidecar)
-        os.utime(shadow, ns=(old_mtime, old_mtime))
-
-        assert "DERIVATION_MISMATCH" in _codes(check_derivation(changed_ctx))
-    finally:
-        sidecar.close()
 
 
-def test_incremental_g7_rechecks_when_extractor_version_changes(
-        toy, monkeypatch):
-    from engine.extractor import engine as extractor
-
-    sidecar = Sidecar(toy)
-    try:
-        ctx = SimpleNamespace(root=toy, config=load_config(toy), sidecar=sidecar)
-        assert not check_derivation(ctx)
-        shadow = shadow_path_for(toy, toy / "config.py")
-        old_mtime = shadow.stat().st_mtime_ns
-
-        monkeypatch.setattr(
-            extractor, "EXTRACTOR_VERSION", extractor.EXTRACTOR_VERSION + 1)
-        os.utime(shadow, ns=(old_mtime, old_mtime))
-
-        assert "DERIVATION_MISMATCH" in _codes(check_derivation(ctx))
-    finally:
-        sidecar.close()
 
 
-def test_g7_rejects_deleted_required_shadow_incrementally_and_exhaustively(toy):
-    config = load_config(toy)
-    sidecar = Sidecar(toy)
-    try:
-        ctx = SimpleNamespace(root=toy, config=config, sidecar=sidecar)
-        assert not check_derivation(ctx)
-        shadow_path_for(toy, toy / "config.py").unlink()
-
-        incremental = check_derivation(ctx)
-        exhaustive = derivation_findings(toy, config)
-        filtered = derivation_findings(
-            toy, config, paths={str((toy / "telemetry.py").resolve())})
-        verify = run_cli("verify", root=toy)
-
-        assert "DERIVATION_MISMATCH" in _codes(incremental)
-        assert "DERIVATION_MISMATCH" in _codes(exhaustive)
-        assert any("config.py" in finding["message"] for finding in exhaustive)
-        assert "DERIVATION_MISMATCH" not in _codes(filtered)
-        assert verify.returncode == 1
-        assert "DERIVATION_MISMATCH" in verify.stdout
-    finally:
-        sidecar.close()
 
 
-def test_incremental_g7_rejects_deleted_previously_seen_shadow(toy):
-    source = toy / "local_only.py"
-    source.write_text("VALUE = 1\n")
-    extract_path(toy, source, load_config(toy))
-    sidecar = Sidecar(toy)
-    try:
-        ctx = SimpleNamespace(root=toy, config=load_config(toy), sidecar=sidecar)
-        assert not check_derivation(ctx)
-        shadow_path_for(toy, source).unlink()
-
-        findings = check_derivation(ctx)
-
-        assert "DERIVATION_MISMATCH" in _codes(findings)
-        assert any("local_only.py" in finding["message"] for finding in findings)
-    finally:
-        sidecar.close()

@@ -92,22 +92,12 @@ def test_verdict_merging_property():
 
 
 def test_blocking_finding_without_rule_ref_rejected():
-    f = make_finding("STALE_SHADOW", "gate:G4", "m", severity="block")
+    f = make_finding("UNDECLARED_USE", "gate:G5", "m", severity="block")
     f["rule_ref"] = ""
     with pytest.raises(VerdictError):
         verdict_for([f])
 
 
-def test_context_loaded_persisted_per_session(toy):
-    from engine.events import Sidecar
-    handle_event(make_event("pre_context", session="persist",
-                            context=["shadow:telemetry"]), toy)
-    sc = Sidecar(toy)
-    try:
-        assert "shadow:telemetry" in sc.context_get("persist")
-        assert "shadow:telemetry" not in sc.context_get("other-session")
-    finally:
-        sc.close()
 
 
 def test_phase1_reinjection_deduped_per_session(toy):

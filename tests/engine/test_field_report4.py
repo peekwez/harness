@@ -18,24 +18,18 @@ def codes(verdict):
 
 # ---------------------------------------------------------------- W7
 def test_extract_all_rewrites_stale_format_shadows(toy):
-    """The G7 <-> cache deadlock: a shadow in an older format has a matching
-    source_hash, so extract --all cache-hits forever while G7's uncached
-    rebuild mismatches forever. A format/version change must be a cache miss."""
-    from engine.gates.g7_derivation import derivation_findings
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    """A shadow in an older format has a matching source_hash; extract --all
+    must still rewrite it. A format/version change must be a cache miss."""
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     stale = json.loads(sp.read_text())
     stale.pop("extractor_version", None)   # what a 0.3.3-era shadow looks like
     sp.write_text(json.dumps(stale, sort_keys=True, indent=1) + "\n")
-    assert any(f["code"] == "DERIVATION_MISMATCH"
-               for f in derivation_findings(toy, load_config(toy)))
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
-    assert "telemetry.py" in out["written"], \
-        "the finding's own named fix must not be a no-op"
+    assert "telemetry.py" in out["written"]
     assert json.loads(sp.read_text()).get("extractor_version")
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
 
 
 def test_explicit_extract_reports_cache_hits_as_cached(toy):
@@ -64,7 +58,6 @@ def test_extract_all_refreshes_existing_extensionless_shadows(toy):
     must still refresh — otherwise G7 mismatches with `extract --all` as a
     no-op fix, the same deadlock class as W7."""
     from engine.extractor.engine import extract_path
-    from engine.gates.g7_derivation import derivation_findings
     mk = toy / "Makefile"
     mk.write_text("all:\n\techo hi\n")
     extract_path(toy, mk, load_config(toy))    # the hook path shadows it
@@ -72,8 +65,6 @@ def test_extract_all_refreshes_existing_extensionless_shadows(toy):
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "Makefile" in json.loads(proc.stdout)["written"]
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
 
 
 # ---------------------------------------------------------------- W8

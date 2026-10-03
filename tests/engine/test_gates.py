@@ -1,5 +1,5 @@
-"""C6 acceptance: positive + negative fixture per gate; G2 pointer <=400
-tokens with shadow path; G5 override edge auditable; G7 catches hand-edits."""
+"""C6 acceptance: positive + negative fixture per gate; G5 override edge
+auditable. G2, G4 and G7 were removed in 0.10."""
 import json
 
 import pytest
@@ -24,30 +24,6 @@ def test_g1_negative_missing_acceptance(toy):
     v = handle_event(make_event("session_start", session="g1n"), toy)
     assert v["verdict"] == "block"
     assert "MANIFEST_INCOMPLETE" in codes(v)
-
-
-# ---------------------------------------------------------------- G2
-def test_g2_blocks_without_context_with_pointer(toy):
-    v = handle_event(make_event("pre_change", session="g2n",
-                                files=["orders.py"]), toy)
-    assert v["verdict"] == "block"
-    g2 = [f for f in v["findings"]
-          if f["code"] in ("CONTEXT_NOT_LOADED", "MISSING_SHADOW")]
-    assert g2
-    for f in g2:
-        assert f["rule_ref"] == "gate:G2"
-        pointer = "\n".join(f["inject"])
-        assert token_estimate(pointer) <= 400, "pointer must be pointer-sized"
-    shadow_pointers = [f for f in g2 if "shadow" in "\n".join(f["inject"])]
-    assert any(".harness/shadows/telemetry.py.json" in "\n".join(f["inject"])
-               for f in shadow_pointers), "deny reason must contain the shadow path"
-
-
-def test_g2_allows_after_phase1_injection(toy):
-    loaded_context(toy, session="g2p")
-    v = handle_event(make_event("pre_change", session="g2p",
-                                files=["orders.py"]), toy)
-    assert v["verdict"] == "allow", v["findings"]
 
 
 # ---------------------------------------------------------------- G3
@@ -84,25 +60,6 @@ def test_g3_non_goal_boundary_always_blocks(toy):
     assert v["verdict"] == "block"
     hits = [f for f in v["findings"] if f["code"] == "NON_GOAL_VIOLATION"]
     assert hits and hits[0]["rule_ref"] == "adr:007"
-
-
-# ---------------------------------------------------------------- G4
-def test_g4_blocks_on_stale_shadow_with_refresh_pointer(toy):
-    loaded_context(toy, session="g4n")
-    (toy / "telemetry.py").write_text(
-        open(toy / "telemetry.py").read() + "\n\ndef extra(x):\n    return x\n")
-    v = handle_event(make_event("pre_change", session="g4n",
-                                files=["orders.py"]), toy)
-    assert v["verdict"] == "block"
-    stale = [f for f in v["findings"] if f["code"] == "STALE_SHADOW"]
-    assert stale and "harness extract" in "\n".join(stale[0]["inject"])
-
-
-def test_g4_fresh_passes(toy):
-    loaded_context(toy, session="g4p")
-    v = handle_event(make_event("pre_change", session="g4p",
-                                files=["orders.py"]), toy)
-    assert "STALE_SHADOW" not in codes(v)
 
 
 # ---------------------------------------------------------------- G5
@@ -192,19 +149,6 @@ def test_g6_drift_blocks_until_acknowledged(toy):
     assert edge["meta"]["rule_ref"] == "gate:G6"
     v2 = handle_event(make_event("unit_complete", session=session), toy)
     assert "INTERFACE_DRIFT" not in codes(v2)
-
-
-# ---------------------------------------------------------------- G7
-def test_g7_catches_hand_edited_shadow(toy):
-    session = "g7"
-    loaded_context(toy, session=session)
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    shadow = json.loads(sp.read_text())
-    shadow["symbols"][0]["signature"] = "def emit_span(hacked)"
-    sp.write_text(json.dumps(shadow, sort_keys=True, indent=1) + "\n")
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert v["verdict"] == "block"
-    assert "DERIVATION_MISMATCH" in codes(v)
 
 
 # ---------------------------------------------------------------- G8

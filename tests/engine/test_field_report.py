@@ -95,11 +95,6 @@ def test_missing_extraction_deps_degrade_not_crash(toy, monkeypatch):
     assert "MISSING_DEPENDENCY" in codes
     assert all(f["severity"] == "advisory" for f in findings)
 
-    # unit_complete (the Stop path that hard-blocked in the field) stays unblocked
-    from engine.gates.g7_derivation import derivation_findings
-    g7 = derivation_findings(toy, load_config(toy))
-    assert all(f["severity"] == "advisory" for f in g7)
-    assert any(f["code"] == "MISSING_DEPENDENCY" for f in g7)
 
 
 def test_doctor_reports_deps(toy):

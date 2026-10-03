@@ -55,14 +55,6 @@ def test_typescript_shadow_extracts_the_real_interface(toy):
     assert "./telemetry" in shadow["imports"] and "lodash" in shadow["imports"]
 
 
-def test_typescript_shadow_regenerates_identically(toy):
-    """G7's guarantee must hold for every enabled language, not just Python."""
-    from engine.extractor.engine import extract_path
-    from engine.gates.g7_derivation import derivation_findings
-    (toy / "orders.ts").write_text(TS_SOURCE)
-    extract_path(toy, toy / "orders.ts", load_config(toy))
-    assert not [f for f in derivation_findings(toy, load_config(toy))
-                if f["severity"] == "block"]
 
 
 HCL_SOURCE = """variable "region" {

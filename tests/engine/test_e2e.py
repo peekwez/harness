@@ -1,5 +1,5 @@
-"""C8/M4 acceptance on the toy repo: block -> inject -> pass; Stop
-regenerates shadows + edges; session cycling; the full close ceremony;
+"""C8/M4 acceptance on the toy repo: edit -> inject -> record; Stop
+records edges; session cycling; the full close ceremony;
 backlog splitting; init idempotence."""
 import json
 
@@ -7,22 +7,17 @@ from conftest import git, loaded_context, make_event, run_cli
 from engine.events import handle_event
 
 
-def test_toy_repo_end_to_end_block_then_pass(toy):
-    # 1. An agent editing a file without context is blocked with a pointer.
+def test_toy_repo_end_to_end_edit_then_record(toy):
+    # 1. Context no longer gates an edit: an edit before Phase 1 is allowed.
     v = handle_event(make_event("pre_change", session="e2e",
                                 files=["orders.py"]), toy)
-    assert v["verdict"] == "block"
-    pointers = [i for f in v["findings"] for i in f["inject"]]
-    assert pointers and any("shadow" in p for p in pointers)
+    assert v["verdict"] == "allow", v["findings"]
 
-    # 2. After Phase-1 injection the same edit passes.
+    # 2. Phase 1 still injects the slice context.
     start = loaded_context(toy, session="e2e")
     assert start["injections"], "Phase 1 must inject"
-    v2 = handle_event(make_event("pre_change", session="e2e",
-                                 files=["orders.py"]), toy)
-    assert v2["verdict"] == "allow", v2["findings"]
 
-    # 3. Write the file; Stop regenerates shadows and writes edges.
+    # 3. Write the file; Stop records the shadow and writes edges.
     (toy / "orders.py").write_text(
         "import telemetry\n\n\ndef create_order(sku: str) -> dict:\n"
         "    telemetry.emit_span('create_order', {'sku': sku})\n"
@@ -30,7 +25,8 @@ def test_toy_repo_end_to_end_block_then_pass(toy):
     handle_event(make_event("post_change", session="e2e",
                             files=["orders.py"]), toy)
     handle_event(make_event("unit_complete", session="e2e"), toy)
-    assert (toy / ".harness" / "shadows" / "orders.py.json").exists()
+    from engine.extractor.engine import shadow_path_for
+    assert shadow_path_for(toy, toy / "orders.py").exists()
     from engine.graph import load_edges
     edges = load_edges(toy)
     assert any(e["type"] == "touches" and e["to"] == "file:orders.py"

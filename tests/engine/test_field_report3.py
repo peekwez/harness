@@ -62,35 +62,6 @@ def test_hook_adapter_stop_regenerates_shadows_in_the_worktree(toy, tmp_path):
 
 
 # ---------------------------------------------------------------- W3
-def test_close_extracts_missing_shadows_instead_of_passing_silently(toy):
-    """G7 asymmetry (W3): a brand-new predicted file with NO shadow sailed
-    through close — the md-file-bug class. The ruled contract: close
-    extracts the missing shadows itself (derived artifacts are the engine's
-    job) and reports them; it must never silently pass without them."""
-    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"] = ["orders.py", "newcli.py"]
-    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
-    session = "wt-close"
-    run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(GOOD_ORDERS)
-    (toy / "newcli.py").write_text("def main() -> int:\n    return 0\n")
-    handle_event(make_event("post_change", session=session,
-                            files=["orders.py", "newcli.py"]), toy)
-    # NO unit_complete for this session: shadows were never regenerated
-    # (the worktree hook gap) — close runs under an explicitly DIFFERENT
-    # session (Y2 would otherwise join the live one), so the ceremony's
-    # session-scoped regeneration can't cover them either.
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "slice-042: orders + cli")
-    head = git(toy, "rev-parse", "HEAD").stdout.strip()
-    proc = run_cli("close-slice", "--slice", "slice-042", "--commit", head,
-                   "--session", "someone-else", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    out = json.loads(proc.stdout)
-    assert out["closed"]
-    assert set(out["shadows_extracted"]) >= {"orders.py", "newcli.py"}
-    assert (toy / ".harness" / "shadows" / "newcli.py.json").exists()
 
 
 # ---------------------------------------------------------------- W4

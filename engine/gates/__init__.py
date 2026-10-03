@@ -4,8 +4,10 @@ Each gate declares preferred/fallback events (T1 portability: post-only
 frameworks run pre_change gates at post_change in degraded revert-and-retry
 mode). Every blocking finding cites a rule_ref — enforced by the engine.
 
-The pack is G1-G8 plus whatever the repo lists under `gates.extra`
-(ADR-002 / D-007) — see `engine/gates/extra.py`.
+The pack is G1, G3, G5, G6 and G8 plus whatever the repo lists under
+`gates.extra` (ADR-002 / D-007) — see `engine/gates/extra.py`. G2, G4 and
+G7 were removed in 0.10; their ids stay reserved so old override records
+keep their meaning.
 """
 from __future__ import annotations
 
@@ -31,7 +33,6 @@ class GateContext:
         self._slice = None
         self._decisions = None
         self._boundaries = None
-        self._context_loaded = None
 
     @property
     def registry(self):
@@ -57,13 +58,6 @@ class GateContext:
             self._boundaries = load_boundaries(self.root)
         return self._boundaries
 
-    @property
-    def context_loaded(self) -> set:
-        if self._context_loaded is None:
-            self._context_loaded = (self.sidecar.context_get(self.session_id) |
-                                    set(self.payload.get("context_loaded", [])))
-        return self._context_loaded
-
     def touched_files(self) -> list:
         return [f["path"] for f in self.payload.get("files", [])]
 
@@ -77,12 +71,18 @@ class GateContext:
         return str(p)
 
 
+RETIRED_GATE_IDS = frozenset({"G2", "G4", "G7"})
+
+
 def builtin_gates() -> list:
-    """The eight gates that ship with the engine, in G1..G8 order."""
-    from . import (g1_manifest, g2_context, g3_scope, g4_freshness,
-                   g5_conformance, g6_drift, g7_derivation, g8_coverage)
-    return [g1_manifest, g2_context, g3_scope, g4_freshness,
-            g5_conformance, g6_drift, g7_derivation, g8_coverage]
+    """The gates that ship with the engine, in id order."""
+    from . import g1_manifest, g3_scope, g5_conformance, g6_drift, g8_coverage
+    return [g1_manifest, g3_scope, g5_conformance, g6_drift, g8_coverage]
+
+
+def reserved_gate_ids() -> set:
+    """Ids a repo-local gate may not take: the builtins and the retired ids."""
+    return {g.GATE["id"] for g in builtin_gates()} | set(RETIRED_GATE_IDS)
 
 
 def all_gates(root=None, config=None) -> list:
@@ -102,7 +102,7 @@ def all_gates(root=None, config=None) -> list:
     """
     gates = builtin_gates()
     extra, _errors = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in gates})
+        root, config, reserved_ids=reserved_gate_ids())
     return gates + extra
 
 
@@ -143,7 +143,7 @@ def run_gates(root, event: dict, config: dict, sidecar) -> list:
     ctx = GateContext(root, event, config, sidecar)
     builtins = builtin_gates()
     extra, findings = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in builtins})
+        root, config, reserved_ids=reserved_gate_ids())
     findings = list(findings)
     for gate in select_gates(builtins + extra, event["event"], degraded):
         if isinstance(gate, ExtraGate):

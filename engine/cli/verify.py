@@ -190,19 +190,6 @@ def cmd_verify(args):
         findings.append(make_finding("SCHEMA_INVALID", "gate:G1", problem,
                                      severity="block", key=problem[:80]))
 
-    # shadow regeneration match (G7)
-    from engine.gates.g7_derivation import derivation_findings
-    try:
-        findings.extend(derivation_findings(root, config))
-    except HarnessError as exc:
-        # Required-shadow discovery reads the substrate too. Keep schema
-        # failures in this structured report instead of losing every finding
-        # to a loader exception; an incomplete derivation check still blocks.
-        findings.append(make_finding(
-            "DERIVATION_MISMATCH", "gate:G7",
-            f"cannot verify required shadows: {exc}",
-            severity="block", key="required-shadow-substrate"))
-
     # manifest completeness against the built artifact. Files an OPEN slice
     # predicts are pending work, not the md-file-bug.
     from engine.registry import load_registry, validate_manifests
@@ -225,7 +212,8 @@ def cmd_verify(args):
                                      severity="block", key="registry"))
         registry = []
 
-    # hash validation + derived-artifact existence for built entries
+    # hash validation for built entries (shadows are a lazy cache: nothing
+    # here may depend on one existing)
     from engine import sha256_file
     from engine.events import make_finding
     for e in registry:
@@ -235,17 +223,9 @@ def cmd_verify(args):
             src = root / e["source"]
             if src.exists() and sha256_file(src) != e["source_hash"]:
                 findings.append(make_finding(
-                    "HASH_MISMATCH", "gate:G4",
+                    "HASH_MISMATCH", "gate:G1",
                     f"registry {e['id']!r}: source_hash stale for {e['source']}",
                     severity="block", key=e["id"]))
-        # a built entry's shadow is a required derived artifact — its absence
-        # is the md-file-bug class, never a silent pass
-        if not e.get("shadow") or not (root / e["shadow"]).exists():
-            findings.append(make_finding(
-                "MISSING_SHADOW", "gate:G7",
-                f"registry {e['id']!r} is built but its shadow "
-                f"{e.get('shadow')!r} does not exist; run `harness extract --all`",
-                severity="block", key=e["id"] + "|shadow"))
         for ref in e.get("guidance_refs", []):
             if not (root / ref.split("#")[0]).exists():
                 findings.append(make_finding(

@@ -18,11 +18,10 @@ SEVERITIES = ("gate", "block", "advisory")
 _VERDICT_RANK = {"allow": 0, "allow_with_findings": 1, "block": 2}
 
 FINDING_CODES = {
-    "MANIFEST_INCOMPLETE", "SCHEMA_MISMATCH", "CONTEXT_NOT_LOADED",
-    "MISSING_SHADOW", "UNDECLARED_FILE", "NON_GOAL_VIOLATION", "STALE_SHADOW",
-    "UNDECLARED_USE", "DUPLICATE_CANDIDATE", "INTERFACE_DRIFT",
-    "DERIVATION_MISMATCH", "UNSHADOWED_FILE", "UNKNOWN_LANGUAGE",
-    "NO_ACTIVE_WORK_UNIT", "HASH_MISMATCH", "ORPHANED_NOTE", "MISSING_DEPENDENCY",
+    "MANIFEST_INCOMPLETE", "SCHEMA_MISMATCH", "UNDECLARED_FILE",
+    "NON_GOAL_VIOLATION", "UNDECLARED_USE", "DUPLICATE_CANDIDATE",
+    "INTERFACE_DRIFT", "UNSHADOWED_FILE", "UNKNOWN_LANGUAGE",
+    "HASH_MISMATCH", "ORPHANED_NOTE", "MISSING_DEPENDENCY",
     "UNRECONCILED_SLICE", "MISSING_RULE_REF", "REVIEW_UNCERTAIN",
     "COMPACTION_REACHED",
 }
@@ -304,10 +303,6 @@ def handle_event(raw: dict, root) -> dict:
         # session the hooks are gating instead of a parallel "cli" one (Y2).
         if session not in ("cli", "__default__"):
             sidecar.state_set("__hooks__", "last_session_id", session)
-
-        # Persist context_loaded additions per session_id (spec C1).
-        if evt["payload"]["context_loaded"]:
-            sidecar.context_add(session, evt["payload"]["context_loaded"])
 
         injections, resolved_manifest = [], []
         if event in ("session_start", "pre_context") and slice_id:

@@ -92,40 +92,8 @@ def test_resolve_registers_context_only_when_it_emits_it(toy):
 
 
 # ---------------------------------------------------------------- R4
-def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(
-        toy, monkeypatch):
-    """An unchanged shadow/source/input tuple skips the expensive parse."""
-    session = "g7scope"
-    loaded_context(toy, session=session)
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert v["verdict"] != "block", v["findings"]      # clean sweep recorded
-
-    from engine.gates import g7_derivation
-
-    def unexpected_parse(*args, **kwargs):
-        raise AssertionError("unchanged inputs must not be re-parsed")
-
-    monkeypatch.setattr(g7_derivation, "build_shadow", unexpected_parse)
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" not in {f["code"] for f in v["findings"]}
 
 
-def test_g7_still_catches_any_hand_edited_shadow_at_stop(toy):
-    """The guarantee is unchanged: a hand-edit moves mtime forward, so the
-    cache can never hide one — including for files this slice never touched."""
-    session = "g7hit"
-    loaded_context(toy, session=session)
-    handle_event(make_event("unit_complete", session=session), toy)
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    shadow = json.loads(sp.read_text())
-    shadow["symbols"][0]["signature"] = "def hacked()"
-    sp.write_text(json.dumps(shadow, sort_keys=True, indent=1) + "\n")
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" in {f["code"] for f in v["findings"]}
-    # and it keeps reporting until fixed — a standing mismatch must not be
-    # swallowed by the watermark
-    v2 = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" in {f["code"] for f in v2["findings"]}
 
 
 # ---------------------------------------------------------------- R5

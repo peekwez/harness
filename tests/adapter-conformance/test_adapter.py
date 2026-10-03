@@ -1,6 +1,6 @@
 """Adapter conformance suite: event translation, verdict handling, injection
 format. Any future framework adapter must pass the equivalents of these.
-PreCompact: memory flush + COMPACTION_REACHED telemetry ONLY, no injection."""
+PreCompact: clear injection hashes, memory flush + COMPACTION_REACHED telemetry, no injection."""
 import json
 import os
 import subprocess
@@ -28,6 +28,14 @@ def run_adapter(hook_json, cwd, slice_id=None, harness_bin=None):
     return proc.returncode, out, proc.stderr
 
 
+def _drift_telemetry(toy):
+    """Change telemetry's public interface: G6 blocks until acknowledged."""
+    src = toy / "telemetry.py"
+    src.write_text(src.read_text().replace(
+        "def emit_span(name: str, attrs: dict) -> dict:",
+        "def emit_span(name: str, attrs: dict, level: int = 0) -> dict:"))
+
+
 def test_session_start_translates_and_injects(toy):
     code, out, err = run_adapter(
         {"hook_event_name": "SessionStart", "session_id": "ac-1"},
@@ -42,12 +50,12 @@ def test_pre_tool_use_deny_with_reason(toy):
     code, out, err = run_adapter(
         {"hook_event_name": "PreToolUse", "session_id": "ac-2",
          "tool_name": "Edit",
-         "tool_input": {"file_path": str(toy / "orders.py")}},
+         "tool_input": {"file_path": str(toy / "legacy" / "exporter.py")}},
         toy, slice_id="slice-042")
     assert code == 0
     hso = out["hookSpecificOutput"]
     assert hso["permissionDecision"] == "deny"
-    assert "gate:G2" in hso["permissionDecisionReason"]
+    assert "adr:007" in hso["permissionDecisionReason"]
 
 
 def test_pre_tool_use_allows_after_session_start(toy):
@@ -77,17 +85,17 @@ def test_post_tool_use_findings_as_context(toy):
 def test_stop_maps_to_unit_complete_and_can_block(toy):
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-5"},
                 toy, slice_id="slice-042")
-    # hand-edit a derived shadow -> G7 must block the Stop
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
+    _drift_telemetry(toy)
+    run_adapter({"hook_event_name": "PostToolUse", "session_id": "ac-5",
+                 "tool_name": "Edit",
+                 "tool_input": {"file_path": str(toy / "telemetry.py")}},
+                toy, slice_id="slice-042")
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-5"},
         toy, slice_id="slice-042")
     assert code == 0
     assert out["decision"] == "block"
-    assert "DERIVATION_MISMATCH" in out["reason"]
+    assert "INTERFACE_DRIFT" in out["reason"]
 
 
 def test_stop_hook_active_prevents_reblock_loop(toy):
@@ -95,16 +103,15 @@ def test_stop_hook_active_prevents_reblock_loop(toy):
     Claude Code force-overrides after 8 consecutive blocks anyway."""
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-loop"},
                 toy, slice_id="slice-042")
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
-    # first Stop: blocks
+    _drift_telemetry(toy)
+    run_adapter({"hook_event_name": "PostToolUse", "session_id": "ac-loop",
+                 "tool_name": "Edit",
+                 "tool_input": {"file_path": str(toy / "telemetry.py")}},
+                toy, slice_id="slice-042")
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-loop"},
         toy, slice_id="slice-042")
     assert out and out["decision"] == "block"
-    # second Stop with stop_hook_active: must NOT block again
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-loop",
          "stop_hook_active": True},
@@ -161,7 +168,7 @@ def test_gates_declare_preferred_and_fallback_events():
         assert "preferred" in g.GATE and "fallback" in g.GATE
     normal = {g.GATE["id"] for g in gates_for_event("post_change")}
     degraded = {g.GATE["id"] for g in gates_for_event("post_change", degraded=True)}
-    assert {"G2", "G3"} <= (degraded - normal), \
+    assert "G3" in (degraded - normal), \
         "degraded mode must re-run pre_change gates at post_change"
     assert degraded > normal
 

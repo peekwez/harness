@@ -232,8 +232,8 @@ def main(argv=None):
 
     sp = sub.add_parser("merge-slice",
                         help="merge a closed slice's branch into this tree: "
-                             "regen+commit shadows, G4 safety net, remove "
-                             "worktree+branch")
+                             "acceptance + gates on the merged tree, commit "
+                             "substrate, remove worktree+branch")
     sp.add_argument("--slice", required=True)
     sp.add_argument("--session")
 

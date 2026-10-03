@@ -19,7 +19,7 @@ from engine.registry import REGISTRY_KINDS, registry_kinds
 from engine.schema import validate_substrate
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "extra_gates"
-BUILTIN_IDS = [f"G{i}" for i in range(1, 9)]
+BUILTIN_IDS = ["G1", "G3", "G5", "G6", "G8"]
 
 ADR_008 = '''---
 id: "008"
@@ -279,11 +279,11 @@ def test_bad_gate_is_one_loud_blocking_finding(toy):
     assert "deliberate import failure" in err["message"]
 
     v = handle_event(make_event("pre_change", session="kbad",
-                                files=["orders.py"]), toy)
+                                files=["rogue.py"]), toy)
     assert v["verdict"] == "block"
     assert len([f for f in v["findings"]
                 if f["code"] == "EXTRA_GATE_LOAD_ERROR"]) == 1
-    builtin_refs = {f"gate:G{i}" for i in range(1, 9)}
+    builtin_refs = {f"gate:G{i}" for i in (1, 3, 5, 6, 8)}
     assert {f["rule_ref"] for f in v["findings"]} & builtin_refs
 
 
@@ -458,13 +458,13 @@ def test_gate_raising_in_run_is_a_run_error_with_a_frame(toy):
     entry = _write_gate(toy, "raiser.py", RAISING_GATE)
     _configure(toy, extra=[entry])
     v = handle_event(make_event("pre_change", session="kraise",
-                                files=["orders.py"]), toy)
+                                files=["rogue.py"]), toy)
     hits = [f for f in v["findings"] if f["code"] == "EXTRA_GATE_RUN_ERROR"]
     assert len(hits) == 1
     msg = hits[0]["message"]
     assert entry in msg and "boom in run" in msg
     assert "raiser.py:" in msg, msg   # last traceback frame, file:line
-    builtin_refs = {f"gate:G{i}" for i in range(1, 9)}
+    builtin_refs = {f"gate:G{i}" for i in (1, 3, 5, 6, 8)}
     assert {f["rule_ref"] for f in v["findings"]} & builtin_refs
 
 
@@ -527,3 +527,15 @@ def test_kinds_extra_must_be_strings():
     from engine import HarnessError
     with pytest.raises(HarnessError):
         registry_kinds({"registry": {"kinds_extra": ["package", 7]}})
+
+
+def test_retired_builtin_ids_stay_reserved(toy):
+    """G2, G4 and G7 are gone, but old override records still name them."""
+    entry = _write_gate(toy, "retired.py",
+                        COLLIDING_GATE.replace('"G3"', '"G7"'))
+    config = _configure(toy, extra=[entry])
+    assert "G7" not in [g.GATE["id"] for g in all_gates(root=toy, config=config)]
+    from engine.gates import reserved_gate_ids
+    gates, errors = load_extra_gates(toy, config, reserved_ids=reserved_gate_ids())
+    assert gates == [] and errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
+    assert "G7" in errors[0]["message"]

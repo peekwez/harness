@@ -52,7 +52,7 @@ def _deterministic_rubrics():
          "rule_ref": "gate:G5"},
         {"id": "R-gates", "question": "Are all Layer-0 gates green?",
          "check": no_blocking_gate_findings, "severity_if_fail": "block",
-         "rule_ref": "gate:G7"},
+         "rule_ref": "review:layer0"},
         {"id": "R-dup", "question": "Are duplicate candidates resolved or overridden?",
          "check": duplicates_resolved, "severity_if_fail": "block",
          "rule_ref": "gate:G5"},

@@ -23,7 +23,7 @@ import { writeFileSync } from 'node:fs';
 const results = [];
 const hooks = await HarnessPlugin({ directory: '%(root)s', worktree: '%(root)s' });
 
-// 1. pre-change before Phase 1 -> must throw (G2)
+// 1. pre-change before Phase 1 -> allowed (no G2 in 0.10)
 try {
   await hooks['tool.execute.before'](
     { tool: 'edit', sessionID: 'oc-1', callID: 'c1' },
@@ -93,13 +93,14 @@ def run_driver(toy, env_extra=None):
 @pytest.mark.skipif(NODE is None, reason="node not available")
 def test_opencode_plugin_full_flow(toy):
     r = run_driver(toy)
-    assert "gate:G2" in r["deny-before-phase1"]
+    assert r["deny-before-phase1"] == "NO-THROW"
     assert r["allow-after-inject"] == "ok"
     assert "NON_GOAL" in r["non-goal"]
     assert r["idle"] == "ok"
     assert r["non-edit-passthrough"] == "ok"
-    # idle regenerated the touched file's shadow
-    assert (toy / ".harness" / "shadows" / "orders.py.json").exists()
+    # idle recorded the touched file's shadow in the cache
+    from engine.extractor.engine import shadow_path_for
+    assert shadow_path_for(toy, toy / "orders.py").exists()
 
 
 @pytest.mark.skipif(NODE is None, reason="node not available")

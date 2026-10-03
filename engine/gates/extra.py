@@ -106,7 +106,7 @@ def load_extra_gates(root, config, reserved_ids=None) -> tuple:
         root: Repo root; a relative path entry resolves against it.
         config: Loaded engine config (`engine.load_config`).
         reserved_ids: Gate ids already taken — the builtin pack — so a
-            repo-local gate cannot shadow G1-G8.
+            repo-local gate cannot take a builtin or retired id.
 
     Returns:
         A `(gates, findings)` pair: the successfully loaded gates in config
@@ -203,10 +203,10 @@ def verify_extra_findings(root, config, slices) -> list:
     Returns:
         Load errors plus every finding the selected gates produced.
     """
-    from . import GateContext, builtin_gates
+    from . import GateContext, reserved_gate_ids
 
     gates, findings = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in builtin_gates()})
+        root, config, reserved_ids=reserved_gate_ids())
     findings = list(findings)
     if not gates:
         return findings
