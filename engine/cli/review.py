@@ -139,8 +139,11 @@ def cmd_adjudicate(args):
         print(f"error: parked finding {args.finding_id!r} not found",
               file=sys.stderr)
         return 1
-    # Every resolution writes back substrate: a decision row or durable memory,
-    # plus an adjudication edge. The same question never parks twice.
+    # Every resolution writes an adjudication edge; a --decision-id also
+    # writes a decision row. A one-off ruling never writes shared memory:
+    # that needs a human, so the output suggests the promote command.
+    # The same question never parks twice (the edge suppresses it).
+    suggest = None
     if args.decision_id:
         from engine import load_decisions
         rows = load_decisions(root)
@@ -164,16 +167,20 @@ def cmd_adjudicate(args):
         write_jsonl(harness_dir(root) / "decisions.jsonl", rows)
         back_ref = f"decision:{args.decision_id}"
     else:
-        from engine import memory
-        entry = memory.make_entry(target["slice"], "adjudication",
-                                  f"{args.finding_id}: {args.resolution}")
-        memory.write_entry(root, entry)
-        back_ref = f"memory:{entry['id']}"
+        import shlex
+        back_ref = f"adjudication:{args.finding_id}"
+        fact = (f"{target['finding']['message'][:200]} "
+                f"Ruling: {args.resolution}")
+        suggest = f"harness memory promote --text {shlex.quote(fact)}"
     append_edge(root, "decided_by", f"finding:{args.finding_id}", back_ref,
                 meta={"kind": "adjudication", "resolution": args.resolution,
-                      "reverses": args.reverses})
+                      "reverses": args.reverses,
+                      "slice": target.get("slice")})
     remaining = [p for p in parked if p["finding"]["finding_id"] != args.finding_id]
     write_jsonl(parked_path, remaining)
-    _print({"adjudicated": args.finding_id, "wrote": back_ref,
-            "remaining_parked": len(remaining)})
+    out = {"adjudicated": args.finding_id, "wrote": back_ref,
+           "remaining_parked": len(remaining)}
+    if suggest:
+        out["suggest"] = suggest
+    _print(out)
     return 0

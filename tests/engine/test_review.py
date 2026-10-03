@@ -46,15 +46,63 @@ def test_blocking_finding_without_rule_ref_rejected_by_engine(toy):
         run_review(toy, facts, config, model=None)
 
 
-def test_reviewer_never_receives_builder_session_memory(toy):
-    """Layer-0 facts must not contain session-memory content."""
-    from engine import memory
-    entry = memory.make_entry("slice-042", "reasoning",
-                              "SESSION-SECRET-REASONING")
-    memory.write_entry(toy, entry)
-    config = load_config(toy)
-    facts = assemble(toy, "", "slice-042", config)
-    assert "SESSION-SECRET-REASONING" not in json.dumps(facts)
+def test_reviewer_never_receives_personal_memory(toy, tmp_path, monkeypatch):
+    """Layer-0 facts must not contain the builder's personal memory."""
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    from engine.shared_memory import personal_memory_dir
+    mem = personal_memory_dir(toy)
+    mem.mkdir(parents=True)
+    (mem / "note.md").write_text("PERSONAL-SECRET-REASONING\n")
+    facts = assemble(toy, "", "slice-042", load_config(toy))
+    assert "PERSONAL-SECRET-REASONING" not in json.dumps(facts)
+
+
+def _park(toy):
+    from conftest import run_cli
+    proc = run_cli("review", "--park", "--slice", "slice-042", "--session", "rv",
+                   "--code", "REVIEW_UNCERTAIN", "--rule-ref", "decision:D-041",
+                   "--message", "unsure whether span names conform", root=toy)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)["finding"]["finding_id"]
+
+
+def test_adjudicate_without_decision_id_writes_edge_and_suggests_promote(toy):
+    from conftest import run_cli
+    from engine.graph import load_edges
+    from engine.review.rubrics import _precedents
+    fid = _park(toy)
+    before = (toy / ".harness" / "decisions.jsonl").read_text()
+    proc = run_cli("adjudicate", "--finding-id", fid, "--resolution",
+                   "span names conform to D-041", root=toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["wrote"] == f"adjudication:{fid}"
+    assert out["suggest"].startswith("harness memory promote --text ")
+    assert "span names conform to D-041" in out["suggest"]
+    assert (toy / ".harness" / "decisions.jsonl").read_text() == before
+    durable = toy / ".harness" / "memory" / "durable.jsonl"
+    assert not (durable.exists() and durable.read_text().strip())
+    edge = [e for e in load_edges(toy) if e["type"] == "decided_by"][-1]
+    assert edge["from"] == f"finding:{fid}" and edge["to"] == f"adjudication:{fid}"
+    assert _precedents(toy, "R-decisions") == [f"adjudication:{fid}"]
+
+
+def test_adjudicate_with_decision_id_suggests_nothing(toy):
+    from conftest import run_cli
+    from engine.review.rubrics import _precedents
+    fid = _park(toy)
+    proc = run_cli("adjudicate", "--finding-id", fid, "--resolution", "ok",
+                   "--decision-id", "D-901", "--domain", "telemetry", root=toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["wrote"] == "decision:D-901" and "suggest" not in out
+    assert _precedents(toy, "R-decisions") == ["decision:D-901"]
+
+
+def test_precedents_empty_without_adjudications(toy):
+    from engine.review.rubrics import _precedents
+    assert _precedents(toy, "R-decisions") == []
 
 
 def test_replay_ten_pairs_stable_across_three_runs(toy, plugin_root):

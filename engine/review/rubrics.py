@@ -93,12 +93,14 @@ def _model_rubrics(root):
 
 
 def _precedents(root, rubric_id: str, limit: int = 3) -> list:
-    """Nearest adjudicated exemplars from durable memory."""
-    rows = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
-    hits = [r for r in rows if r.get("kind") == "adjudication"
-            and rubric_id in (r.get("content") or "")]
-    hits = hits or [r for r in rows if r.get("kind") == "adjudication"]
-    return [r["id"] for r in hits[:limit]]
+    """Nearest adjudicated exemplars: the targets of adjudication edges
+    (a decision row, or an edge-only ruling), in recorded order."""
+    from ..graph import load_edges
+    rows = [e for e in load_edges(root) if e.get("type") == "decided_by"
+            and (e.get("meta") or {}).get("kind") == "adjudication"]
+    hits = [e for e in rows if rubric_id in e.get("from", "")
+            or rubric_id in json.dumps(e.get("meta") or {})]
+    return [e["to"] for e in (hits or rows)[:limit]]
 
 
 def _validate_model_output(out: dict, rubric_id: str) -> dict:
