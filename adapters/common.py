@@ -155,27 +155,22 @@ def clip(text: str, slice_id=None) -> str:
     return text[:MAX_OUTPUT_CHARS - len(pointer)] + pointer
 
 
-def flush_compaction(session: str) -> int:
-    """PreCompact duty: clear the per-block injection hashes (the next prompt
-    re-injects), then memory flush + COMPACTION_REACHED telemetry."""
+def record_compaction(session: str) -> int:
+    """PreCompact duty: `harness precompact` (hash reset + count) only."""
     root = resolve_root()
     cmd = [sys.executable, HARNESS]
     if root:
         cmd += ["--root", str(root)]
-    session = session or "unknown-session"
-    # Run both, always: a failed reset must not drop the flush and its
-    # COMPACTION_REACHED signal. Report each failure, then fail loud.
-    failed = False
-    for args in (["resolve", "--reset", "--session", session],
-                 ["memory", "flush", "--session", session, "--compaction"]):
-        proc = subprocess.run(cmd + args, capture_output=True, text=True)
-        if proc.returncode != 0:
-            err = proc.stdout.strip() or proc.stderr.strip()
-            if "no .harness substrate" in err:
-                return 0
-            print(f"harness compaction {args[0]} failed: {err}", file=sys.stderr)
-            failed = True
-    return 1 if failed else 0
+    proc = subprocess.run(cmd + ["precompact", "--session",
+                                 session or "unknown-session"],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        err = proc.stdout.strip() or proc.stderr.strip()
+        if "no .harness substrate" in err:
+            return 0
+        print(f"harness precompact failed: {err}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def emit(obj) -> None:

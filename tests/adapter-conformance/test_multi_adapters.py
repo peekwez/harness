@@ -117,7 +117,7 @@ def test_non_goal_boundary_denied(toy, name):
 
 
 @pytest.mark.parametrize("name", sorted(ADAPTERS))
-def test_compaction_flush_and_telemetry_only(toy, name):
+def test_compaction_counted_and_nothing_injected(toy, name):
     spec = SPEC[name]
     events = toy / ".harness" / "cache" / "events.jsonl"
     before = events.read_text() if events.exists() else ""

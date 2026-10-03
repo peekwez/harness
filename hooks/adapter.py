@@ -6,8 +6,8 @@ another agent framework means writing one new file like this one.
 
 Bindings: SessionStart->session_start, UserPromptSubmit->pre_context,
 PreToolUse(Edit|Write|MultiEdit)->pre_change, PostToolUse(same)->post_change,
-Stop->unit_complete, PreCompact->clear the per-block injection hashes, then
-memory flush + COMPACTION_REACHED telemetry (the next prompt re-injects).
+Stop->unit_complete, PreCompact->`harness precompact` (context-hash reset +
+COMPACTION_REACHED telemetry; the next prompt re-injects).
 """
 import json
 import os
@@ -220,25 +220,18 @@ def main():
                         hook.get("cwd"))
 
     if hook_name == "PreCompact":
-        # Clear the per-block injection hashes so the next prompt injects
-        # the slice context again, then flush memory + COMPACTION_REACHED.
+        # Hash reset + compaction count only. Never injects.
         cmd = [sys.executable, HARNESS]
         if root:
             cmd += ["--root", str(root)]
-        # Run both, always: a failed reset must not drop the flush and its
-        # COMPACTION_REACHED signal. Report each failure, then fail loud.
-        failed = False
-        for args in (["resolve", "--reset", "--session", session],
-                     ["memory", "flush", "--session", session, "--compaction"]):
-            proc = subprocess.run(cmd + args, capture_output=True, text=True)
-            if proc.returncode != 0:
-                err = proc.stdout.strip() or proc.stderr.strip()
-                if "no .harness substrate" in err:
-                    return 0
-                print(f"harness PreCompact {args[0]} failed: {err}",
-                      file=sys.stderr)
-                failed = True
-        return 1 if failed else 0
+        proc = subprocess.run(cmd + ["precompact", "--session", session],
+                              capture_output=True, text=True)
+        if proc.returncode != 0:
+            err = proc.stdout.strip() or proc.stderr.strip()
+            if "no .harness substrate" not in err:
+                print(f"harness precompact failed: {err}", file=sys.stderr)
+                return 1  # fail loud: a lost compaction count is a defect
+        return 0
 
     # Bash is a permission question, not an EnforcementEvent: the five-event
     # contract is about file changes. A bound slice's own loop commands are

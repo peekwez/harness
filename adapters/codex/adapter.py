@@ -10,7 +10,7 @@ translation. Bindings (register via adapters/codex/hooks.json):
                                         apply_patch aliases Edit|Write)
   PostToolUse       -> post_change     (decision block replaces tool result)
   Stop              -> unit_complete   (decision block forces continuation)
-  PreCompact        -> clear injection hashes, memory flush + COMPACTION_REACHED
+  PreCompact        -> harness precompact (hash reset + COMPACTION_REACHED)
 
 Codex documents PreToolUse as "a guardrail rather than a complete
 enforcement boundary" (unified_exec paths not yet intercepted) — keep
@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common import (call_engine, clip, emit, extract_paths,  # noqa: E402
-                    flush_compaction, injections_text, permit, reasons_text)
+                    record_compaction, injections_text, permit, reasons_text)
 
 ENGINE_EVENT = {
     "SessionStart": "session_start",
@@ -40,7 +40,7 @@ def main():
     session = hook.get("session_id", "codex-session")
 
     if name in ("PreCompact",):
-        return flush_compaction(session)
+        return record_compaction(session)
     if name not in ENGINE_EVENT:
         return 0
 

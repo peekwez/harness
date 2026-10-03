@@ -122,19 +122,12 @@ export const HarnessPlugin = async ({ directory, worktree }) => {
           console.error(`harness: unit_complete blocked — ${reasons(v)}`);
         }
       } else if (event.type === "session.compacted") {
-        // compaction: forget the injected blocks (the next prompt
-        // re-injects), then record the COMPACTION_REACHED signal
+        // reset the context hashes and count the compaction
         if (process.env.HARNESS_BIN) {
           spawnSync(
             "python3",
-            [process.env.HARNESS_BIN, "--root", root, "resolve", "--reset",
+            [process.env.HARNESS_BIN, "--root", root, "precompact",
              "--session", sid],
-            { encoding: "utf-8" },
-          );
-          spawnSync(
-            "python3",
-            [process.env.HARNESS_BIN, "--root", root, "memory", "flush",
-             "--session", sid, "--compaction"],
             { encoding: "utf-8" },
           );
         }

@@ -1,6 +1,6 @@
 """Adapter conformance suite: event translation, verdict handling, injection
 format. Any future framework adapter must pass the equivalents of these.
-PreCompact: clear injection hashes, memory flush + COMPACTION_REACHED telemetry, no injection."""
+PreCompact: `harness precompact` (hash reset + COMPACTION_REACHED) ONLY, no injection."""
 import json
 import os
 import subprocess
@@ -155,7 +155,7 @@ def test_injection_clipped_under_hook_output_cap():
     assert adapter.clip("short", "slice-042") == "short"
 
 
-def test_precompact_flush_and_telemetry_only(toy):
+def test_precompact_counts_compaction_and_injects_nothing(toy):
     events = toy / ".harness" / "cache" / "events.jsonl"
     before = events.read_text() if events.exists() else ""
     code, out, err = run_adapter(
@@ -337,44 +337,42 @@ def test_precompact_clears_hashes_so_the_next_prompt_reinjects(toy):
     assert "D-041" in out["hookSpecificOutput"]["additionalContext"]
 
 
-def _failing_reset_bin(tmp_path):
-    """A stand-in engine: `resolve --reset` fails, everything is logged."""
+def _failing_precompact_bin(tmp_path):
+    """A stand-in engine: `precompact` fails, every call is logged."""
     log = tmp_path / "calls.log"
     fake = tmp_path / "fake_harness.py"
     fake.write_text(
         "import sys\n"
         f"open({str(log)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
-        "if 'resolve' in sys.argv:\n"
-        "    print('reset exploded', file=sys.stderr)\n"
-        "    sys.exit(1)\n")
+        "print('clear exploded', file=sys.stderr)\n"
+        "sys.exit(1)\n")
     return fake, log
 
 
-def test_precompact_flushes_memory_even_when_reset_fails(toy, tmp_path):
-    """A failed reset must not drop COMPACTION_REACHED: both run, the hook
-    names the failure and exits non-zero."""
-    fake, log = _failing_reset_bin(tmp_path)
+def test_precompact_reports_failure_and_calls_only_precompact(toy, tmp_path):
+    """A failed clear exits non-zero and names the failure. The hook makes
+    one engine call, `precompact`, which records the compaction itself."""
+    fake, log = _failing_precompact_bin(tmp_path)
     code, out, err = run_adapter(
         {"hook_event_name": "PreCompact", "session_id": "ac-reset"},
         toy, slice_id="slice-042", harness_bin=fake)
-    calls = log.read_text()
-    assert "resolve --reset" in calls
-    assert "memory flush" in calls and "--compaction" in calls
-    assert code != 0 and "resolve" in err and "reset exploded" in err
+    calls = log.read_text().strip().splitlines()
+    assert len(calls) == 1 and "precompact" in calls[0]
+    assert "memory flush" not in calls[0] and "resolve" not in calls[0]
+    assert code != 0 and "precompact" in err and "clear exploded" in err
 
 
-def test_common_flush_compaction_flushes_even_when_reset_fails(
+def test_common_record_compaction_reports_failure(
         toy, tmp_path, monkeypatch, capsys):
     import importlib.util
     spec = importlib.util.spec_from_file_location(
         "harness_adapters_common_m2", PLUGIN_ROOT / "adapters" / "common.py")
     common = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(common)
-    fake, log = _failing_reset_bin(tmp_path)
+    fake, log = _failing_precompact_bin(tmp_path)
     monkeypatch.setattr(common, "HARNESS", str(fake))
     monkeypatch.setattr(common, "resolve_root", lambda *a, **k: toy)
-    assert common.flush_compaction("ac-reset") != 0
+    assert common.record_compaction("ac-reset") != 0
     calls = log.read_text()
-    assert "resolve --reset" in calls
-    assert "memory flush" in calls and "--compaction" in calls
-    assert "reset exploded" in capsys.readouterr().err
+    assert "precompact" in calls and "memory flush" not in calls
+    assert "clear exploded" in capsys.readouterr().err

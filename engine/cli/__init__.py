@@ -21,7 +21,7 @@ from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
 from engine.cli.slice import cmd_permit, cmd_start
 from engine.cli.substrate import (cmd_extract, cmd_gates, cmd_graph,
-                                  cmd_memory, cmd_merge_substrate,
+                                  cmd_memory, cmd_merge_substrate, cmd_precompact,
                                   cmd_registry, cmd_resolve, cmd_status)
 from engine.cli.verify import cmd_doctor, cmd_event, cmd_verify
 from engine.cli.upgrade import cmd_upgrade
@@ -43,7 +43,7 @@ COMMANDS = {
     "land": cmd_land,
     "review": cmd_review,
     "registry": cmd_registry, "merge-substrate": cmd_merge_substrate,
-    "graph": cmd_graph, "memory": cmd_memory, "status": cmd_status,
+    "graph": cmd_graph, "memory": cmd_memory, "precompact": cmd_precompact, "status": cmd_status,
     "adjudicate": cmd_adjudicate,
 }
 
@@ -305,6 +305,10 @@ def main(argv=None):
     fl.add_argument("--compaction", action="store_true")
     co = ms.add_parser("compact")
     co.add_argument("--slice", required=True); co.add_argument("--commit")
+
+    sp = sub.add_parser("precompact", help="PreCompact hook: reset context "
+                                           "hashes, count the compaction")
+    sp.add_argument("--session")
 
     sp = sub.add_parser("status", help="slice metrics from .harness/slice-metrics.jsonl and always-on context cost")
     sp.add_argument("--json", action="store_true")

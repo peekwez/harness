@@ -243,6 +243,36 @@ def cmd_memory(args):
     return 0
 
 
+# ------------------------------------------------------------------ precompact
+def cmd_precompact(args):
+    """PreCompact hook duty, for every host adapter: clear this session's
+    per-block context hashes, so the next prompt injects once again (7.4),
+    and count the compaction (D-0.10-11). Never injects anything. A failed
+    clear still records the compaction, then exits 1."""
+    from engine import telemetry
+    from engine.events import Sidecar
+    root = _root(args)
+    session = _session(args, root)
+    sidecar = Sidecar(root)
+    failure = None
+    try:
+        slice_id = (sidecar.state_get(session, "active_slice")
+                    or sidecar.state_get("__default__", "active_slice"))
+        try:
+            sidecar.block_hashes_clear(session)
+        except Exception as exc:  # noqa: BLE001 - reported below, never lost
+            failure = exc
+    finally:
+        sidecar.close()
+    telemetry.emit(root, "COMPACTION_REACHED",
+                   {"slice": slice_id, "session": session})
+    if failure is not None:
+        print(f"error: context reset failed: {failure}", file=sys.stderr)
+        return 1
+    _print({"compaction_recorded": True, "session": session, "slice": slice_id})
+    return 0
+
+
 # ------------------------------------------------------------------ status
 def cmd_status(args):
     from engine import telemetry

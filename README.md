@@ -273,7 +273,7 @@ and open its PR if it has none; idempotent),
 `graph` (`neighbors`, `provenance`, `uses-declares`, `note` — `--slice/--commit`
 to (re)write a note, `--repoint <slice-id> <sha>` to move one onto the commit
 a squash/rebase landed, `edge`),
-`memory`, `status`, `adjudicate`. Make targets in `Makefile` wrap
+`memory`, `precompact`, `status`, `adjudicate`. Make targets in `Makefile` wrap
 these thinly. Exit code 0 = verdict emitted (semantics in the JSON);
 2 = malformed input; 1 = check failed.
 
