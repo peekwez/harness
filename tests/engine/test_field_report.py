@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from conftest import loaded_context, make_event, run_cli
+from conftest import cite_non_goals, loaded_context, make_event, run_cli
 from engine import read_jsonl, write_jsonl
 from engine.compiler import (author_gate, compile_substrate, extract_non_goals,
                              _unresolved_open_questions)
@@ -95,11 +95,6 @@ def test_missing_extraction_deps_degrade_not_crash(toy, monkeypatch):
     assert "MISSING_DEPENDENCY" in codes
     assert all(f["severity"] == "advisory" for f in findings)
 
-    # unit_complete (the Stop path that hard-blocked in the field) stays unblocked
-    from engine.gates.g7_derivation import derivation_findings
-    g7 = derivation_findings(toy, load_config(toy))
-    assert all(f["severity"] == "advisory" for f in g7)
-    assert any(f["code"] == "MISSING_DEPENDENCY" for f in g7)
 
 
 def test_doctor_reports_deps(toy):
@@ -131,30 +126,6 @@ def test_replaces_prunes_scaffolded_planned_entries(toy):
     report = compile_substrate(toy)
     assert "telemetry" not in report["pruned"]
     assert any("not pruned" in w for w in report["warnings"])
-
-
-# ---------------------------------------------------------------- #6
-def test_api_surface_gaps_reported_and_gate_blocks(toy):
-    adr = toy / "adr" / "011-api.md"
-    adr.write_text('---\nid: "011"\napi_surface:\n  - "GET /orders"\n---\nbody\n')
-    report = compile_substrate(toy)
-    # contracts/api.yaml exists (authored) and lacks /orders -> gap, not rewrite
-    assert any("/orders" in g for g in report["contract_gaps"])
-    before = (toy / "contracts" / "api.yaml").read_text()
-    assert "/orders" not in before, "authored contract must not be rewritten"
-    result = author_gate(toy)
-    assert any("GET /orders" in g for g in result["gaps"])
-
-
-def test_api_surface_stub_created_for_new_contract(toy):
-    adr = toy / "adr" / "012-newapi.md"
-    adr.write_text('---\nid: "012"\ncontract: billing\n'
-                   'api_surface:\n  - "POST /invoices"\n---\nbody\n')
-    report = compile_substrate(toy)
-    assert "contracts/billing.yaml" in report["contracts"]
-    import yaml
-    doc = yaml.safe_load((toy / "contracts" / "billing.yaml").read_text())
-    assert "post" in doc["paths"]["/invoices"]
 
 
 # ---------------------------------------------------------------- #7
@@ -238,7 +209,8 @@ def test_decision_rows_match_dep_id_even_when_kind_coerced(toy):
     from engine import load_config
     from engine.resolver import resolve
     out = resolve(toy, "slice-042", load_config(toy))
-    assert "decision:D-090" in out["context_loaded"], \
+    decisions = next(b["text"] for b in out["blocks"] if b["key"] == "decisions")
+    assert "D-090" in decisions, \
         "rows must match the dep id even when its kind was coerced to 'other'"
 
 
@@ -303,6 +275,7 @@ def test_compile_adopts_source_into_seeded_planned_entries(toy):
 def test_denied_pre_change_records_no_phantom_touch(toy):
     """A blocked edit never happened: it must not demand G3 reconciliation
     at close-slice (found live in the todo-api walkthrough)."""
+    cite_non_goals(toy, "adr:007")
     from engine.events import Sidecar, handle_event
     loaded_context(toy, session="phantom")
     v = handle_event(make_event("pre_change", session="phantom",

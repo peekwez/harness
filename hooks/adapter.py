@@ -5,9 +5,9 @@ Claude Code hook JSON <-> the five-event engine contract. Porting harness to
 another agent framework means writing one new file like this one.
 
 Bindings: SessionStart->session_start, UserPromptSubmit->pre_context,
-PreToolUse(Edit|Write|MultiEdit)->pre_change, PostToolUse(same)->post_change,
-Stop->unit_complete, PreCompact->memory flush + COMPACTION_REACHED telemetry
-ONLY (no re-injection: session cycling, not compaction, is the strategy).
+PreToolUse(Edit|Write|MultiEdit|NotebookEdit)->pre_change, PostToolUse(same)->post_change,
+Stop->unit_complete, PreCompact->`harness precompact` (context-hash reset +
+COMPACTION_REACHED telemetry; the next prompt re-injects).
 """
 import json
 import os
@@ -119,6 +119,8 @@ def files_from_tool_input(tool_input):
         return files
     if tool_input.get("file_path"):
         files.append({"path": tool_input["file_path"], "proposed_content_hash": None})
+    if tool_input.get("notebook_path"):      # NotebookEdit
+        files.append({"path": tool_input["notebook_path"], "proposed_content_hash": None})
     for edit in tool_input.get("edits", []) or []:
         if isinstance(edit, dict) and edit.get("file_path"):
             files.append({"path": edit["file_path"], "proposed_content_hash": None})
@@ -158,6 +160,7 @@ def permit(session, root=None, command=None, paths=None):
         `(decision, reason)` where decision is `allow` (auto-approve),
         `deny` (pr-mode egress outside D-011's surface — the settings profile
         cannot express "this slice's branch", so the hook is the decider) or
+        `ask` (a human must approve: `harness memory promote`) or
         `defer` (stay silent; the host's own flow decides).
 
         When the engine itself fails, a pr-mode repo denies anything
@@ -211,6 +214,26 @@ def call_engine(event, root=None):
     return json.loads(proc.stdout)
 
 
+def render_findings(findings):
+    """`[CODE rule_ref] message`, then `  Fix: ...`, then injected lines.
+
+    Mirrors adapters/common.py:render_findings. Imports no engine code,
+    so the hook answers when the engine is broken.
+    """
+    if not findings:
+        return ""
+    blocks = []
+    for f in findings:
+        text = f"[{f['code']} {f['rule_ref']}] {f['message']}"
+        if f.get("fix"):
+            text += f"\n  Fix: {f['fix']}"
+        if f.get("inject"):
+            text += "\n" + "\n".join(f["inject"])
+        blocks.append(text)
+    blocks.append("Details: harness gates explain <CODE>")
+    return "\n".join(blocks)
+
+
 def main():
     hook = json.load(sys.stdin)
     hook_name = hook.get("hook_event_name", "")
@@ -220,18 +243,17 @@ def main():
                         hook.get("cwd"))
 
     if hook_name == "PreCompact":
-        # Flush + telemetry only. Compaction firing is a defect signal (§1.5).
+        # Hash reset + compaction count only. Never injects.
         cmd = [sys.executable, HARNESS]
         if root:
             cmd += ["--root", str(root)]
-        proc = subprocess.run(cmd + ["memory", "flush",
-                                     "--session", session, "--compaction"],
+        proc = subprocess.run(cmd + ["precompact", "--session", session],
                               capture_output=True, text=True)
         if proc.returncode != 0:
             err = proc.stdout.strip() or proc.stderr.strip()
             if "no .harness substrate" not in err:
-                print(f"harness PreCompact flush failed: {err}", file=sys.stderr)
-                return 1  # fail loud: losing the defect signal is itself a defect
+                print(f"harness precompact failed: {err}", file=sys.stderr)
+                return 1  # fail loud: a lost compaction count is a defect
         return 0
 
     # Bash is a permission question, not an EnforcementEvent: the five-event
@@ -241,7 +263,7 @@ def main():
     if hook_name == "PreToolUse" and hook.get("tool_name") == "Bash":
         command = (hook.get("tool_input") or {}).get("command", "")
         decision, reason = permit(session, root, command=command)
-        if decision in ("allow", "deny"):
+        if decision in ("allow", "deny", "ask"):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": decision,
@@ -264,10 +286,7 @@ def main():
         },
     }, root=root)
 
-    reasons = "; ".join(
-        f"[{f['code']} {f['rule_ref']}] {f['message']}"
-        + (("\n" + "\n".join(f.get("inject", []))) if f.get("inject") else "")
-        for f in verdict.get("findings", []))
+    reasons = render_findings(verdict.get("findings", []))
     if verdict.get("engine_error"):
         reasons = f"harness engine error: {verdict['engine_error']}"
     injections = "\n\n".join(verdict.get("injections", []))

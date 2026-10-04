@@ -5,13 +5,12 @@ scope, shadows of everything the diff imports. No model, no judgment.
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
 from .. import get_slice, load_decisions
-from ..extractor.engine import (LANG_BY_EXT, RegistryIndex,
-                                shadow_path_for)
+from ..extractor import engine as _ex
+from ..extractor.engine import LANG_BY_EXT, RegistryIndex, shadow_for
 from ..graph import uses_vs_declares
 from ..registry import load_registry
 
@@ -59,24 +58,112 @@ def _secret_findings(root, diff_text, slice_id):
         for label, pattern in SECRET_PATTERNS:
             if pattern.search(line):
                 sev = "advisory" if current in overridden else "block"
-                findings.append(make_finding(
-                    "SECRET_IN_DIFF", "review:layer0",
-                    f"{current or '<unknown file>'}: added line matches the "
-                    f"{label} pattern"
-                    + (" (override recorded — audited)" if sev == "advisory"
-                       else " — remove it, or record a false-positive "
-                            "override: `harness gates override --slice "
-                            f"{slice_id} --target secret:{current} "
-                            "--rule-ref review:layer0 --justification "
-                            '"<why>"`'),
-                    severity=sev, key=f"{current}|{label}"))
+                where = current or "<unknown file>"
+                if sev == "advisory":
+                    findings.append(make_finding(
+                        "SECRET_IN_DIFF", "review:layer0",
+                        f"{where}: an added line matches the {label} pattern; "
+                        f"a recorded override accepts it.",
+                        severity="advisory", key=f"{current}|{label}"))
+                else:
+                    findings.append(make_finding(
+                        "SECRET_IN_DIFF", "review:layer0",
+                        f"{where}: an added line matches the {label} secret "
+                        f"pattern.",
+                        severity="block", key=f"{current}|{label}",
+                        fix=f"Remove the secret, or record a false positive: "
+                            f"harness gates override --slice {slice_id} "
+                            f"--target secret:{current} --rule-ref "
+                            f"review:layer0 --justification \"<why>\""))
                 break
     return findings
 
 
+_HUNK = re.compile(r"^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def _added_lines(diff_text):
+    """{path: set of new-file line numbers added by the diff}.
+
+    Hunk line counts decide where a hunk ends, so a `+++ ` line inside a
+    hunk is an added line, not a file header. A deleted file
+    (`+++ /dev/null`) adds nothing.
+    """
+    out, path, new_no, old_left, new_left = {}, None, 0, 0, 0
+    for line in (diff_text or "").splitlines():
+        if old_left > 0 or new_left > 0:
+            tag = line[:1]
+            if tag == "+":
+                if path:
+                    out.setdefault(path, set()).add(new_no)
+                new_no += 1
+                new_left -= 1
+                continue
+            if tag == "-":
+                old_left -= 1
+                continue
+            if tag == " " or line == "":
+                new_no += 1
+                new_left -= 1
+                old_left -= 1
+                continue
+            if tag == "\\":
+                continue
+        if line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else None
+            continue
+        m = _HUNK.match(line)
+        if m:
+            old_left = int(m.group(1) or 1)
+            new_no = int(m.group(2))
+            new_left = int(m.group(3) or 1)
+    return out
+
+
+def _glossary_findings(root, diff_text):
+    """Advisory GLOSSARY_SYNONYM findings over added markdown lines.
+
+    It runs the lint-text synonym scan on each changed markdown file's
+    working-tree content, so fences, headings, tables, comments and front
+    matter are skipped as lint-text skips them. Only a synonym on an added
+    line counts. Each synonym is reported once per file.
+    """
+    from ..events import make_finding
+    from ..lint_text import (GLOSSARY_PATH, _units, find_synonyms,
+                             load_glossary)
+    glossary = load_glossary(Path(root) / GLOSSARY_PATH)
+    if not glossary:
+        return []
+    findings = []
+    for path, added in _added_lines(diff_text).items():
+        if not path.lower().endswith(".md") or path == GLOSSARY_PATH:
+            continue
+        try:
+            text = (Path(root) / path).read_bytes().decode("utf-8-sig")
+        except (OSError, UnicodeDecodeError):
+            continue
+        seen = set()
+        units, _ = _units(text.splitlines())
+        for first, _kind, unit, last in units:
+            if not added.intersection(range(first, last + 1)):
+                continue
+            for syn, term in find_synonyms(unit, glossary):
+                if syn in seen:
+                    continue
+                seen.add(syn)
+                findings.append(make_finding(
+                    "GLOSSARY_SYNONYM", "review:layer0",
+                    f"{path}: added text uses {syn!r}; the glossary term is "
+                    f"{term!r}.",
+                    severity="advisory", key=f"{path}|{syn}",
+                    fix=f"Replace {syn!r} with {term!r}, or edit "
+                        f"{GLOSSARY_PATH}."))
+    return findings
+
+
 def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
-    """Substrate + diff only. The reviewer never receives builder session
-    memory — independent derivation from the same ground truth is the point."""
+    """Substrate + diff only. The reviewer never receives the builder's own
+    notes — independent derivation from the same ground truth is the point."""
     root = Path(root)
     registry = load_registry(root)
     files = diff_files(diff_text)
@@ -92,11 +179,15 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
                    "work_unit_id": slice_id,
                    "payload": {"files": [{"path": f, "proposed_content_hash": None}
                                          for f in files],
-                               "context_loaded": [], "diff": diff_text, "prompt": None}}
+                               "context_loaded": [], "diff": diff_text, "prompt": None,
+                               # a dry run over a diff, not a tool edit: G10
+                               # reads it (host events cannot carry this key)
+                               "source": "review"}}
             gate_findings.extend(run_gates(root, evt, config, sidecar))
     finally:
         sidecar.close()
     gate_findings.extend(_secret_findings(root, diff_text, slice_id))
+    gate_findings.extend(_glossary_findings(root, diff_text))
 
     ud = uses_vs_declares(root, slice_id)
     sl = get_slice(root, slice_id)
@@ -112,19 +203,29 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
     dup_candidates = [f for f in gate_findings if f["code"] == "DUPLICATE_CANDIDATE"]
 
     imported_shadows = {}
+    from .. import HarnessError
+    _ex.validate_shadow_config(config)       # loud, outside the catch below
+    known_modules = _ex.python_module_ids(root, config)            # once
+    ignored = _ex.git_ignored_set(
+        root, list(files) + [e["source"] for e in registry if e.get("source")])
+    kw = {"known_modules": known_modules, "ignored": ignored}
     for f in files:
         if Path(f).suffix.lower() not in LANG_BY_EXT:
             continue
-        sp = shadow_path_for(root, root / f)
-        if not sp.exists():
+        try:
+            shadow = shadow_for(root, root / f, config, **kw)
+        except HarnessError:
             continue
-        shadow = json.loads(sp.read_text())
+        if shadow is None:
+            continue
         for imp in shadow.get("imports", []):
             # longest dotted prefix, like G5 and the resolver (D-008):
             # exact-id matching drops `telemetry.spans` -> `telemetry`
             entry = index.match(imp)
-            if entry and entry.get("shadow") and (root / entry["shadow"]).exists():
-                imported_shadows[imp] = json.loads((root / entry["shadow"]).read_text())
+            if entry and entry.get("source"):
+                dep = shadow_for(root, root / entry["source"], config, **kw)
+                if dep is not None:
+                    imported_shadows[imp] = dep
 
     return {
         "slice": slice_id,

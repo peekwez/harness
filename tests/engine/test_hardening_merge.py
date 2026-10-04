@@ -124,6 +124,9 @@ def test_merge_rolls_back_when_substrate_commit_hook_fails(toy):
     hook = toy / ".git" / "hooks" / "pre-commit"
     hook.write_text("#!/bin/sh\nexit 1\n")
     hook.chmod(0o755)
+    # Merge no longer flushes telemetry, so stage substrate output directly:
+    # a regenerated file under .harness/ forces the substrate commit.
+    (toy / ".harness" / "regenerated.jsonl").write_text("{}\n")
 
     proc = run_cli("merge-slice", "--slice", "slice-042", root=toy,
                    env=NO_ENV)
@@ -166,25 +169,6 @@ def test_merge_rolls_back_when_successful_gate_mutates_tracked_source(toy):
     assert wt.exists() and _branch_exists(toy)
 
 
-def test_merge_rolls_back_when_extraction_raises(toy, monkeypatch, capsys):
-    wt = _closed_slice_worktree(toy)
-    head = git(toy, "rev-parse", "HEAD").stdout.strip()
-    from engine.extractor import engine as extractor
-    monkeypatch.setattr(
-        extractor, "extract_all",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("extract boom")))
-    from engine.cli.close import cmd_merge_slice
-
-    rc = cmd_merge_slice(SimpleNamespace(
-        root=str(toy), slice="slice-042", session=None))
-    out = json.loads(capsys.readouterr().out)
-
-    assert rc == 1
-    assert out["merged"] is False and out["rolled_back"] is True
-    assert "extract" in out["reason"] and "extract boom" in out["reason"]
-    assert git(toy, "rev-parse", "HEAD").stdout.strip() == head
-    assert not (toy / "orders.py").exists()
-    assert wt.exists() and _branch_exists(toy)
 
 
 def test_merge_rolls_back_when_event_pipeline_raises(toy, monkeypatch, capsys):

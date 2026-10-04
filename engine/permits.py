@@ -16,14 +16,24 @@ Two surfaces:
   `git push [-u] <landing.remote> slice/<bound-id>`, `git fetch
   <landing.remote>` and `gh pr create|view|checks|status` are auto-approved,
   and nothing else that talks to a remote.
+- `needs_human` — `harness memory promote` always goes to the human
+  (D-0.10-02), with or without a bound slice. The adapter asks.
+- `ask_reason` — the shipped profile runs a deferred command unprompted, so
+  protective outcomes are `ask`: a promotion, a command that names the shared
+  memory folder (`echo x > .claude/memory/shared/a.md`), and a command that
+  is not plain and may spell `harness` (`har${x}ness`, `harnes?`) or whose
+  program word is not plain (`h*`, `harn$(echo e)ss`). In pr mode a deny
+  outranks every ask.
 """
 from __future__ import annotations
 
+import posixpath
 import re
 import shlex
 from fnmatch import fnmatch
 
-from .gates.g3_scope import SUBSTRATE_PREFIXES
+from .gates import exempt
+from .shared_memory import SHARED_DIR, in_shared_dir
 
 # git subcommands that stay on this machine
 GIT_LOCAL = {
@@ -66,6 +76,268 @@ _SPLIT = re.compile(r"&&|\|\||[;\n|]")
 # command substitution can hide anything — never auto-approve a command
 # carrying it (this is also why the skills use `--commit HEAD`)
 _SUBSTITUTION = re.compile(r"\$\(|`|<\(")
+
+# Shared memory holds only facts a human chose (D-0.10-02). Matched on the
+# raw text so every spelling counts: `--root` first, `python3 …/harness`,
+# `bash -c`, extra spaces. Over-matching costs one prompt, never a write.
+PROMOTE = re.compile(r"\bmemory\s+[\"']?promote\b", re.I)
+# the sub-word after `memory`, ending at a blank or a shell separator
+_MEMORY_SUB = re.compile(r"\bmemory\b[ \t]*([^\s;&|<>()]*)", re.I)
+
+
+def needs_human(command: str):
+    """The reason a command must go to the human, or None.
+
+    `harness memory promote` always asks. So does every other `harness memory`
+    subcommand but `changed`, and any spelling we cannot resolve (`pro${x}mote`,
+    `$'promote'`): the sub-word is read de-quoted and must equal `changed`.
+    Case is ignored: macOS paths are case-insensitive.
+
+    A plain command is read by word: only the word after a `harness` program
+    word and its `--root` option is the subcommand, so `harness resolve
+    --module memory` and a commit message naming memory do not ask. A word
+    holding blanks (a `bash -c` script) is read as a command of its own.
+    Other commands fall back to a match on the raw text.
+
+    Args:
+        command: The command line the host is asking about.
+
+    Returns:
+        A reason string, else None.
+    """
+    raw = command or ""
+    dequoted = re.sub(r"[\\'\"]", "", raw)
+    for text in (raw, dequoted):
+        if "harness" in text.casefold() and PROMOTE.search(text):
+            return _PROMOTE_REASON
+    segments = plain_segments(raw)
+    if segments is not None:
+        if any(_words_need_human(words) for words in segments):
+            return _PROMOTE_REASON
+        return None
+    if "harness" in dequoted.casefold():
+        for m in _MEMORY_SUB.finditer(dequoted):
+            if m.group(1) != "changed":
+                return _PROMOTE_REASON
+    return None
+
+
+def _harness_sub(words: list, i: int):
+    """The words after the `harness` program word at `i`, past `--root`."""
+    j = i + 1
+    while j < len(words) and words[j].startswith("-") and words[j] != "--":
+        flag = words[j].split("=", 1)[0]
+        takes_value = ("=" not in words[j] and len(flag) >= 3
+                       and "--root".startswith(flag))
+        j += 2 if takes_value else 1
+    return words[j:]
+
+
+def _words_need_human(words: list) -> bool:
+    """True when a plain segment runs `harness memory <sub>` with a sub
+    other than `changed`, or holds a word that is such a command itself."""
+    for i, word in enumerate(words):
+        if any(c in word for c in " \t\n") and needs_human(word):
+            return True
+        if word.rsplit("/", 1)[-1].casefold() != "harness":
+            continue
+        rest = _harness_sub(words, i)
+        if rest and rest[0].casefold() == "memory" \
+                and (rest[1:2] or [""])[0] != "changed":
+            return True
+    return False
+
+
+_PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
+                   "and any harness memory command but `changed`. Shared "
+                   "memory holds only facts a human chose.")
+
+# A command is auto-approved only when it is plain: judged by a small
+# shell-quoting state machine, not a pattern list. Outside quotes only
+# [A-Za-z0-9_./:=@%+,-], blanks, the separators and the safe redirects pass.
+# Single quotes are literal. Double quotes are literal except $ ` \\ !, which
+# bash expands or escapes, so they are refused. Adjacent quoted and unquoted
+# parts form one word (`pro''mote` is `promote`); the token checks then run
+# on the de-quoted words. `~` and `^` pass mid-word (`HEAD~1`), never at a
+# word start or after `=`/`:`. Anything else goes to the human.
+_BARE_OK = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                     "0123456789_./:=@%+,-")
+_SAFE_REDIRECT_TOKENS = {"2>&1", "1>&2", "2>/dev/null", ">/dev/null",
+                         "&>/dev/null"}
+_DQUOTE_BAD = frozenset("$`\\!")
+# literal engine spellings the skills document; the host leaves them as typed
+_PLUGIN_BIN = ("${CLAUDE_PLUGIN_ROOT}/bin/harness",)
+
+
+def plain_segments(command: str, harness_bin=None):
+    """Split a command into segments of de-quoted words, or None if not plain.
+
+    Args:
+        command: The full command line.
+        harness_bin: Absolute engine path, allowed as a segment head as typed.
+
+    Returns:
+        A list of segments (each a list of words), or None when anything
+        outside the plain rules appears.
+    """
+    text = command or ""
+    heads = list(_PLUGIN_BIN) + ([harness_bin] if harness_bin else [])
+    segments, words = [], []
+    word, quoted, redir = [], False, False
+    i, n = 0, len(text)
+
+    def end_word():
+        nonlocal word, quoted, redir
+        if word or quoted:
+            value = "".join(word)
+            if redir:
+                if quoted or value not in _SAFE_REDIRECT_TOKENS:
+                    return False
+            else:
+                words.append(value)
+        word, quoted, redir = [], False, False
+        return True
+
+    def end_segment():
+        nonlocal words
+        if words:
+            segments.append(words)
+        words = []
+
+    while i < n:
+        ch = text[i]
+        if not word and not quoted and not words:
+            hit = next((f for h in heads for f in (f'"{h}"', f"'{h}'", h)
+                        if text.startswith(f, i)
+                        and (i + len(f) == n or text[i + len(f)] in " \t\n;&|")),
+                       None)
+            if hit:
+                words.append("harness")
+                i += len(hit)
+                continue
+        if ch in " \t":
+            if not end_word():
+                return None
+        elif ch in "\n;" or text.startswith(("&&", "||"), i) or ch == "|":
+            if not end_word():
+                return None
+            end_segment()
+            i += 2 if text.startswith(("&&", "||"), i) else 1
+            continue
+        elif ch == "'":
+            j = text.find("'", i + 1)
+            if j < 0:
+                return None
+            word.append(text[i + 1:j])
+            quoted = True
+            i = j + 1
+            continue
+        elif ch == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                if text[j] in _DQUOTE_BAD:
+                    return None
+                j += 1
+            if j >= n:
+                return None
+            word.append(text[i + 1:j])
+            quoted = True
+            i = j + 1
+            continue
+        elif ch in _BARE_OK:
+            word.append(ch)
+        elif ch in "~^" and (word or quoted) and text[i - 1] not in "=:":
+            # bash expands `~` only at a word start or after `=`/`:`, and `^`
+            # is history only at the start: `HEAD~1`, `HEAD^` stay plain
+            word.append(ch)
+        elif ch in "<>&":
+            word.append(ch)
+            redir = True
+        else:
+            return None
+        i += 1
+    if not end_word():
+        return None
+    end_segment()
+    return segments
+
+
+def _under_claude_dir(token: str) -> bool:
+    """True when a path token is `.claude` itself or inside `.claude/memory`."""
+    comps = [c for c in posixpath.normpath(token).casefold().split("/") if c]
+    for i, c in enumerate(comps):
+        if c == ".claude" and (i == len(comps) - 1
+                               or comps[i + 1] == "memory"):
+            return True
+    return False
+
+
+def names_shared_parent(command: str) -> bool:
+    """True when a de-quoted token names `.claude` or `.claude/memory`.
+
+    `cp -r x/shared .claude/memory/` and `git checkout other -- .claude`
+    write the shared folder without naming it. The token may carry a
+    redirect lead, a `--flag=` prefix, `./` parts or a trailing slash.
+    Case is ignored: macOS paths are case-insensitive.
+    """
+    raw = command or ""
+    try:
+        tokens = shlex.split(raw)
+    except ValueError:
+        tokens = re.sub(r"[\\'\"]", "", raw).split()
+    for tok in tokens:
+        tok = _REDIRECT_LEAD.sub("", tok).split("=", 1)[-1]
+        if not tok:
+            continue
+        comps = [c for c in posixpath.normpath(tok).casefold().split("/")
+                 if c and c != "."]
+        if comps[-1:] == [".claude"] or comps[-2:] == [".claude", "memory"]:
+            return True
+    return False
+
+
+def _git_output_flag(parts: list) -> bool:
+    """True for `--output[=file]` or any unambiguous abbreviation of it."""
+    for tok in parts:
+        flag = tok.split("=", 1)[0]
+        if len(flag) >= 3 and flag.startswith("--") and "--output".startswith(flag):
+            return True
+    return False
+
+
+_REDIRECT_LEAD = re.compile(r"^[0-9]*[<>&|]+")
+
+
+def touches_shared_memory(command: str) -> bool:
+    """True when a command names a path inside the shared memory folder.
+
+    Redirects, `cp`, `tee`, heredocs and any other head count: the check reads
+    path-like tokens, not the program. A normalized substring match is the
+    backstop for absolute paths and quoting the tokenizer cannot see.
+
+    Args:
+        command: The command line the host is asking about.
+
+    Returns:
+        Whether any token (or the normalized text) is in the shared folder.
+    """
+    raw = command or ""
+    for text in (raw.replace("\\", "/"), raw.replace("\\", "")):
+        flat = re.sub(r"/(\./)+", "/", re.sub(r"/{2,}", "/", text)).casefold()
+        if SHARED_DIR.casefold() in flat:
+            return True
+    try:
+        tokens = shlex.split(raw)
+    except ValueError:
+        tokens = raw.split()
+    for tok in tokens:
+        tok = _REDIRECT_LEAD.sub("", tok).split("=", 1)[-1]
+        if tok and in_shared_dir(posixpath.normpath(tok)):
+            return True
+        if tok and SHARED_DIR.casefold() in \
+                (posixpath.normpath(tok).casefold() + "/"):
+            return True
+    return False
 
 
 def _pr_egress_allowed(parts: list, landing: dict, slice_id: str) -> bool:
@@ -169,19 +441,21 @@ def is_config_escalation(command: str) -> bool:
     return False
 
 
-def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
+def _segment_allowed(parts: list, harness_bin: str | None, landing=None,
                      slice_id=None) -> bool:
-    seg = seg.strip()
-    if not seg:
-        return True
-    try:
-        parts = shlex.split(seg)
-    except ValueError:
-        return False          # unbalanced quotes: not something to auto-approve
+    """Judge one plain segment, given as de-quoted words."""
     if not parts:
         return True
+    seg = " ".join(parts)
+    if needs_human(seg):
+        return False
+    if any(_under_claude_dir(t) for t in parts[1:] if not t.startswith("-")):
+        return False
     head = parts[0]
-    if head in ("cd", "true", "echo", "ls", "pwd"):
+    if head == "cd":
+        return not any(c.casefold() == ".claude"
+                       for t in parts[1:] for c in t.split("/"))
+    if head in ("true", "echo", "ls", "pwd"):
         return True
     base = head.rsplit("/", 1)[-1]
     if base == "harness" or (harness_bin and head.strip('"\'') == harness_bin):
@@ -198,6 +472,8 @@ def _segment_allowed(seg: str, harness_bin: str | None, landing=None,
         if landing and landing.get("mode") == "pr" \
                 and _config_escalation_parts(_strip_env(parts)):
             return False
+        if _git_output_flag(parts[1:]):
+            return False          # --output writes a file anywhere
         sub = next((p for p in parts[1:] if not p.startswith("-")), None)
         return sub in GIT_LOCAL and sub not in GIT_EGRESS
     return any(seg.startswith(pfx) for pfx in TEST_RUNNERS)
@@ -388,7 +664,7 @@ def is_egress(command: str) -> bool:
 
 def command_decision(command: str, harness_bin: str | None = None,
                      config=None, slice_id=None) -> tuple:
-    """The host-facing verdict: `allow`, `deny` or `defer`.
+    """The host-facing verdict: `allow`, `deny`, `ask` or `defer`.
 
     `allow` and `defer` are the historical answers (auto-approve, or leave it
     to the human). `deny` exists only for `landing.mode: pr`, where the
@@ -421,7 +697,142 @@ def command_decision(command: str, harness_bin: str | None = None,
             "slice/<bound-slice>`, `git fetch <remote>` and `gh pr "
             "create|view|checks|status` (ADR-002 / D-011) — this command is "
             f"outside that surface: {reason}")
+    why = ask_reason(command, harness_bin)
+    if why:
+        return "ask", False, why
     return "defer", False, reason
+
+
+def ask_reason(command: str, harness_bin: str | None = None):
+    """Why a command must be put to the human, or None.
+
+    The shipped profile runs a deferred command in the sandbox without a
+    prompt, so these outcomes have to be `ask`, not `defer`.
+
+    Args:
+        command: The command line the host is asking about.
+        harness_bin: Absolute path of the engine binary, when known.
+
+    Returns:
+        A reason string for a promotion or other non-`changed` memory
+        subcommand, a command that names the shared memory folder, or a
+        command that is not plain and may spell `harness`; else None.
+    """
+    why = needs_human(command)
+    if why:
+        return why
+    if touches_shared_memory(command) or names_shared_parent(command):
+        return _SHARED_REASON
+    if plain_segments(command, harness_bin) is None:
+        if _may_spell_harness(command):
+            return _UNRESOLVED_REASON
+        if _program_word_unreadable(command):
+            return _PROGRAM_REASON
+    return None
+
+
+_SHARED_REASON = ("A command that names .claude/memory/shared or a parent "
+                  "folder needs a human. Shared memory holds only facts a "
+                  "human chose.")
+_PROGRAM_REASON = ("A program name uses expansion, globs, escapes or joined "
+                   "quotes, so the permit cannot read it. A human approves it.")
+_UNRESOLVED_REASON = ("This harness command uses expansion, globs or escapes, "
+                      "so the permit cannot read it. A human approves it.")
+
+
+_PROGRAM_BAD = frozenset("$`\\*?[]{}!")
+_ASSIGN_WORD = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_REDIRECT_WORD = re.compile(r"^[0-9]*(?:&>|[<>])")
+_REDIRECT_OP_ONLY = re.compile(r"^[0-9]*(?:&>>?|[<>]+&?|>\|)$")
+
+
+def _raw_segments(text: str):
+    """Split a command into segments of raw words, quotes kept, or None.
+
+    Quotes and backticks keep their contents in one word; separators
+    (`; & | ( )` and newlines) end a segment. An unterminated quote is None.
+    """
+    segments, words, word = [], [], []
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch in "'\"`":
+            j = i + 1
+            while j < n and text[j] != ch:
+                j += 2 if ch != "'" and text[j] == "\\" else 1
+            if j >= n:
+                return None
+            word.append(text[i:j + 1])
+            i = j + 1
+            continue
+        if ch == "\\":
+            word.append(text[i:i + 2])
+            i += 2
+            continue
+        if ch in " \t" or ch in ";&|()\n":
+            if word:
+                words.append("".join(word))
+                word = []
+            if ch not in " \t":
+                if words:
+                    segments.append(words)
+                words = []
+        else:
+            word.append(ch)
+        i += 1
+    if word:
+        words.append("".join(word))
+    if words:
+        segments.append(words)
+    return segments
+
+
+def _program_word_unreadable(command: str) -> bool:
+    """True when a segment's program word is not plain text.
+
+    The program word is the first word after leading `NAME=value`
+    assignments and redirections. It is unreadable when it holds `$`, a
+    backtick, a backslash, a glob or brace character, `!`, or quoted parts
+    joined to other text (`harn"e"ss`). An unterminated quote counts too.
+    """
+    segments = _raw_segments(command or "")
+    if segments is None:
+        return True
+    for words in segments:
+        k = 0
+        while k < len(words):
+            w = words[k]
+            if _ASSIGN_WORD.match(w):
+                k += 1
+            elif _REDIRECT_OP_ONLY.match(w):
+                k += 2
+            elif _REDIRECT_WORD.match(w):
+                k += 1
+            else:
+                break
+        if k >= len(words):
+            continue
+        prog = words[k]
+        if any(c in _PROGRAM_BAD for c in prog):
+            return True
+        if any(q in prog for q in "'\"") and not (
+                prog[0] in "'\"" and prog.index(prog[0], 1) == len(prog) - 1):
+            return True
+    return False
+
+
+def _may_spell_harness(command: str) -> bool:
+    """True when the text could name `harness` once the shell expands it.
+
+    Reads the raw text, the de-quoted text, and the text with `${...}`,
+    `$name`, quotes, escapes and glob characters removed (`har${x}ness`,
+    `harnes[s]`), case-insensitive. A glob tail (`harnes?`) counts too.
+    """
+    raw = (command or "").casefold()
+    stripped = re.sub(r"\$\{[^}]*\}|\$[a-z_][a-z0-9_]*", "", raw)
+    stripped = re.sub(r"[\\'\"$?*\[\]{}]", "", stripped)
+    return any("harnes" in t for t in
+               (raw, re.sub(r"[\\'\"]", "", raw), stripped))
 
 
 def command_allowed(command: str, harness_bin: str | None = None,
@@ -446,15 +857,25 @@ def command_allowed(command: str, harness_bin: str | None = None,
     """
     if not command or not command.strip():
         return False, "empty command"
+    why = needs_human(command)
+    if why:
+        return False, why
     if _SUBSTITUTION.search(command):
         return False, ("command substitution is never auto-approved — use "
                        "plain commands (e.g. `--commit HEAD`)")
+    if touches_shared_memory(command):
+        return False, ("a command that names .claude/memory/shared is never "
+                       "auto-approved — a human approves it")
     from engine.cli.landing import landing_config
     landing = landing_config(config)
-    segments = _SPLIT.split(command)
-    for seg in segments:
-        if not _segment_allowed(seg, harness_bin, landing, slice_id):
-            return False, f"segment not in the slice loop's command surface: {seg.strip()!r}"
+    segments = plain_segments(command, harness_bin)
+    if segments is None:
+        return False, ("expansion, escapes, globs, redirects and grouping are "
+                       "never auto-approved — use plain commands")
+    for parts in segments:
+        if not _segment_allowed(parts, harness_bin, landing, slice_id):
+            return False, ("segment not in the slice loop's command surface: "
+                           f"{' '.join(parts)!r}")
     return True, "slice loop command surface"
 
 
@@ -469,14 +890,16 @@ def declared_set(slice_row: dict, registry: list) -> set:
     return declared
 
 
-def paths_in_scope(slice_row: dict, registry: list, rels) -> bool:
-    """True when every path is substrate or inside the slice's declaration.
-    Wandering keeps its prompt — auto-approval is scoped to what the slice
-    said it would touch, which is exactly what G3 reconciles at close."""
+def paths_in_scope(slice_row: dict, registry: list, rels, config=None) -> bool:
+    """True when every path is exempt or inside the slice's declaration.
+    Wandering keeps its prompt: auto-approval is scoped to what the slice
+    said it would touch. `config` supplies `gates.exempt_paths`."""
     declared = declared_set(slice_row, registry)
     globs = [d for d in declared if "*" in d]
     for rel in rels:
-        if rel.startswith(SUBSTRATE_PREFIXES):
+        if in_shared_dir(rel):
+            return False      # G10 blocks it; never auto-approve it either
+        if exempt(rel, config):
             continue
         if rel in declared or any(fnmatch(rel, g) for g in globs):
             continue

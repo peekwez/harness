@@ -91,11 +91,11 @@ def test_the_vendored_engine_runs_verify_by_itself(tmp_path):
 
 def test_the_vendored_engine_is_not_extracted_as_project_source(tmp_path):
     """`.harness/` is substrate; the engine's own .py files must not become
-    shadows, registry gaps or G8 surface in the consumer repo."""
+    shadows, registry gaps or unshadowed surface in the consumer repo."""
     root = _init(tmp_path)
     proc = run_cli("extract", "--all", root=root)
     assert proc.returncode == 0, proc.stderr
-    shadows = list((root / ".harness" / "shadows").rglob("*.json"))
+    shadows = list((root / ".harness" / "cache" / "shadows").rglob("*.json"))
     assert not any("engine" in p.parts[p.parts.index("shadows") + 1:]
                    for p in shadows), shadows
     cfg = (root / ".harness" / "config.yaml").read_text()
@@ -150,7 +150,7 @@ def test_upgrade_brings_an_older_substrate_up_to_date(tmp_path):
         ".harness/engine/bin/harness", "./nowhere/harness")
     wf_path.write_text(old_wf)
 
-    proc = run_cli("upgrade", root=root)
+    proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     assert out["vendored_engine"]["action"] == "installed"
@@ -159,7 +159,7 @@ def test_upgrade_brings_an_older_substrate_up_to_date(tmp_path):
     assert (root.joinpath(*VENDOR) / "bin" / "harness").exists()
     assert ".harness/engine/bin/harness" in wf_path.read_text()
     # idempotent
-    out2 = json.loads(run_cli("upgrade", root=root).stdout)
+    out2 = json.loads(run_cli("upgrade", "--yes", root=root).stdout)
     assert out2["vendored_engine"]["action"] == "unchanged"
     assert out2["workflow"]["action"] == "unchanged"
 
@@ -170,7 +170,7 @@ def test_upgrade_replaces_a_stale_vendored_engine_wholesale(tmp_path):
     (vendored / "VERSION").write_text("0.0.1\n")
     (vendored / "engine" / "stale_module.py").write_text("x = 1\n")
     (vendored / "engine" / "cli" / "verify.py").write_text("broken\n")
-    out = json.loads(run_cli("upgrade", root=root).stdout)
+    out = json.loads(run_cli("upgrade", "--yes", root=root).stdout)
     assert out["vendored_engine"]["action"] == "refreshed"
     assert out["vendored_engine"]["from"] == "0.0.1"
     assert not (vendored / "engine" / "stale_module.py").exists()
@@ -200,7 +200,11 @@ def test_stale_vendored_engine_refuses_self_replacement_and_survives(tmp_path):
          "--root", str(root), "upgrade"],
         cwd=root, capture_output=True, text=True)
     assert proc.returncode != 0
-    assert "would replace" in proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["status"] == "failed", proc.stderr
+    [failure] = [f for f in out["failures"] if f["code"] == "STAGE_FAILED"]
+    assert failure["stage"] == "refresh vendored engine"
+    assert "would replace" in failure["detail"]
     assert (vendored / "bin" / "harness").exists()
     assert (vendored / "VERSION").read_text() == "0.0.1\n"
 
@@ -229,7 +233,7 @@ def test_upgrade_never_overwrites_a_hand_authored_workflow(tmp_path):
     wf_path = root / ".github" / "workflows" / "harness-verify.yml"
     custom = "name: mine\non: [push]\njobs: {}\n"
     wf_path.write_text(custom)
-    proc = run_cli("upgrade", root=root)
+    proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["workflow"]["action"] == "kept"
@@ -241,14 +245,14 @@ def test_upgrade_writes_the_workflow_when_it_is_missing(tmp_path):
     root = _init(tmp_path)
     wf_path = root / ".github" / "workflows" / "harness-verify.yml"
     wf_path.unlink()
-    out = json.loads(run_cli("upgrade", root=root).stdout)
+    out = json.loads(run_cli("upgrade", "--yes", root=root).stdout)
     assert out["workflow"]["action"] == "written"
     assert wf_path.exists()
 
 
 def test_upgrade_runs_the_schema_migration_and_merge_drivers(tmp_path):
     root = _init(tmp_path)
-    out = json.loads(run_cli("upgrade", root=root).stdout)
+    out = json.loads(run_cli("upgrade", "--yes", root=root).stdout)
     assert "schema" in out and out["schema"]["to"] >= 1
     drivers = subprocess.run(["git", "-C", str(root), "config", "--get",
                               "merge.harness-substrate.driver"],
@@ -259,7 +263,7 @@ def test_upgrade_runs_the_schema_migration_and_merge_drivers(tmp_path):
 def test_upgrade_refuses_a_repo_without_a_substrate(tmp_path):
     root = tmp_path / "bare"
     root.mkdir()
-    proc = run_cli("upgrade", root=root)
+    proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode != 0
     assert "init" in proc.stderr
 
@@ -310,7 +314,8 @@ def test_toy_repo_doctor_stays_healthy(tmp_path):
 
 
 # ---------------------------------------------------------------- docs
-def test_readme_documents_vendoring_and_upgrade():
-    body = (PLUGIN_ROOT / "README.md").read_text()
+def test_docs_document_vendoring_and_upgrade():
+    from test_docs_site import public_docs_text
+    body = public_docs_text()
     assert ".harness/engine" in body
-    assert "`upgrade`" in body
+    assert "harness upgrade" in body

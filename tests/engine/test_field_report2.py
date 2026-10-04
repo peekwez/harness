@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from conftest import git, loaded_context, make_event, run_cli
+from conftest import cite_non_goals, git, loaded_context, make_event, run_cli
 from engine import load_config, read_jsonl, write_jsonl
 from engine.compiler import author_gate, compile_substrate, extract_non_goals
 from engine.events import Sidecar, handle_event
@@ -44,11 +44,9 @@ def test_resolver_skips_superseded_adr_guidance(toy):
     (toy / "adr" / "009-push-model.md").write_text(
         '---\nid: "009"\nstatus: accepted\nsupersedes: ["007"]\n---\n'
         '# ADR-009\nNew push model replaces ADR-007 guidance.\n')
-    from engine.resolver import resolve
-    out = resolve(toy, "slice-042", load_config(toy))
-    joined = "\n".join(out["injections"])
-    assert "SURVIVING-GUIDANCE-MARKER" not in joined  # adr/007 is out of force
-    assert "adr:007" not in out["context_loaded"]
+    from engine.resolver import render_module
+    out = render_module(toy, "telemetry", load_config(toy))
+    assert "SURVIVING-GUIDANCE-MARKER" not in out["text"]  # adr/007 is out of force
     assert any(d.get("kind") == "guidance-superseded" for d in out["dropped"]), \
         "the drop must be visible, not silent"
 
@@ -112,6 +110,7 @@ def test_descriptive_path_compiles_to_warning_not_block(toy):
 
 
 def test_g3_non_goal_block_is_overridable(toy):
+    cite_non_goals(toy, "adr:007")
     session = "g3ovr"
     loaded_context(toy, session=session)
     v = handle_event(make_event("pre_change", session=session,
@@ -236,10 +235,9 @@ def test_decisions_block_includes_rows_from_loaded_adrs(toy):
     write_jsonl(toy / ".harness" / "decisions.jsonl", rows)
     from engine.resolver import resolve
     out = resolve(toy, "slice-042", load_config(toy))
-    assert "decision:D-070" in out["context_loaded"], \
-        "rows from loaded ADRs must join the decisions block"
-    assert "decision:D-071" not in out["context_loaded"], \
-        "rows from unloaded ADRs must not leak in"
+    decisions = next(b["text"] for b in out["blocks"] if b["key"] == "decisions")
+    assert "D-070" in decisions, "rows from cited ADRs must join the decisions block"
+    assert "D-071" not in decisions, "rows from uncited ADRs must not leak in"
 
 
 # ------------------------------------------------- autonomy profile
@@ -271,17 +269,6 @@ def test_init_without_autonomy_writes_no_settings(tmp_path):
     target.mkdir()
     run_cli("init", root=target)
     assert not (target / ".claude" / "settings.json").exists()
-
-
-# ---------------------------------------------------------------- #16
-def test_generated_contract_mode_exempts_coverage(toy):
-    (toy / "adr" / "012-genapi.md").write_text(
-        '---\nid: "012"\nstatus: accepted\ncontract_mode: generated\n'
-        'api_surface:\n  - "GET /metrics"\n---\nbody\n')
-    report = compile_substrate(toy)
-    assert not any("/metrics" in g for g in report["contract_gaps"])
-    result = author_gate(toy)
-    assert not any("GET /metrics" in g for g in result["gaps"]), result["gaps"]
 
 
 # ---------------------------------------------------------------- #17

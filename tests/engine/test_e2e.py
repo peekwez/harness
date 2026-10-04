@@ -1,5 +1,5 @@
-"""C8/M4 acceptance on the toy repo: block -> inject -> pass; Stop
-regenerates shadows + edges; session cycling; the full close ceremony;
+"""C8/M4 acceptance on the toy repo: edit -> inject -> record; Stop
+records edges; session cycling; the full close ceremony;
 backlog splitting; init idempotence."""
 import json
 
@@ -7,22 +7,17 @@ from conftest import git, loaded_context, make_event, run_cli
 from engine.events import handle_event
 
 
-def test_toy_repo_end_to_end_block_then_pass(toy):
-    # 1. An agent editing a file without context is blocked with a pointer.
+def test_toy_repo_end_to_end_edit_then_record(toy):
+    # 1. Context no longer gates an edit: an edit before Phase 1 is allowed.
     v = handle_event(make_event("pre_change", session="e2e",
                                 files=["orders.py"]), toy)
-    assert v["verdict"] == "block"
-    pointers = [i for f in v["findings"] for i in f["inject"]]
-    assert pointers and any("shadow" in p for p in pointers)
+    assert v["verdict"] == "allow", v["findings"]
 
-    # 2. After Phase-1 injection the same edit passes.
+    # 2. Phase 1 still injects the slice context.
     start = loaded_context(toy, session="e2e")
     assert start["injections"], "Phase 1 must inject"
-    v2 = handle_event(make_event("pre_change", session="e2e",
-                                 files=["orders.py"]), toy)
-    assert v2["verdict"] == "allow", v2["findings"]
 
-    # 3. Write the file; Stop regenerates shadows and writes edges.
+    # 3. Write the file; Stop records the shadow and writes edges.
     (toy / "orders.py").write_text(
         "import telemetry\n\n\ndef create_order(sku: str) -> dict:\n"
         "    telemetry.emit_span('create_order', {'sku': sku})\n"
@@ -30,7 +25,8 @@ def test_toy_repo_end_to_end_block_then_pass(toy):
     handle_event(make_event("post_change", session="e2e",
                             files=["orders.py"]), toy)
     handle_event(make_event("unit_complete", session="e2e"), toy)
-    assert (toy / ".harness" / "shadows" / "orders.py.json").exists()
+    from engine.extractor.engine import shadow_path_for
+    assert shadow_path_for(toy, toy / "orders.py").exists()
     from engine.graph import load_edges
     edges = load_edges(toy)
     assert any(e["type"] == "touches" and e["to"] == "file:orders.py"
@@ -46,20 +42,12 @@ def test_session_cycling_resumes_from_substrate_alone(toy):
                                    "    return telemetry.emit_span('o', {})\n")
     handle_event(make_event("post_change", session="dying",
                             files=["orders.py"]), toy)
-    run_cli("memory", "write", "--slice", "slice-042", "--kind", "attempt",
-            "--content", "tried dataclass orders",
-            "--approach", "dataclass", "--outcome", "abandoned",
-            "--why", "dict is the decided row", root=toy)
     # session dies here. New session: resolver rebuilds everything.
     fresh = loaded_context(toy, session="fresh")
     assert fresh["injections"]
     v = handle_event(make_event("pre_change", session="fresh",
                                 files=["orders.py"]), toy)
     assert v["verdict"] == "allow", v["findings"]
-    # the attempt memory survived the cycle in substrate
-    from engine import memory
-    entries = memory.read_session(toy, "slice-042")
-    assert any(e["kind"] == "attempt" for e in entries)
 
 
 def test_full_close_ceremony(toy):
@@ -91,7 +79,8 @@ def test_full_close_ceremony(toy):
     assert registry["orders"]["status"] == "built"
     notes = git(toy, "notes", "--ref=refs/notes/harness", "list").stdout
     assert notes.strip(), "git note must exist"
-    assert not (toy / ".harness" / "memory" / "session" / "slice-042.jsonl").exists()
+    assert "memory" not in out
+    assert not (toy / ".harness" / "memory").exists()
 
     # verify stays green after the ceremony (uses ⊆ declares reconciled)
     proc = run_cli("verify", root=toy)
@@ -132,39 +121,9 @@ def test_close_blocked_on_red_acceptance(toy):
     assert "acceptance" in proc.stdout
 
 
-def test_close_blocked_on_unreconciled_g3_touch(toy):
-    """T2: the unit cannot close until touched-file declarations reconcile."""
-    session = "close-g3"
-    run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(GOOD_ORDERS)
-    (toy / "rogue.py").write_text("x = 1\n")
-    handle_event(make_event("post_change", session=session,
-                            files=["orders.py", "rogue.py"]), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "orders and rogue")
-    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   "--commit", "HEAD", root=toy)
-    assert proc.returncode == 1
-    out = json.loads(proc.stdout)
-    assert "rogue.py" in json.dumps(out) and out.get("rule_ref") == "gate:G3"
-
-    # reconciliation path: amend the declaration, then close succeeds
-    from engine import read_jsonl, write_jsonl
-    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"].append("rogue.py")
-    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
-    handle_event(make_event("unit_complete", session=session), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "slice-042 + rogue")
-    proc2 = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                    "--commit", "HEAD", root=toy)
-    assert proc2.returncode == 0, proc2.stdout + proc2.stderr
-
-
 def test_backlog_proposes_authored_children_for_oversized_slice(tmp_path):
     from conftest import build_toy_repo
-    toy = build_toy_repo(tmp_path / "toy", budget=100)  # tiny budget
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)  # context over the cap
     proc = run_cli("backlog", root=toy)
     out = json.loads(proc.stdout)
     assert out["split"] == []
@@ -189,8 +148,9 @@ def test_init_scaffolds_and_refuses_overwrite(tmp_path):
     for p in (".harness/config.yaml", ".harness/schema_version",
               ".harness/registry.jsonl", ".harness/decisions.jsonl",
               ".harness/backlog.jsonl", "adr/000-template.md",
-              "contracts/api.yaml", ".github/workflows/harness-verify.yml"):
+              ".github/workflows/harness-verify.yml"):
         assert (target / p).exists(), p
+    assert not (target / "contracts").exists()
     cfg = (target / ".harness" / "config.yaml").read_text()
     assert "python: true" in cfg  # detected from app.py
     gi = (target / ".gitignore").read_text()

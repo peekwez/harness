@@ -59,7 +59,6 @@ def test_requirements_are_the_complete_records_written_at_closure(toy):
         ("touches", "slice:slice-042", "file:telemetry.py"),
         ("touches", "slice:slice-042", "module:telemetry"),
         ("produced_by", "module:telemetry", "$closed_commit"),
-        ("shadows", "module:telemetry", "file:.harness/shadows/telemetry.py.json"),
         ("governs", "decision:D-041", "module:telemetry"),
         ("satisfies", "slice:slice-042", "file:tests/slices/042_orders.py"),
     }

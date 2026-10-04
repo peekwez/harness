@@ -1,0 +1,91 @@
+# harness per-repo engine config (authored — edit freely, then commit)
+schema: 1
+resolver:
+  budget_tokens: 8000
+  ranking: [direct_deps, one_hop_types, durable_memories]
+  degrade: drop_docstrings_before_modules
+gates:
+  g3_mode: allow_with_findings      # or: block | radius
+  g5_override: recorded_justification  # or: advisory | park
+  g5_similarity_threshold: 0.6
+  # Repo-local gates (ADR-002 / D-007). Each entry is a repo-relative .py
+  # path or a dotted module name, either optionally suffixed `:ATTR` to name
+  # the declaration attribute (default `GATE`). A path entry names code the
+  # engine EXECUTES, so it must resolve inside the repo: absolute paths,
+  # `../` traversal and escaping symlinks are rejected. A gate module exposes:
+  #
+  #   GATE = {"id": "K1", "rule_ref": "adr:002",
+  #           "preferred": ["pre_change"], "fallback": ["post_change"]}
+  #
+  #   def run(ctx) -> list[finding]
+  #       # ctx is engine.gates.GateContext:
+  #       #   .root .config .slice .payload .touched_files() .rel(path)
+  #       # build findings with engine.events.make_finding; a blocking
+  #       # finding MUST carry a rule_ref, like every builtin gate.
+  #
+  # An entry that is uncontained, fails to import or declares no valid GATE
+  # becomes a blocking EXTRA_GATE_LOAD_ERROR finding; a gate that raises,
+  # returns a non-list or emits an invalid finding (e.g. a `block` with no
+  # rule_ref) becomes a blocking EXTRA_GATE_RUN_ERROR. Never a silent skip.
+  # Only gates with `unit_complete` in `preferred` also run in `harness
+  # verify` (a `fallback` entry does not qualify): a pre_change-only gate
+  # has no edit to intercept in CI.
+  # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+# acceptance:
+#   # The command that decides a slice is green (ADR-002 / D-012). Omit the
+#   # whole block and the engine runs the historical
+#   # `<python> -m pytest <paths> -q` — existing repos are unchanged.
+#   # `{paths}` is substituted with the shell-quoted acceptance paths and the
+#   # command is split with shlex (no shell); a cmd without `{paths}` gets
+#   # them appended. The same runner runs the cumulative regression suite at
+#   # close and at merge-slice.
+#   cmd: "uv run pytest {paths} -q"
+#   cwd: "."                        # repo-root-relative
+#   env: {PYTHONHASHSEED: "0"}      # overlaid on os.environ; values must be strings
+#   # The repo's own whole-tree gate. Runs ONCE per ceremony: at close (after
+#   # acceptance is green, before the substrate commit) and on the merged
+#   # tree in merge-slice — never on every event. A non-zero exit is the
+#   # blocking finding ACCEPTANCE_GATE_FAILED (rule_ref adr:002) carrying the
+#   # last 20 lines of combined stdout/stderr; merge-slice rolls the merge back.
+#   gate_cmd: "make check"
+# registry:
+#   # widen the registry `kind` enum with this repo's own abstraction kinds
+#   kinds_extra: [package, protocol]
+# extractor:
+#   # Source roots stripped from a source path to make a module id, tried in
+#   # order (ADR-002 / D-008). The remainder is dotted and a trailing
+#   # `__init__` dropped, so under the default globs
+#   # `packages/kente-config/src/kente/config/__init__.py` is the module
+#   # `kente.config`. A repo matching none of them keeps the dotted relative
+#   # path (`engine/resolver.py` -> `engine.resolver`). Python imports are
+#   # always shadowed whole (`kente.telemetry.decorators`), and G5 + the
+#   # resolver match those ids by longest dotted prefix.
+#   src_roots: ["src", "packages/*/src"]
+# landing:
+#   # How a closed slice reaches the base branch (ADR-002 / D-009).
+#   #   local (default) — `merge-slice` merges into the checked-out base;
+#   #     nothing leaves the machine.
+#   #   pr — `close-slice` IS the landing: after its substrate commit and
+#   #     provenance note it pushes `slice/<id>` to `remote` and runs
+#   #     `pr_cmd`; `merge-slice` and `run` refuse. Use this when the base
+#   #     branch is PR-protected.
+#   # In pr mode the permit layer and the generated autonomy profile
+#   # auto-approve exactly `git push [-u] <remote> slice/<bound-slice>`,
+#   # `git fetch <remote>` and `gh pr create|view|checks|status` (D-011) —
+#   # every other remote command still stops for a human.
+#   # `pr_cmd` is split with shlex and run WITHOUT a shell; {base} {branch}
+#   # {title} {body} are replaced inside their own token ({body} is a temp
+#   # file holding the PR body). The first URL it prints is recorded as the
+#   # slice row's `pr_url`, next to `landed_via: pr`. A slice row's optional
+#   # `linear` id prefixes the PR title and links in the body.
+#   mode: pr
+#   remote: origin
+#   base: main
+#   pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
+ensemble:
+  trigger_confidence_below: 0.7
+  samples: 3
+languages:
+{{languages}}
+telemetry:
+  compaction_is_defect: false

@@ -2,12 +2,9 @@
 substrate, adjudication is reachable, G2 certifies only what was emitted,
 G7 scales, substrate writes are atomic, docs stay true, metrics are honest."""
 import json
-import subprocess
-import sys
 
-from conftest import PLUGIN_ROOT, git, loaded_context, make_event, run_cli
-from engine import load_config, read_jsonl
-from engine.events import Sidecar, handle_event
+from conftest import PLUGIN_ROOT, run_cli
+from engine import read_jsonl
 
 
 # ---------------------------------------------------------------- R1/R2
@@ -17,7 +14,7 @@ def test_reviewer_records_findings_and_parks_into_the_queue(toy):
     proc = run_cli("review", "--slice", "slice-042", "--record-finding",
                    "--code", "R-decisions", "--rule-ref", "decision:D-041",
                    "--message", "span name is free-form, violates D-041",
-                   "--severity", "block", root=toy)
+                   "--severity", "block", "--fix", "Name the span.", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     from engine.graph import load_edges
     assert any(e["type"] == "reviewed_by" and e["from"] == "slice:slice-042"
@@ -68,64 +65,9 @@ def test_status_reports_parks_per_slice(toy):
 
 
 # ---------------------------------------------------------------- R3
-def test_resolve_registers_context_only_when_it_emits_it(toy):
-    """G2 must certify what the caller actually printed, never the
-    resolver's intent — otherwise the gate verifies nothing."""
-    proc = run_cli("resolve", "--slice", "slice-042", "--session", "quiet",
-                   "--quiet", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert not json.loads(proc.stdout).get("injections"), \
-        "--quiet suppresses the injections"
-    sc = Sidecar(toy)
-    try:
-        assert not sc.context_get("quiet"), \
-            "context nobody was shown must not be registered"
-    finally:
-        sc.close()
-    # the normal (emitting) path does register
-    run_cli("resolve", "--slice", "slice-042", "--session", "loud", root=toy)
-    sc = Sidecar(toy)
-    try:
-        assert sc.context_get("loud")
-    finally:
-        sc.close()
-
-
 # ---------------------------------------------------------------- R4
-def test_g7_reverifies_only_what_changed_since_the_last_clean_sweep(
-        toy, monkeypatch):
-    """An unchanged shadow/source/input tuple skips the expensive parse."""
-    session = "g7scope"
-    loaded_context(toy, session=session)
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert v["verdict"] != "block", v["findings"]      # clean sweep recorded
-
-    from engine.gates import g7_derivation
-
-    def unexpected_parse(*args, **kwargs):
-        raise AssertionError("unchanged inputs must not be re-parsed")
-
-    monkeypatch.setattr(g7_derivation, "build_shadow", unexpected_parse)
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" not in {f["code"] for f in v["findings"]}
 
 
-def test_g7_still_catches_any_hand_edited_shadow_at_stop(toy):
-    """The guarantee is unchanged: a hand-edit moves mtime forward, so the
-    cache can never hide one — including for files this slice never touched."""
-    session = "g7hit"
-    loaded_context(toy, session=session)
-    handle_event(make_event("unit_complete", session=session), toy)
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    shadow = json.loads(sp.read_text())
-    shadow["symbols"][0]["signature"] = "def hacked()"
-    sp.write_text(json.dumps(shadow, sort_keys=True, indent=1) + "\n")
-    v = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" in {f["code"] for f in v["findings"]}
-    # and it keeps reporting until fixed — a standing mismatch must not be
-    # swallowed by the watermark
-    v2 = handle_event(make_event("unit_complete", session=session), toy)
-    assert "DERIVATION_MISMATCH" in {f["code"] for f in v2["findings"]}
 
 
 # ---------------------------------------------------------------- R5
@@ -148,82 +90,14 @@ def test_substrate_writes_are_atomic(toy, tmp_path):
 
 
 # ---------------------------------------------------------------- R6
-def test_readme_documents_every_cli_subcommand():
-    """Docs drift is a correctness bug in a tool whose whole thesis is
-    'lookup, never interpret'."""
-    readme = (PLUGIN_ROOT / "README.md").read_text()
-    proc = subprocess.run([sys.executable, str(PLUGIN_ROOT / "bin" / "harness"),
-                           "--help"], capture_output=True, text=True)
-    body = proc.stdout.split("{", 1)[1].split("}", 1)[0]
-    subcommands = [s.strip() for s in body.split(",") if s.strip()]
-    missing = [s for s in subcommands if f"`{s}`" not in readme]
-    assert not missing, f"README does not document: {missing}"
-
-
 def test_spec_glossary_resolves_every_referenced_marker():
     """The skills cite §5.6 / C7 / T1 — an agent told to look things up must
     be able to."""
     import re
-    glossary = (PLUGIN_ROOT / "docs" / "SPEC.md").read_text()
+    glossary = (PLUGIN_ROOT / "docs" / "internal" / "SPEC.md").read_text()
     refs = set()
     for p in (PLUGIN_ROOT / "skills").rglob("*.md"):
         refs |= set(re.findall(r"§[\d.]+|\bC[1-9]\b|\bT[1-3]\b|\bM[1-9]\b",
                                p.read_text()))
     missing = sorted(r for r in refs if r not in glossary)
-    assert not missing, f"SPEC.md does not define: {missing}"
-
-
-# ---------------------------------------------------------------- R7
-def test_rule_samples_report_observations_without_automatic_promotion(toy):
-    """Sparse telemetry is evidence for review, not a promotion decision."""
-    from engine import telemetry
-    from engine.gates.g5_conformance import record_override
-    for _ in range(3):
-        telemetry.emit(toy, "event", {"event": "pre_change", "session": "s",
-                                      "slice": "slice-042", "verdict": "block",
-                                      "codes": ["UNDECLARED_FILE"],
-                                      "gates": ["gate:G3"]})
-    telemetry.emit(toy, "event", {"event": "pre_change", "session": "s",
-                                  "slice": "slice-042", "verdict": "block",
-                                  "codes": ["UNDECLARED_USE"],
-                                  "gates": ["gate:G5"]})
-    record_override(toy, "slice-042", "registry:telemetry", "needed",
-                    rule_ref="gate:G5")
-    agg = telemetry.aggregate(toy)
-    assert agg["rule_samples"]["gate:G3"] == {
-        "firings": 3, "overrides": 0, "reversals": 0}
-    assert agg["rule_samples"]["gate:G5"] == {
-        "firings": 1, "overrides": 1, "reversals": 0}
-    assert agg["layer0_promotion_candidates"] == []
-
-
-# ---------------------------------------------------------------- R8
-def test_telemetry_buffers_in_the_sidecar_and_flushes_at_close(toy):
-    """Hook events appending to a tracked file forced churn commits before
-    every merge; buffer them and flush once at close."""
-    session = "buf"
-    run_cli("start", "--slice", "slice-042", "--session", session,
-            "--no-worktree", root=toy)
-    before = len(read_jsonl(toy / ".harness" / "telemetry.jsonl"))
-    loaded_context(toy, session=session)
-    (toy / "orders.py").write_text(
-        "import telemetry\n\n\ndef create_order(sku: str) -> dict:\n"
-        "    telemetry.emit_span('create_order', {'sku': sku})\n"
-        "    return {'sku': sku}\n")
-    for _ in range(3):
-        handle_event(make_event("post_change", session=session,
-                                files=["orders.py"]), toy)
-    assert len(read_jsonl(toy / ".harness" / "telemetry.jsonl")) == before, \
-        "hook events must not churn the tracked file"
-    handle_event(make_event("unit_complete", session=session), toy)
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "x")
-    proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
-                   "--commit", "HEAD", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    rows = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    assert len(rows) > before, "buffered events must land at close"
-    assert any(r["kind"] == "event" for r in rows)
-    # and the dashboard still sees buffered-but-unflushed events
-    out = json.loads(run_cli("status", root=toy).stdout)
-    assert out["pre_change_events"] >= 0
+    assert not missing, f"docs/internal/SPEC.md does not define: {missing}"

@@ -1,13 +1,11 @@
 # harness per-repo engine config (authored — edit freely, then commit)
 schema: 1
-resolver:
-  budget_tokens: 8000
-  ranking: [direct_deps, one_hop_types, durable_memories]
-  degrade: drop_docstrings_before_modules
 gates:
-  g3_mode: allow_with_findings      # or: block | radius
-  g5_override: recorded_justification  # or: advisory | park
+  g3_mode: allow_with_findings      # or: radius (skip files next to a declared file)
   g5_similarity_threshold: 0.6
+  # Path prefixes that G3 and G5 never treat as slice work (spec 5.6). The
+  # list replaces the default; keep the entries you still want.
+  exempt_paths: [".harness/", "adr/", ".github/", "tests/", "docs/", ".claude/", "explore/"]
   # Repo-local gates (ADR-002 / D-007). Each entry is a repo-relative .py
   # path or a dotted module name, either optionally suffixed `:ATTR` to name
   # the declaration attribute (default `GATE`). A path entry names code the
@@ -15,7 +13,15 @@ gates:
   # `../` traversal and escaping symlinks are rejected. A gate module exposes:
   #
   #   GATE = {"id": "K1", "rule_ref": "adr:002",
-  #           "preferred": ["pre_change"], "fallback": ["post_change"]}
+  #           "preferred": ["pre_change"], "fallback": ["post_change"],
+  #           "cites": ["adr:007"]}
+  #
+  # `cites` (optional) names non-goal rule refs or boundary ids. G3 blocks a
+  # non-goal only when some gate cites it; other non-goals are advisory, and
+  # `harness compile` lists them under `advisory_only`. Prefer the ADR rule
+  # ref (`adr:NNN`): a boundary id is a hash of the non-goal text and
+  # changes when the text does. `harness compile` warns on a cite that
+  # matches no non-goal.
   #
   #   def run(ctx) -> list[finding]
   #       # ctx is engine.gates.GateContext:
@@ -31,6 +37,12 @@ gates:
   # verify` (a `fallback` entry does not qualify): a pre_change-only gate
   # has no edit to intercept in CI.
   # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+  # A host that cannot stop an edit before it lands sets this to true (for
+  # example Cursor CLI). Each gate then also runs at its fallback events.
+  # degraded_mode: false
+  # At close, harness also runs the acceptance tests of every closed slice.
+  # Set this to false to skip that regression run.
+  # regression_at_close: true
 # acceptance:
 #   # The command that decides a slice is green (ADR-002 / D-012). Omit the
 #   # whole block and the engine runs the historical
@@ -42,6 +54,14 @@ gates:
 #   cmd: "uv run pytest {paths} -q"
 #   cwd: "."                        # repo-root-relative
 #   env: {PYTHONHASHSEED: "0"}      # overlaid on os.environ; values must be strings
+#   # Red record (spec 6.3): `harness slice --slice` and `harness start` run
+#   # the slice's suite once and write .harness/verification/<slice>.json.
+#   # The suite must fail. With junit: true harness also records each test.
+#   # The default pytest command gets --junitxml. A custom cmd must name
+#   # {junit}, the XML path harness reads.
+#   junit: false
+#   red_timeout: 600                # seconds the bind-time suite run may take
+#   # cmd: "uv run pytest {paths} -q --junitxml={junit}"
 #   # The repo's own whole-tree gate. Runs ONCE per ceremony: at close (after
 #   # acceptance is green, before the substrate commit) and on the merged
 #   # tree in merge-slice — never on every event. A non-zero exit is the
@@ -61,13 +81,22 @@ gates:
 #   # always shadowed whole (`kente.telemetry.decorators`), and G5 + the
 #   # resolver match those ids by longest dotted prefix.
 #   src_roots: ["src", "packages/*/src"]
+# shadows:
+#   # Which files get an interface shadow. Shadows are a cache under the
+#   # gitignored .harness/cache/shadows/, built when G5, G6, review or
+#   # `harness resolve --module` need one. Git-ignored files, tests,
+#   # generated or minified files, media and archives, files over 1 MB and
+#   # binary files are always out. A file that matches `exclude` is out
+#   # unless `include` matches it. `*` crosses directories.
+#   exclude: ["*"]
+#   include: ["libs/**/src/**"]
 # landing:
 #   # How a closed slice reaches the base branch (ADR-002 / D-009).
 #   #   local (default) — `merge-slice` merges into the checked-out base;
 #   #     nothing leaves the machine.
 #   #   pr — `close-slice` IS the landing: after its substrate commit and
 #   #     provenance note it pushes `slice/<id>` to `remote` and runs
-#   #     `pr_cmd`; `merge-slice` and `run` refuse. Use this when the base
+#   #     `pr_cmd`; `merge-slice` refuses. Use this when the base
 #   #     branch is PR-protected.
 #   # In pr mode the permit layer and the generated autonomy profile
 #   # auto-approve exactly `git push [-u] <remote> slice/<bound-slice>`,
@@ -82,10 +111,16 @@ gates:
 #   remote: origin
 #   base: main
 #   pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
-ensemble:
-  trigger_confidence_below: 0.7
-  samples: 3
+# run:
+#   # After this many failed closes, harness parks the slice.
+#   max_close_attempts: 3
+review:
+  # Ensemble sampling and golden replay (opt-in, default off). On, a
+  # low-confidence would-block rubric answer is resampled 3 times and a
+  # split parks; `harness review --replay` runs the golden set.
+  ensemble: false
+  # Close runs the review stack over the slice diff. Set this to false to
+  # skip that review run.
+  # run_at_close: true
 languages:
 {{languages}}
-telemetry:
-  compaction_is_defect: false

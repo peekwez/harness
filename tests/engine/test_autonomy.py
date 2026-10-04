@@ -28,7 +28,7 @@ def test_extract_all_never_walks_into_worktrees(toy):
     (inner / "dupe.py").write_text("def f():\n    return 1\n")
     out = extract_all(toy, load_config(toy))
     assert not any(".worktrees" in p for p in out["written"] + out["cached"])
-    assert not (toy / ".harness" / "shadows" / ".worktrees").exists()
+    assert not (toy / ".harness" / "cache" / "shadows" / ".worktrees").exists()
 
 
 def test_init_gitignores_the_worktrees_dir(tmp_path):

@@ -1,7 +1,7 @@
 # Stage 2 — Red-team protocol
 
 First examine the working document locally using `agents/red-team.md` and
-the premortem checklist. Then run `harness:design-review` (sibling
+`premortem.md` in this skill. Then run `harness:design-review` (sibling
 `../design-review/SKILL.md`): hand the requirements and design to Codex when
 Claude Code leads, or Claude Code when Codex leads. This independent peer
 can perform the red-team pass with the checklist below. If unavailable,
@@ -10,7 +10,7 @@ the missing peer. Never label a same-host fork as a cross-provider review.
 
 The red-team hunts: unstated assumptions, scale cliffs, security holes,
 silent-failure modes (the md-file-bug class: anything that no-ops instead of
-erroring when an artifact is missing — see the premortem skill's checklist).
+erroring when an artifact is missing — see `premortem.md`).
 Review the feature's verification matrix using `../verification/design.md`.
 Challenge happy-path assumptions with concrete boundary, race, retry, partial
 failure and recovery cases. For each applicable risk, demand a reproducible

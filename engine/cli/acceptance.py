@@ -28,6 +28,9 @@ GATE_RULE_REF = "adr:002"
 GATE_REASON = "acceptance gate command failed"
 SPAWN_FAILED_RC = 127          # the shell's "command not found"
 GATE_CODE = "ACCEPTANCE_GATE_FAILED"
+JUNIT_PLACEHOLDER = "{junit}"
+PYTEST_RUNNER_ERRORS = (4, 5)  # usage error; no tests collected
+DEFAULT_RED_TIMEOUT = 600
 
 
 def _acceptance_block(config) -> dict:
@@ -52,17 +55,19 @@ def _acceptance_block(config) -> dict:
     return block
 
 
-def _acceptance_cmd(config, paths, interpreter) -> list[str]:
+def _acceptance_cmd(config, paths, interpreter, junit=None) -> list[str]:
     """The argv that decides acceptance for the given paths.
 
     `{paths}` is substituted with the shell-quoted paths and the result
     split with `shlex`; a custom command that never names `{paths}` gets
     them appended, so a bare `uv run pytest -q` still receives its targets.
+    `{junit}` becomes the quoted JUnit XML path, or `os.devnull` if none.
 
     Args:
         config: The merged engine config.
         paths: Repo-relative acceptance paths, already glob-expanded.
         interpreter: Python used by the default command.
+        junit: Absolute JUnit XML path for the red record, or None.
 
     Returns:
         The argv list to execute (no shell is involved).
@@ -70,11 +75,89 @@ def _acceptance_cmd(config, paths, interpreter) -> list[str]:
     cmd = _acceptance_block(config).get("cmd")
     paths = [str(p) for p in paths]
     if not cmd:
-        return [interpreter, "-m", "pytest", *paths, "-q"]
+        argv = [interpreter, "-m", "pytest", *paths, "-q"]
+        if junit:
+            argv.append(f"--junitxml={junit}")
+        return argv
+    if JUNIT_PLACEHOLDER in cmd:
+        cmd = cmd.replace(JUNIT_PLACEHOLDER,
+                          shlex.quote(str(junit or os.devnull)))
     if "{paths}" in cmd:
         quoted = " ".join(shlex.quote(p) for p in paths)
         return shlex.split(cmd.replace("{paths}", quoted))
     return [*shlex.split(cmd), *paths]
+
+
+def junit_enabled(config) -> bool:
+    """`acceptance.junit`: record each test's result. HarnessError if not bool."""
+    value = _acceptance_block(config).get("junit", False)
+    if not isinstance(value, bool):
+        raise HarnessError(f"config `acceptance.junit` is {value!r}. "
+                           f"Set it to true or false.")
+    return value
+
+
+def red_timeout(config) -> int:
+    """`acceptance.red_timeout`: seconds the bind-time run may take (int > 0)."""
+    value = _acceptance_block(config).get("red_timeout", DEFAULT_RED_TIMEOUT)
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise HarnessError(f"config `acceptance.red_timeout` is {value!r}. "
+                           f"Set it to whole seconds above zero.")
+    return value
+
+
+def _is_pytest(argv) -> bool:
+    """True when the argv runs pytest, directly or as `-m pytest`."""
+    if {Path(str(a)).name for a in argv} & {"pytest", "py.test"}:
+        return True
+    return any(a == "-m" and b == "pytest" for a, b in zip(argv, argv[1:]))
+
+
+def run_slice_suite(root, sl, config, junit=None) -> dict:
+    """One run of the slice's own acceptance command. No regression suite.
+
+    The red record (spec 6.3) calls this at bind, with stdin closed and a
+    timeout. A command that cannot run is a runner error, never red.
+
+    Args:
+        root: Repo root.
+        sl: The slice row.
+        config: The merged engine config.
+        junit: Absolute JUnit XML path, or None.
+
+    Returns:
+        `{"exit_code", "output_tail", "runner_error"}`; `runner_error` is
+        None for a real pass or fail.
+    """
+    declared = sl.get("acceptance", []) or []
+    if not declared:
+        return {"exit_code": None, "output_tail": "",
+                "runner_error": "slice declares no acceptance paths"}
+    paths, error = _expand(root, declared)
+    if error:
+        return {"exit_code": None, "output_tail": "", "runner_error": error}
+    interpreter = _acceptance_python(root, config)
+    custom = bool(_acceptance_block(config).get("cmd"))
+    if not custom and not Path(interpreter).exists():
+        return {"exit_code": None, "output_tail": "", "runner_error":
+                f"acceptance interpreter {interpreter!r} does not exist"}
+    argv = _acceptance_cmd(config, paths, interpreter, junit=junit)
+    limit = red_timeout(config)
+    try:
+        proc = _run(argv, root, config, stdin=subprocess.DEVNULL,
+                    timeout=limit)
+    except subprocess.TimeoutExpired:
+        return {"exit_code": None, "output_tail": "",
+                "runner_error": f"acceptance suite timed out after {limit}s"}
+    tail = "\n".join((proc.stdout or "").strip().splitlines()[-20:])
+    runner_error = None
+    if proc.returncode == SPAWN_FAILED_RC:
+        runner_error = "acceptance command could not run (exit 127)"
+    elif proc.returncode in PYTEST_RUNNER_ERRORS and _is_pytest(argv):
+        runner_error = (f"pytest exit {proc.returncode}: usage error or no "
+                        f"tests collected")
+    return {"exit_code": proc.returncode, "output_tail": tail,
+            "runner_error": runner_error}
 
 
 def _acceptance_cwd(root, config) -> str:
@@ -141,7 +224,7 @@ def _acceptance_env(root, config, base=None) -> dict:
     return base
 
 
-def _run(argv, root, config, env=None):
+def _run(argv, root, config, env=None, stdin=None, timeout=None):
     """Run `argv` under the acceptance cwd/env; returns a CompletedProcess.
 
     stderr is folded into stdout so evidence tails read in the order the
@@ -156,7 +239,8 @@ def _run(argv, root, config, env=None):
         cwd = _acceptance_cwd(root, config)
         return subprocess.run(argv, cwd=cwd,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, env=_acceptance_env(root, config, env))
+                              text=True, env=_acceptance_env(root, config, env),
+                              stdin=stdin, timeout=timeout)
     except OSError as exc:
         return subprocess.CompletedProcess(
             argv, SPAWN_FAILED_RC,
@@ -402,11 +486,15 @@ def gate_finding(root, config):
     if ok:
         return None, ""
     from engine.events import make_finding
-    cmd = _acceptance_block(config)["gate_cmd"]
+    from engine.findings import clip_words
+    block = _acceptance_block(config)
+    cmd = block["gate_cmd"]
     finding = make_finding(
         GATE_CODE, GATE_RULE_REF,
-        f"{GATE_REASON}: {cmd!r} (run from "
-        f"{_acceptance_block(config).get('cwd', '.')!r}) — fix the tree, not "
-        f"the gate.\n{tail}",
-        severity="block", layer=0, key=f"{cmd}")
+        f"{GATE_REASON} in {block.get('cwd', '.')!r}: "
+        f"{clip_words(repr(cmd), 12)}",
+        severity="block", layer=0, key=f"{cmd}",
+        inject=[tail] if tail else [],
+        fix="Fix the code or the environment until the gate command "
+            "passes. Do not edit the gate command.")
     return finding, tail

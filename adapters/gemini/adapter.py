@@ -8,7 +8,7 @@ Bindings (register via adapters/gemini/settings-hooks.json):
   BeforeTool   -> pre_change      (decision deny; matcher write_file|replace)
   AfterTool    -> post_change     (additionalContext feedback)
   AfterAgent   -> unit_complete   (decision block forces another turn)
-  PreCompress  -> memory flush + COMPACTION_REACHED telemetry ONLY
+  PreCompress  -> harness precompact (hash reset + COMPACTION_REACHED)
 
 CAVEAT: Gemini CLI hooks are fail-open by design — a crashed hook lets the
 action proceed with only a warning. harness compensates because `harness
@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common import (call_engine, clip, emit, extract_paths,  # noqa: E402
-                    flush_compaction, injections_text, permit, reasons_text)
+                    record_compaction, injections_text, permit, reasons_text)
 
 ENGINE_EVENT = {
     "SessionStart": "session_start",
@@ -45,7 +45,7 @@ def main():
     session = hook.get("session_id", "gemini-session")
 
     if name == "PreCompress":
-        return flush_compaction(session)
+        return record_compaction(session)
     if name not in ENGINE_EVENT:
         return 0
 

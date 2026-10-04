@@ -1,19 +1,72 @@
 """C6 — Gates: deterministic checks bound to engine events.
 
-Each gate declares preferred/fallback events (T1 portability: post-only
-frameworks run pre_change gates at post_change in degraded revert-and-retry
-mode). Every blocking finding cites a rule_ref — enforced by the engine.
+Each gate declares preferred/fallback events (T1 portability: with
+`gates.degraded_mode`, post-only frameworks run pre_change gates at
+post_change; the edit has landed, so they report and do not revert it).
+Every blocking finding cites a rule_ref — enforced by the engine.
 
-The pack is G1-G8 plus whatever the repo lists under `gates.extra`
-(ADR-002 / D-007) — see `engine/gates/extra.py`.
+The pack is G1, G3, G5, G6, G9 and G10 plus whatever the repo lists under
+`gates.extra` (ADR-002 / D-007) — see `engine/gates/extra.py`. G2, G4, G7
+and G8 were removed in 0.10; their ids stay reserved so old override records
+keep their meaning.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from .. import get_slice, load_boundaries, load_decisions
+from .. import (DEFAULT_EXEMPT_PATHS, HarnessError, get_slice,
+                load_boundaries, load_decisions)
 from ..registry import load_registry
-from .extra import ExtraGate, load_extra_gates, run_gate
+from .extra import ExtraGate, cited_rules, load_extra_gates, run_gate
+
+
+def exempt_paths(config) -> tuple:
+    """The `gates.exempt_paths` prefixes in force (spec 5.6).
+
+    Args:
+        config: Loaded engine config, or None.
+
+    Returns:
+        The configured prefixes, or `DEFAULT_EXEMPT_PATHS` when the key is
+        absent.
+
+    Raises:
+        HarnessError: The key is present but is not a list of non-empty
+            strings. A gate must never guess which files are exempt.
+    """
+    raw = ((config or {}).get("gates") or {}).get("exempt_paths")
+    if raw is None:
+        return DEFAULT_EXEMPT_PATHS
+    if (isinstance(raw, str) or not isinstance(raw, (list, tuple))
+            or not all(isinstance(p, str) and p.strip() for p in raw)):
+        raise HarnessError(
+            "gates.exempt_paths must be a list of path prefixes, for "
+            "example [\"docs/\", \"tests/\"]. Fix .harness/config.yaml.")
+    return tuple(raw)
+
+
+def _strip_dot(path: str) -> str:
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def exempt(rel: str, config) -> bool:
+    """True when a repo-relative path falls under an exempt entry.
+
+    An entry ending in `/` is a prefix. An entry without one names a whole
+    path segment: `docs` matches `docs` and `docs/x`, never `docsite/`. A
+    leading `./` on the entry or the path is ignored.
+    """
+    rel = _strip_dot(str(rel).replace("\\", "/"))
+    for entry in exempt_paths(config):
+        entry = _strip_dot(entry.replace("\\", "/"))
+        if entry.endswith("/"):
+            if rel.startswith(entry):
+                return True
+        elif rel == entry or rel.startswith(entry + "/"):
+            return True
+    return False
 
 
 class GateContext:
@@ -31,7 +84,7 @@ class GateContext:
         self._slice = None
         self._decisions = None
         self._boundaries = None
-        self._context_loaded = None
+        self._cited = None
 
     @property
     def registry(self):
@@ -58,11 +111,13 @@ class GateContext:
         return self._boundaries
 
     @property
-    def context_loaded(self) -> set:
-        if self._context_loaded is None:
-            self._context_loaded = (self.sidecar.context_get(self.session_id) |
-                                    set(self.payload.get("context_loaded", [])))
-        return self._context_loaded
+    def cited(self) -> set:
+        """Non-goal ids and rule refs that a `gates.extra` gate cites."""
+        if self._cited is None:
+            extra, _errors = load_extra_gates(
+                self.root, self.config, reserved_ids=reserved_gate_ids())
+            self._cited = cited_rules(extra)
+        return self._cited
 
     def touched_files(self) -> list:
         return [f["path"] for f in self.payload.get("files", [])]
@@ -77,12 +132,20 @@ class GateContext:
         return str(p)
 
 
+RETIRED_GATE_IDS = frozenset({"G2", "G4", "G7", "G8"})
+
+
 def builtin_gates() -> list:
-    """The eight gates that ship with the engine, in G1..G8 order."""
-    from . import (g1_manifest, g2_context, g3_scope, g4_freshness,
-                   g5_conformance, g6_drift, g7_derivation, g8_coverage)
-    return [g1_manifest, g2_context, g3_scope, g4_freshness,
-            g5_conformance, g6_drift, g7_derivation, g8_coverage]
+    """The gates that ship with the engine, in id order."""
+    from . import (g1_manifest, g3_scope, g5_conformance, g6_drift,
+                   g9_explore, g10_shared_memory)
+    return [g1_manifest, g3_scope, g5_conformance, g6_drift, g9_explore,
+            g10_shared_memory]
+
+
+def reserved_gate_ids() -> set:
+    """Ids a repo-local gate may not take: the builtins and the retired ids."""
+    return {g.GATE["id"] for g in builtin_gates()} | set(RETIRED_GATE_IDS)
 
 
 def all_gates(root=None, config=None) -> list:
@@ -102,7 +165,7 @@ def all_gates(root=None, config=None) -> list:
     """
     gates = builtin_gates()
     extra, _errors = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in gates})
+        root, config, reserved_ids=reserved_gate_ids())
     return gates + extra
 
 
@@ -143,8 +206,9 @@ def run_gates(root, event: dict, config: dict, sidecar) -> list:
     ctx = GateContext(root, event, config, sidecar)
     builtins = builtin_gates()
     extra, findings = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in builtins})
+        root, config, reserved_ids=reserved_gate_ids())
     findings = list(findings)
+    ctx._cited = cited_rules(extra)
     for gate in select_gates(builtins + extra, event["event"], degraded):
         if isinstance(gate, ExtraGate):
             findings.extend(run_gate(gate, ctx))

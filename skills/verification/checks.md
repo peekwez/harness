@@ -11,8 +11,9 @@ pytest in a project configured for another runner.
   running `-m pytest <paths> -q`. Custom commands substitute `{paths}` or append
   paths when absent; the engine uses argv splitting, not a shell. A red
   feature/bug regression must fail for the intended behavior, not a broken
-  environment. Existing correct behavior and static/doc changes need no
-  artificial failing test.
+  environment. Do not write an artificial failing test for existing correct behavior or static or doc changes.
+  Record why the suite is green at start instead:
+  `harness gates override --slice <id> --target verification:green-at-start --rule-ref verify:red-record --justification "<why>"`.
 - `harness acceptance --closed` runs declared tests for **closed** slices.
   `--list` only inspects selection. Neither selects the active slice; there
   is no `acceptance --slice` command. Inspect `ran`, `disabled`, selected paths

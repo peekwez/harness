@@ -83,7 +83,7 @@ def test_verify_flags_a_closed_slice_with_no_note(toy):
     out = json.loads(proc.stdout)
     f = next(f for f in out["findings"] if f["code"] == "MISSING_PROVENANCE_NOTE")
     assert "slice-042" in f["message"]
-    assert "graph note" in f["message"], "the repair command must be named"
+    assert "graph note" in f["fix"], "the repair command must be named"
 
 
 def test_graph_note_repairs_missing_provenance(toy):

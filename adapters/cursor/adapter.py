@@ -8,7 +8,7 @@ Bindings (register via adapters/cursor/hooks.json):
   preToolUse         -> pre_change     (permission deny; matcher Write|Delete)
   afterFileEdit      -> post_change    (observe-only in Cursor)
   stop               -> unit_complete  (followup_message to continue)
-  preCompact         -> memory flush + COMPACTION_REACHED telemetry ONLY
+  preCompact         -> harness precompact (hash reset + COMPACTION_REACHED)
 
 Set "failClosed": true on preToolUse (Cursor hooks default to fail-open).
 Cursor CLI (headless) does not fire preToolUse yet — it runs harness in
@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common import (call_engine, clip, emit, extract_paths,  # noqa: E402
-                    flush_compaction, injections_text, reasons_text)
+                    record_compaction, injections_text, reasons_text)
 
 ENGINE_EVENT = {
     "sessionStart": "session_start",
@@ -49,7 +49,7 @@ def main():
                or "cursor-session")
 
     if name == "preCompact":
-        return flush_compaction(session)
+        return record_compaction(session)
     if name not in ENGINE_EVENT:
         return 0
 

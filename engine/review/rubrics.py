@@ -10,11 +10,28 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .. import HarnessError, harness_dir, read_jsonl
+from .. import HarnessError, SchemaError, harness_dir, read_jsonl
 from ..events import make_finding, validate_finding
 from .ensemble import run_ensemble
 
 RUBRIC_SCHEMA_FIELDS = ("answer", "confidence", "evidence")
+
+# Layer 2 is opt-in (spec 10.3): `review.ensemble: true` resamples a
+# low-confidence would-block answer. Off, that answer parks unresampled.
+ENSEMBLE_TRIGGER_BELOW = 0.7
+ENSEMBLE_SAMPLES = 3
+
+
+def ensemble_enabled(config) -> bool:
+    """True when the repo opted into ensemble sampling and golden replay."""
+    review = (config or {}).get("review") or {}
+    if not isinstance(review, dict):
+        raise SchemaError("review must be a mapping. Fix .harness/config.yaml.")
+    value = review.get("ensemble", False)
+    if not isinstance(value, bool):
+        raise SchemaError(f"review.ensemble must be true or false, got "
+                          f"{value!r}. Fix .harness/config.yaml.")
+    return value
 
 
 def _deterministic_rubrics():
@@ -25,7 +42,7 @@ def _deterministic_rubrics():
         # `unresolved` = undeclared uses minus recorded G5 overrides — the
         # same set the close ceremony's own uses ⊆ declares check reads.
         # Reading `undeclared` here made a config-sanctioned override
-        # (g5_override: recorded_justification) pass the gate and then
+        # (a recorded G5 override) pass the gate and then
         # block at Layer 1 anyway (kente slice 001, 2026-08-17).
         ud = facts["uses_declares"]
         unresolved = ud.get("unresolved", ud["undeclared"])
@@ -49,13 +66,19 @@ def _deterministic_rubrics():
     return [
         {"id": "R-uses", "question": "Are all used registry abstractions declared?",
          "check": uses_reconciled, "severity_if_fail": "block",
-         "rule_ref": "gate:G5"},
+         "rule_ref": "gate:G5",
+         "summary": "uses registry entries that it does not declare",
+         "fix": "Add each entry to declares_dep, or record an override with harness gates override."},
         {"id": "R-gates", "question": "Are all Layer-0 gates green?",
          "check": no_blocking_gate_findings, "severity_if_fail": "block",
-         "rule_ref": "gate:G7"},
+         "rule_ref": "review:layer0",
+         "summary": "has blocking gate findings",
+         "fix": "Fix each blocking gate finding, then run the review again."},
         {"id": "R-dup", "question": "Are duplicate candidates resolved or overridden?",
          "check": duplicates_resolved, "severity_if_fail": "block",
-         "rule_ref": "gate:G5"},
+         "rule_ref": "gate:G5",
+         "summary": "has unresolved duplicate candidates",
+         "fix": "Reuse each existing entry, or record an override with harness gates override."},
     ]
 
 
@@ -66,22 +89,32 @@ def _model_rubrics(root):
         {"id": "R-decisions",
          "question": "Does the diff conform to every decision row in scope? "
                      "Answer pass/fail with the violated row id as evidence.",
-         "severity_if_fail": "block", "rule_ref": "decision:in-scope"},
+         "severity_if_fail": "block", "rule_ref": "decision:in-scope",
+         "summary": "breaks a decision row in scope",
+         "fix": "Change the code to follow the row, or park the question with harness review --park."},
         {"id": "R-holistic",
          "question": "Holistic pass: anything worth a new decision row, ADR, "
                      "or gate? Proposals only.",
          "severity_if_fail": "advisory", "rule_ref": "review:layer3",
-         "layer": 3},
+         "layer": 3,
+         "summary": "has a layer-3 proposal for a decision row, ADR or gate",
+         "fix": "A human decides whether to adopt the proposal."},
     ]
 
 
 def _precedents(root, rubric_id: str, limit: int = 3) -> list:
-    """Nearest adjudicated exemplars from durable memory."""
-    rows = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
-    hits = [r for r in rows if r.get("kind") == "adjudication"
-            and rubric_id in (r.get("content") or "")]
-    hits = hits or [r for r in rows if r.get("kind") == "adjudication"]
-    return [r["id"] for r in hits[:limit]]
+    """Nearest adjudicated exemplars as "<target>: <resolution>", from
+    adjudication edges. Edges for this rubric (matched on the parked
+    finding's code or rule_ref) win; otherwise the most recent edges."""
+    from ..graph import load_edges
+    rows = [e for e in load_edges(root) if e.get("type") == "decided_by"
+            and (e.get("meta") or {}).get("kind") == "adjudication"]
+    hits = [e for e in rows
+            if rubric_id in ((e.get("meta") or {}).get("code"),
+                             (e.get("meta") or {}).get("rule_ref"))]
+    chosen = (hits or rows)[-limit:]
+    return [f"{e['to']}: {(e.get('meta') or {}).get('resolution', '')}".rstrip(": ")
+            for e in chosen]
 
 
 def _validate_model_output(out: dict, rubric_id: str) -> dict:
@@ -95,6 +128,11 @@ def _validate_model_output(out: dict, rubric_id: str) -> dict:
     if out["answer"] not in ("pass", "fail", "uncertain"):
         raise HarnessError(f"rubric {rubric_id}: answer must be pass|fail|uncertain")
     return out
+
+
+def adjudicated_message(slice_id: str, rubric_id: str) -> str:
+    return (f"slice {slice_id}: rubric {rubric_id} was uncertain. "
+            "A human previously adjudicated this question. See the precedent.")
 
 
 def _already_adjudicated(root) -> set:
@@ -125,14 +163,13 @@ def run_review(root, facts: dict, config: dict, model=None,
         if out["answer"] == "fail":
             findings.append(make_finding(
                 rubric["id"], rubric["rule_ref"],
-                f"{rubric['question']} -> fail. {out['evidence']}",
+                f"slice {facts['slice']} {rubric['summary']}.",
                 severity=rubric["severity_if_fail"], layer=1,
                 precedents=_precedents(root, rubric["id"]),
-                key=facts["slice"] + "|" + rubric["id"]))
+                key=facts["slice"] + "|" + rubric["id"],
+                inject=[f"Evidence: {out['evidence']}"], fix=rubric["fix"]))
 
     if model is not None:
-        threshold = float(config["ensemble"]["trigger_confidence_below"])
-        samples = int(config["ensemble"]["samples"])
         for rubric in _model_rubrics(root):
             ctx = {"facts": {k: facts[k] for k in
                              ("diff_files", "uses_declares", "decisions_in_scope",
@@ -141,40 +178,56 @@ def run_review(root, facts: dict, config: dict, model=None,
             out = _validate_model_output(model(rubric["question"], ctx), rubric["id"])
             layer = rubric.get("layer", 1)
             would_block = rubric["severity_if_fail"] == "block" and out["answer"] == "fail"
-            # Layer 2: ensemble only when confidence < threshold AND severity
-            # would block. Splits escalate as uncertain — never averaged.
-            if would_block and out["confidence"] < threshold:
-                out = run_ensemble(model, rubric["question"], ctx, samples,
-                                   validate=lambda o: _validate_model_output(o, rubric["id"]))
+            # Layer 2: only a would-block answer below ENSEMBLE_TRIGGER_BELOW
+            # is touched. review.ensemble on: resample, splits escalate as
+            # uncertain (never averaged). Off: park it unresampled.
+            if would_block and out["confidence"] < ENSEMBLE_TRIGGER_BELOW:
+                if ensemble_enabled(config):
+                    out = run_ensemble(
+                        model, rubric["question"], ctx, ENSEMBLE_SAMPLES,
+                        validate=lambda o: _validate_model_output(o, rubric["id"]))
+                else:
+                    out = {"answer": "uncertain", "confidence": out["confidence"],
+                           "evidence": (
+                               f"confidence {out['confidence']:.2f} is below "
+                               f"{ENSEMBLE_TRIGGER_BELOW}; review.ensemble is "
+                               f"off, so this parks without resampling. "
+                               f"{out['evidence']}")}
             if layer >= 3:
                 # Layer 3 is advisory-only: findings can only spawn proposals.
                 if out["answer"] != "pass":
                     findings.append(make_finding(
                         rubric["id"], rubric["rule_ref"],
-                        f"proposal: {out['evidence']}",
+                        f"slice {facts['slice']} {rubric['summary']}.",
                         severity="advisory", layer=3,
-                        key=facts["slice"] + "|" + rubric["id"]))
+                        key=facts["slice"] + "|" + rubric["id"],
+                        inject=[f"Proposal: {out['evidence']}"],
+                        fix=rubric["fix"]))
                 continue
             if out["answer"] == "fail":
                 findings.append(make_finding(
                     rubric["id"], rubric["rule_ref"],
-                    f"{rubric['question']} -> fail. {out['evidence']}",
+                    f"slice {facts['slice']} {rubric['summary']}.",
                     severity=rubric["severity_if_fail"], layer=layer,
                     precedents=ctx["precedents"],
-                    key=facts["slice"] + "|" + rubric["id"]))
+                    key=facts["slice"] + "|" + rubric["id"],
+                    inject=[f"Evidence: {out['evidence']}"], fix=rubric["fix"]))
             elif out["answer"] == "uncertain":
                 f = make_finding(
                     "REVIEW_UNCERTAIN", rubric["rule_ref"],
-                    f"{rubric['question']} -> ensemble split; parked for "
-                    f"adjudication. {out['evidence']}",
+                    f"slice {facts['slice']}: rubric {rubric['id']} is "
+                    f"uncertain, so the finding is parked.",
                     severity="gate", layer=2,
                     precedents=ctx["precedents"],
-                    key=facts["slice"] + "|" + rubric["id"] + "|park")
+                    key=facts["slice"] + "|" + rubric["id"] + "|park",
+                    inject=[f"Evidence: {out['evidence']}"],
+                    fix="Run: harness adjudicate --list")
                 if f["finding_id"] in adjudicated:
                     # Adjudication already answered this exact question:
                     # surface the precedent, do not re-park (park-once).
                     f["severity"] = "advisory"
-                    f["message"] += " [previously adjudicated: applying precedent]"
+                    f["message"] = adjudicated_message(facts["slice"],
+                                                       rubric["id"])
                     findings.append(f)
                 else:
                     findings.append(f)

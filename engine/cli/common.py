@@ -106,19 +106,13 @@ def _acceptance_python(root, config):
 # Parallel worktree closes conflict on .harness JSONL by construction (W5).
 # Append-only logs union-merge; keyed-by-id rows go through the
 # `harness merge-substrate` 3-way driver.
-SUBSTRATE_UNION_MERGE = (".harness/telemetry.jsonl", ".harness/edges.jsonl",
-                         ".harness/notes.jsonl",
-                         ".harness/memory/durable.jsonl")
+SUBSTRATE_UNION_MERGE = (".harness/edges.jsonl", ".harness/notes.jsonl",
+                         ".harness/promotions.jsonl")
 
 
 SUBSTRATE_KEYED_MERGE = (".harness/backlog.jsonl", ".harness/registry.jsonl",
-                         ".harness/decisions.jsonl")
-
-
-# Shadows are derived: content-merging them is semantically meaningless
-# (W10). Keep ours, then regenerate from the merged sources — extract --all
-# actually rewrites stale ones now that the cache is version-aware (W7).
-SUBSTRATE_OURS_MERGE = (".harness/shadows/**",)
+                         ".harness/decisions.jsonl",
+                         ".harness/slice-metrics.jsonl")
 
 
 def _write_merge_attributes(root):
@@ -127,6 +121,7 @@ def _write_merge_attributes(root):
     the file lands in the slice's own diff and trips G3)."""
     ga = root / ".gitattributes"
     lines = ga.read_text().splitlines() if ga.exists() else []
+    before = list(lines)
     for f in SUBSTRATE_UNION_MERGE:
         entry = f"{f} merge=union"
         if entry not in lines:
@@ -135,11 +130,9 @@ def _write_merge_attributes(root):
         entry = f"{f} merge=harness-substrate"
         if entry not in lines:
             lines.append(entry)
-    for f in SUBSTRATE_OURS_MERGE:
-        entry = f"{f} merge=ours"
-        if entry not in lines:
-            lines.append(entry)
-    ga.write_text("\n".join(lines) + "\n")
+    if lines != before or not ga.exists():
+        from engine import write_lines
+        write_lines(ga, lines)
 
 
 def _config_merge_drivers(root):
@@ -148,9 +141,8 @@ def _config_merge_drivers(root):
     if not (root / ".git").exists():
         return
     import subprocess
-    # `ours` is NOT a built-in low-level driver (only text/binary/union
-    # are) — it must be defined or the attribute silently degrades to
-    # a normal text merge
+    # kept defined: a repo upgraded from 0.9 may still name merge=ours until
+    # its .gitattributes line is removed
     subprocess.run(["git", "-C", str(root), "config",
                     "merge.ours.driver", "true"], capture_output=True)
     subprocess.run(["git", "-C", str(root), "config",

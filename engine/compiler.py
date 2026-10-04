@@ -1,6 +1,6 @@
 """Stage-4 transform (`harness compile`): authored artifacts -> enforcement
 substrate. ADR frontmatter -> decision rows; abstraction mentions -> registry
-skeleton (all planned); API surface -> contract stubs; [non-goal]s -> G3
+skeleton (all planned); [non-goal]s -> G3
 scope boundaries. Prose is for extrapolation; compiled form is what gates read.
 
 Rows and abstractions may also be authored in the working document's typed
@@ -26,6 +26,7 @@ from .registry import registry_kinds
 
 _CODE_SPAN = re.compile(r"`[^`]*`")
 PLACEHOLDER_SENTINEL = "EDIT ME"
+DECISION_ANSWER_WORDS = 150  # spec 9.2: a row answer; the reasons go in the ADR
 
 
 def _config(root) -> dict:
@@ -110,7 +111,7 @@ def _boundary(text: str, patterns: list, source: str, rule_ref: str) -> dict:
             "text": text, "patterns": patterns}
 
 
-def _out_of_force(root) -> set:
+def out_of_force(root) -> set:
     """ADR ids that no longer bind: status superseded, or named in another
     ADR's supersedes list."""
     out = set()
@@ -124,6 +125,9 @@ def _out_of_force(root) -> set:
         for s in fm.get("supersedes", []) or []:
             out.add(str(s))
     return out
+
+
+_out_of_force = out_of_force  # the pre-0.10 private name
 
 
 def compile_substrate(root, working_doc=None, config=None) -> dict:
@@ -140,11 +144,11 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
     decisions = {d["id"]: d for d in read_jsonl(harness_dir(root) / "decisions.jsonl")}
     registry = {e["id"]: e for e in read_jsonl(harness_dir(root) / "registry.jsonl")}
     boundaries: dict = {}  # regenerated from scratch: derived files never accumulate
-    report = {"decisions": [], "registry": [], "boundaries": [], "contracts": [],
-              "contract_gaps": [], "pruned": [], "warnings": [], "adrs": [],
-              "skipped_superseded": []}
+    report = {"decisions": [], "registry": [], "boundaries": [],
+              "pruned": [], "warnings": [], "adrs": [],
+              "skipped_superseded": [], "advisory_only": []}
     now = now_iso()
-    superseded_adrs = _out_of_force(root)
+    superseded_adrs = out_of_force(root)
     # per-compile authored view of each abstraction, rebuilt from in-force ADRs
     authored: dict = {}  # aid -> {"kind":…, "domain":…, "refs":[…]}
     # which ADR claimed each id: a doc row claiming it too is a hard error
@@ -242,7 +246,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                     "id": aid, "kind": kind, "domain": requested_kind,
                     "status": "planned",
                     "module_id": None, "source": ab.get("source"),
-                    "source_hash": None, "shadow": None,
+                    "source_hash": None,
                     "guidance_refs": [ref],
                     "supersedes_guidance": ab.get("supersedes_guidance", []),
                     "manifest": ab.get("manifest", []),
@@ -277,49 +281,6 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 report["warnings"].append(
                     f"{adr_ref}: non-goal {b['id']} has no backticked path/glob — "
                     f"it documents intent but G3 cannot enforce it")
-
-        # API surface -> contract stubs (new contracts only; existing
-        # contracts are authored — report gaps instead of rewriting them).
-        # contract_mode: generated declares the contract is produced by the
-        # build (code-first); compile then owns neither stubs nor gaps (#16).
-        surface = fm.get("api_surface", []) or []
-        if surface and str(fm.get("contract_mode", "")).lower() == "generated":
-            report["warnings"].append(
-                f"{adr_ref}: contract_mode=generated — api_surface is "
-                f"informational; coverage is the build's responsibility, not "
-                f"author-gate's")
-            surface = []
-        if surface:
-            cdir = root / "contracts"
-            cdir.mkdir(exist_ok=True)
-            stub = cdir / f"{fm.get('contract', 'api')}.yaml"
-            ops = []
-            for op in surface:
-                parts = op.split(None, 1)
-                if len(parts) == 2:
-                    ops.append((parts[0].lower(), parts[1]))
-            import yaml
-            if not stub.exists():
-                paths: dict = {}
-                for method, route in ops:
-                    paths.setdefault(route, {})[method] = {
-                        "summary": f"stub from {adr_ref}",
-                        "responses": {"200": {"description": "ok"}}}
-                stub.write_text(yaml.safe_dump({
-                    "openapi": "3.0.3",
-                    "info": {"title": "generated stub", "version": "0.1.0"},
-                    "paths": paths}, sort_keys=True), encoding="utf-8")
-                report["contracts"].append(str(stub.relative_to(root)))
-            else:
-                doc = yaml.safe_load(stub.read_text()) or {}
-                have = doc.get("paths") or {}
-                for method, route in ops:
-                    if route not in have or method not in (have.get(route) or {}):
-                        gap = (f"{stub.relative_to(root)}: api_surface op "
-                               f"'{method.upper()} {route}' ({adr_ref}) is not in "
-                               f"the contract")
-                        report["contract_gaps"].append(gap)
-                        report["warnings"].append(gap)
 
     # typed fenced tables in the working document (ADR-002 D-013) are a
     # second authoring surface for the SAME rows — merged before reconcile
@@ -374,6 +335,52 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 report["warnings"].append(
                     f"working-doc: non-goal {b['id']} has no backticked path/glob — "
                     f"G3 cannot enforce it")
+
+    # spec 4.1: a non-goal blocks only when a gates.extra gate cites it
+    from .gates import reserved_gate_ids
+    from .gates.extra import cited_rules, load_extra_gates
+    extra, load_errors = load_extra_gates(
+        root, config, reserved_ids=reserved_gate_ids())
+    # a broken citing gate must be named, not just leave its non-goals
+    # listed as advisory only
+    report["warnings"].extend(
+        " ".join([f["message"], *f.get("inject", [])]) for f in load_errors)
+    cited = cited_rules(extra)
+    # a boundary id is a hash of the non-goal text: editing the text
+    # orphans a cite of the old id, so a cite that matches nothing is named
+    known = ({b["id"] for b in boundaries.values()}
+             | {b.get("rule_ref") for b in boundaries.values()})
+    for entry in sorted(cited - known):
+        report["warnings"].append(
+            f"cites entry {entry} matches no non-goal. Fix the cite or the "
+            f"non-goal.")
+    for b in sorted(boundaries.values(), key=lambda b: b["id"]):
+        if not b.get("patterns"):
+            continue
+        if b["id"] in cited or b.get("rule_ref") in cited:
+            continue
+        report["advisory_only"].append(b["id"])
+        report["warnings"].append(
+            f"non-goal {b['id']} is advisory only. Cite {b.get('rule_ref')} "
+            f"in a gates.extra GATE[\"cites\"] to make G3 block it.")
+
+    for rid in sorted(set(report["decisions"])):
+        n = len(str(decisions[rid].get("answer", "")).split())
+        if n > DECISION_ANSWER_WORDS:
+            report["warnings"].append(
+                f"decision {rid}: the answer has {n} words; the limit is "
+                f"{DECISION_ANSWER_WORDS}. Move the detail into the ADR that "
+                f"the row cites.")
+
+    # spec 6.1 / 6.2 (W5): statements -> .harness/verify.jsonl, and
+    # verifies: comments that name no statement. Runs before every write:
+    # a malformed statement ID fails the compile with nothing written.
+    from .statements import compile_statements
+    statements = compile_statements(root, working_doc=working_doc)
+    report["statements"] = statements["statements"]
+    report["statements_source"] = statements["source"]
+    report["unknown_test_links"] = statements["unknown_links"]
+    report["warnings"].extend(statements["warnings"])
 
     write_jsonl(harness_dir(root) / "decisions.jsonl",
                 sorted(decisions.values(), key=lambda d: d["id"]))
@@ -474,47 +481,13 @@ def author_gate(root, working_doc=None) -> dict:
                 shown = str(doc.resolve().relative_to(root.resolve()))
             except ValueError:
                 shown = str(working_doc)
-            gaps.append(f"working document {shown!r} does not exist yet — "
-                        f"start Phase 0 with /harness:architect (stage 1 "
-                        f"creates it), or seed it from an existing spec: "
-                        f"harness architect --from-spec <path>")
+            gaps.append(f"working document {shown!r} does not exist yet. "
+                        f"Run harness explore, then harness architect "
+                        f"--from-explore. Or pass --from-spec <path> or "
+                        f"--skip-explore \"<reason>\".")
         else:
             for q in _unresolved_open_questions(doc.read_text(encoding="utf-8")):
                 gaps.append(f"open question unresolved and not deferred-with-owner: {q}")
-
-    # contracts lint + api_surface coverage
-    cdir = root / "contracts"
-    contract_paths: dict = {}
-    if cdir.exists():
-        import yaml
-        for c in sorted(cdir.glob("*.yaml")):
-            try:
-                doc = yaml.safe_load(c.read_text())
-                if not isinstance(doc, dict) or "paths" not in doc:
-                    gaps.append(f"{c.relative_to(root)}: not a valid OpenAPI doc "
-                                f"(missing 'paths')")
-                else:
-                    contract_paths[c.stem] = doc.get("paths") or {}
-            except Exception as exc:
-                gaps.append(f"{c.relative_to(root)}: YAML parse error: {exc}")
-    in_force = _out_of_force(root)
-    for adr in _adr_files(root):
-        fm, _body = parse_frontmatter(adr.read_text(encoding="utf-8"))
-        if str(fm.get("id", "")) in in_force or \
-                str(fm.get("status", "")).lower() == "superseded":
-            continue  # superseded ADRs impose no coverage obligations
-        if str(fm.get("contract_mode", "")).lower() == "generated":
-            continue  # code-generated contract: coverage is the build's job (#16)
-        for op in fm.get("api_surface", []) or []:
-            parts = op.split(None, 1)
-            if len(parts) != 2:
-                continue
-            method, route = parts[0].lower(), parts[1]
-            covered = any(route in paths and method in (paths.get(route) or {})
-                          for paths in contract_paths.values())
-            if not covered:
-                gaps.append(f"api_surface op '{op}' (adr/{adr.name}) is not "
-                            f"covered by any contract in contracts/")
 
     # registry closure covers guidance refs
     for e in registry:

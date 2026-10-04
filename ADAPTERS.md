@@ -5,8 +5,9 @@ EnforcementEvent (JSON, stdin) and returns a verdict (JSON, stdout). Porting
 harness to another coding agent = writing one adapter that translates that
 harness's hook/plugin events into the five-event contract, then passing
 `tests/adapter-conformance/`. Frameworks without pre-change interception run
-gates in degraded revert-and-retry mode (T1: gates declare
-preferred/fallback events).
+in degraded mode (T1: gates declare preferred/fallback events): the
+pre_change gates run after the edit lands and report; nothing reverts the
+edit, and `harness verify` in CI is the backstop.
 
 Since early 2026 nearly every major harness has adopted Claude-Code-style
 lifecycle hooks (stdin JSON → stdout verdict, exit 2 = block), so full
@@ -21,7 +22,7 @@ enforcement is available almost everywhere.
 | **Factory Droid** | FULL | `PreToolUse` (`Edit`,`Create`,`ApplyPatch`,`Execute`) → `permissionDecision:"deny"`/exit 2, `updatedInput` | `SessionStart`/`UserPromptSubmit` additionalContext | near drop-in (same wire shape); org-managed hooks + `allowManagedHooksOnly` make enforcement non-overridable |
 | **Gemini CLI** (hooks GA v0.26, 2026-01) | FULL | `BeforeTool`, matcher `write_file\|replace` / `run_shell_command` → `decision:"deny"` | `SessionStart`/`BeforeAgent` additionalContext; `AfterAgent` for unit_complete | event/field rename shim; ship as a gemini-cli extension bundling hooks. Caveat: hooks are fail-open |
 | **Cursor (IDE agent)** | FULL | `preToolUse`, matcher `Write`/`Delete`/`Shell` → `permission:"deny"`; set `failClosed:true` | `sessionStart` additional_context; `beforeSubmitPrompt`; `stop` followup | may need none: Cursor natively loads Claude Code hooks configs and maps events/tools automatically |
-| **Cursor CLI (headless)** | DEGRADED (post-only for edits) | none yet (`preToolUse` not fired locally as of 2026-04); shell deny works via `beforeShellExecution` | `sessionStart` | `gates.degraded_mode: true` (T1 revert-and-retry via `afterFileEdit`/`postToolUse`); coarse pre-blocks via static `Write()` deny globs in `.cursor/cli.json` |
+| **Cursor CLI (headless)** | DEGRADED (post-only for edits) | none yet (`preToolUse` not fired locally as of 2026-04); shell deny works via `beforeShellExecution` | `sessionStart` | `gates.degraded_mode: true` (T1 fallback: pre_change gates run at `afterFileEdit`, observe-only, and a `stop` block asks for a fix via `followup_message`; no revert); coarse pre-blocks via static `Write()` deny globs in `.cursor/cli.json` |
 | **pi** (earendil-works/pi) | FULL | extension `pi.on("tool_call")` → `{block:true, reason}`; `event.input` mutable | `session_start`/`before_agent_start` → injected message + systemPrompt | ~50-line TypeScript extension spawning `bin/harness event` |
 | **OpenCode** (anomalyco) | FULL | plugin `tool.execute.before` → throw to deny; `output.args` mutable | AGENTS.md + SDK client; `session.created`/`session.idle` lifecycle | ~50-line JS plugin in `.opencode/plugins/` |
 | **Amp** (Sourcegraph) | FULL | plugin `tool.call` → `{action:"reject-and-continue"}` / `modify` / `synthesize` | `agent.start` message return | ~50-line TS plugin (`@ampcode/plugin`); API is descended from pi's, so the two shims are near-identical. Toolboxes/hooks-settings are legacy — plugins only |
@@ -34,9 +35,9 @@ enforcement is available almost everywhere.
   guidance is universal even before an adapter exists.
 - **`harness verify` in CI** — zero framework involvement; the enforcement
   backstop is identical regardless of which agent produced the commits.
-- **The CLI itself** — every harness above can shell out, so the full
-  workflow (`resolve`, `gates`, `close-slice`, `review`, `status`) is usable
-  from any of them today, adapter or not.
+- **The CLI itself** — every harness above can shell out. So each of them
+  can use the full workflow (`resolve`, `gates`, `close-slice`, `review`,
+  `status`) today, with or without an adapter.
 
 ## Shipped adapters
 
@@ -64,10 +65,10 @@ Approval prompts are not the enforcement layer in a harness repo — the
 pre-change gates and CI verify are — so each host's prompts can be safely
 pre-approved, with network-egress commands (`git push`/`git remote`) kept
 denied everywhere. Slice worktrees live at `.worktrees/<slice>` INSIDE the
-repo precisely so these profiles cover them: acceptEdits (Claude Code),
-workspace-write sandboxes (Codex), and workspace-scoped `Write(**)` allows
-(Cursor) all stop at the workspace boundary, and an out-of-repo worktree
-would prompt — or be blocked — on every edit:
+repo, so these profiles cover them. acceptEdits (Claude Code),
+workspace-write sandboxes (Codex) and workspace-scoped `Write(**)` allows
+(Cursor) all stop at the workspace boundary. An out-of-repo worktree
+would prompt, or be blocked, on every edit:
 
 | Host | Profile | Mechanism |
 |---|---|---|
@@ -82,7 +83,7 @@ would prompt — or be blocked — on every edit:
 
 1. Map the host's events onto: `session_start`, `pre_context`, `pre_change`,
    `post_change`, `unit_complete` (see `hooks/adapter.py` — the Claude Code
-   reference is ~130 lines).
+   reference is about 350 lines).
 2. Translate verdicts: `block` → the host's deny mechanism; `injections` →
    the host's context-injection mechanism; respect the host's loop guards
    (e.g. Codex/Claude `stop_hook_active`, Cursor `loop_count`).

@@ -1,0 +1,33 @@
+# Review rubrics
+
+The stack (C7):
+
+- **Layer 0 — deterministic facts.** Gate outputs, uses/declares diff,
+  duplicate candidates, decision rows in scope, shadows of the diff's
+  imports. Assembled by `"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --layer0-only`; no judgment.
+- **Layer 1 — rubric-bound checks.** One narrow question per check. Fixed
+  output schema: `{answer: pass|fail|uncertain, confidence, evidence}`.
+  Retrieve 2–3 precedent exemplars from adjudicated findings first.
+- **Layer 2 — ensemble (opt-in).** Ensemble sampling and golden replay are
+  opt-in via `review.ensemble: true`. With it on, a finding that would block
+  with confidence below 0.7 is sampled 3×. Splits escalate as `uncertain`
+  and park. With it off (the default), the same finding parks as `uncertain`
+  without resampling. Never average a coin flip into a verdict.
+- **Layer 3 — holistic, advisory-only.** Its findings can only spawn
+  proposals (new decision row / ADR / gate). It cannot block anything.
+
+The findings contract (§5.2): every blocking finding cites a `rule_ref` —
+gate:GN, decision:D-NNN, or adr:NNN. The engine rejects rule-ref-less
+blocks. **No blocking on taste**: if something offends your sensibilities
+but no rule covers it, that is a Layer-3 advisory plus a proposed rule, and
+next slice it can block legitimately.
+
+Write each finding in STE-80 (`skills/harness/ste80.md`).
+`harness review --record-finding` takes `--message` (25 words or fewer),
+`--failure-scenario` (a concrete input and the wrong result) and `--fix` (one
+action). A `--severity block` finding needs `--fix`.
+
+Reviewer hygiene: substrate + diff only; never the builder's personal memory.
+Golden-set replay (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --replay`)
+re-runs stored diff+verdict pairs whenever rubrics change. It is part of the
+ensemble opt-in and refuses to run unless `review.ensemble: true`.

@@ -13,21 +13,18 @@ implementation readiness; do not treat planned tests as executed PASS evidence.
 
 For each `[open-question]` in the working document:
 
-1. Present 2–3 options with tradeoffs (a table: option, cost, risk, reach).
-2. The human picks, or explicitly delegates the pick ("you choose" is
-   recorded as such).
+1. Write a decision card for the question. Use `../explore/card.md`. Each option gives what it solves with an example, the trade-off, the 1st, 2nd and 3rd order effects, and the undo cost. Use [../explore/calibrate.md](../explore/calibrate.md): calibrate before the first card when explore did not run. End each card you show with: Reply with a letter, 'explain more about X', or 'not sure, park it'.
+2. The human answers with an option, "explain more about X", or "not sure, park it". A parked question gets `deferred: <owner>` and a trigger. A vague reply is not a choice. The human can also delegate the pick with "you choose". Delegation is an explicit choice: pick the recommended option, write `delegated: <their words>` in `Reason`, and ask the human to confirm.
 3. Write the ADR: Nygard format with machine frontmatter —
    `{id, status, domains[], supersedes[], decision_table_rows[]}` — using the
    adr-authoring skill and `templates/adr.md`. Recurring choices go into
    `decision_table_rows` (lookup, never interpret); one-off architecture
-   stays prose. Keep pending ADRs in the adr-authoring skill's nonbinding
-   draft directory; put them in `adr/` only after acceptance under the human's
-   existing choice/delegation, with the review limitation disclosed.
+   stays prose. Keep pending ADRs in the nonbinding draft directory of the
+   adr-authoring skill. Move an ADR to `adr/` only after acceptance under the
+   human's existing choice or delegation, and disclose the review limitation.
+   Put the full card in the ADR body.
 
-A row whose decision needs no ADR prose (a convention, a naming rule, the
-rows a `--from-spec` seed is waiting for) may instead be written straight
-into the working document's fenced tables, which compile identically
-(ADR-002 D-013):
+Some rows need no ADR prose: a convention, a naming rule, or the rows that a `--from-spec` seed waits for. You can write these rows into the fenced tables of the working document instead of an ADR. They compile the same way (ADR-002 D-013):
 
 ````
 ```harness-decisions
@@ -54,7 +51,7 @@ compile error naming both.
 Mark each resolved question `[resolved: adr/NNN]` in the working document.
 
 Before accepting the resulting ADRs, batch material changes into the one
-focused design-review follow-up, including the proposed ADRs and contracts.
+focused design-review follow-up, including the proposed ADRs.
 Read its existing round count across sessions. If the budget is spent or the
 peer is unavailable, record unreviewed changes and surface them with remaining
 choices under the human/delegation contract; do not claim current peer coverage.

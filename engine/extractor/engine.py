@@ -1,17 +1,21 @@
-"""C2 — Extractor: tree-sitter -> universal shadows.
+"""C2 — Extractor: tree-sitter -> universal shadows, in a lazy cache.
 
 One driver, per-language query packs (symbols.scm / imports.scm / exports.scm).
-Content/input cache: unchanged derivation inputs -> no work. Unknown language
--> degenerate shadow + G8 finding, never silence. Shadows are deterministic:
-the same source and module-resolution context produce byte-identical output.
+Shadows live in the gitignored `.harness/cache/shadows/` and are built on
+demand by `shadow_for` for files inside the shadow scope (spec §7.2).
+Unchanged derivation inputs -> no work. Unknown language -> degenerate shadow
++ coverage finding, never silence. Shadows are deterministic: the same source and
+module-resolution context produce byte-identical output.
 """
+
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import subprocess
+from fnmatch import fnmatchcase
+from pathlib import Path, PurePosixPath
 
-from .. import (IGNORED_DIRS, IGNORED_EXTS, HarnessError, harness_dir,
-                sha256_bytes)
+from .. import IGNORED_DIRS, IGNORED_EXTS, HarnessError, sha256_bytes
 from ..events import make_finding
 from .modules import module_id_for_rel, python_module_ids
 # re-exported: the gates and the event pipeline reach the matcher through
@@ -590,9 +594,188 @@ def module_id_for(root, path: Path, config=None) -> str:
     return module_id_for_rel(rel.as_posix(), config)
 
 
+SHADOW_CACHE = ".harness/cache/shadows"
+
+
 def shadow_path_for(root, path: Path) -> Path:
+    """Cache file for one source: `.harness/cache/shadows/<rel>.json`."""
     rel = rel_to_root(root, path)
-    return harness_dir(root) / "shadows" / rel.parent / (rel.name + ".json")
+    return Path(root) / SHADOW_CACHE / rel.parent / (rel.name + ".json")
+
+
+# ------------------------------------------------------------ scope (§7.2)
+MAX_SHADOW_BYTES = 1_000_000
+BINARY_PROBE_BYTES = 8192
+DEFAULT_EXCLUDE_GLOBS = (
+    # tests
+    "tests/*", "*/tests/*", "test_*.py", "*_test.py", "*_test.go",
+    "*.test.ts", "*.spec.ts", "conftest.py",
+    # generated or minified
+    "*.map", "*.min.*",
+)
+MEDIA_EXTS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".tif",
+    ".tiff", ".svg", ".mp3", ".mp4", ".wav", ".ogg", ".mov", ".avi", ".webm",
+    ".pdf", ".woff", ".woff2", ".ttf", ".otf", ".eot", ".zip", ".tar", ".gz",
+    ".tgz", ".bz2", ".xz", ".7z", ".rar", ".jar", ".whl", ".egg",
+}
+
+
+def _glob_match(rel: str, pattern: str) -> bool:
+    """A glob with a slash matches the whole path; one without matches the
+    file name. `*` crosses directories, so `libs/**/src/**` works."""
+    if "/" in pattern:
+        return fnmatchcase(rel, pattern)
+    return fnmatchcase(PurePosixPath(rel).name, pattern)
+
+
+def _shadow_globs(config) -> tuple:
+    """`(include, exclude)` from `shadows` in config; malformed is loud."""
+    block = (config or {}).get("shadows") or {}
+    if not isinstance(block, dict):
+        raise HarnessError(
+            "shadows must be a mapping with include and exclude glob lists. "
+            "Fix .harness/config.yaml")
+    out = []
+    for key in ("include", "exclude"):
+        value = block.get(key) or []
+        if not isinstance(value, list) or not all(
+                isinstance(v, str) and v for v in value):
+            raise HarnessError(
+                f"shadows.{key} must be a list of glob strings. "
+                f"Fix .harness/config.yaml")
+        out.append(value)
+    return out[0], out[1]
+
+
+def _rules_allow(rel: str, config) -> bool:
+    """Path-only scope rules: default exclusions, then exclude/include."""
+    include, exclude = _shadow_globs(config)   # validate before any early return
+    p = PurePosixPath(rel)
+    if p.is_absolute() or ".." in p.parts or not p.parts:
+        return False
+    if any(part in IGNORED_DIRS for part in p.parts) or p.name.startswith("."):
+        return False
+    ext = p.suffix.lower()
+    if ext in IGNORED_EXTS or ext in MEDIA_EXTS:
+        return False
+    if any(_glob_match(rel, g) for g in DEFAULT_EXCLUDE_GLOBS):
+        return False
+    if any(_glob_match(rel, g) for g in exclude):
+        return any(_glob_match(rel, g) for g in include)
+    return True
+
+
+def _content_allows(path: Path) -> bool:
+    """1 MB or smaller and no NUL byte in the first 8 KB."""
+    try:
+        if path.stat().st_size > MAX_SHADOW_BYTES:
+            return False
+        with open(path, "rb") as fh:
+            return b"\0" not in fh.read(BINARY_PROBE_BYTES)
+    except OSError:
+        return False
+
+
+_GIT_WORK_TREES: set = set()
+
+
+def _is_git_repo(root) -> bool:
+    """True when `root` sits inside a git work tree, at its top or in a
+    subdirectory (a monorepo app). Git answers, once per root: only a
+    positive answer is cached, so a repo created later is still seen."""
+    key = str(Path(root).resolve())
+    if key in _GIT_WORK_TREES:
+        return True
+    try:
+        proc = subprocess.run(
+            ["git", "-C", key, "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, text=True)
+    except OSError:
+        return False
+    if proc.returncode == 0 and proc.stdout.strip() == "true":
+        _GIT_WORK_TREES.add(key)
+        return True
+    return False
+
+
+def git_ignored(root, rel: str) -> bool:
+    """True when the repo's ignore rules exclude `rel`. A tracked file is
+    never ignored; without a git repo nothing is."""
+    if not _is_git_repo(root):
+        return False
+    proc = subprocess.run(["git", "-C", str(root), "check-ignore", "-q", "--",
+                           rel], capture_output=True)
+    return proc.returncode == 0
+
+
+def git_ignored_set(root, rels) -> set:
+    """The subset of `rels` the repo's ignore rules exclude, in one git call."""
+    rels = sorted({str(r) for r in rels})
+    if not rels or not _is_git_repo(root):
+        return set()
+    proc = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "--stdin", "-z"],
+        input="\0".join(rels).encode(), capture_output=True)
+    if proc.returncode not in (0, 1):
+        return set()
+    return {p for p in proc.stdout.decode("utf-8", "replace").split("\0") if p}
+
+
+def validate_shadow_config(config) -> None:
+    """Raise HarnessError when `shadows` in config is malformed."""
+    _shadow_globs(config)
+
+
+def in_shadow_scope(root, rel: str, config, *, ignored=None) -> bool:
+    """Whether one repo-relative file gets a shadow (spec §7.2).
+
+    `ignored`: optional precomputed `git_ignored_set` covering `rel`, so a
+    loop does not spawn one git process per file."""
+    rel = PurePosixPath(str(rel).replace("\\", "/")).as_posix()
+    if not _rules_allow(rel, config):
+        return False
+    path = Path(root) / rel
+    if not path.is_file() or not _content_allows(path):
+        return False
+    if ignored is not None:
+        return rel not in ignored
+    return not git_ignored(root, rel)
+
+
+def scope_files(root, config) -> list:
+    """Every in-scope file, sorted. Git lists them (ignore rules applied);
+    a substrate without git walks the tree instead."""
+    root = Path(root)
+    if _is_git_repo(root):
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others",
+             "--exclude-standard"], capture_output=True)
+        if proc.returncode != 0:
+            raise HarnessError(
+                f"git ls-files failed in {root}: "
+                f"{proc.stderr.decode('utf-8', 'replace').strip()}")
+        listed = sorted({p for p in proc.stdout.decode("utf-8", "replace")
+                         .split("\0") if p})
+    else:
+        listed = sorted(p.relative_to(root).as_posix()
+                        for p in root.rglob("*") if p.is_file())
+    return [rel for rel in listed
+            if _rules_allow(rel, config) and (root / rel).is_file()
+            and _content_allows(root / rel)]
+
+
+def stack_versions() -> dict:
+    """Installed tree-sitter versions: two machines with different versions
+    can build different shadows, so `doctor` reports them."""
+    from importlib.metadata import PackageNotFoundError, version
+    out = {}
+    for name in ("tree-sitter", "tree-sitter-language-pack"):
+        try:
+            out[name] = version(name)
+        except PackageNotFoundError:
+            out[name] = "MISSING"
+    return out
 
 
 def _degenerate_shadow(root, path: Path, source: bytes, config=None) -> dict:
@@ -689,7 +872,7 @@ def extract_path(root, path, config=None, force=False,
     Cache: unchanged source, extractor version, language, module identity, and
     import-resolution context -> no work. A changed derivation input is a
     cache miss by construction; ``force`` bypasses the cache entirely.
-    Unknown language -> degenerate shadow + G8 UNKNOWN_LANGUAGE finding.
+    Unknown language -> degenerate shadow + UNKNOWN_LANGUAGE coverage finding.
     Ignored extensions -> (None, []) — docs/substrate are not modules.
     """
     path = Path(path)
@@ -700,7 +883,7 @@ def extract_path(root, path, config=None, force=False,
     if not in_root(root, path):
         # out-of-root files are visible, never shadowable, never a crash
         return None, [make_finding(
-            "UNSHADOWED_FILE", "gate:G8",
+            "UNSHADOWED_FILE", "doctor:coverage",
             f"{path}: outside the repo root — not shadowed, not enforced",
             severity="advisory", key=f"oor|{path}")]
     source = path.read_bytes()
@@ -750,16 +933,16 @@ def extract_path(root, path, config=None, force=False,
     if lang is None or not enabled.get(lang, True):
         shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
-            "UNKNOWN_LANGUAGE", "gate:G8",
+            "UNKNOWN_LANGUAGE", "doctor:coverage",
             f"{shadow['source_path']}: language for {ext!r} not enforced; "
             f"degenerate shadow written (unenforced surface is enumerated, never invisible)",
             severity="advisory", key=shadow["source_path"]))
     elif not deps_available():
         # Degrade loudly, never crash the session: the exact failure mode the
-        # premortem skill hunts is a missing dep turning into a hard block.
+        # premortem checklist hunts is a missing dep turning into a hard block.
         shadow = _degenerate_shadow(root, path, source, config)
         findings.append(make_finding(
-            "MISSING_DEPENDENCY", "gate:G8",
+            "MISSING_DEPENDENCY", "doctor:coverage",
             f"{shadow['source_path']}: tree-sitter stack unavailable — "
             f"degenerate shadow written; interface enforcement for {lang} is "
             f"degraded until you run `{DEP_INSTALL_HINT}`",
@@ -771,15 +954,44 @@ def extract_path(root, path, config=None, force=False,
     return shadow, findings
 
 
+def shadow_for(root, path, config, *, known_modules=None, ignored=None):
+    """The interface shadow of one source file, from the cache when fresh.
+
+    Args:
+        root: Repo root.
+        path: Source file, absolute or root-relative.
+        config: Loaded engine config (scope globs, languages, src roots).
+        known_modules: Optional precomputed `python_module_ids` for loops.
+        ignored: Optional precomputed `git_ignored_set` for loops.
+
+    Returns:
+        The shadow dict, rebuilt and stored when its source hash, extractor
+        version, language or import context changed; None for a file
+        outside the shadow scope.
+    """
+    root = Path(root)
+    path = Path(path)
+    if not path.is_absolute():
+        path = root / path
+    if not in_root(root, path):
+        return None
+    rel = rel_to_root(root, path).as_posix()
+    if not in_shadow_scope(root, rel, config, ignored=ignored):
+        return None
+    shadow, _findings = extract_path(root, path, config,
+                                     _known_modules=known_modules)
+    return shadow
+
+
 def extract_all(root, config=None, force=False) -> dict:
-    """Walk repo, extract every candidate source file, and refresh every
-    EXISTING shadow whose source still exists — including extensionless
-    sources (Makefile, LICENSE…) the discovery walk skips. G7 checks all
-    stored shadows, so --all must be able to fix all of them."""
+    """Warm the shadow cache for every in-scope source file and prune cache
+    entries whose source is gone or out of scope. Extensionless files are
+    refreshed only when a cache entry already exists for them."""
     root = Path(root)
     written, cached, findings = [], [], []
     seen = set()
     known_python_modules = python_module_ids(root, config)
+    in_scope = scope_files(root, config)
 
     def one(p):
         sp = shadow_path_for(root, p)
@@ -793,34 +1005,27 @@ def extract_all(root, config=None, force=False) -> dict:
         post = sp.read_bytes() if sp.exists() else None
         (cached if pre == post else written).append(shadow["source_path"])
 
-    for p in sorted(root.rglob("*")):
-        # filter on parts RELATIVE to root: a worktree at .worktrees/<slice>
-        # (or a repo cloned under ~/venv/…) carries an ignored name in its
-        # ABSOLUTE parts, and filtering those extracted nothing (S2)
-        if any(part in IGNORED_DIRS for part in p.relative_to(root).parts):
-            continue
-        if not p.is_file() or p.suffix.lower() in IGNORED_EXTS or not p.suffix:
-            continue
-        one(p)
+    for rel in in_scope:
+        if PurePosixPath(rel).suffix:
+            one(root / rel)
+    listed = set(in_scope)
     pruned = []
-    shadows_dir = harness_dir(root) / "shadows"
-    if shadows_dir.exists():
-        for sp in sorted(shadows_dir.rglob("*.json")):
-            rel_sp = str(sp.relative_to(shadows_dir))
+    cache_dir = root / SHADOW_CACHE
+    if cache_dir.exists():
+        for sp in sorted(cache_dir.rglob("*.json")):
+            rel_sp = str(sp.relative_to(cache_dir))
             try:
                 stored = load_shadow_file(sp)
             except (json.JSONDecodeError, OSError):
-                sp.unlink()          # unparseable derived artifact: garbage
+                sp.unlink()          # unparseable cache entry: garbage
                 pruned.append(rel_sp)
                 continue
             rel = stored.get("source_path")
             if rel in seen:
                 continue
-            src = root / rel if rel else None
-            if src is None or not in_root(root, src) or not src.is_file():
-                # deleted source, traversal path, or no source at all: the
-                # shadow is stale derived state a slice can never fix by
-                # hand — --all IS the fix (S4/S5), never manual deletion
+            src = root / rel if isinstance(rel, str) and rel else None
+            if (src is None or not in_root(root, src) or not src.is_file()
+                    or PurePosixPath(rel).as_posix() not in listed):
                 sp.unlink()
                 pruned.append(rel or rel_sp)
                 continue

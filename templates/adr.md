@@ -16,8 +16,6 @@ abstractions: []
 #    replaces: []        # planned scaffold entries this abstraction merges away
 # kinds outside the enum coerce to 'other' with a compile warning; decision
 # rows still reach slices by matching the abstraction id as a domain.
-api_surface: []
-#  - "GET /orders"
 ---
 
 # ADR-000: Title

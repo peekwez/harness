@@ -1,4 +1,4 @@
-"""Rust and Go shadow extraction: same universal schema, same G7 guarantee.
+"""Rust and Go shadow extraction: same universal schema.
 
 Visibility follows each language's own rule — `pub` in Rust, initial-capital
 in Go — because that is what "public interface" means to their compilers.
@@ -164,14 +164,6 @@ def test_go_docs_and_imports(toy):
 
 
 # ---------------------------------------------------------------- shared
-def test_rust_and_go_shadows_regenerate_identically(toy):
-    """G7's guarantee must hold for every enabled language."""
-    from engine.gates.g7_derivation import derivation_findings
-    _extract(toy, "orders.rs", RUST_SOURCE)
-    _extract(toy, "orders.go", GO_SOURCE)
-    blocking = [f for f in derivation_findings(toy, load_config(toy))
-                if f["severity"] == "block"]
-    assert not blocking, blocking
 
 
 def test_body_edits_do_not_perturb_the_interface_shadow(toy):

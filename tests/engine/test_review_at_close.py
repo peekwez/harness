@@ -62,7 +62,7 @@ def test_agent_recorded_findings_are_surfaced_at_close(toy):
     run_cli("review", "--slice", "slice-042", "--record-finding",
             "--code", "R-decisions", "--rule-ref", "decision:D-041",
             "--message", "span name is free-form", "--severity", "block",
-            root=toy)
+            "--fix", "Name the span.", root=toy)
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
                    "--commit", "HEAD", root=toy)
     assert proc.returncode == 1, proc.stdout
@@ -79,7 +79,7 @@ def test_a_recorded_fix_clears_an_agent_blocking_finding(toy):
     run_cli("review", "--slice", "slice-042", "--record-finding",
             "--code", "R-decisions", "--rule-ref", "decision:D-041",
             "--message", "span name is free-form", "--severity", "block",
-            root=toy)
+            "--fix", "Name the span.", root=toy)
     run_cli("review", "--slice", "slice-042", "--record-finding",
             "--code", "R-decisions", "--rule-ref", "decision:D-041",
             "--message", "fixed: span names now come from the registry",
@@ -97,7 +97,7 @@ def test_a_reblock_after_a_fix_blocks_again(toy):
         run_cli("review", "--slice", "slice-042", "--record-finding",
                 "--code", "R-decisions", "--rule-ref", "decision:D-041",
                 "--message", f"state: {severity}", "--severity", severity,
-                root=toy)
+                "--fix", "Name the span.", root=toy)
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
                    "--commit", "HEAD", root=toy)
     assert proc.returncode == 1, proc.stdout
@@ -135,7 +135,8 @@ def test_review_at_close_can_be_disabled_by_config(toy):
     # the close; with the stack disabled it does not run at all
     run_cli("review", "--slice", "slice-042", "--record-finding",
             "--code", "R-decisions", "--rule-ref", "decision:D-041",
-            "--message", "would block", "--severity", "block", root=toy)
+            "--message", "would block", "--severity", "block",
+            "--fix", "Name the span.", root=toy)
     proc = run_cli("close-slice", "--slice", "slice-042", "--session", session,
                    "--commit", "HEAD", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -143,7 +144,7 @@ def test_review_at_close_can_be_disabled_by_config(toy):
 
 
 def test_a_recorded_g5_override_satisfies_r_uses(toy):
-    """`g5_override: recorded_justification` is a first-class resolution: an
+    """A recorded G5 override is a first-class resolution: an
     undeclared use with a recorded override passes the close's own
     uses ⊆ declares check, so the Layer-1 R-uses rubric must read the same
     override-aware set (`unresolved`), not `undeclared` — otherwise the

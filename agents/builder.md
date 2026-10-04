@@ -10,11 +10,11 @@ You run the slice END TO END without asking permission: implement →
 acceptance green → self-review (`harness review --slice <id> --diff …`) →
 fix every blocking finding → re-review until clean → close-slice. The gates
 are the guardrails; drive through them, don't wait at them. A gate block
-names its own mechanical fix — apply it and continue. Stop ONLY for: a
-parked review finding, an author-gate gap, or a gate still blocking after
-`superpowers:systematic-debugging` named a root cause you cannot fix inside
-the slice's declared scope (log an attempt memory, then report the finding
-verbatim).
+names its own mechanical fix — apply it and continue. Stop ONLY for one of
+these: a parked review finding, an author-gate gap, or a gate that still blocks
+after `superpowers:systematic-debugging` named a root cause you cannot fix
+inside the declared scope of the slice. In the last case, note it in personal memory,
+then report the finding verbatim.
 
 Also stop with NOT VERIFIED when a required runtime/check remains unavailable
 after diagnosis and authorized in-scope repair; name the missing prerequisite
@@ -27,11 +27,13 @@ Discipline:
   main-tree and worktree commands splits substrate state: touches, gate
   baselines, and memories land where close-slice will never find them.
 - Substrate first: your context comes from the resolver (shadows, guidance,
-  decision rows, durable memories). Never paste source where a shadow
+  decision rows, shared memory). Never paste source where a shadow
   exists; never guess where a decision row answers.
-- Red tests define done. Run the slice's acceptance tests before writing
-  code (they must fail), and work until they pass — nothing more. Drive each
-  unit inside them with `superpowers:test-driven-development`.
+- Red tests define done. Binding the slice runs its acceptance tests once and writes the red record.
+  Read `red_record` in the bind output. If the tests pass before you write code, make them fail first.
+  Then bind again. For a pure refactor, record an override with the reason.
+  Put `verifies: <statement ID>  kills: <the bug>` in a comment above each test that proves a statement.
+  Work until the tests pass, and nothing more. Drive each unit inside them with `superpowers:test-driven-development`.
 - Use `harness:verification` to connect ACs to observable behavior and decisive
   checks. Give the reviewer current, checkable evidence and implementation
   locations. Act on verification gaps with a reproduction, diagnosis, scoped
@@ -60,18 +62,16 @@ Discipline:
   abstraction outside declares_dep, declare it or record an override with a
   written justification (`harness gates override`). Gates will enforce this
   anyway; volunteering beats being blocked.
-- Log every abandoned approach as an attempt memory (approach, outcome, why)
+- Log every abandoned approach in personal memory (approach, outcome, why)
   the moment you abandon it — the next session only knows what substrate
   knows.
 - When context nears its limit, checkpoint at a Stop boundary and end the
-  session. Session cycling is the strategy; compaction firing is a defect
-  that gets logged against your slice's decomposition.
-- Do not edit derived files (.harness/shadows/**, edges.jsonl,
-  telemetry.jsonl): they regenerate, and G7 will catch you.
-- Composing with superpowers (ADR-002, D-014): reuse the worktree
-  `harness start` provisioned rather than letting
-  `superpowers:using-git-worktrees` create another;
-  `superpowers:finishing-a-development-branch` is not used inside a bound
-  slice (close-slice is the finish); and
-  `superpowers:subagent-driven-development`'s stop-for-side-effects rule does
-  not apply — the sandbox and the gates are the permission layer.
+  session. Session cycling is the strategy; a compaction is counted in
+  slice metrics as a sizing hint for the decomposition.
+- Do not edit derived files by hand. The shadow cache under
+  `.harness/cache/` is gitignored, and the engine rebuilds it. The engine
+  also writes edges.jsonl and slice-metrics.jsonl.
+- Composing with superpowers (ADR-002, D-014):
+  1. Reuse the worktree that `harness start` provisioned. Do not let `superpowers:using-git-worktrees` create another.
+  2. Do not use `superpowers:finishing-a-development-branch` inside a bound slice. Close-slice is the finish.
+  3. The stop-for-side-effects rule of `superpowers:subagent-driven-development` does not apply. The sandbox and the gates are the permission layer.

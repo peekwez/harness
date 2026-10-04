@@ -309,17 +309,17 @@ def test_the_three_declared_versions_agree():
     assert versions == {engine.ENGINE_VERSION}, versions
 
 
-def test_the_readme_changelogs_the_release():
+def test_the_changelog_records_the_release():
     from pathlib import Path
 
     import engine
-    readme = (Path(engine.__file__).resolve().parents[1]
-              / "README.md").read_text()
-    assert "## Changelog" in readme
-    assert "0.8.0" in readme
+    changelog = (Path(engine.__file__).resolve().parents[1]
+                 / "CHANGELOG.md").read_text()
+    assert changelog.startswith("# Changelog")
+    assert "## 0.8.0" in changelog
     for issue in ("GOO-73", "GOO-74", "GOO-75", "GOO-76", "GOO-77", "GOO-78",
                   "GOO-79"):
-        assert issue in readme, issue
+        assert issue in changelog, issue
 
 
 # ------------------------------------------------------------------ I-4

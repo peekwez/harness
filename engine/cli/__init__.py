@@ -16,40 +16,45 @@ from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
+from engine.cli.explore import cmd_explore
 from engine.cli.init import cmd_init
 from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
-from engine.cli.run import cmd_run
 from engine.cli.slice import cmd_permit, cmd_start
 from engine.cli.substrate import (cmd_extract, cmd_gates, cmd_graph,
-                                  cmd_memory, cmd_merge_substrate,
+                                  cmd_memory, cmd_merge_substrate, cmd_precompact,
                                   cmd_registry, cmd_resolve, cmd_status)
+from engine.cli.text import cmd_lint_text
 from engine.cli.verify import cmd_doctor, cmd_event, cmd_verify
 from engine.cli.upgrade import cmd_upgrade
 
-__all__ = ["COMMANDS", "main"]
+__all__ = ["COMMANDS", "build_parser", "main"]
 
 # name -> handler. The single dispatch table: the argparse subparsers below,
-# the README-coverage test and any host enumerating the CLI all read it.
+# the docs CLI reference test (tests/engine/test_docs_reference.py) and any
+# host enumerating the CLI all read it.
 COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
     "upgrade": cmd_upgrade, "extract": cmd_extract,
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
+    "lint-text": cmd_lint_text,
     "acceptance": cmd_acceptance,
+    "explore": cmd_explore,
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
     "backlog": cmd_backlog, "slice": cmd_slice,
-    "start": cmd_start, "run": cmd_run, "permit": cmd_permit,
+    "start": cmd_start, "permit": cmd_permit,
     "close-slice": cmd_close_slice, "merge-slice": cmd_merge_slice,
     "land": cmd_land,
     "review": cmd_review,
     "registry": cmd_registry, "merge-substrate": cmd_merge_substrate,
-    "graph": cmd_graph, "memory": cmd_memory, "status": cmd_status,
+    "graph": cmd_graph, "memory": cmd_memory, "precompact": cmd_precompact, "status": cmd_status,
     "adjudicate": cmd_adjudicate,
 }
 
 
-def main(argv=None):
+def build_parser() -> argparse.ArgumentParser:
+    """The `harness` argparse parser. The docs hook reads it for the CLI reference."""
     p = argparse.ArgumentParser(prog="harness", description=__doc__)
     p.add_argument("--root", help="substrate root (default: walk up from cwd)")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -60,10 +65,9 @@ def main(argv=None):
                                        "(+ --substrate for repo health)")
     sp.add_argument("--substrate", action="store_true",
                     help="also audit substrate health: schemas, stale "
-                         "bindings/worktrees, parks, notes, telemetry")
+                         "bindings/worktrees, parks, notes, unshadowed source files")
     sp.add_argument("--fix", action="store_true",
-                    help="clear what is safe to clear (stale bindings, "
-                         "unflushed telemetry); never removes worktrees")
+                    help="clear stale bindings; never removes worktrees")
 
     sp = sub.add_parser("init", help="scaffold substrate")
     sp.add_argument("--migrate", action="store_true",
@@ -86,22 +90,29 @@ def main(argv=None):
                     help="Claude installation scope when an id exists in more than one scope")
     sp.add_argument("--dry-run", action="store_true",
                     help="report the exact plan and host commands without writes")
+    sp.add_argument("--yes", action="store_true",
+                    help="accept every upgrade prompt (for CI)")
 
-    sp = sub.add_parser("extract", help="tree-sitter -> universal shadows")
+    sp = sub.add_parser("extract", help="warm the shadow cache (--all) or "
+                                        "extract the named files")
     sp.add_argument("paths", nargs="*")
     sp.add_argument("--all", action="store_true")
     sp.add_argument("--force", action="store_true",
                     help="bypass the shadow cache (escape hatch for stale/"
-                         "corrupted shadows)")
+                         "corrupted cache entries)")
 
-    sp = sub.add_parser("resolve", help="slice -> assembled context")
-    sp.add_argument("--slice", required=True)
+    sp = sub.add_parser("resolve", help="slice context (no cap) or one "
+                                        "module's full context")
+    target = sp.add_mutually_exclusive_group(required=True)
+    target.add_argument("--slice", help="print the slice's context blocks")
+    target.add_argument("--module", help="print one module's shadow and "
+                                         "guidance")
+    target.add_argument("--reset", action="store_true",
+                        help="forget the context blocks this session was "
+                             "sent (PreCompact): the next prompt injects again")
     sp.add_argument("--session",
-                    help="register the resolved context for this session "
-                         "(default: $CLAUDE_SESSION_ID, then 'cli')")
-    sp.add_argument("--quiet", action="store_true",
-                    help="manifest only, no injections — and therefore no "
-                         "context registration (G2 certifies what was shown)")
+                    help="session id for --reset (default: $CLAUDE_SESSION_ID, "
+                         "then the live hook session, then 'cli')")
 
     sp = sub.add_parser("gates", help="run gate pack / record overrides")
     gsub = sp.add_subparsers(dest="gates_cmd")
@@ -124,9 +135,24 @@ def main(argv=None):
     ack.add_argument("--slice", required=True)
     ack.add_argument("--module", required=True)
     ack.add_argument("--note")
+    ex = gsub.add_parser("explain", help="print the catalog entry of a "
+                                         "finding code")
+    ex.add_argument("code")
 
     sp = sub.add_parser("verify", help="full CI check (no plugin required)")
     sp.add_argument("--built-artifact", help="validate manifests against this tree")
+
+    sp = sub.add_parser("lint-text",
+                        help="STE-80 check: sentence length, banned words, "
+                             "glossary synonyms")
+    sp.add_argument("paths", nargs="+",
+                    help="files, or directories to search for *.md")
+    sp.add_argument("--glossary",
+                    help="glossary file (default: docs/glossary.md under "
+                         "--root or the cwd, when it exists); --root does "
+                         "not change how paths resolve")
+    sp.add_argument("--json", action="store_true",
+                    help="print the findings as JSON")
 
     sp = sub.add_parser("acceptance",
                         help="the cumulative closed-slice acceptance suite: "
@@ -138,13 +164,32 @@ def main(argv=None):
                     help="report paths/owners/problems; execute nothing")
     sp.add_argument("--exclude", help="slice id to leave out")
 
+    sp = sub.add_parser("explore",
+                        help="create explore/ with DECISIONS.md, VERIFY.md "
+                             "and OPEN.md; --freeze checks and signs them")
+    sp.add_argument("--freeze", action="store_true",
+                    help="check each card and statement, then write "
+                         "frozen_by and frozen_at_commit into "
+                         "explore/DECISIONS.md")
+
     sp = sub.add_parser("architect",
-                        help="seed the Phase-0 working document from an "
-                             "existing spec (--from-spec)")
-    sp.add_argument("--from-spec", dest="from_spec", required=True,
-                    help="existing spec/design markdown (root-relative); its "
-                         "headings become [constraint] blocks and its "
-                         "TODO/TBD/Open lines [open-question]s")
+                        help="seed the Phase-0 working document from one "
+                             "source: --from-explore (frozen explore/), "
+                             "--from-spec <path>, or --skip-explore "
+                             "\"<reason>\"")
+    source = sp.add_mutually_exclusive_group()
+    source.add_argument("--from-spec", dest="from_spec", default=None,
+                        help="existing spec/design markdown (root-relative); "
+                             "its headings become [constraint] blocks and "
+                             "its TODO/TBD/Open lines [open-question]s")
+    source.add_argument("--from-explore", dest="from_explore",
+                        action="store_true",
+                        help="one ADR and one decision row per chosen card "
+                             "in the frozen explore/DECISIONS.md")
+    source.add_argument("--skip-explore", dest="skip_explore",
+                        metavar="REASON", default=None,
+                        help="start without a toy; the reason goes into the "
+                             "working document and slice metrics")
     sp.add_argument("--doc", default=DEFAULT_WORKING_DOC,
                     help="working document to write (default: %(default)s)")
     sp.add_argument("--force", action="store_true",
@@ -185,6 +230,10 @@ def main(argv=None):
                     help="tracker id for this slice (e.g. GOO-73): quoted in "
                          "the PR title and linked in its body under "
                          "landing.mode: pr")
+    ba.add_argument("--verifies", nargs="+", action="extend", default=[],
+                    help="statement IDs from .harness/verify.jsonl that this "
+                         "slice proves, comma- or space-separated: "
+                         "V-orders-1,V-orders-2")
 
     sp = sub.add_parser("slice", help="bind a slice (repo default + session)")
     sp.add_argument("--slice")
@@ -204,17 +253,6 @@ def main(argv=None):
                          "auditable override; requires --justification)")
     sp.add_argument("--justification")
 
-    sp = sub.add_parser("run",
-                        help="campaign dispatcher: build every ready slice "
-                             "via run.builder_cmd until the backlog is "
-                             "empty or a park needs a human")
-    sp.add_argument("--lanes", default=1,
-                    help="parallel builder lanes (merges always serialize)")
-    sp.add_argument("--builder-cmd", dest="builder_cmd",
-                    help="override run.builder_cmd for this invocation")
-    sp.add_argument("--dry-run", dest="dry_run", action="store_true",
-                    help="print the dependency waves and exit; mutates nothing")
-
     sp = sub.add_parser("permit",
                         help="host permission query: would the harness "
                              "approve this tool call in the bound slice?")
@@ -230,8 +268,8 @@ def main(argv=None):
 
     sp = sub.add_parser("merge-slice",
                         help="merge a closed slice's branch into this tree: "
-                             "regen+commit shadows, G4 safety net, remove "
-                             "worktree+branch")
+                             "acceptance + gates on the merged tree, commit "
+                             "substrate, remove worktree+branch")
     sp.add_argument("--slice", required=True)
     sp.add_argument("--session")
 
@@ -277,6 +315,10 @@ def main(argv=None):
     sp.add_argument("--rule-ref", dest="rule_ref",
                     help="gate:GN | decision:D-NNN | adr:NNN")
     sp.add_argument("--message")
+    sp.add_argument("--fix", help="one action that resolves the finding")
+    sp.add_argument("--failure-scenario", dest="failure_scenario",
+                    help="one or two sentences: a concrete input and the "
+                         "wrong result")
     sp.add_argument("--severity", choices=["block", "gate", "advisory"])
     sp.add_argument("--layer")
     sp.add_argument("--confidence", type=float)
@@ -298,23 +340,29 @@ def main(argv=None):
     ed.add_argument("type"); ed.add_argument("frm"); ed.add_argument("to")
     ed.add_argument("--commit"); ed.add_argument("--meta")
 
-    sp = sub.add_parser("memory", help="working-memory write/flush/compact")
+    sp = sub.add_parser("memory", help="shared memory: promote a fact (human "
+                                       "only); list changed personal memory")
     ms = sp.add_subparsers(dest="memory_cmd", required=True)
-    w = ms.add_parser("write")
-    w.add_argument("--slice", required=True)
-    w.add_argument("--kind", required=True)
-    w.add_argument("--content", required=True)
-    w.add_argument("--approach"); w.add_argument("--outcome"); w.add_argument("--why")
-    w.add_argument("--edge", nargs="*")
-    fl = ms.add_parser("flush")
-    fl.add_argument("--slice"); fl.add_argument("--session")
-    fl.add_argument("--compaction", action="store_true")
-    co = ms.add_parser("compact")
-    co.add_argument("--slice", required=True); co.add_argument("--commit")
+    pm = ms.add_parser("promote", help="copy one fact into "
+                                       ".claude/memory/shared/")
+    pm.add_argument("file", nargs="?", help="a memory file to promote")
+    pm.add_argument("--text", help="the fact itself")
+    pm.add_argument("--name", help="fact file name (default: from the fact)")
+    ac = ms.add_parser("accept", help="record a human edit or deletion of "
+                                      "one shared memory file")
+    ac.add_argument("path", help="a file in .claude/memory/shared/")
+    ch = ms.add_parser("changed", help="personal memory files changed since "
+                                       "a slice started")
+    ch.add_argument("--slice")
+    ch.add_argument("--since", help="ISO time; wins over --slice")
 
-    sp = sub.add_parser("status", help="telemetry rendering")
+    sp = sub.add_parser("precompact", help="PreCompact hook: reset context "
+                                           "hashes, count the compaction")
+    sp.add_argument("--session")
+
+    sp = sub.add_parser("status", help="slice metrics from .harness/slice-metrics.jsonl and always-on context cost")
     sp.add_argument("--json", action="store_true")
-    sp.add_argument("--since", help="only events at/after this ISO timestamp "
+    sp.add_argument("--since", help="only slices closed at/after this ISO timestamp "
                                     "(e.g. 2026-07-01)")
 
     sp = sub.add_parser("adjudicate", help="resolve parked findings")
@@ -325,6 +373,11 @@ def main(argv=None):
     sp.add_argument("--domain")
     sp.add_argument("--reverses", action="store_true")
 
+    return p
+
+
+def main(argv=None):
+    p = build_parser()
     args = p.parse_args(argv)
     try:
         return COMMANDS[args.cmd](args)

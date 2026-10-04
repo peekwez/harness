@@ -311,7 +311,7 @@ def merge_doc_blocks(blocks: dict, doc_ref: str, *, decisions: dict,
             registry[aid] = {
                 "id": aid, "kind": kind, "domain": requested_kind,
                 "status": "planned", "module_id": module_id, "source": source,
-                "source_hash": None, "shadow": None, "guidance_refs": [ref],
+                "source_hash": None, "guidance_refs": [ref],
                 "supersedes_guidance": [], "manifest": [],
                 "signature_digest": None,
             }

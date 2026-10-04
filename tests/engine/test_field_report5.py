@@ -37,18 +37,6 @@ def test_review_diff_with_missing_file_errors_cleanly(toy):
 
 
 # ---------------------------------------------------------------- X3 + improvement 1
-def test_resolve_accepts_session_and_registers_context(toy):
-    proc = run_cli("resolve", "--slice", "slice-042", "--session", "x3",
-                   root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    sc = Sidecar(toy)
-    try:
-        assert sc.context_get("x3"), \
-            "resolve knows the context set — it must register it (G2)"
-    finally:
-        sc.close()
-
-
 def test_bind_registers_resolved_context_for_the_session(toy):
     """Improvement 1: after `harness slice`, an edit under that session must
     pass G2 without a separate pre_context ceremony."""
@@ -74,45 +62,9 @@ def test_session_defaults_to_claude_session_id_env(toy):
 
 
 # ---------------------------------------------------------------- X2
-def test_g7_mismatch_names_a_fix_that_cannot_noop(toy):
-    """`extract --all` can legitimately report 'cached' in edge states; the
-    finding must name `extract --force <path>` — guaranteed effective."""
-    from engine import load_config
-    from engine.gates.g7_derivation import derivation_findings
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    shadow = json.loads(sp.read_text())
-    shadow["symbols"] = []
-    sp.write_text(json.dumps(shadow, sort_keys=True, indent=1) + "\n")
-    f = [f for f in derivation_findings(toy, load_config(toy))
-         if f["code"] == "DERIVATION_MISMATCH"]
-    assert f and "--force" in f[0]["message"]
 
 
 # ---------------------------------------------------------------- W3 ruling
-def test_close_auto_extracts_missing_shadows_for_touched_files(toy):
-    """The documented contract: derived artifacts are the ENGINE's job.
-    Close extracts missing shadows for touched files itself and reports
-    them; G7 still blocks anything stale or hand-edited."""
-    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
-    rows[0]["predicted_files"] = ["orders.py", "newcli.py"]
-    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
-    session = "heal"
-    run_cli("slice", "--slice", "slice-042", "--session", session, root=toy)
-    (toy / "orders.py").write_text(GOOD_ORDERS)
-    (toy / "newcli.py").write_text("def main() -> int:\n    return 0\n")
-    git(toy, "add", "-A")
-    git(toy, "commit", "-qm", "slice-042 heal")
-    # close under a DIFFERENT session: the ceremony's session-scoped
-    # regeneration can't cover these — the auto-extract contract must
-    proc = run_cli("close-slice", "--slice", "slice-042",
-                   "--commit", "HEAD", root=toy)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    out = json.loads(proc.stdout)
-    assert set(out.get("shadows_extracted", [])) >= {"newcli.py"}, out
-    assert (toy / ".harness" / "shadows" / "newcli.py.json").exists()
-    # and the auto-extracted shadows ride in the substrate commit
-    dirty = git(toy, "status", "--porcelain", "--", ".harness").stdout.strip()
-    assert not dirty
 
 
 # ---------------------------------------------------------------- improvement 5

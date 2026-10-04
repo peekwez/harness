@@ -4,21 +4,13 @@ Blocks unit_complete until acknowledged; the ack is recorded as an edge.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from ..events import make_finding
 from ..registry import public_symbols
 
 GATE = {"id": "G6", "rule_ref": "gate:G6",
         "preferred": ("unit_complete",), "fallback": ()}
-
-
-def _shadow_source_hash(root, entry):
-    import json
-    from pathlib import Path
-    sp = Path(root) / (entry.get("shadow") or "")
-    try:
-        return json.loads(sp.read_text()).get("source_hash")
-    except (OSError, json.JSONDecodeError):
-        return None
 
 
 def _acked(ctx) -> set:
@@ -37,14 +29,30 @@ def check(ctx) -> list:
     try:
         ensure_baseline(ctx.root, ctx.sidecar, ctx.work_unit_id)
     except HarnessError as exc:
-        return [make_finding("MISSING_DRIFT_BASELINE", GATE["rule_ref"],
-                             str(exc), severity="block", key=ctx.work_unit_id)]
+        return [make_finding(
+            "MISSING_DRIFT_BASELINE", GATE["rule_ref"],
+            f"slice {ctx.work_unit_id} has no interface baseline, so G6 "
+            f"cannot check drift.",
+            severity="block", key=ctx.work_unit_id, inject=[str(exc)],
+            fix=f"Restore the slice's starting revision if git cannot read "
+                f"it, or bind the slice: harness slice "
+                f"--slice {ctx.work_unit_id}")]
     baseline = ctx.sidecar.snapshot_get(ctx.work_unit_id)
     if not baseline:
         return []
     findings = []
     acked = _acked(ctx)
     registry = {e["id"]: e for e in ctx.registry}
+    from ..extractor import engine as _ex
+    _ex.validate_shadow_config(ctx.config)
+    # module ids only matter for a Python source: scan once, and only then
+    python_entries = any(
+        _ex.LANG_BY_EXT.get(Path(registry[m].get("source") or "").suffix.lower())
+        == "python" for m in baseline if m in registry)
+    known_modules = (_ex.python_module_ids(ctx.root, ctx.config)
+                     if python_entries else None)
+    ignored = _ex.git_ignored_set(
+        ctx.root, [e["source"] for e in registry.values() if e.get("source")])
     for module_id, old in sorted(baseline.items()):
         entry = registry.get(module_id)
         if entry is None:
@@ -55,12 +63,15 @@ def check(ctx) -> list:
             # skip rather than demand acks for non-events (W8)
             continue
         old_syms = old.get("symbols") or []
-        new_syms = public_symbols(ctx.root, entry)
+        new_syms = public_symbols(ctx.root, entry, ctx.config,
+                               known_modules=known_modules, ignored=ignored)
         if new_syms is None or new_syms == old_syms:
             continue
         # symbols changed but source bytes did not: extractor version skew,
         # not interface drift — the ack ledger stays clean (W8)
-        cur_hash = _shadow_source_hash(ctx.root, entry)
+        from .. import sha256_file
+        src = ctx.root / entry["source"] if entry.get("source") else None
+        cur_hash = sha256_file(src) if src is not None and src.is_file() else None
         if old.get("source_hash") and cur_hash == old["source_hash"]:
             continue
         if f"module:{module_id}" in acked:
@@ -69,11 +80,12 @@ def check(ctx) -> list:
         removed = sorted(set(old_syms) - set(new_syms))
         findings.append(make_finding(
             "INTERFACE_DRIFT", GATE["rule_ref"],
-            f"public interface of {module_id!r} drifted since slice start "
-            f"(+{len(added)}/-{len(removed)}): added {added[:5]}, removed "
-            f"{removed[:5]}; acknowledge with `harness gates ack-drift "
-            f"--slice {ctx.work_unit_id} --module {module_id}`",
-            severity="block", key=ctx.work_unit_id + "|" + module_id))
+            f"public interface of {module_id!r} changed since slice start: "
+            f"{len(added)} added, {len(removed)} removed.",
+            severity="block", key=ctx.work_unit_id + "|" + module_id,
+            inject=[f"added: {added[:5]}", f"removed: {removed[:5]}"],
+            fix=f"Run: harness gates ack-drift --slice {ctx.work_unit_id} "
+                f"--module {module_id}"))
     return findings
 
 

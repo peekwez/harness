@@ -1,0 +1,69 @@
+# Docs site: lint the text (STE-80), build with --strict, deploy to GitHub
+# Pages. The origin push also reaches goodwork-eng, so every job runs only on
+# peekwez/harness (D-0.10-04).
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.repository == 'peekwez/harness'
+    # A new push to a pull request cancels its older build; main never does.
+    concurrency:
+      group: docs-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Install docs tools
+        run: pip install -r docs/requirements.txt
+
+      # README.md (linted, not published) plus the docs pages the site
+      # publishes. docs/hooks/ holds build inputs: a unit test lints
+      # file-formats.md, the prose of the generated File formats page.
+      # The default glossary is docs/glossary.md.
+      - name: Lint docs text (STE-80)
+        run: |
+          find docs -name '*.md' \
+            -not -path 'docs/internal/*' -not -path 'docs/hooks/*' \
+            -not -path 'docs/superpowers/*' -not -path 'docs/design-reviews/*' \
+            -print0 | xargs -0 python3 bin/harness lint-text README.md
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.repository == 'peekwez/harness' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    # One deploy at a time. A queued deploy waits and is never cancelled.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

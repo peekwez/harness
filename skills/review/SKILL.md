@@ -1,6 +1,6 @@
 ---
 name: review
-description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory.
+description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never the builder's personal memory. Also holds the review rubrics and findings contract (layers, rule_ref, confidence, ensembles) and how a human adjudicates parked findings.
 allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *) Bash(claude -p *)
 context: fork
 agent: reviewer
@@ -16,10 +16,17 @@ with an explicit project `--root`; the `!` substitutions and
 # /harness:review $1
 
 You are the reviewer. Your context is **substrate + diff only** — you never
-read `.harness/memory/session/` (the builder's working memory). Independent
+read the builder's personal memory (`~/.claude/projects/<slug>/memory/`, or
+its `autoMemoryDirectory`). Shared memory (`.claude/memory/shared/`) is
+substrate; you may read it. Independent
 derivation from the same ground truth is the point; where you and the
 builder disagree, the substrate underdetermined the answer, and that
 disagreement is signal.
+
+Reference files in this skill: `rubrics.md` (the four layers and the
+findings contract) and `adjudicate.md` (how a human resolves parks).
+Adjudication happens in the main session through the `harness` skill, never
+inside this forked review.
 
 Layer 0 — deterministic facts (gates, uses/declares diff, duplicate
 candidates, decision rows in scope, shadows of everything the diff imports).
@@ -27,7 +34,7 @@ candidates, decision rows in scope, shadows of everything the diff imports).
 argument, so this is your first command):
 
 ```
-git diff <landing.base>...HEAD > /tmp/harness-review-$1.diff && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
+git diff --output=/tmp/harness-review-$1.diff <landing.base>...HEAD && "${CLAUDE_PLUGIN_ROOT}/bin/harness" review --slice $1 --diff /tmp/harness-review-$1.diff --layer0-only
 ```
 
 `<landing.base>` is `landing.base` from `.harness/config.yaml` (default
@@ -40,7 +47,7 @@ actual acceptance criteria through the implementation and observed check
 results. Report the AC evidence matrix and `VERIFIED|NOT VERIFIED` alongside
 the existing review verdict; do not claim done from green tests that miss an
 AC, skipped checks or stale results. The builder supplies checkable artifacts,
-never session memory as proof. Feed each gap back with a reproduction and
+never personal memory as proof. Feed each gap back with a reproduction and
 next action. This is the reviewer's responsibility, not another agent layer.
 It includes starting/attaching to the local stack, a real browser/DevTools
 connection, and observing logs, persisted database state and cache effects
@@ -66,25 +73,25 @@ Layers 1–3 — rubric-bound checks over those facts:
 - Every blocking finding MUST cite a `rule_ref` (gate:GN, decision:D-NNN, or
   adr:NNN). No blocking on taste — taste becomes a Layer-3 advisory plus a
   proposed rule. The engine rejects rule-ref-less blocks; do not fight it.
-- If your confidence on a would-block finding is below the ensemble
-  threshold, say so explicitly and mark the finding `uncertain` — it parks
-  for adjudication rather than blocking on a coin flip.
+- If your confidence in a would-block finding is below 0.7, say so
+  explicitly and mark the finding `uncertain`. It parks for adjudication
+  rather than blocking on a coin flip. Ensemble sampling and golden replay
+  are opt-in via `review.ensemble: true`.
 - Layer 3 only: run `superpowers:requesting-code-review` when it is
-  installed and treat everything it returns as ADVISORY input. Its
+  installed. Treat everything it returns as ADVISORY input. Its
   Critical/Important/Minor severities carry no blocking power here. Promote
   one of its findings to a blocking finding ONLY when you can cite a
-  `rule_ref` for it; otherwise record it as a Layer-3 advisory plus a
+  `rule_ref` for it. Otherwise record it as a Layer-3 advisory plus a
   proposed rule.
-- Layer 3, second opinion: when Codex is available (an MCP tool named
-  `codex`, or the `codex` CLI on PATH), run it over the same slice diff —
-  `make review-codex` if the repo's Makefile defines that target, else
-  `codex review` (or `codex exec` with the diff). Two independent reviewers
-  disagreeing is signal. Verify every Codex finding against the substrate
-  yourself, then record the real ones with
-  `harness review --record-finding …`; blocking still requires a `rule_ref`,
-  so the rest are Layer-3 advisories. Codex never auto-fixes inside the
-  slice — the slice owner applies fixes so the gates see the edits. If Codex
-  is absent, skip this silently.
+- Layer 3, second opinion: run Codex over the same slice diff when it is available.
+  Codex is an MCP tool named `codex`, or the `codex` CLI on PATH.
+  1. Run `make review-codex` if the Makefile of the repo defines that target. Otherwise run `codex review`, or `codex exec` with the diff.
+  2. Two independent reviewers that disagree are a signal. Verify every Codex finding against the substrate yourself.
+  3. Record the real ones with `harness review --record-finding …`. Write each finding by `skills/harness/ste80.md`. Pass `--message` (25 words or fewer), `--failure-scenario` (a concrete input and the wrong result) and `--fix` (one action).
+  4. The CLI rejects a `--message` over 25 words and exits 2. It does not clip the message. It also exits 2 for a `--severity block` finding without `--fix`.
+  5. Blocking still requires a `rule_ref`. The rest are Layer-3 advisories.
+  6. Codex never auto-fixes inside the slice. The slice owner applies fixes, so the gates see the edits.
+  7. If Codex is absent, skip this silently.
 - When Codex owns the slice, use Claude Code as the independent second
   opinion if available. Start a fresh `claude -p` process with the diff and
   requirements; request structured findings with file, line, evidence and
@@ -100,4 +107,4 @@ Layers 1–3 — rubric-bound checks over those facts:
 
 Output: AC verification matrix/verdict, findings list (§5.2 schema), review
 verdict, and any Layer-3 proposals.
-Blocking findings gate the merge; disputes park via `/harness:adjudicate`.
+Blocking findings gate the merge; disputes park, and a human resolves them with `adjudicate.md`.

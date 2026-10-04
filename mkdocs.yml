@@ -1,0 +1,97 @@
+site_name: harness
+site_description: Decisions, proof and safe actions for software built with coding agents.
+site_url: https://peekwez.github.io/harness/
+repo_url: https://github.com/peekwez/harness
+repo_name: peekwez/harness
+edit_uri: edit/main/docs/
+docs_dir: docs
+strict: true
+
+exclude_docs: |
+  internal/
+  hooks/
+  superpowers/
+  design-reviews/
+  requirements.txt
+
+hooks:
+  - docs/hooks/reference.py
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - Philosophy: concepts/philosophy.md
+      - Slice lifecycle: concepts/lifecycle.md
+      - Substrate files: concepts/substrate.md
+  - Workflow:
+      - Overview: workflow/index.md
+      - Explore: workflow/explore.md
+      - Architect: workflow/architect.md
+      - Backlog: workflow/backlog.md
+      - Build: workflow/build.md
+      - Review: workflow/review.md
+      - Close: workflow/close.md
+      - Land: workflow/land.md
+  - Verification: verification.md
+  - Decision cards: decision-cards.md
+  - Memory: memory.md
+  - Reference:
+      - CLI: reference/cli.md
+      - Gates: reference/gates.md
+      - Config keys: reference/config.md
+      - Finding codes: reference/findings.md
+      - Hook events: reference/hooks.md
+      - File formats: reference/file-formats.md
+  - Extending:
+      - Repo-local gates: extending/extra-gates.md
+      - Other hosts: extending/hosts.md
+      - Contracts recipe: extending/contracts.md
+  - Internals: internals.md
+  - Trade-offs and limits: trade-offs.md
+  - Upgrading 0.9 to 0.10: upgrading.md
+  - Changelog: changelog.md
+  - Glossary: glossary.md

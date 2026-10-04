@@ -1,5 +1,5 @@
 """C3 acceptance: manifest deletion blocks session_start with
-MANIFEST_INCOMPLETE; status flip rejected unless shadow matches source."""
+MANIFEST_INCOMPLETE; status flip derives fields from the cached shadow."""
 import pytest
 
 from conftest import make_event
@@ -23,15 +23,15 @@ def test_flip_rejected_without_shadow(toy):
         flip_status(toy, "orders")
 
 
-def test_flip_rejected_when_shadow_stale(toy):
+def test_flip_builds_the_shadow_from_current_source(toy):
+    """The cache is never trusted over the source: a stale entry rebuilds."""
     from engine import load_config
     from engine.extractor.engine import extract_path
     (toy / "orders.py").write_text("def create_order(sku):\n    return sku\n")
     extract_path(toy, toy / "orders.py", load_config(toy))
-    # source changes after extraction -> stale shadow -> rejected
     (toy / "orders.py").write_text("def create_order(sku, qty):\n    return sku\n")
-    with pytest.raises(RegistryError, match="stale"):
-        flip_status(toy, "orders")
+    entry = flip_status(toy, "orders")
+    assert "qty" in entry["signature_digest"]
 
 
 def test_flip_succeeds_and_derives_fields(toy):
@@ -43,7 +43,7 @@ def test_flip_succeeds_and_derives_fields(toy):
     entry = flip_status(toy, "orders")
     assert entry["status"] == "built"
     assert entry["module_id"] == "orders"
-    assert entry["shadow"] and entry["source_hash"]
+    assert "shadow" not in entry and entry["source_hash"]
     assert "create_order" in entry["signature_digest"]
     # idempotent
     assert flip_status(toy, "orders")["status"] == "built"

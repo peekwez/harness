@@ -21,7 +21,7 @@ the builtin gates from running:
 * `EXTRA_GATE_RUN_ERROR` — the gate raised, returned a non-list, or produced a
   finding the engine's own `validate_finding` rejects (a blocking finding with
   no `rule_ref` is the case that matters: D-003/D-007 hold for repo-local
-  gates exactly as for G1-G8).
+  gates exactly as for the builtin gates).
 """
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def load_extra_gates(root, config, reserved_ids=None) -> tuple:
         root: Repo root; a relative path entry resolves against it.
         config: Loaded engine config (`engine.load_config`).
         reserved_ids: Gate ids already taken — the builtin pack — so a
-            repo-local gate cannot shadow G1-G8.
+            repo-local gate cannot take a builtin or retired id.
 
     Returns:
         A `(gates, findings)` pair: the successfully loaded gates in config
@@ -203,10 +203,10 @@ def verify_extra_findings(root, config, slices) -> list:
     Returns:
         Load errors plus every finding the selected gates produced.
     """
-    from . import GateContext, builtin_gates
+    from . import GateContext, reserved_gate_ids
 
     gates, findings = load_extra_gates(
-        root, config, reserved_ids={g.GATE["id"] for g in builtin_gates()})
+        root, config, reserved_ids=reserved_gate_ids())
     findings = list(findings)
     if not gates:
         return findings
@@ -420,24 +420,53 @@ def _validate_gate(gate, taken: set) -> None:
             raise ValueError(
                 f"GATE[{field!r}] names unknown events {unknown}; "
                 f"expected {list(EVENTS)}")
+    cites = gate.get("cites", [])
+    if (isinstance(cites, str) or not isinstance(cites, (list, tuple))
+            or not all(isinstance(c, str) and c.strip() for c in cites)):
+        raise TypeError(
+            "GATE['cites'] must be a list of non-goal rule refs or boundary "
+            "ids, for example [\"adr:007\"]")
+
+
+def cited_rules(gates: list) -> set:
+    """Every boundary id or rule ref that a loaded gate lists in
+    `GATE["cites"]` (spec 4.1). G3 blocks only the non-goals named here.
+
+    Args:
+        gates: Loaded gates (builtin modules or `ExtraGate`s).
+
+    Returns:
+        The union of their `cites` entries.
+    """
+    out = set()
+    for gate in gates:
+        out.update(gate.GATE.get("cites") or ())
+    return out
 
 
 def _load_error(entry, exc: BaseException) -> dict:
     """Build the blocking finding for an entry that could not be loaded."""
-    message = (f"gates.extra entry {entry!r} failed to load: "
-               f"{type(exc).__name__}: {exc}")
-    return make_finding(LOAD_ERROR_CODE, RULE_REF, message[:_MESSAGE_LIMIT],
-                        severity="block", key=f"extra|{entry}")
+    return make_finding(
+        LOAD_ERROR_CODE, RULE_REF,
+        f"gates.extra entry {entry!r} failed to load: {type(exc).__name__}.",
+        severity="block", key=f"extra|{entry}",
+        inject=[f"{type(exc).__name__}: {exc}"[:_MESSAGE_LIMIT]],
+        fix=f"Fix {entry}, or remove it from gates.extra in "
+            f".harness/config.yaml.")
 
 
 def _run_error(entry, exc: BaseException) -> dict:
     """Build the blocking finding for a gate that misbehaved while running."""
     frame = _last_frame(exc)
     where = f" at {frame}" if frame else ""
-    message = (f"gates.extra entry {entry!r} failed while running{where}: "
-               f"{type(exc).__name__}: {exc}")
-    return make_finding(RUN_ERROR_CODE, RULE_REF, message[:_MESSAGE_LIMIT],
-                        severity="block", key=f"extra-run|{entry}")
+    return make_finding(
+        RUN_ERROR_CODE, RULE_REF,
+        f"gates.extra entry {entry!r} failed while running{where}: "
+        f"{type(exc).__name__}.",
+        severity="block", key=f"extra-run|{entry}",
+        inject=[f"{type(exc).__name__}: {exc}"[:_MESSAGE_LIMIT]],
+        fix=f"Fix run() in {entry}, or remove it from gates.extra in "
+            f".harness/config.yaml.")
 
 
 def _last_frame(exc: BaseException):

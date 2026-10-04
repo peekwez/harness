@@ -11,12 +11,14 @@ from engine import HarnessError, IGNORED_DIRS
 
 
 def journal_path(root, slice_id):
+    """Close recovery journal. It lives in the gitignored cache, outside the
+    commit that it describes."""
     key = hashlib.sha256(slice_id.encode()).hexdigest()
-    return Path(root) / ".harness/memory/session" / f".close-{key}.json"
+    return Path(root) / ".harness" / "cache" / f"close-{key}.json"
 
 
 FINALIZATION_FILES = ("backlog.jsonl", "registry.jsonl", "edges.jsonl",
-                      "notes.jsonl", "memory/durable.jsonl")
+                      "notes.jsonl", "slice-metrics.jsonl")
 
 
 def _save_journal(path, pending):
@@ -83,7 +85,7 @@ def _restore_finalization(root, pending):
 
 
 def finish_closure(root, result):
-    from engine import memory, telemetry
+    from engine import telemetry
     from engine.events import Sidecar
     sid = result["slice"]
     sidecar = Sidecar(root)
@@ -94,9 +96,7 @@ def finish_closure(root, result):
         sidecar.close()
     telemetry.emit(root, "slice_closed", {
         "slice": sid, "flipped": result["registry_flipped"],
-        "flip_skipped": result["flip_skipped"], "memories": result["memory"]["total"]},
-        buffered=True, event_id=f"closure:{sid}:{result.get('source_commit')}")
-    memory.session_path(root, sid).unlink(missing_ok=True)
+        "flip_skipped": result["flip_skipped"]})
     journal_path(root, sid).unlink(missing_ok=True)
     return result
 
@@ -110,8 +110,9 @@ def recover_closure(root, slice_id):
     pending = json.loads(path.read_text())
     result = pending["result"]
     if (Path(root) / ".git").exists():
+        from engine import jsonl_lines
         rows = [json.loads(line) for line in
-                _git(root, "show", "HEAD:.harness/backlog.jsonl").splitlines() if line]
+                jsonl_lines(_git(root, "show", "HEAD:.harness/backlog.jsonl")) if line]
         durable = next((r for r in rows if r["id"] == slice_id), {})
     else:
         durable = get_slice(root, slice_id)
@@ -162,8 +163,8 @@ def source_matches_commit(root, commit):
 
 def prepare_files(root, sl, sidecar, session, commit, config):
     """Discover all changes before any review or conformance check."""
-    from engine.events import _regenerate_touched, rel_in_root
-    from engine.extractor.engine import shadow_path_for
+    from engine.events import record_touched_uses, rel_in_root
+    from engine.extractor.engine import git_ignored_set
     from engine.graph import load_edges
     touched = sidecar.touched_paths(slice_id=sl["id"])
     touched |= {e["to"][5:] for e in load_edges(root)
@@ -179,9 +180,7 @@ def prepare_files(root, sl, sidecar, session, commit, config):
         touched |= {p for p in _git(root, *args).split("\0") if p}
     touched = {p for p in touched if rel_in_root(root, p)
                and not any(part in IGNORED_DIRS for part in Path(p).parts)}
-    missing = {p for p in touched if (Path(root) / p).is_file()
-               and not shadow_path_for(root, Path(root) / p).exists()}
+    touched -= git_ignored_set(root, touched)         # one git call, not N
     sidecar.touch(session, sl["id"], sorted(touched))
-    _regenerate_touched(root, sidecar, session, sl["id"], config)
-    extracted = sorted(p for p in missing if shadow_path_for(root, Path(root) / p).exists())
-    return sorted(touched), extracted
+    record_touched_uses(root, sidecar, session, sl["id"], config)
+    return sorted(touched)

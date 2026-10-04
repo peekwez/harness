@@ -23,7 +23,7 @@ adjudication duplicate-id guard) shipped in 0.8.6 without it.
 
 ## Context
 
-The Codex Astra review (`docs/handoffs/2026-09-05-codex-astra-harness-enhancements.md`, verified
+The Codex Astra review (`docs/internal/handoffs/2026-09-05-codex-astra-harness-enhancements.md`, verified
 against engine 0.8.5 at b0befcb) found four places where the engine keeps
 a *fragment* of an intervention and later behaves as if it kept the whole:
 

@@ -143,8 +143,7 @@ def _prove_codex_engine(entry: dict) -> tuple[Path, Path]:
             return files
     raise HarnessError(
         f"cannot prove the installed engine for {plugin_id!r} version "
-        f"{version}: `codex plugin list --json` exposes no installed path and "
-        "no unique matching copy exists in the Codex plugin cache")
+        f"{version}: no installed path and no unique matching copy. Reinstall the plugin.")
 
 
 def prove_engine(host: str, entry: dict) -> tuple[Path, Path]:

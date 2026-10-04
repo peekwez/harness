@@ -7,9 +7,7 @@
 - E1: one closed-slice acceptance selector shared by close, merge and the
   new `harness acceptance --closed` entry point; a declared suite that
   disappeared fails loud, naming the slice and pattern.
-- E6: the resolver and the backlog estimate build guidance candidates
-  through one layer — same supersession, anchors and dedup — and a missing
-  anchor is a reported fallback, not a silent whole-file load.
+- E6: guidance candidates go through one layer (see test_resolver.py).
 - Proposed ADRs that carry frontmatter decision rows are warned about at
   compile: rows bind regardless of `status`, so say so.
 """
@@ -46,7 +44,7 @@ def _closed(sid, acceptance, **extra):
 
 # =============================================================== E5: split
 def test_split_never_rewrites_a_closed_slice(tmp_path):
-    toy = build_toy_repo(tmp_path / "toy", budget=100)   # everything is oversized
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     rows = _backlog(toy)
     rows[0]["status"] = "closed"
     _set_backlog(toy, rows)
@@ -60,7 +58,7 @@ def test_split_never_rewrites_a_closed_slice(tmp_path):
 
 def test_split_never_rewrites_a_bound_or_parked_slice(tmp_path):
     for status in ("in_progress", "parked"):
-        toy = build_toy_repo(tmp_path / status, budget=100)
+        toy = build_toy_repo(tmp_path / status, oversized=True)
         rows = _backlog(toy)
         rows[0]["status"] = status
         _set_backlog(toy, rows)
@@ -72,7 +70,7 @@ def test_split_never_rewrites_a_bound_or_parked_slice(tmp_path):
 def test_split_refuses_a_parent_other_slices_depend_on(tmp_path):
     """Replacing slice-042 with -a/-b would leave slice-043's depends_on
     pointing at a row that no longer exists."""
-    toy = build_toy_repo(tmp_path / "toy", budget=100)
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     rows = _backlog(toy)
     rows.append({"id": "slice-043", "spec": "s", "title": "after",
                  "status": "planned", "declares_dep": ["orders"],
@@ -91,7 +89,7 @@ def test_split_refuses_a_parent_other_slices_depend_on(tmp_path):
 
 
 def test_split_of_a_free_planned_slice_requires_authored_child_contracts(tmp_path):
-    toy = build_toy_repo(tmp_path / "toy", budget=100)
+    toy = build_toy_repo(tmp_path / "toy", oversized=True)
     out = json.loads(run_cli("backlog", root=toy).stdout)
     assert out["split"] == []
     assert out["split_proposals"][0]["child_ids"] == ["slice-042-a",
@@ -299,116 +297,6 @@ def test_ci_template_offers_closed_acceptance_opt_in():
         (PLUGIN_ROOT / "templates" / "ci-verify.yml").read_text()
 
 
-# =================================================== E6: context estimate
-def test_estimate_and_resolver_share_one_guidance_layer(toy):
-    """The number `backlog` writes is the number `resolve` needs for the
-    declared deps' shadows + guidance — same supersession, same anchors."""
-    from engine.resolver import context_cost_breakdown, resolve
-    config = load_config(toy)
-    config["resolver"]["budget_tokens"] = 10**6
-    res = resolve(toy, "slice-042", config)
-    est = context_cost_breakdown(toy, ["telemetry", "config"], config)
-    assert est["total"] == res["declared_demand"], (est, res["declared_demand"])
-    assert est["total"] == est["shadows"] + est["guidance"]
-    # telemetry is built with s2 superseded: the estimate skips s2 too
-    assert "adr/007-telemetry.md#s2" in est["superseded"]
-    # demand is everything that qualified; what fit (token_estimate) also
-    # holds the decisions block and one-hop shadows, which the declared
-    # figure deliberately excludes
-    assert res["demand"] >= res["declared_demand"]
-    assert res["demand"] >= res["token_estimate"]
-
-
-def test_repeated_anchor_counted_once_distinct_anchors_kept(toy):
-    from engine.resolver import context_cost_breakdown
-    config = load_config(toy)
-    rows = read_jsonl(toy / ".harness" / "registry.jsonl")
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/007-telemetry.md#s1",
-                                  "adr/007-telemetry.md#s1",     # repeat
-                                  "adr/007-telemetry.md#s3"]     # distinct
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    one = context_cost_breakdown(toy, ["orders"], config)
-    assert one["guidance_refs"] == ["adr/007-telemetry.md#s1",
-                                    "adr/007-telemetry.md#s3"]
-    # config also references #s1: across deps it is still counted once
-    both = context_cost_breakdown(toy, ["orders", "config"], config)
-    assert both["guidance"] == one["guidance"]
-    # and the resolver injects it once
-    from engine.resolver import resolve
-    config["resolver"]["budget_tokens"] = 10**6
-    rows = _backlog(toy)
-    rows[0]["declares_dep"] = ["orders", "config"]
-    _set_backlog(toy, rows)
-    res = resolve(toy, "slice-042", config)
-    hits = [b for b in res["injections"]
-            if b.startswith("=== guidance adr/007-telemetry.md#s1")]
-    assert len(hits) == 1, hits
-
-
-def test_missing_anchor_is_a_reported_fallback_with_its_cost(toy):
-    from engine.resolver import context_cost_breakdown, resolve
-    config = load_config(toy)
-    rows = read_jsonl(toy / ".harness" / "registry.jsonl")
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/007-telemetry.md#nope"]
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    est = context_cost_breakdown(toy, ["orders"], config)
-    assert est["anchor_fallbacks"] == ["adr/007-telemetry.md#nope"]
-    from engine import token_estimate
-    whole = token_estimate((toy / "adr" / "007-telemetry.md").read_text())
-    # the whole file (plus the block header) is what it costs — far more
-    # than the section a valid anchor would have cost
-    assert est["guidance"] >= whole
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/007-telemetry.md#s1"]
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    assert context_cost_breakdown(toy, ["orders"], config)["guidance"] < whole
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/007-telemetry.md#nope"]
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    backlog = _backlog(toy)
-    backlog[0]["declares_dep"] = ["orders"]
-    _set_backlog(toy, backlog)
-    config["resolver"]["budget_tokens"] = 10**6
-    res = resolve(toy, "slice-042", config)
-    fallback = [d for d in res["dropped"] if d["kind"] == "anchor-missing"]
-    assert fallback and fallback[0]["ids"] == ["adr/007-telemetry.md#nope"]
-    assert "whole file" in fallback[0]["reason"]
-
-
-def test_missing_guidance_file_is_reported_by_the_estimate(toy):
-    from engine.resolver import context_cost_breakdown
-    rows = read_jsonl(toy / ".harness" / "registry.jsonl")
-    for r in rows:
-        if r["id"] == "orders":
-            r["guidance_refs"] = ["adr/099-gone.md#s1"]
-    write_jsonl(toy / ".harness" / "registry.jsonl", rows)
-    est = context_cost_breakdown(toy, ["orders"], load_config(toy))
-    assert est["missing_refs"] == ["adr/099-gone.md#s1"]
-    assert est["guidance"] == 0
-
-
-def test_backlog_output_carries_the_breakdown(toy):
-    out = json.loads(run_cli("backlog", "--no-split", root=toy).stdout)
-    est = out["estimates"]["slice-042"]
-    assert set(est) >= {"total", "shadows", "guidance", "guidance_refs",
-                        "anchor_fallbacks", "missing_refs", "superseded"}
-    assert est["total"] == _backlog(toy)[0]["context_cost_estimate"]
-
-
-def test_estimate_is_deterministic(toy):
-    from engine.resolver import context_cost_breakdown
-    config = load_config(toy)
-    a = context_cost_breakdown(toy, ["config", "telemetry"], config)
-    b = context_cost_breakdown(toy, ["telemetry", "config"], config)
-    assert a == b
-
-
 # =================================================== compile: proposed ADRs
 def test_compile_warns_when_a_proposed_adr_carries_binding_rows(toy):
     (toy / "adr" / "008-draft.md").write_text(
@@ -438,8 +326,9 @@ def test_the_lifecycle_adr_is_proposed_and_binds_nothing():
         assert needle in body.lower(), needle
 
 
-def test_readme_documents_the_new_surface():
-    body = (PLUGIN_ROOT / "README.md").read_text()
-    assert "`acceptance`" in body
-    assert "split_refused" in body or "never split" in body
+def test_docs_document_the_new_surface():
+    from test_docs_site import public_docs_text
+    body = public_docs_text()
+    assert "harness acceptance --closed" in body
+    assert "split_refused" in body
     assert "anchor" in body

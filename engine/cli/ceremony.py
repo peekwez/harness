@@ -59,11 +59,11 @@ def _security_rows_for_slice(root, sl):
 
 def _close_ceremony(args):
     from engine.events import Sidecar, handle_event
-    from engine.gates.g3_scope import SUBSTRATE_PREFIXES
+    from engine.gates import exempt
     from engine.graph import (append_edge, load_edges, uses_vs_declares,
                               write_note, GraphError)
     from engine.registry import flip_status, load_registry, RegistryError
-    from engine import memory, telemetry
+    from engine import telemetry
     root = _root(args)
     config = load_config(root)
     session = _session(args, root)
@@ -114,7 +114,7 @@ def _close_ceremony(args):
         source_matches_commit(root, args.commit)
         sidecar = Sidecar(root)
         try:
-            prepared_touched, prepared_shadows = prepare_files(
+            prepared_touched = prepare_files(
                 root, sl, sidecar, session, args.commit, config)
         finally:
             sidecar.close()
@@ -137,6 +137,24 @@ def _close_ceremony(args):
                 "findings": [gate]})
     # a repo with no gate_cmd is not a repo whose gate passed: say which
     acceptance_gate = "passed" if gate_configured(config) else "skipped"
+    # Precondition 1.2 (spec 6.4 checks 3-5, W5): the red record exists (or
+    # an override records why the suite was green at start), each statement
+    # the slice verifies has a linked test, and each link has kills: text.
+    # Legacy slices skip these; acceptance and regression above still ran.
+    from engine.verification import close_checks
+    from engine.verification import slice_metrics as verification_metrics
+    v_findings, verification = close_checks(root, sl, config)
+    v_blocks = [f for f in v_findings if f["severity"] == "block"]
+    if v_blocks:
+        # a corrupt red record and a green start need a human, not a retry:
+        # they must not push the slice toward auto-park.
+        human = any(f["code"] == "GREEN_AT_START"
+                    or (f["code"] == "RED_RECORD_MISSING"
+                        and verification.get("red_record_corrupt"))
+                    for f in v_blocks)
+        _fail({"closed": False, "rule_ref": v_blocks[0]["rule_ref"],
+               "reason": v_blocks[0]["message"], "findings": v_findings,
+               "verification": verification}, attempt=not human)
     try:
         source_matches_commit(root, args.commit)
     except HarnessError as exc:
@@ -257,61 +275,20 @@ def _close_ceremony(args):
 
     touched = prepared_touched
 
-    # Precondition 4: G3 declaration reconciliation (T2: unit cannot close
-    # until every touched file is declared/predicted or overridden).
+    # Precondition 4 (0.10, D-0.10-01): G3 scope is advisory. Close lists
+    # touched files outside the declaration; it does not block on them.
     registry_sources = {e.get("source") for e in load_registry(root)
                         if e["id"] in sl.get("declares_dep", [])}
     declared = set(sl.get("predicted_files", [])) | registry_sources | \
         set(sl.get("acceptance", []))
-    # overrides consult the same ledger as G3/G5: any recorded target
-    # (file:path, boundary:B-x, registry:x) reconciles by bare id (#21)
     from engine.graph import override_targets
     overridden = override_targets(root, args.slice, "gate:G3", {"file", "boundary"})
     from fnmatch import fnmatch
-    rogue = [t for t in touched
-             if not t.startswith(SUBSTRATE_PREFIXES)
-             and not any(fnmatch(t, pattern) for pattern in declared if pattern)
-             and t not in overridden]
-    if rogue:
-        _fail({"closed": False,
-                "reason": f"G3 unreconciled: touched files not in the declared/"
-                          f"predicted set: {rogue}; amend the slice declaration "
-                          f"or record an override", "rule_ref": "gate:G3"})
-
-    # Precondition 5 → the W3 ruling, now the documented contract: derived
-    # artifacts are the ENGINE's job. A touched shadow-eligible file with no
-    # shadow (the md-file-bug class) gets extracted HERE, deterministically,
-    # and reported; the close only blocks if extraction itself fails. G7
-    # still blocks anything stale or hand-edited.
-    from engine import IGNORED_EXTS
-    from engine.extractor.engine import extract_path, shadow_path_for
-    shadows_extracted, shadow_failures = list(prepared_shadows), []
-    for rel in sorted(touched):
-        if rel.startswith(SUBSTRATE_PREFIXES):
-            continue
-        p = root / rel
-        # extensionless files (Makefile, scripts) get degenerate shadows —
-        # enforced surface too, not a loophole. Dotfiles (.gitignore,
-        # .gitattributes…) are config, not modules.
-        if (not p.is_file() or p.suffix.lower() in IGNORED_EXTS
-                or p.name.startswith(".")):
-            continue
-        if shadow_path_for(root, p).exists():
-            continue
-        try:
-            shadow, _sf = extract_path(root, p, config)
-        except HarnessError as exc:
-            shadow_failures.append({"path": rel, "reason": str(exc)})
-            continue
-        if shadow is None:
-            shadow_failures.append({"path": rel, "reason": "not shadowable"})
-        else:
-            shadows_extracted.append(rel)
-    if shadow_failures:
-        _fail({"closed": False,
-                "reason": f"touched files could not be shadowed: "
-                          f"{shadow_failures} — fix the named cause and "
-                          f"re-close", "rule_ref": "gate:G7"})
+    scope_advisory = sorted(
+        t for t in touched
+        if not exempt(t, config)
+        and not any(fnmatch(t, pattern) for pattern in declared if pattern)
+        and t not in overridden)
 
     # Precondition 8: dependency governance. Third-party deps are outside
     # shadow enforcement — a builder silently adding one is the drift class
@@ -368,14 +345,12 @@ def _close_ceremony(args):
     from engine.graph import record_slice_provenance, record_dependency_snapshot
     record_dependency_snapshot(root, args.slice, ud["uses"], touched, commit=args.commit)
     record_slice_provenance(root, args.slice, args.commit, touched)
-    memory_ids = [m["id"] for m in memory.read_session(root, args.slice)]
     note_written, note_row = False, {}
     if args.commit:
         try:
             note_row = write_note(root, args.commit, {
                 "slice_id": args.slice, "modules_touched": touched,
-                "registry_used": sl.get("declares_dep", []),
-                "memory_ids": memory_ids})
+                "registry_used": sl.get("declares_dep", [])})
             note_written = True
         except GraphError as exc:
             # NOT a warning: an unwritten note means the provenance claim is
@@ -387,24 +362,25 @@ def _close_ceremony(args):
                               f"(stale ref lock? read-only .git?) and "
                               f"re-close — provenance is not optional."})
 
-    compacted = memory.compact_to_durable(root, args.slice, commit=args.commit,
-                                          consume=False)
-
-    # hook-frequency events buffered in the sidecar land here, once, so the
-    # tracked file doesn't churn on every edit (review R8)
-    telemetry_flushed = telemetry.flush(root)
-    telemetry_archived = telemetry.rotate(root, config)
+    # D-0.10-11: one committed summary row per slice. Event rows stay local.
+    from engine.explore import explore_summary_extra
+    slice_metrics = telemetry.record_slice_summary(
+        root, args.slice,
+        extra={**verification_metrics(verification),
+               **explore_summary_extra(root)})
 
     result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
               "acceptance_gate": acceptance_gate, "substrate_commit": None,
-              "source_commit": args.commit, "shadows_extracted": shadows_extracted,
+              "source_commit": args.commit,
               "fork_review": fork_review, "review": review_result,
-              "telemetry_flushed": telemetry_flushed, "telemetry_archived": telemetry_archived,
-              "registry_refreshed": refreshed, "flip_skipped": flip_skipped, "memory": compacted,
+              "slice_metrics": slice_metrics,
+              "verification": verification,
+              "registry_refreshed": refreshed, "flip_skipped": flip_skipped,
               "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
               "notes_ref": NOTES_REF if note_written else None,
               "notes_hint": (f"view with: git notes --ref={NOTES_REF} show {args.commit}")
-                            if note_written else None, "touched": touched}
+                            if note_written else None, "touched": touched,
+                            "scope_advisory": scope_advisory}
     from engine.cli.closure_state import prepare_journal, finish_closure
     prepare_journal(root, original_slice, result)
     sl["status"] = "closed"
@@ -416,7 +392,7 @@ def _close_ceremony(args):
     save_slice(root, sl)
 
     # The ceremony itself just mutated substrate (backlog flip, registry,
-    # edges, telemetry) AFTER the commit it stamps — commit those mutations
+    # edges, slice metrics) AFTER the commit it stamps — commit those mutations
     # or they ride as uncommitted worktree state and the flip is lost on
     # merge (parallel-worktree field report W4). A follow-up commit, never
     # an amend: amending args.commit would orphan its git note.

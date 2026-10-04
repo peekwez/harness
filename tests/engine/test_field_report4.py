@@ -18,24 +18,18 @@ def codes(verdict):
 
 # ---------------------------------------------------------------- W7
 def test_extract_all_rewrites_stale_format_shadows(toy):
-    """The G7 <-> cache deadlock: a shadow in an older format has a matching
-    source_hash, so extract --all cache-hits forever while G7's uncached
-    rebuild mismatches forever. A format/version change must be a cache miss."""
-    from engine.gates.g7_derivation import derivation_findings
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    """A shadow in an older format has a matching source_hash; extract --all
+    must still rewrite it. A format/version change must be a cache miss."""
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     stale = json.loads(sp.read_text())
     stale.pop("extractor_version", None)   # what a 0.3.3-era shadow looks like
     sp.write_text(json.dumps(stale, sort_keys=True, indent=1) + "\n")
-    assert any(f["code"] == "DERIVATION_MISMATCH"
-               for f in derivation_findings(toy, load_config(toy)))
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
-    assert "telemetry.py" in out["written"], \
-        "the finding's own named fix must not be a no-op"
+    assert "telemetry.py" in out["written"]
     assert json.loads(sp.read_text()).get("extractor_version")
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
 
 
 def test_explicit_extract_reports_cache_hits_as_cached(toy):
@@ -47,7 +41,8 @@ def test_explicit_extract_reports_cache_hits_as_cached(toy):
 
 
 def test_extract_force_bypasses_the_cache(toy):
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     corrupted = json.loads(sp.read_text())
     corrupted["symbols"] = []
     sp.write_text(json.dumps(corrupted, sort_keys=True, indent=1) + "\n")
@@ -64,7 +59,6 @@ def test_extract_all_refreshes_existing_extensionless_shadows(toy):
     must still refresh — otherwise G7 mismatches with `extract --all` as a
     no-op fix, the same deadlock class as W7."""
     from engine.extractor.engine import extract_path
-    from engine.gates.g7_derivation import derivation_findings
     mk = toy / "Makefile"
     mk.write_text("all:\n\techo hi\n")
     extract_path(toy, mk, load_config(toy))    # the hook path shadows it
@@ -72,8 +66,6 @@ def test_extract_all_refreshes_existing_extensionless_shadows(toy):
     proc = run_cli("extract", "--all", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "Makefile" in json.loads(proc.stdout)["written"]
-    assert not any(f["code"] == "DERIVATION_MISMATCH"
-                   for f in derivation_findings(toy, load_config(toy)))
 
 
 # ---------------------------------------------------------------- W8
@@ -82,7 +74,8 @@ def test_g6_silent_on_extractor_format_skew(toy):
     version skew, not interface drift — no ack-drift ceremony for non-events."""
     session = "skew"
     loaded_context(toy, session=session)   # baseline snapshot
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
+    from engine.extractor.engine import shadow_path_for
+    sp = shadow_path_for(toy, toy / "telemetry.py")
     shadow = json.loads(sp.read_text())
     shadow["symbols"].append({                      # "new extractor emits more"
         "kind": "field", "name": "Cfg.max_count",
@@ -130,40 +123,6 @@ def test_override_records_the_actual_rule_ref(toy):
 
 
 # ---------------------------------------------------------------- W10
-def test_merge_drivers_never_content_merge_shadows(tmp_path):
-    """Shadows are derived: content-merging them is semantically meaningless.
-    ours-merge keeps our version; post-merge extract regenerates from the
-    merged sources."""
-    root = tmp_path / "shad"
-    root.mkdir()
-    (root / "app.py").write_text("x = 1\n")
-    git(root, "init", "-q")
-    git(root, "config", "user.email", "t@t")
-    git(root, "config", "user.name", "t")
-    proc = run_cli("init", root=root)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert ".harness/shadows/** merge=ours" in \
-        (root / ".gitattributes").read_text()
-    sp = root / ".harness" / "shadows" / "app.py.json"
-    sp.parent.mkdir(parents=True, exist_ok=True)
-    sp.write_text('{"v": "base"}\n')
-    git(root, "add", "-A")
-    git(root, "commit", "-qm", "base")
-    default = git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-    git(root, "checkout", "-qb", "a")
-    sp.write_text('{"v": "ours"}\n')
-    git(root, "commit", "-qam", "a")
-    git(root, "checkout", "-q", default)
-    git(root, "checkout", "-qb", "b")
-    sp.write_text('{"v": "theirs"}\n')
-    git(root, "commit", "-qam", "b")
-    git(root, "checkout", "-q", default)
-    assert git(root, "merge", "-q", "--no-edit", "a").returncode == 0
-    merged = git(root, "merge", "--no-edit", "b")
-    assert merged.returncode == 0, merged.stdout + merged.stderr
-    assert json.loads(sp.read_text())["v"] == "ours"
-
-
 # ---------------------------------------------------------------- W11
 def test_close_uses_git_diff_as_touch_ground_truth(toy):
     """A bash-side edit the hooks never saw must still land in the close

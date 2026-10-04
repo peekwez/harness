@@ -89,6 +89,12 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
     if refusal:
         return refusal
     justification = (justification or "").strip()
+    if not sl.get("legacy_verification"):
+        # config errors surface before any state changes (no half-bound slice)
+        from engine.cli.acceptance import junit_enabled, red_timeout
+        _cfg = load_config(root)
+        junit_enabled(_cfg)
+        red_timeout(_cfg)
 
     existing_edges = load_edges(root)
     existing = {(e["type"], e["from"], e["to"]) for e in existing_edges}
@@ -147,18 +153,22 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
     if dirty:
         save_slice(root, sl)
 
+    # spec 6.3 (W5): run the slice's suite once and record that it fails.
+    # Legacy slices (in flight at upgrade) skip it.
+    red_record = None
+    if not sl.get("legacy_verification"):
+        from engine.verification import ensure_red_record
+        red_record = ensure_red_record(root, sl, load_config(root))
+
     # G6 baseline at bind: Phase-1 hook events may never route to this
     # substrate (worktree sessions), so binding is the reliable slice-start
     # moment (S1). INSERT OR IGNORE keeps the earliest baseline on re-bind.
-    # The resolved context is registered for this session ONLY because the
-    # caller emits the injections it names — G2 must never certify context
-    # nobody printed (review finding R3).
+    # The bind prints the capped context; it records no block hashes, so the
+    # first prompt after the binding injects (spec §7.4).
     res = _resolve(root, slice_id, load_config(root))
     sidecar = Sidecar(root)
     try:
         _snapshot_slice_baseline(root, sidecar, slice_id)
-        sidecar.context_add(session, res["context_loaded"],
-                            injections=res["injections"])
     finally:
         sidecar.close()
 
@@ -169,11 +179,12 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
 
     return {"bound": True, "active_slice": slice_id, "session": session,
             "status": sl["status"],
-            "context_registered": len(res["context_loaded"]),
-            "context_loaded": res["context_loaded"],
+            "context_chars": res["chars"],
+            "context_cut": res["cut"],
             "injections": res["injections"],
             "acceptance_python": _acceptance_python(root, load_config(root)),
-            "started_at_commit": sl.get("started_at_commit")}
+            "started_at_commit": sl.get("started_at_commit"),
+            "red_record": red_record}
 
 
 def _acceptance_green(root, sl, config):
@@ -283,7 +294,7 @@ def cmd_permit(args):
     ever returns allow=true; a false is "not auto-approved", leaving the
     host's normal flow (and the human) in charge."""
     from engine.events import Sidecar
-    from engine.permits import command_decision, paths_in_scope
+    from engine.permits import ask_reason, command_decision, paths_in_scope
     from engine.registry import load_registry
     root = _root(args)
     session = _session(args, root)
@@ -294,6 +305,13 @@ def cmd_permit(args):
     finally:
         sidecar.close()
     if not slice_id:
+        # with a slice bound, command_decision alone decides (deny > ask)
+        why = (ask_reason(args.command, str(PLUGIN_ROOT / "bin" / "harness"))
+               if args.command else None)
+        if why:
+            _print({"allow": False, "decision": "ask", "reason": why,
+                    "slice": slice_id})
+            return 0
         _print({"allow": False, "reason": "no slice bound to this session — "
                                           "auto-approval is scoped to a bound slice"})
         return 0
@@ -320,7 +338,7 @@ def cmd_permit(args):
                     return 0
             rels.append(str(pp))
         sl = get_slice(root, slice_id)
-        ok = paths_in_scope(sl, load_registry(root), rels)
+        ok = paths_in_scope(sl, load_registry(root), rels, load_config(root))
         _print({"allow": ok, "decision": "allow" if ok else "defer",
                 "slice": slice_id,
                 "reason": (f"gate-approved for slice {slice_id} (declared "

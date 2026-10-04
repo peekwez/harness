@@ -24,12 +24,13 @@ static checks and do not require a fabricated runtime scenario.
 3. Isolate attribution. Use scenario/request measurement contexts when the
    collector supports the application's concurrency model; propagate the same
    operation/trace ID through requests, queues, workers and retries. Do not assume
-   a process-global context switch safely separates simultaneous requests. If
-   request attribution is unsupported, run one scenario at a time in an isolated
-   app instance with no unrelated traffic/background work, and capture/reset
-   scenario counters using supported collector operations after setup/readiness.
+   a process-global context switch safely separates simultaneous requests.
+   If the collector cannot attribute requests, run one scenario at a time in
+   an isolated app instance with no unrelated traffic or background work.
+   After setup and readiness, capture and reset the scenario counters with
+   supported collector operations.
    Exclude setup and observation-probe activity. A startup-wide or cumulative
-   coverage file cannot attribute a hit to this action, and subtracting aggregate
+   coverage file cannot attribute a hit to this action. Subtracting aggregate
    sets can miss lines already executed during startup or another request.
 
 Use the existing collector and tracing facilities when available. For Python,

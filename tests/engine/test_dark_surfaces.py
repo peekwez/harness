@@ -1,12 +1,11 @@
 """Surfaces the suite never exercised: TypeScript/HCL/YAML shadows, the
-scaffolded CI workflow, non-Claude adapter permission parity, and telemetry
-retention."""
+scaffolded CI workflow, and non-Claude adapter permission parity."""
 import json
 import subprocess
 import sys
 
 from conftest import PLUGIN_ROOT, run_cli
-from engine import load_config, read_jsonl
+from engine import load_config
 
 
 # ---------------------------------------------------------------- TypeScript
@@ -55,14 +54,6 @@ def test_typescript_shadow_extracts_the_real_interface(toy):
     assert "./telemetry" in shadow["imports"] and "lodash" in shadow["imports"]
 
 
-def test_typescript_shadow_regenerates_identically(toy):
-    """G7's guarantee must hold for every enabled language, not just Python."""
-    from engine.extractor.engine import extract_path
-    from engine.gates.g7_derivation import derivation_findings
-    (toy / "orders.ts").write_text(TS_SOURCE)
-    extract_path(toy, toy / "orders.ts", load_config(toy))
-    assert not [f for f in derivation_findings(toy, load_config(toy))
-                if f["severity"] == "block"]
 
 
 HCL_SOURCE = """variable "region" {
@@ -127,8 +118,8 @@ def test_scaffolded_ci_workflow_is_valid_yaml_with_the_engine_step(tmp_path):
 
 
 def test_this_repo_actually_runs_its_own_ship_gate():
-    """README: "`harness verify` runs in this repo's CI ... the ship gate for
-    every release." That claim needs a workflow to exist."""
+    """README: "This repo runs its own ship gate." That claim needs a
+    workflow to exist."""
     import yaml
     wf_path = PLUGIN_ROOT / ".github" / "workflows" / "harness-verify.yml"
     assert wf_path.exists(), "the self-hosting claim needs a real workflow"
@@ -202,38 +193,3 @@ def test_non_claude_adapters_auto_approve_declared_work(toy):
         out = json.loads(proc.stdout) if proc.stdout.strip() else {}
         blob = json.dumps(out)
         assert "allow" in blob, f"{name} should auto-approve declared work: {blob}"
-
-
-# ---------------------------------------------------------------- retention
-def test_telemetry_rotates_into_an_archive(toy):
-    from engine import telemetry
-    cap = 25
-    import yaml
-    cfg_path = toy / ".harness" / "config.yaml"
-    cfg = yaml.safe_load(cfg_path.read_text())
-    cfg.setdefault("telemetry", {})["max_rows"] = cap
-    cfg_path.write_text(yaml.safe_dump(cfg))
-    for i in range(cap + 10):
-        telemetry.emit(toy, "slice_closed", {"slice": f"s-{i}"})
-    moved = telemetry.rotate(toy, load_config(toy))
-    assert moved > 0
-    live = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    archive = read_jsonl(toy / ".harness" / "telemetry.archive.jsonl")
-    assert len(live) <= cap and archive, (len(live), len(archive))
-    # nothing is lost, only moved
-    assert len(live) + len(archive) == cap + 10
-    # the newest rows stay live
-    assert live[-1]["meta"]["slice"] == f"s-{cap + 9}"
-
-
-def test_status_since_filters_the_window(toy):
-    from engine import telemetry
-    telemetry.emit(toy, "slice_closed", {"slice": "old"})
-    rows = read_jsonl(toy / ".harness" / "telemetry.jsonl")
-    rows[0]["ts"] = "2020-01-01T00:00:00+00:00"
-    from engine import write_jsonl
-    write_jsonl(toy / ".harness" / "telemetry.jsonl", rows)
-    telemetry.emit(toy, "slice_closed", {"slice": "new"})
-    out = json.loads(run_cli("status", "--since", "2021-01-01", root=toy).stdout)
-    assert out["window"]["since"] == "2021-01-01"
-    assert out["window"]["rows"] == 1

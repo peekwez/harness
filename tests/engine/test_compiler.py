@@ -84,7 +84,8 @@ def test_compile_chain_telemetry_end_to_end(toy):
     from engine import load_config
     from engine.resolver import resolve
     out = resolve(toy, "slice-042", load_config(toy))
-    assert "decision:D-041" in out["context_loaded"]
+    assert "D-041" in next(b["text"] for b in out["blocks"]
+                           if b["key"] == "decisions")
     # the [non-goal] boundary compiled from the same ADR blocks with adr ref
     from conftest import loaded_context, make_event
     from engine.events import handle_event

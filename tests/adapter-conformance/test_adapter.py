@@ -1,6 +1,6 @@
 """Adapter conformance suite: event translation, verdict handling, injection
 format. Any future framework adapter must pass the equivalents of these.
-PreCompact: memory flush + COMPACTION_REACHED telemetry ONLY, no injection."""
+PreCompact: `harness precompact` (hash reset + COMPACTION_REACHED) ONLY, no injection."""
 import json
 import os
 import subprocess
@@ -10,6 +10,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PLUGIN_ROOT / "tests"))
 sys.path.insert(0, str(PLUGIN_ROOT))
+from conftest import cite_non_goals  # noqa: E402
 
 ADAPTER = PLUGIN_ROOT / "hooks" / "adapter.py"
 
@@ -28,6 +29,14 @@ def run_adapter(hook_json, cwd, slice_id=None, harness_bin=None):
     return proc.returncode, out, proc.stderr
 
 
+def _drift_telemetry(toy):
+    """Change telemetry's public interface: G6 blocks until acknowledged."""
+    src = toy / "telemetry.py"
+    src.write_text(src.read_text().replace(
+        "def emit_span(name: str, attrs: dict) -> dict:",
+        "def emit_span(name: str, attrs: dict, level: int = 0) -> dict:"))
+
+
 def test_session_start_translates_and_injects(toy):
     code, out, err = run_adapter(
         {"hook_event_name": "SessionStart", "session_id": "ac-1"},
@@ -35,19 +44,20 @@ def test_session_start_translates_and_injects(toy):
     assert code == 0, err
     ctx = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
-    assert "shadow:telemetry" in ctx or "emit_span" in ctx  # injection format
+    assert "D-041" in ctx  # decision rows lead the injection
 
 
 def test_pre_tool_use_deny_with_reason(toy):
+    cite_non_goals(toy, "adr:007")
     code, out, err = run_adapter(
         {"hook_event_name": "PreToolUse", "session_id": "ac-2",
          "tool_name": "Edit",
-         "tool_input": {"file_path": str(toy / "orders.py")}},
+         "tool_input": {"file_path": str(toy / "legacy" / "exporter.py")}},
         toy, slice_id="slice-042")
     assert code == 0
     hso = out["hookSpecificOutput"]
     assert hso["permissionDecision"] == "deny"
-    assert "gate:G2" in hso["permissionDecisionReason"]
+    assert "adr:007" in hso["permissionDecisionReason"]
 
 
 def test_pre_tool_use_allows_after_session_start(toy):
@@ -61,33 +71,52 @@ def test_pre_tool_use_allows_after_session_start(toy):
     assert code == 0 and out is None  # silent allow
 
 
+ADVISE_GATE = '''from engine.events import make_finding
+
+GATE = {"id": "TOY-ADVISE", "rule_ref": "adr:002",
+        "preferred": ["post_change"]}
+
+
+def run(ctx):
+    return [make_finding("TOY_ADVISORY", "adr:002", "toy advisory",
+                         severity="advisory", key="toy")]
+'''
+
+
 def test_post_tool_use_findings_as_context(toy):
+    import yaml
+    (toy / ".harness" / "gates").mkdir(parents=True, exist_ok=True)
+    (toy / ".harness" / "gates" / "advise.py").write_text(ADVISE_GATE)
+    cfg_path = toy / ".harness" / "config.yaml"
+    doc = yaml.safe_load(cfg_path.read_text())
+    doc["gates"]["extra"] = [".harness/gates/advise.py"]
+    cfg_path.write_text(yaml.safe_dump(doc, sort_keys=False))
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-4"},
                 toy, slice_id="slice-042")
-    (toy / "main.rb").write_text("puts 1\n")
+    (toy / "orders.py").write_text("x = 1\n")
     code, out, err = run_adapter(
         {"hook_event_name": "PostToolUse", "session_id": "ac-4",
          "tool_name": "Write",
-         "tool_input": {"file_path": str(toy / "main.rb")}},
+         "tool_input": {"file_path": str(toy / "orders.py")}},
         toy, slice_id="slice-042")
     assert code == 0
-    assert "UNSHADOWED_FILE" in out["hookSpecificOutput"]["additionalContext"]
+    assert "TOY_ADVISORY" in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_stop_maps_to_unit_complete_and_can_block(toy):
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-5"},
                 toy, slice_id="slice-042")
-    # hand-edit a derived shadow -> G7 must block the Stop
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
+    _drift_telemetry(toy)
+    run_adapter({"hook_event_name": "PostToolUse", "session_id": "ac-5",
+                 "tool_name": "Edit",
+                 "tool_input": {"file_path": str(toy / "telemetry.py")}},
+                toy, slice_id="slice-042")
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-5"},
         toy, slice_id="slice-042")
     assert code == 0
     assert out["decision"] == "block"
-    assert "DERIVATION_MISMATCH" in out["reason"]
+    assert "INTERFACE_DRIFT" in out["reason"]
 
 
 def test_stop_hook_active_prevents_reblock_loop(toy):
@@ -95,16 +124,15 @@ def test_stop_hook_active_prevents_reblock_loop(toy):
     Claude Code force-overrides after 8 consecutive blocks anyway."""
     run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-loop"},
                 toy, slice_id="slice-042")
-    sp = toy / ".harness" / "shadows" / "telemetry.py.json"
-    s = json.loads(sp.read_text())
-    s["symbols"][0]["signature"] = "hacked"
-    sp.write_text(json.dumps(s, sort_keys=True, indent=1) + "\n")
-    # first Stop: blocks
+    _drift_telemetry(toy)
+    run_adapter({"hook_event_name": "PostToolUse", "session_id": "ac-loop",
+                 "tool_name": "Edit",
+                 "tool_input": {"file_path": str(toy / "telemetry.py")}},
+                toy, slice_id="slice-042")
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-loop"},
         toy, slice_id="slice-042")
     assert out and out["decision"] == "block"
-    # second Stop with stop_hook_active: must NOT block again
     code, out, err = run_adapter(
         {"hook_event_name": "Stop", "session_id": "ac-loop",
          "stop_hook_active": True},
@@ -127,15 +155,15 @@ def test_injection_clipped_under_hook_output_cap():
     assert adapter.clip("short", "slice-042") == "short"
 
 
-def test_precompact_flush_and_telemetry_only(toy):
-    telemetry_file = toy / ".harness" / "telemetry.jsonl"
-    before = telemetry_file.read_text()
+def test_precompact_counts_compaction_and_injects_nothing(toy):
+    events = toy / ".harness" / "cache" / "events.jsonl"
+    before = events.read_text() if events.exists() else ""
     code, out, err = run_adapter(
         {"hook_event_name": "PreCompact", "session_id": "ac-6"},
         toy, slice_id="slice-042")
-    assert code == 0
+    assert code == 0, err
     assert out is None, "PreCompact must not inject anything"
-    after = telemetry_file.read_text()
+    after = events.read_text()
     assert "COMPACTION_REACHED" in after and "COMPACTION_REACHED" not in before
 
 
@@ -150,18 +178,18 @@ def test_hooks_json_binds_all_required_events():
     assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse",
                           "PostToolUse", "Stop", "PreCompact"}
     for name in ("PreToolUse", "PostToolUse"):
-        assert hooks[name][0]["matcher"] == "Edit|Write|MultiEdit"
+        assert hooks[name][0]["matcher"] == "Edit|Write|MultiEdit|NotebookEdit"
 
 
 def test_gates_declare_preferred_and_fallback_events():
     """T1 portability: pre_change gates declare post_change fallbacks so
-    post-only frameworks can run degraded revert-and-retry mode."""
+    post-only frameworks can run them in degraded mode, after the edit."""
     from engine.gates import all_gates, gates_for_event
     for g in all_gates():
         assert "preferred" in g.GATE and "fallback" in g.GATE
     normal = {g.GATE["id"] for g in gates_for_event("post_change")}
     degraded = {g.GATE["id"] for g in gates_for_event("post_change", degraded=True)}
-    assert {"G2", "G3"} <= (degraded - normal), \
+    assert "G3" in (degraded - normal), \
         "degraded mode must re-run pre_change gates at post_change"
     assert degraded > normal
 
@@ -290,3 +318,109 @@ def test_engine_error_in_local_mode_stays_silent(toy, tmp_path):
                            harness_bin=_broken_engine(tmp_path))
     assert code == 0, err
     assert out is None, out
+
+
+def test_precompact_clears_hashes_so_the_next_prompt_reinjects(toy):
+    run_adapter({"hook_event_name": "SessionStart", "session_id": "ac-pc"},
+                toy, slice_id="slice-042")
+    code, out, err = run_adapter(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "ac-pc",
+         "prompt": "next"}, toy, slice_id="slice-042")
+    assert out is None, "unchanged blocks are not sent again"
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreCompact", "session_id": "ac-pc"},
+        toy, slice_id="slice-042")
+    assert code == 0 and out is None, err
+    code, out, err = run_adapter(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "ac-pc",
+         "prompt": "after compaction"}, toy, slice_id="slice-042")
+    assert "D-041" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def _failing_precompact_bin(tmp_path):
+    """A stand-in engine: `precompact` fails, every call is logged."""
+    log = tmp_path / "calls.log"
+    fake = tmp_path / "fake_harness.py"
+    fake.write_text(
+        "import sys\n"
+        f"open({str(log)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "print('clear exploded', file=sys.stderr)\n"
+        "sys.exit(1)\n")
+    return fake, log
+
+
+def test_precompact_reports_failure_and_calls_only_precompact(toy, tmp_path):
+    """A failed clear exits non-zero and names the failure. The hook makes
+    one engine call, `precompact`, which records the compaction itself."""
+    fake, log = _failing_precompact_bin(tmp_path)
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreCompact", "session_id": "ac-reset"},
+        toy, slice_id="slice-042", harness_bin=fake)
+    calls = log.read_text().strip().splitlines()
+    assert len(calls) == 1 and "precompact" in calls[0]
+    assert "memory flush" not in calls[0] and "resolve" not in calls[0]
+    assert code != 0 and "precompact" in err and "clear exploded" in err
+
+
+def test_common_record_compaction_reports_failure(
+        toy, tmp_path, monkeypatch, capsys):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "harness_adapters_common_m2", PLUGIN_ROOT / "adapters" / "common.py")
+    common = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(common)
+    fake, log = _failing_precompact_bin(tmp_path)
+    monkeypatch.setattr(common, "HARNESS", str(fake))
+    monkeypatch.setattr(common, "resolve_root", lambda *a, **k: toy)
+    assert common.record_compaction("ac-reset") != 0
+    calls = log.read_text()
+    assert "precompact" in calls and "memory flush" not in calls
+    assert "clear exploded" in capsys.readouterr().err
+
+
+def test_agent_write_into_shared_memory_is_denied(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "g10-1",
+         "tool_name": "Write",
+         "tool_input": {"file_path": str(toy / ".claude" / "memory" / "shared"
+                                         / "x.md"), "content": "x"}},
+        toy)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"
+    assert "gate:G10" in hso["permissionDecisionReason"]
+    assert "harness memory promote" in hso["permissionDecisionReason"]
+
+
+def test_pre_tool_use_bash_promote_asks_the_human(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "ask-1",
+         "tool_name": "Bash",
+         "tool_input": {"command": "harness memory promote --text x"}},
+        toy)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "ask"
+    assert "memory promote" in hso["permissionDecisionReason"]
+
+
+def test_notebook_edit_path_reaches_the_gates(toy):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hook_adapter", ADAPTER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    files = mod.files_from_tool_input(
+        {"notebook_path": "/r/.claude/memory/shared/n.ipynb", "new_source": "x"})
+    assert [f["path"] for f in files] == ["/r/.claude/memory/shared/n.ipynb"]
+
+
+def test_notebook_edit_into_shared_memory_is_blocked(toy):
+    code, out, err = run_adapter(
+        {"hook_event_name": "PreToolUse", "session_id": "nb-1",
+         "tool_name": "NotebookEdit",
+         "tool_input": {"notebook_path": ".claude/memory/shared/n.ipynb",
+                        "new_source": "x"}}, toy)
+    assert code == 0, err
+    hso = out["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"
+    assert "G10" in hso["permissionDecisionReason"]

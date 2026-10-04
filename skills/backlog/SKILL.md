@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Turn the spec and ADRs into dependency-ordered slices with declared deps, red acceptance-test stubs, and context-cost estimates; oversized slices receive decomposition proposals for independently scoped children.
+description: Turn the spec and ADRs into dependency-ordered slices with declared deps, red acceptance-test stubs, and context-cost estimates; oversized slices receive decomposition proposals for independently scoped children. Also for sizing and declaring slices: "break this down", "split this feature", "how big should", declaring dependencies, estimating context cost.
 allowed-tools: Bash(*/bin/harness *)
 ---
 
@@ -24,11 +24,12 @@ Generate slices via the CLI — never hand-edit `.harness/backlog.jsonl`
 
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog add --id <slice-id> --title "…"
 --spec <spec> --declares <registry-ids…> --predicts <files…>
---acceptance tests/slices/NNN_x.py --depends <slice-ids…>`
+--acceptance tests/slices/NNN_x.py --depends <slice-ids…>
+--verifies <V-ids,…>`
 
 It validates ids and declared deps against the registry, dedupes predicted
-files, and computes the context-cost estimate. Row semantics (schema per
-the slice-decomposition skill):
+files, and computes the context-cost estimate. Row semantics (schema and
+sizing rules in `slice-decomposition.md`):
 
 - `declares_dep`: complete registry closure the slice needs. Foundations
   first — the config/telemetry/errors sequence orders before consumers.
@@ -41,10 +42,18 @@ the slice-decomposition skill):
   Use `harness:verification` to turn each actual AC into an observable result
   and a check that would detect it being broken. Name needed fixtures/services
   and any required integration/browser check in the existing slice spec.
-  For state changes, include app-only sample seeding, predeclared expected
-  effects, app write-fingerprint observability and read-only Python storage
-  probes in that scope; no direct storage fixtures as proof of app writes.
+  For state changes, put four things in scope: app-only sample seeding,
+  predeclared expected effects, app write-fingerprint observability and
+  read-only Python storage probes. A direct storage fixture never proves an app write.
   Stubs are starting points; they must become behavior assertions before done.
+  Write real behaviour assertions before the slice is bound. Never use `assert False` placeholders.
+  Bind records red once, and a red record is final. A red record taken on stubs proves nothing.
+  Put a link comment above each red test, in the test's comment syntax:
+  `# verifies: V-orders-3  kills: <the bug this test catches>`.
+  Close blocks when a statement in `verifies` has no linked test, or a link has no `kills:` text.
+- `verifies`: the statement IDs this slice proves, from `.harness/verify.jsonl`.
+  Run `harness compile` first. `backlog add` refuses an ID that is not there.
+  Repeat `--verifies` or separate IDs with commas.
 - `predicted_files`: every file the slice is expected to touch.
 - `depends_on`: slice ordering derived from the registry dependency graph.
 
@@ -52,6 +61,9 @@ Then compute cost estimates and request proposals for oversized slices
 (estimate > resolver budget × 0.8):
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog --split`
+
+Read `unowned_statements` in the same output. Give each statement to one slice with
+`--verifies`. If no slice proves a statement, tell the human why.
 
 Read `split_proposals` and `split_refused`. For each proposal, author separate
 acceptance tests and predicted files for every child, create the children

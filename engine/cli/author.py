@@ -1,6 +1,6 @@
 """Phase-0 authoring commands: architect, compile, author-gate, backlog, slice.
 
-Authored artifacts (ADRs, contracts, the working document) become substrate
+Authored artifacts (ADRs and the working document) become substrate
 here, and slice rows are appended through `backlog add` rather than
 hand-edited.
 """
@@ -17,10 +17,17 @@ from engine.cli.slice import _bind_slice
 
 
 DEFAULT_WORKING_DOC = "docs/architecture.md"
+VERIFY_MD = "explore/VERIFY.md"
 #: tracker ids a slice row may carry (`linear`, schema §5.6). Deliberately
 #: narrow: the id is interpolated into a PR title and a Linear URL, so a
 #: free-form string would produce a dead link nobody notices.
 LINEAR_ID = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
+
+#: D-0.10-12: architect starts from evidence, a spec, or a recorded reason
+ARCHITECT_REFUSAL = (
+    "architect: no frozen explore/, no --from-spec, and no --skip-explore "
+    "reason. Run: harness explore. Or pass --from-spec <path> or "
+    "--skip-explore \"<reason>\".")
 
 
 # ------------------------------------------------------------------ architect
@@ -68,9 +75,8 @@ def validate_linear(value: str) -> str:
     linear = (value or "").strip()
     if not LINEAR_ID.match(linear):
         raise HarnessError(
-            f"--linear {value!r} is not a tracker id like 'GOO-73' "
-            f"(uppercase project key, dash, digits) — it is interpolated "
-            f"into the PR title and the issue URL")
+            f"--linear {value!r} is not a tracker id like 'GOO-73'. "
+            f"Pass an uppercase project key, a dash and digits.")
     return linear
 
 
@@ -81,7 +87,7 @@ def _rel(root, path) -> str:
         return str(path)
 
 
-def cmd_architect(args):
+def _architect_from_spec(root, args, doc) -> int:
     """Seeds the Phase-0 working document from an existing spec (D-013).
 
     A repo that already owns a spec must not have it re-derived Socratically:
@@ -89,23 +95,15 @@ def cmd_architect(args):
     `[open-question]`s, and the document opens at stage 3 (converge) with an
     empty `harness-decisions` table to fill in.
 
-    Args:
-        args: Parsed CLI args (`from_spec`, `doc`, `force`, `root`).
-
-    Returns:
-        Process exit code (0).
-
     Raises:
         HarnessError: The spec is missing, or the working document exists
             and `--force` was not given.
     """
     from engine.compiler import seed_doc_from_spec
-    root = _root(args)
     spec = _under_root(root, args.from_spec)
     if not spec.is_file():
         raise HarnessError(f"--from-spec {args.from_spec!r} is not a readable "
                            f"file — nothing to seed the working document from")
-    doc = _under_root(root, args.doc)
     if doc.exists() and not args.force:
         raise HarnessError(
             f"working document {_rel(root, doc)} already exists — edit it in "
@@ -121,6 +119,49 @@ def cmd_architect(args):
                                if ln.startswith("[constraint] ")),
             "open_questions": sum(1 for ln in lines
                                   if ln.startswith("[open-question] "))})
+    return 0
+
+
+def _architect_skip_explore(root, args, doc) -> int:
+    """Records the `--skip-explore` reason in the working document."""
+    from engine.explore import _one_line, record_skip
+    existing = doc.read_text(encoding="utf-8") if doc.exists() else None
+    body = record_skip(existing, args.skip_explore)
+    doc.parent.mkdir(parents=True, exist_ok=True)
+    doc.write_text(body, encoding="utf-8")
+    stage = re.search(r"<!-- stage: (\d+) -->", body)
+    _print({"doc": str(doc), "stage": int(stage.group(1)) if stage else 1,
+            "explore_skipped": _one_line(args.skip_explore)})
+    return 0
+
+
+def cmd_architect(args):
+    """Seeds the Phase-0 working document from one source (spec 5.5).
+
+    Sources: `--from-spec <path>`, `--from-explore` (or a frozen
+    `explore/` with no flag), or `--skip-explore "<reason>"`.
+
+    Args:
+        args: Parsed CLI args (`from_spec`, `from_explore`, `skip_explore`,
+            `doc`, `force`, `root`).
+
+    Returns:
+        Process exit code (0).
+    """
+    root = _root(args)
+    doc = _under_root(root, args.doc)
+    if args.from_spec:
+        return _architect_from_spec(root, args, doc)
+    if args.skip_explore is not None:
+        return _architect_skip_explore(root, args, doc)
+    from engine.explore import explore_active, freeze_state
+    if not args.from_explore and freeze_state(root) is None:
+        if explore_active(root):
+            raise HarnessError("architect: explore/DECISIONS.md is not "
+                               "frozen. Run: harness explore --freeze")
+        raise HarnessError(ARCHITECT_REFUSAL)
+    from engine.explore_adr import seed_from_explore
+    _print(seed_from_explore(root, doc, force=args.force))
     return 0
 
 
@@ -145,6 +186,12 @@ def cmd_compile(args):
             print(f"warning: {DEFAULT_WORKING_DOC} carries harness-decisions/"
                   f"harness-abstractions tables that this run did NOT compile "
                   f"— re-run with --doc {DEFAULT_WORKING_DOC}", file=sys.stderr)
+        elif default.exists() and not (Path(root) / VERIFY_MD).is_file():
+            from engine.statements import has_statements
+            if has_statements(default.read_text(encoding="utf-8")):
+                print(f"warning: {DEFAULT_WORKING_DOC} holds V-...: "
+                      f"statements that this run did NOT compile. Re-run "
+                      f"with --doc {DEFAULT_WORKING_DOC}.", file=sys.stderr)
     _print(compile_substrate(root, working_doc=doc))
     return 0
 
@@ -168,11 +215,23 @@ def cmd_author_gate(args):
 
 
 # ------------------------------------------------------------------ backlog
+def _slice_context(root, row: dict, config) -> dict:
+    """One slice's context against MAX_INJECTION_CHARS: what fits, what the
+    uncapped blocks need, which blocks the cap cuts, estimated tokens."""
+    from engine import token_estimate
+    from engine.resolver import BLOCK_SEPARATOR, build_blocks, fit_blocks
+    blocks = build_blocks(root, row, config)
+    injections, cut = fit_blocks(blocks, row["id"])
+    demand = BLOCK_SEPARATOR.join(b["text"] for b in blocks)
+    return {"chars": len(BLOCK_SEPARATOR.join(injections)),
+            "demand_chars": len(demand), "cut": cut,
+            "tokens": token_estimate(demand)}
+
+
 def _backlog_add(args):
     """imp-3: slice rows were the last hand-edited substrate (the historical
     EDIT-ME defect source) — append them through the CLI, validated."""
     from engine.registry import load_registry
-    from engine.resolver import context_cost_estimate
     root = _root(args)
     config = load_config(root)
     rows = load_backlog(root)
@@ -187,6 +246,29 @@ def _backlog_add(args):
               f"{unknown} — add the abstraction to an ADR and recompile, "
               f"or fix the id", file=sys.stderr)
         return 1
+    from engine.statements import (VERIFY_JSONL, load_statements,
+                                   parse_id_list)
+    try:
+        verifies = parse_id_list(getattr(args, "verifies", None) or [])
+    except HarnessError as exc:
+        print(f"error: backlog add: {exc}", file=sys.stderr)
+        return 1
+    if verifies:
+        if not (harness_dir(root) / VERIFY_JSONL).exists():
+            print("error: backlog add: .harness/verify.jsonl does not exist. "
+                  "Run harness compile, with --doc <working document> "
+                  "when there is no explore/VERIFY.md.", file=sys.stderr)
+            return 1
+        known_ids = {r["id"] for r in load_statements(root)}
+        missing = [v for v in verifies if v not in known_ids]
+        if missing:
+            shown = ", ".join(missing[:3])
+            if len(missing) > 3:
+                shown += f" and {len(missing) - 3} more"
+            print(f"error: backlog add: {shown} not in verify.jsonl. "
+                  f"Fix the IDs, or add them and run harness compile.",
+                  file=sys.stderr)
+            return 1
     row = {"id": args.id, "spec": args.spec,
            "title": args.title or args.id, "status": "planned",
            "declares_dep": list(args.declares or []),
@@ -194,10 +276,12 @@ def _backlog_add(args):
            "predicted_files": list(dict.fromkeys(
                (args.predicts or []) + list(args.acceptance))),
            "depends_on": list(args.depends or []), "worktree": None}
+    # always written, also when empty: the W5 upgrade step reads a missing
+    # `verifies` key as "written before 0.10" (spec 12 step 9)
+    row["verifies"] = verifies
     if getattr(args, "linear", None):
         row["linear"] = validate_linear(args.linear)
-    row["context_cost_estimate"] = context_cost_estimate(
-        root, row["declares_dep"], config)
+    row["context_cost_estimate"] = _slice_context(root, row, config)["tokens"]
     rows.append(row)
     write_jsonl(harness_dir(root) / "backlog.jsonl", rows)
     _print(row)
@@ -207,11 +291,10 @@ def _backlog_add(args):
 def cmd_backlog(args):
     if getattr(args, "backlog_cmd", None) == "add":
         return _backlog_add(args)
-    from engine.resolver import context_cost_breakdown
+    from engine.resolver import MAX_INJECTION_CHARS, over_cap_finding
+    from engine.statements import unowned_statements
     root = _root(args)
     config = load_config(root)
-    budget = int(config["resolver"]["budget_tokens"])
-    limit = budget * 0.8
     rows = load_backlog(root)
     # who depends on whom: replacing a parent with -a/-b would leave every
     # dependent's `depends_on` pointing at a row that no longer exists
@@ -219,20 +302,23 @@ def cmd_backlog(args):
     for r in rows:
         for d in r.get("depends_on") or []:
             dependents.setdefault(d, []).append(r["id"])
-    out, split, refused, proposals, estimates = [], [], [], [], {}
+    out, split, refused, proposals = [], [], [], []
 
-    # Work out every split candidate and reserve its proposed ids before
-    # changing backlog.jsonl.  A collision must leave even routine estimate
-    # updates unwritten: otherwise a rejected split still mutates substrate.
-    breakdowns = {}
-    candidates = []
+    # Size every slice and reserve proposed split ids before changing
+    # backlog.jsonl. A slice is oversized when its context does not fit
+    # MAX_INJECTION_CHARS: the plan-time twin of CONTEXT_OVER_CAP. A
+    # collision must leave even routine estimate updates unwritten.
+    contexts, warnings, oversized_ids, candidates = {}, [], set(), []
     for s in rows:
-        breakdown = context_cost_breakdown(root, s.get("declares_dep", []),
-                                           config)
-        breakdowns[s["id"]] = breakdown
-        oversized = (breakdown["total"] > limit
-                     and len(s.get("declares_dep", [])) > 1)
-        if (args.split and oversized and s.get("status") == "planned"
+        ctx = _slice_context(root, s, config)
+        contexts[s["id"]] = ctx
+        if ctx["cut"]:
+            warnings.append(over_cap_finding(s["id"], ctx["cut"],
+                                             ctx["demand_chars"]))
+            if len(s.get("declares_dep", [])) > 1:
+                oversized_ids.add(s["id"])
+        if (args.split and s["id"] in oversized_ids
+                and s.get("status") == "planned"
                 and not dependents.get(s["id"])):
             candidates.append(s)
     existing_ids = {s["id"] for s in rows}
@@ -245,17 +331,15 @@ def cmd_backlog(args):
                       f"and author the child contracts explicitly")
             _print({"slices": [row["id"] for row in rows], "split": [],
                     "split_refused": [{"id": s["id"], "reason": reason}],
-                    "split_proposals": [], "estimates": breakdowns,
-                    "budget": budget, "limit": limit, "reason": reason})
+                    "split_proposals": [], "context": contexts,
+                    "warnings": warnings, "cap": MAX_INJECTION_CHARS,
+                    "reason": reason})
             return 1
 
     for s in rows:
+        oversized = s["id"] in oversized_ids
         s = dict(s)
-        breakdown = breakdowns[s["id"]]
-        est = breakdown["total"]
-        s["context_cost_estimate"] = est
-        estimates[s["id"]] = breakdown
-        oversized = est > limit and len(s.get("declares_dep", [])) > 1
+        s["context_cost_estimate"] = contexts[s["id"]]["tokens"]
         if not (args.split and oversized):
             # acceptance paths are implicitly predicted during ordinary
             # estimation.  A refused split keeps the parent's authored work
@@ -297,8 +381,9 @@ def cmd_backlog(args):
     write_jsonl(harness_dir(root) / "backlog.jsonl", out)
     _print({"slices": [s["id"] for s in out], "split": split,
             "split_refused": refused, "split_proposals": proposals,
-            "estimates": estimates,
-            "budget": budget, "limit": limit})
+            "context": contexts, "warnings": warnings,
+            "cap": MAX_INJECTION_CHARS,
+            "unowned_statements": unowned_statements(root, out)})
     return 0
 
 

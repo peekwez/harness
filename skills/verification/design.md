@@ -48,6 +48,15 @@ Use boundary tables, state transitions, property-based/generated sequences or
 fault injection when they expose cases a few examples would miss; every case
 still needs a decisive oracle. Do not require unrelated scenario classes.
 
+## Give each scenario a statement ID
+
+Start each matrix scenario with one statement line outside any code fence:
+`V-<feature>-<n>: <statement>`. Use lowercase letters, digits and dashes in the feature.
+The line can be a heading, for example `### V-orders-3: a rollback leaves no event row`.
+Put the matrix fields under that line. `harness compile --doc <working document>` writes the statements to `.harness/verify.jsonl`.
+When `explore/VERIFY.md` exists, compile reads the statements from it instead.
+Each ID is unique. Compile stops on a malformed or duplicate ID and names the line.
+
 ## Persist a runnable verification matrix
 
 For each AC, record:
@@ -76,7 +85,8 @@ A recorded accepted risk is not PASS evidence and does not waive a required AC.
 Do not label the design implementation-ready while its required verification
 method is undefined. A future script need not already exist, but its input,
 oracle, observations and dependencies must be designed. Keep human acceptance
-and the engine author-gate's existing authority; this adds no engine schema/gate.
+and the engine author-gate's existing authority.
+Statement IDs feed `.harness/verify.jsonl`. Close checks that each statement a slice owns has a linked test.
 
 Backlog carries these cases, instrumentation and probe responsibilities into
 slice scope and dependencies. Builders refine and execute them; reviewers

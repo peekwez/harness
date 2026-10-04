@@ -1,0 +1,144 @@
+# harness verify — CI enforcement, no plugin required.
+# House style: reusable workflow with workflow_call, typed inputs, secrets block.
+#
+# Self-contained by default: `harness init` (and `harness upgrade`) vendors
+# the engine into .harness/engine/, and this workflow runs that copy — nothing
+# is fetched from the plugin repo. The engine is located in this order:
+#   1. .harness/engine/bin/harness — the vendored engine (the default; it is
+#      the copy that matches this substrate's schema),
+#   2. a ./bin/harness at the repo root (the plugin repo itself, self-hosted),
+#   3. the `harness-repo` workflow_call input,
+#   4. the HARNESS_REPO repository variable (Settings > Variables) — the one
+#      that covers plain pull_request runs.
+# 3 and 4 clone the engine and exist only for repos that choose not to vendor
+# it (scaffolded by a plugin older than 0.8.5 and not yet upgraded). None of
+# the four -> the job fails with that exact instruction, not a file-not-found
+# crash (field report X5). A PRIVATE engine repo on path 3/4 also needs the
+# HARNESS_TOKEN secret (fine-grained PAT, Contents: read, resource owner =
+# the org): it is injected into the clone URL and never printed.
+#
+# Derived file: written by `harness init`, refreshed by `harness upgrade`.
+# Edit it and `upgrade` will refuse to overwrite it (drop the first line to
+# claim it as authored).
+name: harness-verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:      # run the ship gate on demand
+  workflow_call:
+    inputs:
+      harness-repo:
+        description: >-
+          git URL of the harness engine repo (only consulted when no engine
+          is vendored under .harness/engine; overrides the HARNESS_REPO
+          variable)
+        required: false
+        type: string
+        default: ""
+      harness-ref:
+        description: git ref of the harness engine to clone (fallback path only)
+        required: false
+        type: string
+        default: main
+      built-artifact-path:
+        description: >-
+          path to the built/installed artifact; manifests are validated
+          against it, not just the source tree (the md-file-bug killer)
+        required: false
+        type: string
+        default: ""
+      closed-acceptance:
+        description: >-
+          also run every CLOSED slice's acceptance suite on this tree
+          (`harness acceptance --closed`). Opt-in: verify never runs the
+          application's tests, and the repo owns its dependency setup
+          (see acceptance-setup)
+        required: false
+        type: boolean
+        default: false
+      acceptance-setup:
+        description: >-
+          shell to run before the closed acceptance suite — install the
+          project and its test dependencies (only used with
+          closed-acceptance: true)
+        required: false
+        type: string
+        default: ""
+    secrets:
+      HARNESS_TOKEN:
+        description: read-only token for a private harness engine repo (fallback path only)
+        required: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      HARNESS_REPO_INPUT: ${{ inputs.harness-repo }}
+      HARNESS_REPO_VAR: ${{ vars.HARNESS_REPO }}
+      HARNESS_REF: ${{ inputs.harness-ref }}
+      # read-only credential for a private engine repo; injected into the
+      # clone URL below, never printed
+      HARNESS_TOKEN: ${{ secrets.HARNESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # notes + reachability need history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install engine dependencies
+        # PyPI only — the engine itself is in the repo (.harness/engine)
+        run: pip install pyyaml tree-sitter tree-sitter-language-pack
+
+      - name: Fetch git notes (provenance)
+        run: git fetch origin 'refs/notes/*:refs/notes/*' || true
+
+      - name: Locate the harness engine
+        run: |
+          if [ -f .harness/engine/bin/harness ]; then
+            # vendored by `harness init` / `harness upgrade`: self-contained
+            echo "HARNESS_BIN=.harness/engine/bin/harness" >> "$GITHUB_ENV"
+            echo "engine: vendored $(cat .harness/engine/VERSION 2>/dev/null || echo '?') at .harness/engine"
+            exit 0
+          fi
+          if [ -x ./bin/harness ]; then
+            # the plugin repo itself (self-hosted): the engine is at the root
+            echo "HARNESS_BIN=./bin/harness" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          # fallback for substrates scaffolded before the engine was vendored
+          REPO="${HARNESS_REPO_INPUT:-$HARNESS_REPO_VAR}"
+          if [ -z "$REPO" ]; then
+            echo "::error::harness engine not found. Run \`harness upgrade\` with the harness plugin installed and commit .harness/engine (the self-contained path). Alternatively pass the harness-repo workflow input, or set the HARNESS_REPO repository variable (Settings > Secrets and variables > Actions > Variables) to the harness plugin's git URL so this job can clone it."
+            exit 1
+          fi
+          echo "::warning::no vendored engine under .harness/engine — cloning $REPO@${HARNESS_REF:-main}. Run \`harness upgrade\` and commit .harness/engine to make this workflow self-contained."
+          if [ -n "$HARNESS_TOKEN" ]; then
+            REPO="${REPO/https:\/\/github.com\//https://x-access-token:${HARNESS_TOKEN}@github.com/}"
+          fi
+          git clone --quiet --depth 1 --branch "${HARNESS_REF:-main}" "$REPO" .harness-engine
+          echo "HARNESS_BIN=.harness-engine/bin/harness" >> "$GITHUB_ENV"
+
+      - name: harness verify
+        run: |
+          if [ -n "${{ inputs.built-artifact-path }}" ]; then
+            python3 "$HARNESS_BIN" verify --built-artifact "${{ inputs.built-artifact-path }}"
+          else
+            python3 "$HARNESS_BIN" verify
+          fi
+
+      - name: Closed-slice acceptance (opt-in)
+        # the cumulative suite every close and merge already protects, on
+        # the landed tree. acceptance-setup is a workflow_call input from
+        # the calling workflow in this same repo, so it runs with the
+        # caller's own trust — never wire it to untrusted event data.
+        if: ${{ inputs.closed-acceptance }}
+        run: |
+          if [ -n "${{ inputs.acceptance-setup }}" ]; then
+            ${{ inputs.acceptance-setup }}
+          fi
+          python3 "$HARNESS_BIN" acceptance --closed

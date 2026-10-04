@@ -7,28 +7,30 @@ import subprocess
 import sys
 from pathlib import Path
 
-from engine import (ENGINE_VERSION, SCHEMA_VERSION, HarnessError, load_config,
-                    sha256_file)
-from engine.cli.common import _install_merge_drivers, _print
-from engine.cli.init import (_vendor_engine, _write_autonomy_settings,
+from engine import (ENGINE_VERSION, SCHEMA_VERSION, HarnessError, sha256_file)
+from engine.cli.common import PLUGIN_ROOT, _install_merge_drivers, _print
+from engine.cli.init import (VENDOR_DIR, _vendor_engine, _write_autonomy_settings,
                              _write_workflow)
 from engine.plugin_install import (entry_id, installed_entries,
                                    plugin_commands, prove_engine,
                                    select_plugin)
+from engine.upgrade_report import dry_run_report, make_ask, step_warnings
 
 
 PROJECT_PLAN = [
     "migrate substrate schema",
+    "canonicalize legacy G5 dependency overrides",
+    "repair legacy graph provenance",
+    "run the 0.10 upgrade steps",
     "install merge drivers",
     "refresh vendored engine",
     "refresh harness-generated workflow",
-    "refresh harness-owned Claude settings",
     "refresh Harness-owned Codex hook commands",
-    "canonicalize legacy G5 dependency overrides",
-    "repair legacy graph provenance",
-    "force-regenerate shadows",
+    "refresh harness-owned Claude settings",
     "refresh clean registry derivations",
     "validate substrate schema",
+    "run doctor and verify",
+    "propose one commit",
 ]
 
 
@@ -73,26 +75,6 @@ def _clean_registry_entries(root: Path) -> tuple[list[str], list[str], list[str]
             f"registry {entry_id}: source differs from its recorded hash "
             "(or is missing); derivation was not refreshed or ratified")
     return clean, dirty, warnings
-
-
-def _refresh_claude_settings(root: Path, config: dict) -> dict:
-    report = {}
-    for local, key in ((False, "settings"), (True, "settings_local")):
-        name = "settings.local.json" if local else "settings.json"
-        path = root / ".claude" / name
-        if not path.exists():
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "missing"}
-        elif "harness autonomy profile" not in path.read_text():
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "kept",
-                           "note": "not a Harness-owned profile"}
-        else:
-            _write_autonomy_settings(root, quiet=True, local=local,
-                                     config=config)
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "refreshed"}
-    return report
 
 
 def _is_harness_adapter_command(command: object) -> bool:
@@ -151,97 +133,168 @@ def _refresh_codex_hooks(root: Path, *, dry_run: bool = False) -> dict:
 
     visit(payload)
     if changed and not dry_run:
+        # hooks.json has no harness marker: keep the old bytes for the human
+        from engine.upgrade_010 import keep_backup
+        backup = keep_backup(root, path.name, path.read_bytes())
         path.write_text(json.dumps(payload, indent=2) + "\n")
+        report["backup"] = backup
+        report["check"] = (f"check: the upgrade changed Harness commands in "
+                           f"{report['path']}. The old file is in the gitignored "
+                           f"backup {backup}.")
     report["action"] = ("would_refresh" if dry_run else "refreshed") \
         if changed else "unchanged"
     report["commands"] = changed
     return report
 
 
-def upgrade_project(root, *, dry_run: bool = False) -> dict:
-    """Upgrade one substrate without rewriting authored project state."""
+def _vendor(root: Path) -> dict:
+    """The plugin repo runs its own engine; a vendored copy would be a
+    second, stale engine inside `.harness/`."""
+    if root.resolve() == PLUGIN_ROOT.resolve():
+        return {"path": str(VENDOR_DIR), "version": ENGINE_VERSION,
+                "action": "self-hosted", "from": None}
+    return _vendor_engine(root)
+
+
+def _refresh_registry(root: Path, clean: list, warnings: list) -> list:
+    from engine.registry import RegistryError, refresh_built
+    refreshed = []
+    for name in clean:
+        try:
+            refresh_built(root, name)
+        except RegistryError as exc:
+            # the steps already ran: name the entry, never abort here
+            warnings.append(
+                f"registry {name}: not refreshed ({exc}). To keep it, "
+                f"add its source to shadows.include in .harness/config.yaml")
+            continue
+        refreshed.append(name)
+    return refreshed
+
+
+def upgrade_project(root, *, dry_run: bool = False, ask=None,
+                    yes: bool = False) -> dict:
+    """Bring one substrate to the current schema and report what changed.
+
+    Order: schema stamp; the 0.8 and 0.9 repairs, which read old shapes; the
+    0.10 steps; the harness-owned files; the registry refresh, on 0.10 rows
+    only; schema validation; doctor and verify. Upgrade never commits. The
+    report proposes one commit. `ask` wins over `yes`.
+    """
     root = Path(root).resolve()
     _require_substrate(root)
-    from engine.migrate import MIGRATIONS, migrate
-    from engine.overrides import repair_legacy_overrides
-
-    # Even a dry run performs the schema preflight, but nothing that writes.
     version = _schema_version(root)
     if dry_run:
-        if version > SCHEMA_VERSION:
-            raise HarnessError(
-                f"substrate schema {version} is newer than engine "
-                f"{SCHEMA_VERSION}; upgrade the plugin")
-        missing = [v for v in range(version, SCHEMA_VERSION)
-                   if v not in MIGRATIONS]
-        if missing:
-            raise HarnessError(
-                f"no migration path from schema {missing[0]} to "
-                f"{SCHEMA_VERSION} (fail closed)")
-        return {"dry_run": True, "plan": PROJECT_PLAN,
-                "schema": {"from": version, "to": SCHEMA_VERSION,
-                           "would_apply": list(
-                               range(version + 1, SCHEMA_VERSION + 1))},
-                "engine_version": ENGINE_VERSION,
-                "legacy_overrides": repair_legacy_overrides(root, dry_run=True),
-                "codex_adapter": _refresh_codex_hooks(root, dry_run=True)}
+        return dry_run_report(root, version, PROJECT_PLAN,
+                              _refresh_codex_hooks(root, dry_run=True))
+
+    from engine import claude_settings, upgrade_010
+    from engine import upgrade_report as rep
+    from engine.graph import repair_legacy_provenance
+    from engine.migrate import migrate
+    from engine.overrides import repair_legacy_overrides
+    from engine.schema import validate_substrate
+
+    ask = ask or make_ask(yes)
+    before = rep.snapshot(root)
+    record = rep.carry_record(root)         # an earlier run's own changes
+    staged_before = rep.staged_before(root, record)
+    carried = rep.carried_paths(root, record)
+    dirty = set(rep.dirty_paths(root))
+    dirty_before = sorted(dirty - set(carried))
+    edited = sorted(((set(record) - set(carried)) | set(rep.carry_mixed(root))) & dirty)
 
     # Migration is deliberately the first write.  New code must never read
     # old substrate rows as though they already had the current schema.
     schema = migrate(root)
-    config = load_config(root)
+    # Which BUILT rows were clean before any upgrade write.
     clean, dirty, warnings = _clean_registry_entries(root)
+    # From here on a stage that raises becomes a failure row, never a crash.
+    failures: list = []
 
-    _install_merge_drivers(root)
-    vendored = _vendor_engine(root)
-    workflow = _write_workflow(root)
-    claude = _refresh_claude_settings(root, config)
-    codex = _refresh_codex_hooks(root)
-    if workflow.get("note"):
-        warnings.append(workflow["note"])
-    warnings.extend(v["note"] for v in claude.values()
-                    if v.get("action") == "kept" and v.get("note"))
-    if codex.get("warning"):
-        warnings.append(codex["warning"])
-    if codex.get("action") in ("missing", "kept"):
-        warnings.append(codex["note"])
+    def stage(name, func, default=None):
+        return rep.run_stage(failures, name, func, default)
 
-    from engine.graph import repair_legacy_provenance
-    legacy_overrides = repair_legacy_overrides(root)
-    graph = repair_legacy_provenance(root)
-    from engine.extractor.engine import extract_all
-    shadows = extract_all(root, config, force=True)
-    warnings.extend(f["message"] for f in shadows.get("findings", []))
+    legacy_overrides = stage("repair legacy overrides",
+                             lambda: repair_legacy_overrides(root), {})
+    graph = stage("repair legacy graph provenance",
+                  lambda: repair_legacy_provenance(root), {})
+    steps = upgrade_010.run(root, ask, dry_run=False)
+    failures.extend(rep.reported_step_errors(steps))
 
-    from engine.registry import refresh_built
-    refreshed = []
-    for entry_id in clean:
-        refresh_built(root, entry_id)
-        refreshed.append(entry_id)
+    stage("install merge drivers", lambda: _install_merge_drivers(root))
+    vendored = stage("refresh vendored engine", lambda: _vendor(root), {})
+    workflow = stage("refresh workflow", lambda: _write_workflow(root), {})
+    codex = stage("refresh Codex hooks", lambda: _refresh_codex_hooks(root), {})
+    config = rep.load_config_or_fail(root, failures)
+    claude = {} if config is None else stage(
+        "refresh Claude settings", lambda: claude_settings.refresh(
+            root, config, _write_autonomy_settings, upgrade_010.keep_backup), {})
+    warnings.extend(step_warnings(steps, workflow, claude, codex))
+    # After any failure the registry may still hold 0.9 rows: a rerun refreshes.
+    refreshed = [] if failures else stage(
+        "refresh registry", lambda: _refresh_registry(root, clean, warnings), [])
 
-    from engine.schema import validate_substrate
-    problems = validate_substrate(root, config=config)
-    if problems:
-        raise HarnessError("upgraded substrate failed validation: "
-                           + "; ".join(problems))
+    problems = stage("validate substrate",
+                     lambda: validate_substrate(root, config=config or {}), [])
+    failures.extend({"check": "schema", "code": "SCHEMA_INVALID", "text": p,
+                     "fix": "correct the named row, then run: harness upgrade --yes"}
+                    for p in problems)
+    checks = rep.final_checks(root)
+    failures.extend(checks["doctor"]["failures"] + checks["verify"]["failures"])
+    files = stage("list changed files",
+                  lambda: rep.carry_files(root, rep.changed_files(
+                      before, rep.snapshot(root)), carried),
+                  {"added": [], "modified": [], "removed": []})
+    pending = rep.pending_ids(root, upgrade_010.STEPS)
+    advice = stage("collect advice", lambda: upgrade_010.advice(root), [])
+    foreign = stage("read the index", lambda: rep.foreign_staged(root, files), [])
+    commit = None
+    if not failures and not pending and not foreign:
+        commit = stage("propose commit", lambda: rep.commit_proposal(root, files))
+
+    def settle():
+        return rep.attribute(failures, steps), rep.upgrade_status(
+            schema_from=schema["from"], current=SCHEMA_VERSION, files=files,
+            steps=steps, pending=pending, failures=failures, foreign=foreign)
+    failures, status = settle()
+    stage("record the changes for the next run",
+          lambda: rep.save_carry(root, status, files,
+                                 rep.mixed_paths(dirty_before, files, edited)))
+    failures, status = settle()     # a failed record is a failed upgrade
     return {
+        "status": status,
         "schema": schema,
+        "engine_version": ENGINE_VERSION,
         "vendored_engine": vendored,
         "workflow": workflow,
         "claude": claude,
         "codex_adapter": codex,
         "graph": graph,
         "legacy_overrides": legacy_overrides,
-        "shadows": shadows,
         "registry": {"refreshed": refreshed, "skipped_dirty": dirty},
-        "schema_validation": {"problems": [], "passed": True},
+        "schema_validation": {"problems": problems, "passed": not problems},
+        "steps": steps,
+        "advice": advice,
+        "files": files,
+        "checks": checks,
+        "failures": failures,
+        "human_checks": rep.human_checks(
+            steps, pending=pending, staged_before=staged_before,
+            dirty_before=dirty_before, files=files, checks=checks,
+            is_repo=(root / ".git").exists(), advice=advice, edited=edited,
+            foreign=foreign, refreshed=rep.refresh_checks(claude, codex)),
+        "commit": commit if status == "upgraded" else None,
         "warnings": warnings,
-        "engine_version": ENGINE_VERSION,
     }
 
 
 def _run_command(command):
-    return subprocess.run(command, capture_output=True, text=True)
+    """Run a non-interactive command and capture its output. The child gets
+    no stdin: a delegated `harness upgrade` must not wait on a [y/N] prompt
+    that captured stderr hides. It reports `needs confirmation` instead."""
+    return subprocess.run(command, stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True)
 
 
 def _run_host_command(command):
@@ -284,8 +337,23 @@ def _command_json(command):
             f"command returned invalid JSON ({' '.join(command)}): {exc}") from exc
 
 
+def _delegate_json(command):
+    """The delegated upgrade exits 1 when it is incomplete. Its JSON report
+    is still the answer, so keep it."""
+    try:
+        proc = _run_command(command)
+    except OSError as exc:
+        raise HarnessError(f"cannot run {' '.join(command)}: {exc}") from exc
+    try:
+        return json.loads(proc.stdout or "")
+    except json.JSONDecodeError:
+        detail = (proc.stderr or proc.stdout or "no diagnostic").strip()
+        raise HarnessError(f"command failed ({' '.join(command)}): {detail}")
+
+
 def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
-                             scope=None, dry_run: bool = False) -> dict:
+                             scope=None, dry_run: bool = False,
+                             yes: bool = False) -> dict:
     """Update one installed Harness plugin, then delegate project upgrade."""
     root = Path(root).resolve()
     _require_substrate(root)
@@ -306,6 +374,8 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
         _plugin_root, binary = prove_engine(host, before)
         delegate = [sys.executable, str(binary), "--root", str(root),
                     "upgrade"]
+        if yes:
+            delegate.append("--yes")
         return {
             "dry_run": True,
             "host": host,
@@ -333,7 +403,9 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
     prevent_downgrade(after.get("version"), ENGINE_VERSION, "project upgrade engine")
     plugin_root, binary = prove_engine(host, after)
     delegate = [sys.executable, str(binary), "--root", str(root), "upgrade"]
-    project = _command_json(delegate)
+    if yes:
+        delegate.append("--yes")
+    project = _delegate_json(delegate)
     plugin_version = after.get("version")
     engine_version = project.get("engine_version")
     versions_match = (
@@ -368,21 +440,29 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
     }
 
 
+DONE = ("upgraded", "already on 0.10")
+
+
 def cmd_upgrade(args):
     root = (Path(args.root).resolve() if getattr(args, "root", None)
             else Path.cwd().resolve())
     plugin = getattr(args, "plugin", False)
     host = getattr(args, "host", None)
+    yes = getattr(args, "yes", False)
+    dry_run = getattr(args, "dry_run", False)
     if plugin:
         if not host:
             raise HarnessError("--plugin requires --host claude|codex")
         report = upgrade_installed_plugin(
             root, host, plugin_id=getattr(args, "plugin_id", None),
-            scope=getattr(args, "scope", None),
-            dry_run=getattr(args, "dry_run", False))
+            scope=getattr(args, "scope", None), dry_run=dry_run, yes=yes)
+        status = (report.get("project") or {}).get("status")
     else:
         if host or getattr(args, "plugin_id", None) or getattr(args, "scope", None):
             raise HarnessError("--host, --plugin-id and --scope require --plugin")
-        report = upgrade_project(root, dry_run=getattr(args, "dry_run", False))
+        report = upgrade_project(root, dry_run=dry_run, ask=make_ask(yes))
+        status = report.get("status")
     _print(report)
-    return 0
+    if dry_run:
+        return 0
+    return 0 if status in DONE else 1

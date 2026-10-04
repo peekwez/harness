@@ -28,15 +28,15 @@ planned checks are not executed evidence.
    Exercise relevant failure/boundary cases, persistence and real integration
    where the criterion crosses a boundary. Do not invent unrelated requirements.
 3. **Observe the running system.** Follow [runtime.md](runtime.md) on every
-   verification: discover/start or attach to services, confirm current code,
-   connect the browser/DevTools and storage/cache clients, and exercise the
-   AC flows. Inspect live logs, console/network traffic, persisted data and
-   cache behavior; capture screenshots and relevant extracts. A component
-   absent from the project is explicitly not applicable, with evidence;
-   a component you cannot start/connect to is an outstanding verification gap.
-   For state-changing behavior, follow [integrity.md](integrity.md): declare
-   sample inputs and expected results before execution, seed through the app,
-   then run independent read-only Python probes of database/cache/blob effects.
+   verification. Discover and start, or attach to, the services. Confirm the
+   current code. Connect the browser/DevTools and the storage/cache clients.
+   Exercise the AC flows. Inspect live logs, console/network traffic,
+   persisted data and cache behavior. Capture screenshots and relevant
+   extracts. A component absent from the project is explicitly not applicable,
+   with evidence. A component you cannot start or connect to is an outstanding verification gap.
+   For state-changing behavior, follow [integrity.md](integrity.md).
+   Declare sample inputs and expected results before execution. Seed through
+   the app. Then run independent read-only Python probes of database/cache/blob effects.
    The app must leave correlated write fingerprints tied to actual contents.
    Direct storage inserts/uploads, forged fingerprints or a probe that repairs
    state invalidate the evidence; they never prove the app performed a write.
@@ -65,6 +65,13 @@ planned checks are not executed evidence.
    the cause, reruns the failed check, then affected required checks. Never
    weaken an AC, delete a relevant assertion or retry blindly to obtain green.
 
+## Statements and test links
+
+`harness compile` writes statements to `.harness/verify.jsonl`. The source is `explore/VERIFY.md`, or the verification matrix in the working document.
+A test links to a statement with a comment: `verifies: V-orders-3  kills: <the bug this test catches>`.
+Read each link. Check that the test would fail if the `kills:` bug existed.
+A link without that power is a gap, even when close passes.
+
 Output this compact result in the existing review/PR record:
 
 ```text
@@ -80,5 +87,5 @@ Gaps: criterion, reproduction, expected/actual, cause confidence, next action
 sufficient, current PASS evidence. Otherwise use `NOT VERIFIED` and name the
 gaps; do not average scores or substitute model agreement. Reuse current
 evidence for unchanged scope, and rerun when edits, failures or uncertainty
-invalidate it. Persist reproducible failed/abandoned approaches through
-Harness attempt memory; keep raw logs in artifacts, not the context window.
+invalidate it. Record reproducible failed or abandoned approaches in your
+personal memory; keep raw logs in artifacts, not the context window.

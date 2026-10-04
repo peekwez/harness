@@ -5,7 +5,7 @@ import json
 import subprocess
 import sys
 
-from conftest import PLUGIN_ROOT, git, run_cli
+from conftest import PLUGIN_ROOT, cite_non_goals, git, run_cli
 from engine import read_jsonl
 from engine.events import Sidecar
 
@@ -42,10 +42,13 @@ def test_start_provisions_worktree_binding_and_context(toy):
     sc = Sidecar(wt)
     try:
         assert sc.state_get("s-start", "active_slice") == "slice-042"
-        assert sc.context_get("s-start"), "resolved context must be registered"
         assert sc.snapshot_get("slice-042"), "G6 baseline must be snapshotted"
     finally:
         sc.close()
+    from conftest import make_event
+    from engine.events import handle_event
+    assert handle_event(make_event("pre_context", session="s-start"),
+                        wt)["injections"], "the first prompt after binding injects"
     # everything the builder needs, printed once
     assert out["injections"], "Phase-1 context must be emitted by start"
     assert out["acceptance_python"]
@@ -117,6 +120,7 @@ def test_undeclared_file_still_prompts(toy):
 def test_blocked_edit_still_denies(toy):
     """Auto-approval never softens a real block: the non-goal boundary
     denies even inside a bound slice."""
+    cite_non_goals(toy, "adr:007")
     run_cli("start", "--slice", "slice-042", "--session", "denied",
             "--no-worktree", root=toy)
     (toy / "legacy").mkdir(exist_ok=True)
@@ -136,12 +140,25 @@ def test_loop_commands_are_auto_allowed(toy):
                 f'"{PLUGIN_ROOT}/bin/harness" close-slice --slice slice-042',
                 "git add -A", "git status", "git commit -m x",
                 "git worktree add .worktrees/x -b slice/x",
-                "git add -A && git commit -m 'both segments allowed'"):
+                "git add -A && git commit -m both_segments_allowed"):
         proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd",
                             "tool_name": "Bash", "cwd": str(toy),
                             "tool_input": {"command": cmd}}, toy)
         assert out_of(proc).get("hookSpecificOutput", {}).get(
             "permissionDecision") == "allow", f"should not prompt: {cmd}"
+
+
+def test_quoted_messages_are_allowed_but_expansion_goes_to_the_human(toy):
+    run_cli("start", "--slice", "slice-042", "--session", "cmd3", "--no-worktree",
+            root=toy)
+    for cmd, want in (("git commit -m 'two words'", "allow"),
+                      ('git commit -m "two words"', "allow"),
+                      ('git commit -m "$(cat x)"', None)):
+        proc = run_adapter({"hook_event_name": "PreToolUse", "session_id": "cmd3",
+                            "tool_name": "Bash", "cwd": str(toy),
+                            "tool_input": {"command": cmd}}, toy)
+        got = out_of(proc).get("hookSpecificOutput", {}).get("permissionDecision")
+        assert got == want, cmd
 
 
 def test_egress_and_unknown_commands_are_never_auto_allowed(toy):

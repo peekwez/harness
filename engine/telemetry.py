@@ -1,471 +1,213 @@
-"""Advisory telemetry aggregation feeding ``/harness:status``.
+"""Advisory telemetry (D-0.10-11).
 
-Telemetry must never block the workflow it observes. Buffered events use
-stable IDs and an append-before-ack transfer so an interrupted flush can be
-retried without either losing or double-counting an event.
+Two files, one job each:
+
+* `.harness/cache/events.jsonl` holds one row per event. It is local and
+  gitignored. Hooks append to it. Nothing in CI reads it.
+* `.harness/slice-metrics.jsonl` holds one committed row per closed slice.
+  `close-slice` writes it with `record_slice_summary`. `harness status`
+  reads it.
+
+Telemetry never blocks the workflow it observes: a failed write prints a
+warning and returns.
 """
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
-import os
 import sys
-import uuid
 from pathlib import Path
 
-from . import append_jsonl, harness_dir, load_config, now_iso, read_jsonl
+from . import append_jsonl, harness_dir, jsonl_lines, now_iso, read_jsonl, write_jsonl
 
-
-BUFFERED_KINDS = ("event", "slice_dispatched")
+EVENTS_PATH = ".harness/cache/events.jsonl"
+METRICS_FILE = "slice-metrics.jsonl"
 
 
 def _warn(action: str, exc: Exception) -> None:
     print(f"warning: telemetry {action} failed: {exc}", file=sys.stderr)
 
 
-def _sync_file(path):
-    if Path(path).exists():
-        with open(path, "rb") as stream:
-            os.fsync(stream.fileno())
-
-
-def _sync_directory(path):
-    fd = os.open(str(path), os.O_RDONLY)
+def emit(root, kind: str, meta: dict) -> None:
+    """Append one local event row. Never raises."""
+    row = {"ts": now_iso(), "kind": kind, "meta": dict(meta or {})}
     try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+        append_jsonl(Path(root) / EVENTS_PATH, row)
+    except Exception as exc:  # noqa: BLE001 - telemetry never blocks
+        _warn("emit", exc)
 
 
-def _quarantine_bytes(root, source: str, raw: bytes, reason: str) -> None:
-    """Durably preserve corrupt telemetry before its source is repaired."""
-    hdir = harness_dir(root)
-    hdir.mkdir(parents=True, exist_ok=True)
-    path = hdir / "telemetry.quarantine.jsonl"
-    digest = hashlib.sha256(source.encode("utf-8") + b"\0" + raw).hexdigest()
-    row = {
-        "id": f"quarantine:{digest}",
-        "ts": now_iso(),
-        "source": source,
-        "reason": reason,
-        "raw_base64": base64.b64encode(raw).decode("ascii"),
-    }
-
-    existing = read_jsonl(path) if path.exists() else []
-    if any(item.get("id") == row["id"] for item in existing):
-        _sync_file(path)
-        _sync_directory(hdir)
-        return
-
-    # Atomic replacement keeps the diagnostic file valid if this process is
-    # interrupted while recording evidence. Callers hold the sidecar write
-    # lock, so telemetry repair and quarantine writers are serialized.
-    prior = path.read_bytes() if path.exists() else b""
-    if prior and not prior.endswith(b"\n"):
-        prior += b"\n"
-    encoded = (json.dumps(row, sort_keys=True, ensure_ascii=False)
-               + "\n").encode("utf-8")
-    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+def load_events(root) -> list:
+    """Local event rows. A torn or non-object line is skipped, not repaired:
+    the file is a cache, and the committed record is the slice summary."""
+    path = Path(root) / EVENTS_PATH
+    if not path.exists():
+        return []
     try:
-        with open(tmp, "xb") as stream:
-            stream.write(prior)
-            stream.write(encoded)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(tmp, path)
-        _sync_file(path)
-        _sync_directory(hdir)
-    finally:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        _warn("load", exc)
+        return []
+    rows = []
+    for line in jsonl_lines(text):
+        line = line.strip()
+        if not line:
+            continue
         try:
-            tmp.unlink()
-        except FileNotFoundError:
-            pass
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
 
 
-def _json_object(raw: bytes | str) -> dict:
-    row = json.loads(raw)
-    if not isinstance(row, dict):
-        raise ValueError("telemetry row must be a JSON object")
+def override_counts(edges, slice_id=None) -> dict:
+    """Override edges per rule ref. An upgrade alias (`legacy_override`)
+    preserves an old approval; it is not a new override."""
+    counts: dict = {}
+    for edge in edges:
+        if edge.get("type") != "override":
+            continue
+        meta = edge.get("meta") or {}
+        if meta.get("legacy_override"):
+            continue
+        if slice_id is not None and edge.get("from") != f"slice:{slice_id}":
+            continue
+        rule = meta.get("rule_ref") or "unknown"
+        counts[rule] = counts.get(rule, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def reversal_counts(edges, slice_id=None, findings=None) -> dict:
+    """Reversed overrides per rule ref, plus reversed adjudications under
+    `adjudication`. Alias edges are skipped, as in `override_counts`. With a
+    slice, an adjudication counts when its edge meta names that slice, or
+    (older edges without one) when its finding is in `findings`, the finding
+    ids the slice parked."""
+    counts: dict = {}
+    for edge in edges:
+        meta = edge.get("meta") or {}
+        if not meta.get("reverses") or meta.get("legacy_override"):
+            continue
+        kind = edge.get("type")
+        if kind == "override":
+            if slice_id is not None and edge.get("from") != f"slice:{slice_id}":
+                continue
+            rule = meta.get("rule_ref") or "unknown"
+        elif kind == "decided_by":
+            if slice_id is not None:
+                owner = meta.get("slice")
+                if owner is not None:
+                    if owner != slice_id:
+                        continue
+                elif edge.get("from") not in {
+                        f"finding:{f}" for f in findings or ()}:
+                    continue
+            rule = "adjudication"
+        else:
+            continue
+        counts[rule] = counts.get(rule, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def summarize(slice_id: str, events: list, edges: list) -> dict:
+    """The summary row for one slice from event rows and graph edges."""
+    fired: dict = {}
+    injection = compactions = parks = 0
+    parked_findings = set()
+    for row in events:
+        meta = row.get("meta") or {}
+        if meta.get("slice") != slice_id:
+            continue
+        kind = row.get("kind")
+        if kind == "event":
+            for rule in meta.get("gates") or []:
+                fired[rule] = fired.get(rule, 0) + 1
+            try:
+                injection = max(injection, int(meta.get("injection_chars") or 0))
+            except (TypeError, ValueError):
+                pass
+        elif kind == "COMPACTION_REACHED":
+            compactions += 1
+        elif kind in ("park", "slice_parked"):
+            parks += 1
+            if meta.get("finding_id"):
+                parked_findings.add(meta["finding_id"])
+    return {"id": slice_id, "gates_fired": dict(sorted(fired.items())),
+            "overrides": override_counts(edges, slice_id),
+            "reversals": reversal_counts(edges, slice_id, parked_findings),
+            "max_injection_chars": injection, "compactions": compactions,
+            "parks": parks}
+
+
+def load_summaries(root) -> list:
+    """Committed summary rows. A malformed file fails loud (it is substrate)."""
+    return read_jsonl(harness_dir(root) / METRICS_FILE)
+
+
+def write_summary(root, row: dict) -> None:
+    """Upsert one row by `id`. One row per slice, sorted by id."""
+    path = harness_dir(root) / METRICS_FILE
+    rows = [r for r in read_jsonl(path) if r.get("id") != row["id"]]
+    rows.append(row)
+    write_jsonl(path, sorted(rows, key=lambda r: str(r.get("id"))))
+
+
+def record_slice_summary(root, slice_id, extra=None) -> dict:
+    """Write the slice's committed summary row at close (D-0.10-11).
+
+    Args:
+        root: Substrate root.
+        slice_id: The slice being closed.
+        extra: Fields other workstreams add (W5: red_before_green,
+            green_at_start; W6: explore_skipped).
+
+    Returns:
+        The row written.
+    """
+    from .graph import load_edges
+    row = summarize(slice_id, load_events(root), load_edges(root))
+    row.update({"closed_at": now_iso(), "source": "close"})
+    if extra:
+        row.update(extra)
+    row["id"] = slice_id
+    write_summary(root, row)
     return row
 
 
-def _repair_trailing_jsonl(root, path: Path, source: str) -> None:
-    """Repair only a final unterminated row, preserving it in quarantine."""
-    if not path.exists():
-        return
-    data = path.read_bytes()
-    if not data or data.endswith(b"\n"):
-        return
-
-    boundary = data.rfind(b"\n")
-    prefix = data[:boundary + 1] if boundary >= 0 else b""
-    tail = data[boundary + 1:]
-    # Refuse to reinterpret interior corruption as a crash tail.
-    for line in prefix.splitlines():
-        if line.strip():
-            _json_object(line)
-
-    try:
-        _json_object(tail)
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        _quarantine_bytes(root, source, tail, str(exc))
-        with open(path, "r+b") as stream:
-            stream.truncate(len(prefix))
-            stream.flush()
-            os.fsync(stream.fileno())
-        _warn("recovery", exc)
-    else:
-        # A complete final row without a terminator would be concatenated with
-        # the next O_APPEND write, so make the boundary explicit first.
-        with open(path, "ab") as stream:
-            stream.write(b"\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-
-
-def _legacy_id(source: str, position: int, row: dict) -> str:
-    """Stable identity for rows written before telemetry IDs were introduced."""
-    payload = json.dumps(row, sort_keys=True, ensure_ascii=False,
-                         separators=(",", ":")).encode("utf-8")
-    digest = hashlib.sha256(payload).hexdigest()[:20]
-    return f"legacy:{source}:{position}:{digest}"
-
-
-def _rows_from_file(path: Path, source: str) -> list:
-    rows = read_jsonl(path)
-    return [dict(row, id=row.get("id") or _legacy_id(source, i, row))
-            for i, row in enumerate(rows)]
-
-
-def _deduplicate(rows: list) -> list:
-    out, seen = [], set()
-    for row in rows:
-        event_id = row.get("id")
-        if event_id and event_id in seen:
-            continue
-        if event_id:
-            seen.add(event_id)
-        out.append(row)
-    return out
-
-
-def _tracked_rows(root) -> list:
-    hdir = harness_dir(root)
-    return _deduplicate(
-        _rows_from_file(hdir / "telemetry.archive.jsonl", "archive")
-        + _rows_from_file(hdir / "telemetry.jsonl", "live"))
-
-
-def emit(root, kind: str, meta: dict, *, event_id=None, buffered=False) -> None:
-    """Record one diagnostic event without blocking the observed workflow."""
-    row = {"id": event_id or f"evt:{uuid.uuid4().hex}", "ts": now_iso(),
-           "kind": kind, "meta": meta}
-    from .events import Sidecar
-
-    if buffered or kind in BUFFERED_KINDS:
-        try:
-            sidecar = Sidecar(root)
-            try:
-                sidecar.telemetry_buffer(row)
-            finally:
-                sidecar.close()
-        except Exception as exc:  # diagnostic storage is best-effort
-            try:
-                append_jsonl(harness_dir(root) / "telemetry.jsonl", row)
-            except Exception as fallback_exc:
-                _warn("emit", fallback_exc)
-            else:
-                _warn("buffer", exc)
-        return
-
-    sidecar = None
-    try:
-        sidecar = Sidecar(root)
-        sidecar.db.execute("BEGIN IMMEDIATE")
-        try:
-            live_path = harness_dir(root) / "telemetry.jsonl"
-            _repair_trailing_jsonl(root, live_path, "telemetry.jsonl")
-            append_jsonl(live_path, row)
-            _sync_file(live_path)
-        except Exception as exc:
-            sidecar.db.execute("INSERT INTO telemetry_buffer(row) VALUES(?)",
-                               (json.dumps(row, sort_keys=True),))
-            sidecar.db.commit()
-            _warn("emit", exc)
-            return
-        sidecar.db.commit()
-    except Exception as exc:
-        if sidecar is not None:
-            try:
-                sidecar.db.rollback()
-            except Exception:
-                pass
-        try:
-            append_jsonl(harness_dir(root) / "telemetry.jsonl", row)
-        except Exception as fallback_exc:
-            _warn("emit", fallback_exc)
-        else:
-            _warn("locking", exc)
-    finally:
-        if sidecar is not None:
-            sidecar.close()
-
-
-def flush(root) -> int:
-    """Append selected rows, then acknowledge only their SQLite row IDs."""
-    from .events import Sidecar
-
-    sidecar = None
-    try:
-        sidecar = Sidecar(root)
-        sidecar.db.execute("BEGIN IMMEDIATE")
-        selected = sidecar.db.execute(
-            "SELECT id, row FROM telemetry_buffer ORDER BY id").fetchall()
-        if not selected:
-            sidecar.db.commit()
-            return 0
-
-        hdir = harness_dir(root)
-        _repair_trailing_jsonl(
-            root, hdir / "telemetry.archive.jsonl",
-            "telemetry.archive.jsonl")
-        _repair_trailing_jsonl(
-            root, hdir / "telemetry.jsonl", "telemetry.jsonl")
-        existing = {row["id"] for row in _tracked_rows(root) if row.get("id")}
-        selected_ids = []
-        for buffer_id, raw in selected:
-            try:
-                row = _json_object(raw)
-            except (UnicodeDecodeError, json.JSONDecodeError, ValueError,
-                    TypeError) as exc:
-                raw_bytes = (raw if isinstance(raw, bytes)
-                             else str(raw).encode("utf-8", "surrogatepass"))
-                try:
-                    _quarantine_bytes(
-                        root, f"telemetry_buffer:{buffer_id}", raw_bytes,
-                        str(exc))
-                except Exception as quarantine_exc:
-                    _warn("quarantine", quarantine_exc)
-                    continue
-                _warn("buffer recovery", exc)
-                selected_ids.append((buffer_id,))
-                continue
-            row = dict(row, id=row.get("id") or
-                       _legacy_id("buffer", buffer_id, row))
-            if row["id"] not in existing:
-                append_jsonl(harness_dir(root) / "telemetry.jsonl", row)
-                existing.add(row["id"])
-            selected_ids.append((buffer_id,))
-
-        # Acknowledgement must follow durable file data, not just a page-cache write.
-        for name in ("telemetry.jsonl", "telemetry.archive.jsonl"):
-            _sync_file(harness_dir(root) / name)
-        sidecar.db.executemany(
-            "DELETE FROM telemetry_buffer WHERE id=?", selected_ids)
-        sidecar.db.commit()
-        return len(selected_ids)
-    except Exception as exc:
-        if sidecar is not None:
-            try:
-                sidecar.db.rollback()
-            except Exception:
-                pass
-        _warn("flush", exc)
-        return 0
-    finally:
-        if sidecar is not None:
-            sidecar.close()
-
-
-def rotate(root, config=None) -> int:
-    """Move old live rows to the archive without losing logical events."""
-    from . import write_jsonl
-    from .events import Sidecar
-
-    sidecar = None
-    try:
-        cap = int(((config or {}).get("telemetry") or {}).get(
-            "max_rows", 5000))
-        if cap <= 0:
-            return 0
-        sidecar = Sidecar(root)
-        sidecar.db.execute("BEGIN IMMEDIATE")
-        hdir = harness_dir(root)
-        live_path = hdir / "telemetry.jsonl"
-        archive_path = hdir / "telemetry.archive.jsonl"
-        _repair_trailing_jsonl(root, live_path, "telemetry.jsonl")
-        _repair_trailing_jsonl(
-            root, archive_path, "telemetry.archive.jsonl")
-        live = _rows_from_file(live_path, "live")
-        if len(live) <= cap:
-            sidecar.db.commit()
-            return 0
-
-        moved, keep = live[:-cap], live[-cap:]
-        archived_ids = {row["id"] for row in
-                        _rows_from_file(archive_path, "archive")}
-        for row in moved:
-            if row["id"] not in archived_ids:
-                append_jsonl(archive_path, row)
-                archived_ids.add(row["id"])
-        # Archive append precedes live acknowledgement. A failed rewrite is
-        # retryable because the archived IDs are recognized on the next pass.
-        _sync_file(archive_path)
-        write_jsonl(live_path, keep)
-        sidecar.db.commit()
-        return len(moved)
-    except Exception as exc:
-        if sidecar is not None:
-            try:
-                sidecar.db.rollback()
-            except Exception:
-                pass
-        _warn("rotation", exc)
-        return 0
-    finally:
-        if sidecar is not None:
-            sidecar.close()
-
-
-def load(root) -> list:
-    """Read archive, live file, and buffer as one deduplicated history."""
-    rows = []
-    hdir = harness_dir(root)
-    for path, source in ((hdir / "telemetry.archive.jsonl", "archive"),
-                         (hdir / "telemetry.jsonl", "live")):
-        try:
-            rows.extend(_rows_from_file(path, source))
-        except Exception as exc:
-            _warn("load", exc)
-
-    from .events import Sidecar
-    sidecar = None
-    try:
-        sidecar = Sidecar(root)
-        for buffer_id, raw in sidecar.db.execute(
-                "SELECT id, row FROM telemetry_buffer ORDER BY id").fetchall():
-            try:
-                row = _json_object(raw)
-            except (UnicodeDecodeError, json.JSONDecodeError, ValueError,
-                    TypeError) as exc:
-                _warn("load", exc)
-                continue
-            rows.append(dict(row, id=row.get("id") or
-                             _legacy_id("buffer", buffer_id, row)))
-    except Exception as exc:
-        _warn("load", exc)
-    finally:
-        if sidecar is not None:
-            sidecar.close()
-    return _deduplicate(rows)
-
-
-def aggregate(root, since: str | None = None) -> dict:
-    """Build a windowed dashboard with explicit samples and observation span."""
-    config = load_config(root)
-    rows = load(root)
-    from .graph import load_edges
-    edges = load_edges(root)
-    if since:
-        rows = [r for r in rows if str(r.get("ts", "")) >= since]
-        edges = [e for e in edges if str(e.get("ts", "")) >= since]
-
-    events = [r for r in rows if r.get("kind") == "event"]
-    pre_changes = [r for r in events if r.get("meta", {}).get("event") ==
-                   "pre_change"]
-    g2_blocks = [r for r in pre_changes
-                 if r.get("meta", {}).get("verdict") == "block"
-                 and "gate:G2" in r.get("meta", {}).get("gates", [])]
-
-    overrides: dict = {}
-    reversals: dict = {}
-    for edge in edges:
-        if (edge.get("type") == "override"
-                and not edge.get("meta", {}).get("legacy_override")):
-            # A migration alias preserves an existing approval; it is not
-            # another human/builder override or reversal.
-            rule = edge.get("meta", {}).get("rule_ref", "unknown")
-            overrides[rule] = overrides.get(rule, 0) + 1
-            if edge.get("meta", {}).get("reverses"):
-                reversals[rule] = reversals.get(rule, 0) + 1
-        if (edge.get("type") == "decided_by"
-                and edge.get("meta", {}).get("reverses")):
-            reversals["adjudication"] = reversals.get("adjudication", 0) + 1
-
-    parks_per_slice: dict = {}
-    for row in rows:
-        if row.get("kind") not in ("park", "slice_parked"):
-            continue
-        slice_id = row.get("meta", {}).get("slice", "unknown")
-        parks_per_slice[slice_id] = parks_per_slice.get(slice_id, 0) + 1
-
-    compactions = [r for r in rows if r.get("kind") == "COMPACTION_REACHED"]
-    slices = {"planned": 0, "in_progress": 0, "parked": 0, "closed": 0}
+def status(root, since=None) -> dict:
+    """The `harness status` report: slice counts plus summary totals."""
     from . import SubstrateMissing, load_backlog
     try:
         backlog = load_backlog(root)
     except SubstrateMissing:
         backlog = []
+    slices = {"planned": 0, "in_progress": 0, "parked": 0, "closed": 0}
     for row in backlog:
-        status = row.get("status", "planned")
-        slices[status] = slices.get(status, 0) + 1
-
-    fired: dict = {}
-    for row in events:
-        for rule in row.get("meta", {}).get("gates", []):
-            fired[rule] = fired.get(rule, 0) + 1
-    rule_samples = {
-        rule: {"firings": fired.get(rule, 0),
-               "overrides": overrides.get(rule, 0),
-               "reversals": reversals.get(rule, 0)}
-        for rule in sorted(set(fired) | set(overrides) | set(reversals))
-    }
-
-    outcome_counts = {
-        "slice_dispatched": 0, "slice_closed": 0, "slice_merged": 0,
-        "slice_parked": 0, "review_parked": 0,
-        "event_allow": 0, "event_allow_with_findings": 0, "event_block": 0,
-    }
-    for row in rows:
-        kind = row.get("kind")
-        if kind in ("slice_dispatched", "slice_closed", "slice_merged",
-                    "slice_parked"):
-            outcome_counts[kind] += 1
-        elif kind == "park":
-            outcome_counts["review_parked"] += 1
-        elif kind == "event":
-            key = f"event_{row.get('meta', {}).get('verdict')}"
-            if key in outcome_counts:
-                outcome_counts[key] += 1
-
-    timestamps = sorted(
-        str(item.get("ts")) for item in [*rows, *edges] if item.get("ts"))
-    observed_interval = {
-        "start": timestamps[0] if timestamps else None,
-        "end": timestamps[-1] if timestamps else None,
-    }
-    sample_counts = {
-        "telemetry_rows": len(rows), "events": len(events),
-        "pre_change_events": len(pre_changes), "graph_edges": len(edges),
-    }
-    window = ({"since": since, "rows": len(rows), "edges": len(edges)}
-              if since else None)
-
-    return {
-        "slices": slices,
-        "window": window,
-        "sample_counts": sample_counts,
-        "observed_interval": observed_interval,
-        "pre_change_events": len(pre_changes),
-        "g2_block_rate": (len(g2_blocks) / len(pre_changes)) if pre_changes else 0.0,
-        "override_counts": overrides,
-        "reversal_counts": reversals,
-        "rule_samples": rule_samples,
-        "layer0_promotion_candidates": [],
-        "outcome_counts": outcome_counts,
-        "compaction_reached": len(compactions),
-        "compaction_is_defect": bool(
-            (config.get("telemetry") or {}).get("compaction_is_defect", False)),
-        "parks_per_slice": parks_per_slice,
-    }
+        state = row.get("status", "planned")
+        slices[state] = slices.get(state, 0) + 1
+    summaries = load_summaries(root)
+    if since:
+        summaries = [r for r in summaries if str(r.get("closed_at", "")) >= since]
+    totals = {"gates_fired": {}, "overrides": {}, "reversals": {},
+              "compactions": 0,
+              "parks": 0, "max_injection_chars": 0}
+    for row in summaries:
+        for key in ("gates_fired", "overrides", "reversals"):
+            for rule, n in (row.get(key) or {}).items():
+                totals[key][rule] = totals[key].get(rule, 0) + int(n)
+        totals["compactions"] += int(row.get("compactions") or 0)
+        totals["parks"] += int(row.get("parks") or 0)
+        totals["max_injection_chars"] = max(
+            totals["max_injection_chars"], int(row.get("max_injection_chars") or 0))
+    for key in ("gates_fired", "overrides", "reversals"):
+        totals[key] = dict(sorted(totals[key].items()))
+    parks_per_slice = {r["id"]: int(r["parks"]) for r in summaries if r.get("parks")}
+    for row in read_jsonl(harness_dir(root) / "parked.jsonl"):
+        sid = row.get("slice", "unknown")
+        parks_per_slice[sid] = parks_per_slice.get(sid, 0) + 1
+    return {"slices": slices,
+            "window": {"since": since, "summaries": len(summaries)} if since else None,
+            "summaries": summaries, "totals": totals,
+            "parks_per_slice": parks_per_slice,
+            "local_events": len(load_events(root))}

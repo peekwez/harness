@@ -13,12 +13,12 @@ import os
 import time
 from pathlib import Path
 
-SCHEMA_VERSION = 1
-ENGINE_VERSION = "0.9.4"
+SCHEMA_VERSION = 2
+ENGINE_VERSION = "0.10.0"
 
 # Extensions we consider "source modules". Anything else in these families is
 # either substrate/docs (ignored) or unknown-language source (degenerate
-# shadow + G8 finding — never a silent hole).
+# shadow + a coverage finding — never a silent hole).
 IGNORED_EXTS = {
     ".md", ".txt", ".json", ".jsonl", ".toml", ".cfg", ".ini", ".lock",
     ".csv", ".html", ".css", ".svg", ".png", ".jpg", ".gif", ".pdf",
@@ -88,12 +88,33 @@ def check_schema_version(root) -> None:
         )
 
 
+def jsonl_lines(text: str) -> list:
+    """Split JSONL text on "\\n" only, dropping a trailing "\\r".
+
+    str.splitlines() also splits on U+2028, U+2029 and U+0085, which JSON
+    allows raw inside strings, and would cut a valid row in two.
+    """
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    return [line[:-1] if line.endswith("\r") else line for line in lines]
+
+
+def write_lines(path: Path, lines: list) -> None:
+    """Rewrite a text file from its lines. A file with CRLF line endings keeps
+    them; any other file gets "\n"."""
+    path = Path(path)
+    eol = "\r\n" if path.exists() and b"\r\n" in path.read_bytes() else "\n"
+    path.write_text(eol.join(lines) + eol if lines else "", encoding="utf-8",
+                    newline="")
+
+
 def read_jsonl(path) -> list:
     path = Path(path)
     if not path.exists():
         return []
     rows = []
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for lineno, line in enumerate(jsonl_lines(path.read_text(encoding="utf-8")), 1):
         line = line.strip()
         if not line:
             continue
@@ -181,26 +202,26 @@ def load_boundaries(root) -> list:
 # path it always had.
 DEFAULT_SRC_ROOTS = ["src", "packages/*/src"]
 
+# Spec 5.6: prefixes G3 and G5 never treat as slice work. A repo replaces
+# the whole list with `gates.exempt_paths` in .harness/config.yaml.
+DEFAULT_EXEMPT_PATHS = (".harness/", "adr/", ".github/", "tests/", "docs/",
+                        ".claude/", "explore/")
+
 DEFAULT_CONFIG = {
     "schema": 1,
-    "resolver": {
-        "budget_tokens": 8000,
-        "ranking": ["direct_deps", "one_hop_types", "durable_memories"],
-        "degrade": "drop_docstrings_before_modules",
-    },
     "gates": {
-        "g3_mode": "allow_with_findings",       # or: block | radius
-        "g5_override": "recorded_justification",  # or: advisory | park
+        "g3_mode": "allow_with_findings",       # or: radius
         "g5_similarity_threshold": 0.6,
+        "exempt_paths": list(DEFAULT_EXEMPT_PATHS),
         "acceptance_runner": "pytest",          # or: none (skill-enforced only)
         "acceptance_python": None,              # default: .venv/bin/python if present
     },
-    "ensemble": {"trigger_confidence_below": 0.7, "samples": 3},
-    "review": {"fork_for_security_rows": True},   # ADR-001
+    "review": {"fork_for_security_rows": True,   # ADR-001
+               "ensemble": False},               # spec 10.3: opt-in
     "extractor": {"src_roots": list(DEFAULT_SRC_ROOTS)},
+    "shadows": {"include": [], "exclude": []},
     "languages": {"python": True, "typescript": True, "rust": True,
                   "go": True, "yaml": True, "hcl": True},
-    "telemetry": {"compaction_is_defect": False},
 }
 
 
@@ -229,4 +250,7 @@ def load_config(root) -> dict:
     # otherwise be shared with DEFAULT_CONFIG, and one caller mutating
     # `config["extractor"]["src_roots"]` would move every module id in the
     # process (fail loud, never quietly global)
-    return _deep_merge(copy.deepcopy(DEFAULT_CONFIG), loaded)
+    config = _deep_merge(copy.deepcopy(DEFAULT_CONFIG), loaded)
+    from engine.review.rubrics import ensemble_enabled
+    ensemble_enabled(config)   # fail loud on a non-bool review.ensemble
+    return config

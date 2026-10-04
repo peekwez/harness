@@ -17,13 +17,13 @@ def test_byte_identical_across_two_runs(toy):
         (toy / name).write_text(src)
     extract_all(toy, config)
     first = {p: p.read_bytes()
-             for p in (toy / ".harness" / "shadows").rglob("*.json")}
+             for p in (toy / ".harness" / "cache" / "shadows").rglob("*.json")}
     # force re-extract from scratch (kill the cache by deleting shadows)
     for p in first:
         p.unlink()
     extract_all(toy, config)
     second = {p: p.read_bytes()
-              for p in (toy / ".harness" / "shadows").rglob("*.json")}
+              for p in (toy / ".harness" / "cache" / "shadows").rglob("*.json")}
     assert first == second
 
 
@@ -59,7 +59,7 @@ def test_unknown_extension_degenerate_shadow_plus_finding(toy):
     assert "raw_head" in shadow and "puts 1" in shadow["raw_head"]
     codes = [f["code"] for f in findings]
     assert "UNKNOWN_LANGUAGE" in codes  # never silence
-    assert all(f["rule_ref"] == "gate:G8" for f in findings)
+    assert all(f["rule_ref"] == "doctor:coverage" for f in findings)
 
 
 def test_cache_hit_no_work(toy):

@@ -9,6 +9,7 @@ ids by longest dotted prefix (ADR-002, decision row D-008).
 """
 from __future__ import annotations
 
+import os
 from fnmatch import fnmatchcase
 from pathlib import Path, PurePosixPath
 
@@ -123,14 +124,17 @@ def python_module_ids(root, config: dict | None = None) -> set[str]:
         for end in range(1, len(namespace_parts) + 1):
             modules.add(".".join(namespace_parts[:end]))
 
-    for path in root.rglob("*.py"):
-        try:
-            rel = path.relative_to(root)
-        except ValueError:  # pragma: no cover - rglob keeps paths under root
-            continue
-        if any(part in IGNORED_DIRS for part in rel.parts) or not path.is_file():
-            continue
-        add_source(rel.as_posix())
+    # prune ignored dirs during the walk: never descend into node_modules
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in IGNORED_DIRS)
+        base = Path(dirpath)
+        for name in sorted(filenames):
+            if not name.endswith(".py"):
+                continue
+            path = base / name
+            if not path.is_file():
+                continue
+            add_source(path.relative_to(root).as_posix())
 
     registry_path = harness_dir(root) / "registry.jsonl"
     if registry_path.exists():

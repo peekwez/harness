@@ -15,13 +15,12 @@ Semantics:
 
 - `tool.execute.before` throws to deny `edit`/`write`/`patch` (and gates
   `bash`) pre-execution — full enforcement mode.
-- `session.idle` maps to unit_complete (shadow regen, edges, G4–G8);
+- `session.idle` maps to unit_complete (edges, G5 and G6);
   `session.compacted` records the COMPACTION_REACHED defect signal.
 - Context injection: OpenCode has no additionalContext hook, so Phase-1
   context arrives via `AGENTS.md` (read natively; `/init` regenerates) plus
   running `harness resolve --slice <id>` at slice start — the build
-  workflow's first step. G2 still verifies at every edit and denies with a
-  pointer if the context isn't loaded, so the loop self-corrects.
+  workflow's first step. No gate denies an edit for missing context.
 - AGENTS.md is scaffolded by `harness init`; OpenCode reads it natively.
 
 Verified against the July 2026 plugin API (`@opencode-ai/plugin` types:

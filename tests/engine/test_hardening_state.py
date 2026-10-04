@@ -1,7 +1,7 @@
 """Regression coverage for the September behavior audit."""
 import json
 
-from conftest import git, make_event, run_cli
+from conftest import cite_non_goals, git, make_event, run_cli
 from engine import read_jsonl, write_jsonl
 from engine.events import Sidecar, handle_event
 from engine.gates.g6_drift import acknowledge
@@ -119,8 +119,8 @@ def test_failed_substrate_commit_is_retryable(toy):
     hook.chmod(0o755)
     p, out = close(toy)
     assert p.returncode == 1 and out["closed"] is False
-    from engine.telemetry import aggregate
-    assert aggregate(toy)["outcome_counts"].get("slice_closed", 0) == 0
+    assert not [r for r in read_jsonl(toy / ".harness/slice-metrics.jsonl")
+                if r["id"] == "slice-042"]
     indexed = [json.loads(line) for line in git(toy, "show", ":.harness/backlog.jsonl").stdout.splitlines()]
     assert indexed[0]["status"] != "closed"
     orders = next(e for e in read_jsonl(toy / ".harness/registry.jsonl") if e["id"] == "orders")
@@ -134,6 +134,7 @@ def test_failed_substrate_commit_is_retryable(toy):
 
 
 def test_close_checks_hookless_non_goal_even_when_declared(toy):
+    cite_non_goals(toy, "adr:007")
     bind(toy)
     rows = read_jsonl(toy / ".harness/backlog.jsonl")
     rows[0]["predicted_files"].append("legacy/export.py")

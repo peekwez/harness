@@ -10,7 +10,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from . import (HarnessError, append_jsonl, harness_dir, now_iso,
+from . import (HarnessError, append_jsonl, jsonl_lines, harness_dir, now_iso,
                read_jsonl, sha256_text)
 
 EDGE_TYPES = {"implements", "declares_dep", "uses", "shadows", "supersedes",
@@ -177,8 +177,6 @@ def slice_provenance_requirements(root, slice_id, files, *, governance=True):
             require("touches", f"slice:{slice_id}", node)
             if has_revision_store:
                 require("produced_by", node, _CLOSED_COMMIT)
-            if entry.get("shadow"):
-                require("shadows", node, f"file:{entry['shadow']}")
             for decision in decisions:
                 require("governs", f"decision:{decision['id']}", node)
     for test in sl.get("acceptance", []) if governance else []:
@@ -225,7 +223,7 @@ def repair_legacy_provenance(root):
         commit = note["commit"]
         try:
             registry = [json.loads(line) for line in
-                        _git(root, "show", f"{commit}:.harness/registry.jsonl").splitlines() if line]
+                        jsonl_lines(_git(root, "show", f"{commit}:.harness/registry.jsonl")) if line]
         except (GraphError, ValueError):
             registry = []
         for payload in note["payloads"]:
@@ -416,7 +414,7 @@ def notes_log(root, slice_id=None) -> list:
 
 
 def write_note(root, commit, payload: dict) -> dict:
-    """Mirror {slice_id, modules_touched, registry_used, memory_ids} onto the
+    """Mirror {slice_id, modules_touched, registry_used} onto the
     commit so provenance travels with the repo. Additive: a second slice on
     the same commit joins the note instead of overwriting it (`notes add -f`
     silently erased the first one); re-noting the same slice replaces its
@@ -457,18 +455,15 @@ def slice_note_payload(root, slice_id: str) -> dict:
         slice_id: The slice to describe.
 
     Returns:
-        `{slice_id, modules_touched, registry_used, memory_ids}`.
+        `{slice_id, modules_touched, registry_used}`.
     """
     from . import get_slice
     sl = get_slice(root, slice_id)
     touched = sorted(e["to"].split(":", 1)[1] for e in load_edges(root)
                      if e["type"] == "touches"
                      and e["from"] == f"slice:{slice_id}")
-    durable = read_jsonl(harness_dir(root) / "memory" / "durable.jsonl")
     return {"slice_id": slice_id, "modules_touched": touched,
-            "registry_used": sl.get("declares_dep", []),
-            "memory_ids": [m["id"] for m in durable
-                           if m.get("slice") == slice_id]}
+            "registry_used": sl.get("declares_dep", [])}
 
 
 def last_note_payload(root, slice_id: str) -> dict:

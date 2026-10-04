@@ -34,12 +34,33 @@ def cmd_review(args):
                   "without a rule reference cannot block or adjudicate)",
                   file=sys.stderr)
             return 2
+        from engine.findings import MAX_MESSAGE_WORDS, clip_words
+        words = len(args.message.split())
+        if words > MAX_MESSAGE_WORDS:
+            print(f"error: --message has {words} words; the limit is "
+                  f"{MAX_MESSAGE_WORDS}. Put detail in --failure-scenario.",
+                  file=sys.stderr)
+            return 2
         severity = args.severity or ("gate" if args.park else "advisory")
+        if severity == "block" and not args.fix:
+            print("error: a blocking finding needs --fix (STE-80). Pass one "
+                  "action that resolves it.", file=sys.stderr)
+            return 2
+        if severity != "advisory" and not args.fix:
+            args.fix = "Run: harness adjudicate --list"
+        from engine.findings import CATALOG
+        if args.code and args.code not in CATALOG:
+            print(f"error: --code {args.code} is not a harness code (STE-80). "
+                  "Run: harness gates explain", file=sys.stderr)
+            return 2
         finding = make_finding(
             args.code or ("REVIEW_UNCERTAIN" if args.park else "REVIEW_FINDING"),
-            args.rule_ref, args.message, severity=severity,
+            args.rule_ref, clip_words(args.message), severity=severity,
             layer=int(args.layer or (2 if args.park else 1)),
-            key=f"{args.slice}|{args.code}|{args.message[:80]}")
+            key=f"{args.slice}|{args.code}|{args.message[:80]}",
+            inject=([f"Failure scenario: {args.failure_scenario}"]
+                    if args.failure_scenario else []),
+            fix=args.fix)
         append_edge(root, "reviewed_by", f"slice:{args.slice}",
                     f"finding:{finding['finding_id']}",
                     meta={"kind": "park" if args.park else "finding",
@@ -77,6 +98,12 @@ def cmd_review(args):
                 "edge": edge})
         return 0
     if args.replay:
+        from engine.review.rubrics import ensemble_enabled
+        if not ensemble_enabled(config):
+            print("error: golden replay is opt-in. Set review.ensemble: true "
+                  "in .harness/config.yaml, then run it again.",
+                  file=sys.stderr)
+            return 2
         golden = Path(args.golden or (PLUGIN_ROOT / "tests" / "fixtures" / "golden-set"))
         result = replay(root, golden, config)
         _print(result)
@@ -111,6 +138,12 @@ def cmd_review(args):
 
 
 # ------------------------------------------------------------------ adjudicate
+def _finding_text(finding: dict) -> str:
+    """The message plus its inject lines (the failure scenario), so the
+    adjudication row keeps the evidence the short message dropped."""
+    return " ".join([finding["message"], *finding.get("inject", [])])[:400]
+
+
 def cmd_adjudicate(args):
     from engine import append_jsonl, now_iso, read_jsonl
     from engine.graph import append_edge
@@ -133,8 +166,11 @@ def cmd_adjudicate(args):
         print(f"error: parked finding {args.finding_id!r} not found",
               file=sys.stderr)
         return 1
-    # Every resolution writes back substrate: a decision row or durable memory,
-    # plus an adjudication edge. The same question never parks twice.
+    # Every resolution writes an adjudication edge; a --decision-id also
+    # writes a decision row. A one-off ruling never writes shared memory:
+    # that needs a human, so the output suggests the promote command.
+    # The same question never parks twice (the edge suppresses it).
+    suggest = None
     if args.decision_id:
         from engine import load_decisions
         rows = load_decisions(root)
@@ -151,23 +187,29 @@ def cmd_adjudicate(args):
                   file=sys.stderr)
             return 2
         rows.append({"id": args.decision_id, "domain": args.domain,
-                     "question": target["finding"]["message"][:200],
+                     "question": _finding_text(target["finding"]),
                      "answer": args.resolution,
                      "adr_ref": None, "origin": "adjudication",
                      "created": now_iso()})
         write_jsonl(harness_dir(root) / "decisions.jsonl", rows)
         back_ref = f"decision:{args.decision_id}"
     else:
-        from engine import memory
-        entry = memory.make_entry(target["slice"], "adjudication",
-                                  f"{args.finding_id}: {args.resolution}")
-        memory.write_entry(root, entry)
-        back_ref = f"memory:{entry['id']}"
+        import shlex
+        back_ref = f"adjudication:{args.finding_id}"
+        fact = (f"{_finding_text(target['finding'])} "
+                f"Ruling: {args.resolution}")
+        suggest = f"harness memory promote --text {shlex.quote(fact)}"
     append_edge(root, "decided_by", f"finding:{args.finding_id}", back_ref,
                 meta={"kind": "adjudication", "resolution": args.resolution,
-                      "reverses": args.reverses})
+                      "reverses": args.reverses,
+                      "slice": target.get("slice"),
+                      "code": target["finding"].get("code"),
+                      "rule_ref": target["finding"].get("rule_ref")})
     remaining = [p for p in parked if p["finding"]["finding_id"] != args.finding_id]
     write_jsonl(parked_path, remaining)
-    _print({"adjudicated": args.finding_id, "wrote": back_ref,
-            "remaining_parked": len(remaining)})
+    out = {"adjudicated": args.finding_id, "wrote": back_ref,
+           "remaining_parked": len(remaining)}
+    if suggest:
+        out["suggest"] = suggest
+    _print(out)
     return 0

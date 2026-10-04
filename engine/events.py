@@ -2,7 +2,7 @@
 
 EnforcementEvent (stdin JSON) -> gate dispatch -> EnforcementVerdict (stdout JSON).
 Exit 0: verdict carries semantics. Nonzero exit = engine error only.
-Session-scoped state (context_loaded per session_id) lives in the sidecar.
+Session-scoped state (bindings, per-block injection hashes) lives in the sidecar.
 """
 from __future__ import annotations
 
@@ -11,21 +11,14 @@ import json
 import sqlite3
 from pathlib import Path
 
+from .findings import CATALOG
 from . import (HarnessError, harness_dir, now_iso, token_estimate)
 
 EVENTS = ("session_start", "pre_context", "pre_change", "post_change", "unit_complete")
 SEVERITIES = ("gate", "block", "advisory")
 _VERDICT_RANK = {"allow": 0, "allow_with_findings": 1, "block": 2}
 
-FINDING_CODES = {
-    "MANIFEST_INCOMPLETE", "SCHEMA_MISMATCH", "CONTEXT_NOT_LOADED",
-    "MISSING_SHADOW", "UNDECLARED_FILE", "NON_GOAL_VIOLATION", "STALE_SHADOW",
-    "UNDECLARED_USE", "DUPLICATE_CANDIDATE", "INTERFACE_DRIFT",
-    "DERIVATION_MISMATCH", "UNSHADOWED_FILE", "UNKNOWN_LANGUAGE",
-    "NO_ACTIVE_WORK_UNIT", "HASH_MISMATCH", "ORPHANED_NOTE", "MISSING_DEPENDENCY",
-    "UNRECONCILED_SLICE", "MISSING_RULE_REF", "REVIEW_UNCERTAIN",
-    "COMPACTION_REACHED",
-}
+FINDING_CODES = frozenset(CATALOG)
 
 
 class EventError(HarnessError):
@@ -38,7 +31,10 @@ class VerdictError(HarnessError):
 
 # ---------------------------------------------------------------- findings
 def make_finding(code, rule_ref, message, severity="advisory", layer=0,
-                 inject=None, precedents=None, key=None) -> dict:
+                 inject=None, precedents=None, key=None, fix=None) -> dict:
+    """One finding. `message`: what is wrong and the file, 25 words or
+    fewer (STE-80). `fix`: the command or action that resolves it. The fix
+    is not part of the finding id, so recorded overrides keep matching."""
     fid = "F-" + hashlib.sha1(
         f"{code}|{rule_ref}|{key or message}".encode()).hexdigest()[:10]
     return {
@@ -48,6 +44,7 @@ def make_finding(code, rule_ref, message, severity="advisory", layer=0,
         "code": code,
         "rule_ref": rule_ref,
         "message": message,
+        "fix": fix,
         "inject": list(inject or []),
         "precedents": list(precedents or []),
     }
@@ -63,6 +60,14 @@ def validate_finding(f: dict) -> None:
         # Blocking without a rule reference is a bug — rejected by the engine itself.
         raise VerdictError(
             f"blocking finding {f.get('finding_id')} ({f.get('code')}) has no rule_ref")
+    if not isinstance(f["message"], str) or not f["message"].strip():
+        raise VerdictError(
+            f"finding {f.get('finding_id')} ({f.get('code')}) has an empty message")
+    fix = f.get("fix")
+    if fix is not None and (not isinstance(fix, str) or not fix.strip()):
+        raise VerdictError(
+            f"finding {f.get('finding_id')} ({f.get('code')}): fix must be a "
+            f"non-empty string or null")
 
 
 def verdict_for(findings: list, injections=None) -> dict:
@@ -135,9 +140,9 @@ def validate_event(raw: dict) -> dict:
 
 # ---------------------------------------------------------------- sidecar
 class Sidecar:
-    """Gitignored session state, touched files, baseline/cache data and
-    pending telemetry. Git-backed baselines recover after loss; transient
-    session observations and unflushed telemetry do not."""
+    """Gitignored session state, touched files and baseline/cache data.
+    Git-backed baselines recover after loss; transient
+    session observations do not."""
 
     def __init__(self, root):
         self.path = harness_dir(root) / "sidecar.db"
@@ -148,9 +153,6 @@ class Sidecar:
         except sqlite3.OperationalError:
             pass  # WAL-unsupported filesystem: default journal is correct, slower
         self.db.executescript("""
-        CREATE TABLE IF NOT EXISTS session_context(
-            session_id TEXT, item TEXT, ts TEXT,
-            UNIQUE(session_id, item));
         CREATE TABLE IF NOT EXISTS session_state(
             session_id TEXT, key TEXT, value TEXT,
             UNIQUE(session_id, key));
@@ -160,41 +162,27 @@ class Sidecar:
         CREATE TABLE IF NOT EXISTS touched(
             session_id TEXT, slice_id TEXT, path TEXT,
             UNIQUE(session_id, slice_id, path));
-        CREATE TABLE IF NOT EXISTS telemetry_buffer(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, row TEXT);
         """)
         self.db.commit()
 
     def close(self):
         self.db.close()
 
-    @staticmethod
-    def _context_stamp(items, injections):
-        payload = json.dumps([sorted(items), injections], ensure_ascii=False)
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    def block_hashes_get(self, session_id) -> dict:
+        """`{block key: hash}` of what this session was last sent."""
+        return self.state_get(session_id, "injected_blocks", {}) or {}
 
-    def context_add(self, session_id, items, *, injections=None):
-        ts = now_iso()
-        self.db.executemany(
-            "INSERT OR IGNORE INTO session_context(session_id, item, ts) VALUES(?,?,?)",
-            [(session_id, i, ts) for i in items])
-        if injections is not None:
-            self.db.execute(
-                "INSERT OR REPLACE INTO session_state(session_id, key, value) VALUES(?,?,?)",
-                (session_id, "resolved_context_fingerprint",
-                 json.dumps(self._context_stamp(items, injections))))
-        self.db.commit()
+    def block_hashes_set(self, session_id, hashes: dict) -> None:
+        self.state_set(session_id, "injected_blocks", hashes)
 
-    def context_matches(self, session_id, items, injections):
-        """IDs certify coverage; the stamp certifies the rendered content."""
-        return (set(items) <= self.context_get(session_id)
-                and self.state_get(session_id, "resolved_context_fingerprint")
-                == self._context_stamp(items, injections))
-
-    def context_get(self, session_id) -> set:
+    def block_hashes_clear(self, session_id) -> int:
+        """Forget what this session was sent (PreCompact): the next prompt
+        injects the slice context again. Returns rows cleared."""
         cur = self.db.execute(
-            "SELECT item FROM session_context WHERE session_id=?", (session_id,))
-        return {r[0] for r in cur.fetchall()}
+            "DELETE FROM session_state WHERE session_id=? AND key=?",
+            (session_id, "injected_blocks"))
+        self.db.commit()
+        return cur.rowcount
 
     def state_set(self, session_id, key, value):
         self.db.execute(
@@ -221,23 +209,6 @@ class Sidecar:
                 (json.dumps(slice_id),))
         self.db.commit()
         return cur.rowcount
-
-    def telemetry_buffer(self, row: dict) -> None:
-        """Hook-frequency telemetry parks here (gitignored) instead of
-        churning the tracked file on every event (review R8)."""
-        self.db.execute("INSERT INTO telemetry_buffer(row) VALUES(?)",
-                        (json.dumps(row, sort_keys=True),))
-        self.db.commit()
-
-    def telemetry_peek(self) -> list:
-        return [json.loads(r[0]) for r in
-                self.db.execute("SELECT row FROM telemetry_buffer ORDER BY id")]
-
-    def telemetry_drain(self) -> list:
-        rows = self.telemetry_peek()
-        self.db.execute("DELETE FROM telemetry_buffer")
-        self.db.commit()
-        return rows
 
     def release_snapshots(self, slice_id) -> int:
         """Drop a slice's G6 baselines at close — stale baselines cause
@@ -305,33 +276,32 @@ def handle_event(raw: dict, root) -> dict:
         if session not in ("cli", "__default__"):
             sidecar.state_set("__hooks__", "last_session_id", session)
 
-        # Persist context_loaded additions per session_id (spec C1).
-        if evt["payload"]["context_loaded"]:
-            sidecar.context_add(session, evt["payload"]["context_loaded"])
-
-        injections, resolved_manifest = [], []
+        injections, context_findings = [], []
         if event in ("session_start", "pre_context") and slice_id:
-            # Phase 1 — inject early; ~90% of context loading happens here.
-            from .resolver import resolve
+            # Phase 1: one injection per binding, then only the blocks whose
+            # text changed. PreCompact clears the hashes (`resolve --reset`).
+            from .resolver import (BLOCK_SEPARATOR, block_hash,
+                                   over_cap_finding, resolve)
             res = resolve(root, slice_id, config)
-            resolved_manifest = res["context_loaded"]
-            # Dedupe for BOTH Phase-1 events: SessionStart re-runs on resume
-            # (same session_id) and UserPromptSubmit fires every prompt — if
-            # the session carries this exact content, suppress its repetition.
-            # Stable IDs alone cannot detect updated decisions or signatures.
-            if resolved_manifest and sidecar.context_matches(
-                    session, resolved_manifest, res["injections"]):
-                injections = []
-            else:
-                injections = res["injections"]
-            sidecar.context_add(session, resolved_manifest,
-                                injections=res["injections"])
+            sent = sidecar.block_hashes_get(session)
+            current = {}
+            for block, text in zip(res["blocks"], res["injections"]):
+                current[block["key"]] = block_hash(text)
+                if sent.get(block["key"]) != current[block["key"]]:
+                    injections.append(text)
+            sidecar.block_hashes_set(session, current)
+            if injections:
+                sidecar.state_set("__context__", "last_injection_chars",
+                                  len(BLOCK_SEPARATOR.join(injections)))
+                if res["cut"]:
+                    context_findings.append(over_cap_finding(
+                        slice_id, res["cut"], res["demand_chars"]))
             _snapshot_slice_baseline(root, sidecar, slice_id)
 
         if event == "post_change":
             # the tool already ran: these files were really touched.
             # Paths still absolute after normalization — or escaping the
-            # root via `../` traversal — are outside the repo: G8 enumerates
+            # root via `../` traversal — are outside the repo: doctor enumerates
             # them; recording them would poison unit_complete regeneration
             # (field report #19, S5).
             paths = [f["path"] for f in evt["payload"]["files"]
@@ -340,9 +310,16 @@ def handle_event(raw: dict, root) -> dict:
                 sidecar.touch(session, slice_id, paths)
 
         if event == "unit_complete":
-            _regenerate_touched(root, sidecar, session, slice_id, config)
+            record_touched_uses(root, sidecar, session, slice_id, config)
 
-        findings = run_gates(root, evt, config, sidecar)
+        findings = context_findings + run_gates(root, evt, config, sidecar)
+        if event == "pre_change":
+            # spec 6.3 (W5): one advisory line when source is edited before
+            # the slice's red record exists. Not a gate; never blocks.
+            from .verification import red_advisory
+            findings = findings + red_advisory(
+                root, slice_id, [f["path"] for f in evt["payload"]["files"]],
+                config)
         verdict = merge_verdicts([verdict_for(findings, injections)])
 
         if event == "pre_change" and verdict["verdict"] != "block":
@@ -358,12 +335,14 @@ def handle_event(raw: dict, root) -> dict:
             # adapters ask `harness permit` (engine/permits.py). The verdict
             # contract is the portability boundary; it does not grow fields.
 
+        from .resolver import BLOCK_SEPARATOR
         telemetry.emit(root, "event", {
             "event": event, "session": session, "slice": slice_id,
             "verdict": verdict["verdict"],
             "codes": sorted({f["code"] for f in verdict["findings"]}),
             "gates": sorted({f["rule_ref"] for f in verdict["findings"]
                              if f["rule_ref"].startswith("gate:")}),
+            "injection_chars": len(BLOCK_SEPARATOR.join(verdict["injections"])),
         })
         return verdict
     finally:
@@ -404,31 +383,41 @@ def _snapshot_slice_baseline(root, sidecar, slice_id):
     ensure_baseline(root, sidecar, slice_id, starting=True)
 
 
-def _regenerate_touched(root, sidecar, session, slice_id, config):
-    """Stop hook duties: regenerate shadows for touched files, append
-    touches + uses edges (feeding G5 and the close-slice reconciliation)."""
-    from .extractor.engine import RegistryIndex, extract_path
+def record_touched_uses(root, sidecar, session, slice_id, config):
+    """Stop hook duty: record `touches` and `uses` edges for touched files.
+
+    A gitignored file is not slice work and records nothing. `uses` edges
+    come from the file's shadow; a file outside shadow scope has none. The
+    shadow cache fills as a side effect; nothing is committed for it.
+    """
+    from .extractor.engine import (LANG_BY_EXT, RegistryIndex,
+                                   git_ignored_set, shadow_for)
+    from .extractor.modules import python_module_ids
     from .graph import append_edge, load_edges, record_dependency_snapshot
     from .registry import load_registry
-    if slice_id:
-        from . import get_slice
-        if get_slice(root, slice_id).get("status") == "closed":
-            return  # historical closure evidence must not change on a later merge/Stop
-    touched = (sidecar.touched_paths(slice_id=slice_id) if slice_id
-               else sidecar.touched_paths(session_id=session))
+    if not slice_id:
+        return
+    from . import get_slice
+    if get_slice(root, slice_id).get("status") == "closed":
+        return  # historical closure evidence must not change on a later merge/Stop
+    touched = sidecar.touched_paths(slice_id=slice_id)
     edges = load_edges(root)
-    if slice_id:
-        touched |= {e["to"][5:] for e in edges
-                    if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
-                    and e["to"].startswith("file:")}
+    touched |= {e["to"][5:] for e in edges
+                if e["from"] == f"slice:{slice_id}" and e["type"] == "touches"
+                and e["to"].startswith("file:")}
+    # legacy poison rows (absolute OR traversal) and gitignored files drop out
+    touched = {rel for rel in touched if rel_in_root(root, rel)}
+    ignored = git_ignored_set(root, touched)          # one git call, not N
+    touched -= ignored
     if not touched:
-        if slice_id:
-            record_dependency_snapshot(root, slice_id, set(), set())
+        record_dependency_snapshot(root, slice_id, set(), set())
         return
     registry = load_registry(root)
     index = RegistryIndex(registry)
-    from .extractor.modules import python_module_ids
-    known_modules = python_module_ids(root, config)
+    # module ids only matter for a Python file: scan once, and only then
+    known_modules = (python_module_ids(root, config)
+                     if any(LANG_BY_EXT.get(Path(rel).suffix.lower()) == "python"
+                            for rel in touched) else None)
     existing = {(e["type"], e["from"], e["to"]) for e in edges}
     uses = set()
 
@@ -438,17 +427,14 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
             existing.add((etype, frm, to))
 
     for rel in sorted(touched):
-        if not rel_in_root(root, rel):
-            continue  # legacy poison rows (absolute OR traversal): skip, never crash
         p = Path(root) / rel
-        if not p.exists():
-            from .extractor.engine import shadow_path_for
-            shadow_path_for(root, p).unlink(missing_ok=True)
-            continue
-        shadow, _f = extract_path(root, p, config, _known_modules=known_modules)
-        if shadow is None or not slice_id:
-            continue
+        if not p.is_file():
+            continue            # deleted or renamed before Stop
         add_once("touches", f"slice:{slice_id}", f"file:{rel}")
+        shadow = shadow_for(root, p, config, known_modules=known_modules,
+                            ignored=ignored)
+        if shadow is None:
+            continue
         own = next((e for e in registry if e.get("source") == rel), None)
         for imp in shadow.get("imports", []):
             target = index.match(imp)
@@ -456,8 +442,7 @@ def _regenerate_touched(root, sidecar, session, slice_id, config):
                 node = f"module:{target['id']}"
                 uses.add(node)
                 add_once("uses", f"slice:{slice_id}", node)
-    if slice_id:
-        record_dependency_snapshot(root, slice_id, uses, touched)
+    record_dependency_snapshot(root, slice_id, uses, touched)
 
 
 # ---------------------------------------------------------------- CLI shim

@@ -28,7 +28,7 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    [coverage.md](coverage.md) for fingerprints and durable records. Prefer
    interfaces and
    focused excerpts to whole repositories. Exclude builder transcripts and
-   `.harness/memory/session/`. The peer identifies missing evidence explicitly.
+   personal memory. The peer identifies missing evidence explicitly.
 3. **Critique.** Ask for at most five highest-impact findings: severity,
    evidence (path/section), affected requirement, consequence, proposed fix
    and uncertainty. Check assumptions, failure/recovery, security, migrations,
@@ -37,12 +37,16 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    checks can detect wrong paths, partial writes, stale state and failed recovery;
    identify missing scenarios and observability before implementation. Require
    [response.schema.json](response.schema.json), no edits or delegation.
+   When the design has decision cards, attack the "Would change it" line
+   and the `Evidence` of each card. Name the card id in each finding.
 4. **Reconcile.** Verify each finding against the packet. Record accepted,
    rebutted or deferred, with rationale and an owner for deferrals. Apply
    accepted changes to authored design/ADRs; real risks become a decision or
    explicit `[accepted-risk]` block. Unresolved choices follow the existing
    human/delegation contract. Peer agreement does not sign the author-gate or
    create a blocking rule; disagreements are evidence to resolve, not votes.
+   A finding that changes a choice updates the card. A new choice gets a
+   new card in the format of [../explore/card.md](../explore/card.md).
 5. **Persist.** Write the coverage record and validated peer response under
    `docs/design-reviews/`. Execution status and design assessment are separate:
    a completed response with `insufficient-context` leaves coverage incomplete.
@@ -60,4 +64,4 @@ Absence/failure is never a pass. Do not retry an unchanged availability failure
 at each stage, install tools or change authentication. Retry after a concrete
 availability change or user request. Honor a user opt-out; if the user expressly
 requires both approvals, require sufficient peer coverage and resolution of
-its concerns before finalization, or an explicit human waiver.
+its concerns before finalization, or an explicit human override.

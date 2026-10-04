@@ -113,13 +113,17 @@ def validate_manifests(root, entries=None, base=None, pending=None) -> list:
         if unexcused:
             findings.append(make_finding(
                 "MANIFEST_INCOMPLETE", "gate:G1",
-                f"registry entry {e['id']!r}: manifest paths missing: {unexcused}",
-                severity="block", key=e["id"] + "|" + ",".join(unexcused)))
+                f"registry entry {e['id']!r}: {len(unexcused)} manifest paths "
+                f"are missing: {', '.join(unexcused[:3])}.",
+                severity="block", key=e["id"] + "|" + ",".join(unexcused),
+                fix="Create the missing files, or remove them from the "
+                    "manifest of the entry."))
         else:
             findings.append(make_finding(
                 "MANIFEST_INCOMPLETE", "gate:G1",
-                f"registry entry {e['id']!r}: manifest paths {missing} not yet "
-                f"built (declared by the active slice — will flip at close)",
+                f"registry entry {e['id']!r}: manifest paths "
+                f"{', '.join(missing[:3])} are not built yet. Close marks "
+                f"them built.",
                 severity="advisory", key=e["id"] + "|pending"))
     return findings
 
@@ -157,22 +161,29 @@ def similarity(tokens_a: set, tokens_b: set) -> float:
     return len(tokens_a & tokens_b) / len(tokens_a | tokens_b)
 
 
-def public_symbols(root, entry) -> list | None:
+def _shadow_of(root, entry, config=None, **kw):
+    """The entry's shadow through the cache, or None (no source / out of scope)."""
+    if not entry.get("source"):
+        return None
+    from . import load_config
+    from .extractor.engine import shadow_for
+    return shadow_for(root, Path(root) / entry["source"],
+                      config if config is not None else load_config(root), **kw)
+
+
+def public_symbols(root, entry, config=None, **kw) -> list | None:
     """Public symbol signatures from an entry's shadow, or None if no shadow."""
-    if not entry.get("shadow"):
+    shadow = _shadow_of(root, entry, config, **kw)
+    if shadow is None:
         return None
-    sp = Path(root) / entry["shadow"]
-    if not sp.exists():
-        return None
-    shadow = json.loads(sp.read_text())
     return sorted(f"{s['kind']} {s['signature']}" for s in shadow.get("symbols", [])
                   if s.get("visibility") == "public")
 
 
 def refresh_built(root, entry_id: str) -> dict:
-    """Re-derive a BUILT entry's source_hash/signature_digest from its (fresh)
-    shadow after a slice legitimately modified the source (G6-acknowledged
-    drift). Without this, verify reports HASH_MISMATCH forever."""
+    """Re-derive a BUILT entry's source_hash/signature_digest from its shadow
+    after a slice legitimately modified the source (G6-acknowledged drift).
+    Without this, verify reports HASH_MISMATCH forever."""
     entries = load_registry(root)
     entry = next((e for e in entries if e["id"] == entry_id), None)
     if entry is None:
@@ -180,25 +191,25 @@ def refresh_built(root, entry_id: str) -> dict:
     if entry.get("status") != "built" or not entry.get("source"):
         return entry
     src = Path(root) / entry["source"]
-    sp = Path(root) / (entry.get("shadow") or "")
-    if not src.exists() or not entry.get("shadow") or not sp.exists():
+    if not src.exists():
         raise RegistryError(
-            f"cannot refresh {entry_id!r}: source or shadow missing (fail closed)")
-    shadow = json.loads(sp.read_text())
-    current = sha256_file(src)
-    if shadow.get("source_hash") != current:
+            f"cannot refresh {entry_id!r}: source {entry['source']} is missing")
+    shadow = _shadow_of(root, entry)
+    if shadow is None:
         raise RegistryError(
-            f"cannot refresh {entry_id!r}: shadow is stale — run `harness extract`")
-    entry["source_hash"] = current
+            f"cannot refresh {entry_id!r}: {entry['source']} is outside shadow "
+            f"scope. Add it to shadows.include in .harness/config.yaml")
+    entry["source_hash"] = sha256_file(src)
     entry["signature_digest"] = signature_digest(shadow)
     entry["module_id"] = shadow.get("module_id")
+    entry.pop("shadow", None)
     save_registry(root, entries)
     return entry
 
 
 def flip_status(root, entry_id: str) -> dict:
-    """planned -> built. Rejected unless the shadow exists and its hash
-    matches current source (status flips are derived at close-slice)."""
+    """planned -> built. Rejected unless the source exists inside shadow
+    scope (status flips are derived at close-slice)."""
     entries = load_registry(root)
     entry = next((e for e in entries if e["id"] == entry_id), None)
     if entry is None:
@@ -209,26 +220,15 @@ def flip_status(root, entry_id: str) -> dict:
     if not source or not (Path(root) / source).exists():
         raise RegistryError(
             f"cannot flip {entry_id!r} to built: source {source!r} missing")
-    shadow_rel = entry.get("shadow")
-    if not shadow_rel:
-        # derive the canonical shadow location for this source
-        from .extractor.engine import shadow_path_for
-        derived = shadow_path_for(root, Path(root) / source)
-        shadow_rel = str(derived.relative_to(Path(root).resolve()))
-        entry["shadow"] = shadow_rel
-    if not (Path(root) / shadow_rel).exists():
+    shadow = _shadow_of(root, entry)
+    if shadow is None:
         raise RegistryError(
-            f"cannot flip {entry_id!r} to built: shadow {shadow_rel!r} missing "
-            f"(run `harness extract`)")
-    shadow = json.loads((Path(root) / shadow_rel).read_text())
-    current = sha256_file(Path(root) / source)
-    if shadow.get("source_hash") != current:
-        raise RegistryError(
-            f"cannot flip {entry_id!r} to built: shadow is stale "
-            f"(shadow hash {shadow.get('source_hash')} != source {current})")
+            f"cannot flip {entry_id!r} to built: {source} is outside shadow "
+            f"scope. Add it to shadows.include in .harness/config.yaml")
     entry["status"] = "built"
-    entry["source_hash"] = current
+    entry["source_hash"] = sha256_file(Path(root) / source)
     entry["module_id"] = shadow.get("module_id")
     entry["signature_digest"] = signature_digest(shadow)
+    entry.pop("shadow", None)
     save_registry(root, entries)
     return entry
