@@ -57,6 +57,10 @@ CATALOG: dict[str, str] = {
         "G1 found that a required file is missing. It can be a substrate "
         "file, a manifest path, a guidance reference or an acceptance test. "
         "Create the file that the message names."),
+    "GLOSSARY_SYNONYM": (
+        "Review layer 0 found added markdown text that uses a banned "
+        "synonym of a glossary term. This finding is advisory. Use the "
+        "glossary term, or edit the glossary."),
     "MISSING_DEPENDENCY": (
         "The tree-sitter stack is not installed. Harness writes empty "
         "shadows, so interface checks for that language are off. Install "
@@ -98,8 +102,8 @@ CATALOG: dict[str, str] = {
         "--record-finding. It blocks only with block severity and a "
         "rule_ref."),
     "REVIEW_UNCERTAIN": (
-        "The review ensemble split on a question that would block. Harness "
-        "parks the finding for a human. Resolve it with harness "
+        "A review rubric was uncertain on a question that would block. "
+        "Harness parks the finding for a human. Resolve it with harness "
         "adjudicate."),
     "SCHEMA_INVALID": (
         "A substrate row does not match its schema. The message names the "

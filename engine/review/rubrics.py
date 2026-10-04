@@ -66,13 +66,19 @@ def _deterministic_rubrics():
     return [
         {"id": "R-uses", "question": "Are all used registry abstractions declared?",
          "check": uses_reconciled, "severity_if_fail": "block",
-         "rule_ref": "gate:G5"},
+         "rule_ref": "gate:G5",
+         "summary": "uses registry entries that it does not declare",
+         "fix": "Add each entry to declares_dep, or record an override with harness gates override."},
         {"id": "R-gates", "question": "Are all Layer-0 gates green?",
          "check": no_blocking_gate_findings, "severity_if_fail": "block",
-         "rule_ref": "review:layer0"},
+         "rule_ref": "review:layer0",
+         "summary": "has blocking gate findings",
+         "fix": "Fix each blocking gate finding, then run the review again."},
         {"id": "R-dup", "question": "Are duplicate candidates resolved or overridden?",
          "check": duplicates_resolved, "severity_if_fail": "block",
-         "rule_ref": "gate:G5"},
+         "rule_ref": "gate:G5",
+         "summary": "has unresolved duplicate candidates",
+         "fix": "Reuse each existing entry, or record an override with harness gates override."},
     ]
 
 
@@ -83,12 +89,16 @@ def _model_rubrics(root):
         {"id": "R-decisions",
          "question": "Does the diff conform to every decision row in scope? "
                      "Answer pass/fail with the violated row id as evidence.",
-         "severity_if_fail": "block", "rule_ref": "decision:in-scope"},
+         "severity_if_fail": "block", "rule_ref": "decision:in-scope",
+         "summary": "breaks a decision row in scope",
+         "fix": "Change the code to follow the row, or park the question with harness review --park."},
         {"id": "R-holistic",
          "question": "Holistic pass: anything worth a new decision row, ADR, "
                      "or gate? Proposals only.",
          "severity_if_fail": "advisory", "rule_ref": "review:layer3",
-         "layer": 3},
+         "layer": 3,
+         "summary": "has a layer-3 proposal for a decision row, ADR or gate",
+         "fix": "A human decides whether to adopt the proposal."},
     ]
 
 
@@ -148,10 +158,11 @@ def run_review(root, facts: dict, config: dict, model=None,
         if out["answer"] == "fail":
             findings.append(make_finding(
                 rubric["id"], rubric["rule_ref"],
-                f"{rubric['question']} -> fail. {out['evidence']}",
+                f"slice {facts['slice']} {rubric['summary']}.",
                 severity=rubric["severity_if_fail"], layer=1,
                 precedents=_precedents(root, rubric["id"]),
-                key=facts["slice"] + "|" + rubric["id"]))
+                key=facts["slice"] + "|" + rubric["id"],
+                inject=[f"Evidence: {out['evidence']}"], fix=rubric["fix"]))
 
     if model is not None:
         for rubric in _model_rubrics(root):
@@ -182,30 +193,35 @@ def run_review(root, facts: dict, config: dict, model=None,
                 if out["answer"] != "pass":
                     findings.append(make_finding(
                         rubric["id"], rubric["rule_ref"],
-                        f"proposal: {out['evidence']}",
+                        f"slice {facts['slice']} {rubric['summary']}.",
                         severity="advisory", layer=3,
-                        key=facts["slice"] + "|" + rubric["id"]))
+                        key=facts["slice"] + "|" + rubric["id"],
+                        inject=[f"Proposal: {out['evidence']}"],
+                        fix=rubric["fix"]))
                 continue
             if out["answer"] == "fail":
                 findings.append(make_finding(
                     rubric["id"], rubric["rule_ref"],
-                    f"{rubric['question']} -> fail. {out['evidence']}",
+                    f"slice {facts['slice']} {rubric['summary']}.",
                     severity=rubric["severity_if_fail"], layer=layer,
                     precedents=ctx["precedents"],
-                    key=facts["slice"] + "|" + rubric["id"]))
+                    key=facts["slice"] + "|" + rubric["id"],
+                    inject=[f"Evidence: {out['evidence']}"], fix=rubric["fix"]))
             elif out["answer"] == "uncertain":
                 f = make_finding(
                     "REVIEW_UNCERTAIN", rubric["rule_ref"],
-                    f"{rubric['question']} -> uncertain; parked for "
-                    f"adjudication. {out['evidence']}",
+                    f"slice {facts['slice']}: rubric {rubric['id']} is "
+                    f"uncertain, so the finding is parked.",
                     severity="gate", layer=2,
                     precedents=ctx["precedents"],
-                    key=facts["slice"] + "|" + rubric["id"] + "|park")
+                    key=facts["slice"] + "|" + rubric["id"] + "|park",
+                    inject=[f"Evidence: {out['evidence']}"],
+                    fix="Run: harness adjudicate --list")
                 if f["finding_id"] in adjudicated:
                     # Adjudication already answered this exact question:
                     # surface the precedent, do not re-park (park-once).
                     f["severity"] = "advisory"
-                    f["message"] += " [previously adjudicated: applying precedent]"
+                    f["message"] += " The question was previously adjudicated."
                     findings.append(f)
                 else:
                     findings.append(f)

@@ -3,20 +3,17 @@
 code has a catalog entry. Checked statically over every make_finding call
 under engine/, so a call site that no test reaches is still checked."""
 import ast
+import json
+import shutil
 
 import pytest
 
-from conftest import PLUGIN_ROOT
+from conftest import PLUGIN_ROOT, build_toy_repo, loaded_context, make_event, run_cli
+from engine import read_jsonl, write_jsonl
+from engine.events import handle_event
 from engine.findings import CATALOG, MAX_MESSAGE_WORDS
 
 DYNAMIC_CODE_FILES = {"engine/review/rubrics.py"}  # codes are rubric ids
-
-# Files whose messages are not rewritten yet. Tasks 7-10 empty this set.
-PENDING = {
-    "engine/review/layer0.py",
-    "engine/review/rubrics.py",
-}
-
 
 def _engine_files():
     return sorted(
@@ -26,7 +23,7 @@ def _engine_files():
         and p.name != "events.py")
 
 
-CHECKED = [f for f in _engine_files() if f not in PENDING]
+CHECKED = _engine_files()
 
 
 def _module_strings(tree):
@@ -147,10 +144,6 @@ def test_codes_have_catalog_entries(rel):
     assert not bad, "add CATALOG entries in engine/findings.py:\n" + "\n".join(bad)
 
 
-def test_pending_names_only_files_that_emit_findings():
-    assert PENDING <= set(_engine_files())
-
-
 def test_message_words_counts_fstrings_and_clipped_text():
     consts = {"REASON": "acceptance gate command failed"}
     expr = ast.parse(
@@ -259,3 +252,80 @@ def test_make_finding_is_only_called_by_name():
                     and any(k.arg is None for k in node.keywords)):
                 bad.append(f"{p.relative_to(PLUGIN_ROOT)}:{node.lineno}: **kwargs")
     assert not bad, "\n".join(bad)
+
+
+FIXTURES = PLUGIN_ROOT / "tests" / "fixtures"
+REPO_LOCAL_CODES = {"NAMESPACE_CAPTURE"}  # the gates.extra fixture's own code
+
+
+def test_rubric_codes_have_catalog_entries_and_short_summaries():
+    from engine.review.rubrics import _deterministic_rubrics, _model_rubrics
+    for r in _deterministic_rubrics() + _model_rubrics(None):
+        assert r["id"] in CATALOG, r["id"]
+        assert len(f"slice slice-042 {r['summary']}.".split()) <= MAX_MESSAGE_WORDS
+        assert r["fix"]
+
+
+def _sweep(toy):
+    """Drive every event fixture and the main gate paths; collect findings."""
+    import yaml
+    gates_dir = toy / ".harness" / "gates"
+    gates_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("good_gate.py", "bad_gate.py"):
+        shutil.copy(FIXTURES / "extra_gates" / name, gates_dir / name)
+    cfg = toy / ".harness" / "config.yaml"
+    doc = yaml.safe_load(cfg.read_text())
+    doc.setdefault("gates", {})["extra"] = [
+        ".harness/gates/good_gate.py", ".harness/gates/bad_gate.py"]
+    cfg.write_text(yaml.safe_dump(doc, sort_keys=False))
+    findings = []
+    loaded_context(toy, session="sweep")
+    for path in sorted((FIXTURES / "events").glob("*.json")):
+        event = dict(json.loads(path.read_text())["event"], session_id="sweep")
+        findings += handle_event(event, toy)["findings"]
+    for event, files in (("pre_change", ["rogue.py"]),
+                         ("pre_change", ["legacy/exporter.py"]),
+                         ("pre_change", ["src/kente/__init__.py"]),
+                         ("pre_change", [".claude/memory/shared/new.md"]),
+                         ("post_change", ["orders.py"]),
+                         ("unit_complete", [])):
+        findings += handle_event(make_event(event, session="sweep",
+                                            files=files), toy)["findings"]
+    (toy / "tests" / "slices" / "042_orders.py").unlink()
+    findings += handle_event(make_event("session_start", session="sweep-g1"),
+                             toy)["findings"]
+    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
+    rows[0]["predicted_files"] = "orders.py"          # schema: must be a list
+    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
+    findings += json.loads(run_cli("verify", root=toy).stdout)["findings"]
+    return findings
+
+
+@pytest.fixture(scope="module")
+def swept(tmp_path_factory):
+    return _sweep(build_toy_repo(tmp_path_factory.mktemp("sweep") / "toy"))
+
+
+def test_the_sweep_reaches_the_main_gates(swept):
+    codes = {f["code"] for f in swept}
+    assert {"UNDECLARED_FILE", "NON_GOAL_VIOLATION", "MANIFEST_INCOMPLETE",
+            "EXTRA_GATE_LOAD_ERROR", "SCHEMA_INVALID",
+            "SHARED_MEMORY_WRITE"} <= codes, codes
+
+
+def test_every_swept_message_has_25_words_or_fewer(swept):
+    long = [(f["code"], f["message"]) for f in swept
+            if len(f["message"].split()) > MAX_MESSAGE_WORDS]
+    assert not long, long
+
+
+def test_every_swept_non_advisory_finding_has_a_fix(swept):
+    missing = [f["code"] for f in swept
+               if f["severity"] != "advisory" and not f.get("fix")
+               and f["code"] not in REPO_LOCAL_CODES]
+    assert not missing, missing
+
+
+def test_every_swept_code_has_a_catalog_entry(swept):
+    unknown = {f["code"] for f in swept} - set(CATALOG) - REPO_LOCAL_CODES
+    assert not unknown, unknown

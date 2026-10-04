@@ -58,18 +58,56 @@ def _secret_findings(root, diff_text, slice_id):
         for label, pattern in SECRET_PATTERNS:
             if pattern.search(line):
                 sev = "advisory" if current in overridden else "block"
-                findings.append(make_finding(
-                    "SECRET_IN_DIFF", "review:layer0",
-                    f"{current or '<unknown file>'}: added line matches the "
-                    f"{label} pattern"
-                    + (" (override recorded — audited)" if sev == "advisory"
-                       else " — remove it, or record a false-positive "
-                            "override: `harness gates override --slice "
-                            f"{slice_id} --target secret:{current} "
-                            "--rule-ref review:layer0 --justification "
-                            '"<why>"`'),
-                    severity=sev, key=f"{current}|{label}"))
+                where = current or "<unknown file>"
+                if sev == "advisory":
+                    findings.append(make_finding(
+                        "SECRET_IN_DIFF", "review:layer0",
+                        f"{where}: an added line matches the {label} pattern; "
+                        f"a recorded override accepts it.",
+                        severity="advisory", key=f"{current}|{label}"))
+                else:
+                    findings.append(make_finding(
+                        "SECRET_IN_DIFF", "review:layer0",
+                        f"{where}: an added line matches the {label} secret "
+                        f"pattern.",
+                        severity="block", key=f"{current}|{label}",
+                        fix=f"Remove the secret, or record a false positive: "
+                            f"harness gates override --slice {slice_id} "
+                            f"--target secret:{current} --rule-ref "
+                            f"review:layer0 --justification \"<why>\""))
                 break
+    return findings
+
+
+def _glossary_findings(root, diff_text):
+    """Advisory GLOSSARY_SYNONYM findings over added markdown lines.
+
+    Code files are never checked: an identifier is not prose (spec 9.2).
+    Each synonym is reported once per file.
+    """
+    from ..events import make_finding
+    from ..lint_text import GLOSSARY_PATH, find_synonyms, load_glossary
+    glossary = load_glossary(Path(root) / GLOSSARY_PATH)
+    if not glossary:
+        return []
+    findings, current, seen = [], None, set()
+    for line in (diff_text or "").splitlines():
+        if line.startswith("+++ "):
+            current = line[6:] if line.startswith("+++ b/") else None
+            continue
+        if (current is None or not current.endswith(".md")
+                or current == GLOSSARY_PATH or not line.startswith("+")):
+            continue
+        for syn, term in find_synonyms(line[1:], glossary):
+            if (current, syn) in seen:
+                continue
+            seen.add((current, syn))
+            findings.append(make_finding(
+                "GLOSSARY_SYNONYM", "review:layer0",
+                f"{current}: added text uses {syn!r}; the glossary term is "
+                f"{term!r}.",
+                severity="advisory", key=f"{current}|{syn}",
+                fix=f"Replace {syn!r} with {term!r}, or edit {GLOSSARY_PATH}."))
     return findings
 
 
@@ -99,6 +137,7 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
     finally:
         sidecar.close()
     gate_findings.extend(_secret_findings(root, diff_text, slice_id))
+    gate_findings.extend(_glossary_findings(root, diff_text))
 
     ud = uses_vs_declares(root, slice_id)
     sl = get_slice(root, slice_id)

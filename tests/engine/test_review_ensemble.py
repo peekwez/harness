@@ -4,7 +4,7 @@ import json
 
 import yaml
 
-from conftest import run_cli
+from conftest import finding_text, run_cli
 from engine import DEFAULT_CONFIG, load_config
 from engine.review import run_review
 from engine.review.golden import ReplayModel
@@ -53,7 +53,8 @@ def test_off_parks_a_low_confidence_block_without_resampling(toy):
     parked = [f for f in result["findings"] if f["code"] == "REVIEW_UNCERTAIN"]
     assert parked and parked[0]["severity"] == "gate"
     assert result["verdict"] == "allow_with_findings"
-    assert "review.ensemble is off" in parked[0]["message"]
+    assert "review.ensemble is off" in finding_text(parked[0])
+    assert "rubric R-decisions is uncertain" in parked[0]["message"]
 
 
 def test_on_resamples_three_times(toy):
