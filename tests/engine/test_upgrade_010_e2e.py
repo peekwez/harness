@@ -113,12 +113,14 @@ def test_shadows_are_untracked_deleted_and_the_cache_is_ignored(upgraded):
     assert all("shadow" not in row for row in read_jsonl(root / ".harness/registry.jsonl"))
 
 
-def test_an_ignored_untracked_shadow_is_deleted_too(upgraded):
-    if upgraded.variant != "0.9.4+broad-site-ignore":
-        pytest.skip("only the broad site ignore leaves a shadow on disk but untracked")
+def test_an_ignored_untracked_shadow_is_deleted_too(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra", ignore_site_broad=True)
     site_shadow = ".harness/shadows/site/assets/javascripts/bundle.js.json"
-    assert site_shadow not in upgraded.tracked_before
-    assert not (upgraded.root / site_shadow).exists()
+    assert (root / site_shadow).exists()
+    assert git(root, "ls-files", site_shadow).stdout == ""
+    proc, out = _upgrade(root)
+    assert proc.returncode == 0, out.get("failures")
+    assert not (root / site_shadow).exists()
 
 
 def test_telemetry_becomes_slice_metrics(upgraded):
@@ -387,8 +389,59 @@ def test_a_09_machine_with_a_live_sidecar_upgrades(tmp_path):
     assert proc.returncode == 0, out.get("failures")
     doctor = json.loads(run_cli("doctor", "--substrate", root=root).stdout)
     assert doctor["substrate_healthy"] is True, doctor
-    metrics = root / ".harness/slice-metrics.jsonl"
-    kept = metrics.exists() and "slice-043" in metrics.read_text()
-    reported = any("telemetry" in line for line in out["human_checks"])
-    kept_in_cache = "slice-043" in (root / ".harness/cache/events.jsonl").read_text()
-    assert kept or reported or kept_in_cache
+    # the slice is still open: its buffered and file events wait in the cache
+    assert "slice-043" not in (root / ".harness/slice-metrics.jsonl").read_text()
+    cached = [(r["ts"], r["meta"]["slice"])
+              for r in read_jsonl(root / ".harness/cache/events.jsonl")]
+    expected = [(r["ts"], "slice-043") for r in
+                legacy_events("slice-043", 9, 5) + legacy_events("slice-043", 12, 3)]
+    assert sorted(cached) == sorted(expected)
+
+
+def _stop_short(root):
+    proc = run_cli("upgrade", root=root)
+    assert json.loads(proc.stdout)["status"] == "incomplete"
+
+
+def _uncommitted_check(out):
+    return [h for h in out["human_checks"] if "uncommitted edits" in h]
+
+
+def test_a_human_edit_to_a_carried_file_after_a_partial_commit_stays_out(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _stop_short(root)
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "partial")
+    glossary = root / "docs/glossary.md"
+    glossary.write_text(glossary.read_text() + "\nHUMAN EDIT\n")
+    proc, out = _upgrade(root)
+    assert proc.returncode == 0 and out["status"] == "upgraded", out["failures"]
+    assert "docs/glossary.md" not in out["commit"]["paths"]
+    assert any("docs/glossary.md" in h for h in _uncommitted_check(out))
+    _commit(out)
+    assert git(root, "status", "--porcelain").stdout.strip() == "M docs/glossary.md"
+
+
+def test_an_edit_to_a_carried_file_is_the_humans_not_the_upgrades(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _stop_short(root)
+    claude_md = root / "CLAUDE.md"
+    claude_md.write_text(claude_md.read_text() + "\nMY OWN NOTE\n")
+    proc, out = _upgrade(root)
+    assert out["status"] == "upgraded", out["failures"]
+    assert "CLAUDE.md" not in out["commit"]["paths"]
+    assert ".harness/schema_version" in out["commit"]["paths"]      # still carried
+    assert any("CLAUDE.md" in h for h in _uncommitted_check(out))
+
+
+def test_a_stashed_upgrade_on_a_new_branch_carries_nothing_of_the_humans(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _stop_short(root)
+    git(root, "stash", "-u")
+    git(root, "checkout", "-qb", "other")
+    config = root / ".harness/config.yaml"
+    config.write_text(config.read_text() + "# my edit\n")
+    proc, out = _upgrade(root)
+    assert out["status"] == "upgraded", out["failures"]
+    assert any(".harness/config.yaml" in h for h in _uncommitted_check(out))
+    assert not (root / ".harness/cache/upgrade-carry.json").exists()

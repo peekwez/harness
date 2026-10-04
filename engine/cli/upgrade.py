@@ -211,8 +211,11 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     ask = ask or make_ask(yes)
     before = rep.snapshot(root)
     staged_before = rep.staged_paths(root)
-    carried = rep.carried_paths(root)       # an earlier run's own changes
-    dirty_before = sorted(set(rep.dirty_paths(root)) - set(carried))
+    record = rep.carry_record(root)         # an earlier run's own changes
+    carried = rep.carried_paths(root, record)
+    dirty = set(rep.dirty_paths(root))
+    dirty_before = sorted(dirty - set(carried))
+    edited = sorted((set(record) - set(carried)) & dirty)
 
     # Migration is deliberately the first write.  New code must never read
     # old substrate rows as though they already had the current schema.
@@ -286,7 +289,7 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
         "human_checks": rep.human_checks(
             steps, pending=pending, staged_before=staged_before,
             dirty_before=dirty_before, files=files, checks=checks,
-            is_repo=(root / ".git").exists(), advice=advice),
+            is_repo=(root / ".git").exists(), advice=advice, edited=edited),
         "commit": commit if status == "upgraded" else None,
         "warnings": warnings,
     }

@@ -113,7 +113,8 @@ def step_lines(row: dict) -> list[str]:
 
 
 def human_checks(steps, *, pending, staged_before, dirty_before, files,
-                 checks, is_repo, advice=()) -> list[str]:
+                 checks, is_repo, advice=(), edited=()) -> list[str]:
+    """`edited`: files an earlier run wrote that the human changed since."""
     out = [f"{row['id']}: {row['check']}" for row in advice]
     for row in steps:
         for line in step_lines(row):
@@ -123,7 +124,7 @@ def human_checks(steps, *, pending, staged_before, dirty_before, files,
         out.append(f"{CHECK}steps {_few(pending)} still have changes. "
                    "Run: harness upgrade --yes")
     touched = set(files["added"]) | set(files["modified"]) | set(files["removed"])
-    mixed = sorted(set(dirty_before) & touched)
+    mixed = sorted((set(dirty_before) & touched) | set(edited))
     if mixed:
         out.append(f"{CHECK}you had uncommitted edits in {_few(mixed)}. "
                    "Review them before you commit.")
@@ -158,21 +159,54 @@ def commit_proposal(root, files) -> dict | None:
             "command": command}
 
 
-# The changes of a run that proposed no commit. The next run adds them to its
-# own, so its one commit covers the whole upgrade.
+# The changes of a run that proposed no commit, with the bytes it left. The
+# next run adds a path to its own changes only while the path still holds
+# those bytes; anything else is the human's edit.
 CARRY_REL = ".harness/cache/upgrade-carry.json"
 COMMITTED = ("upgraded", "already on 0.10")
 
 
-def carried_paths(root) -> list[str]:
-    """The paths an earlier run changed but did not propose. A missing or
-    unreadable record is empty: the record is advisory cache state."""
+def _head(root) -> str | None:
+    done = subprocess.run(["git", "-C", str(root), "rev-parse", "-q", "--verify", "HEAD"],
+                          capture_output=True, text=True)
+    return (done.stdout.strip() or None) if done.returncode == 0 else None
+
+
+def _same_history(root, recorded) -> bool:
+    """The record still applies: HEAD is the recorded commit or descends from it."""
+    if not _is_repo(root):
+        return True
+    head = _head(root)
+    if recorded is None or head is None:
+        return recorded == head
+    return recorded == head or subprocess.run(
+        ["git", "-C", str(root), "merge-base", "--is-ancestor", recorded, head],
+        capture_output=True).returncode == 0
+
+
+def _digest(root, rel):
+    path = Path(root) / rel
+    return sha256_file(path) if path.is_file() else None
+
+
+def carry_record(root) -> dict:
+    """{path: sha256 or None for a removal} from an earlier run on this line
+    of history. A missing, unreadable or foreign record is empty."""
     try:
         data = json.loads((Path(root) / CARRY_REL).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return []
+        return {}
     paths = data.get("paths") if isinstance(data, dict) else None
-    return sorted({p for p in paths if isinstance(p, str)}) if isinstance(paths, list) else []
+    if not isinstance(paths, dict) or not _same_history(root, data.get("head")):
+        return {}
+    return {p: h for p, h in paths.items()
+            if isinstance(p, str) and (h is None or isinstance(h, str))}
+
+
+def carried_paths(root, record=None) -> list[str]:
+    """The recorded paths that still hold the bytes the upgrade left."""
+    record = carry_record(root) if record is None else record
+    return sorted(p for p, h in record.items() if _digest(root, p) == h)
 
 
 def carry_files(root, files: dict, carried) -> dict:
@@ -185,7 +219,7 @@ def carry_files(root, files: dict, carried) -> dict:
     head = set()
     if _is_repo(root):
         extra &= set(dirty_paths(root))     # the human may have committed some
-        if _has_head(root):
+        if _head(root):
             head = set(_nul_list(_git(root, "ls-tree", "-r", "-z", "--name-only",
                                       "HEAD").stdout))
     out = {k: list(v) for k, v in files.items()}
@@ -196,28 +230,25 @@ def carry_files(root, files: dict, carried) -> dict:
     return {k: sorted(v) for k, v in out.items()}
 
 
-def _has_head(root) -> bool:
-    return subprocess.run(["git", "-C", str(root), "rev-parse", "-q", "--verify", "HEAD"],
-                          capture_output=True).returncode == 0
-
-
 def save_carry(root, status: str, files: dict) -> None:
-    """Forget the record once a run proposes the commit or finds nothing to
-    do. Otherwise keep this run's paths for the next run. The record lives in
-    the gitignored cache only."""
+    """Keep this run's paths, their bytes and HEAD for the next run when it
+    proposed no commit. Otherwise forget the record. A run with no changes
+    clears it too: no recorded path still holds the upgrade's bytes. The
+    record lives in the gitignored cache only."""
     root = Path(root)
     path = root / CARRY_REL
     paths = sorted(set(files["added"]) | set(files["modified"]) | set(files["removed"]))
     if status in COMMITTED or not paths:
-        if status in COMMITTED:
-            path.unlink(missing_ok=True)
+        path.unlink(missing_ok=True)
         return
     if _is_repo(root) and subprocess.run(
             ["git", "-C", str(root), "check-ignore", "-q", CARRY_REL],
             capture_output=True).returncode != 0:
         return                  # never leave an untracked file in the tree
+    record = {"head": _head(root) if _is_repo(root) else None,
+              "paths": {rel: _digest(root, rel) for rel in paths}}
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"paths": paths}, indent=1) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n", encoding="utf-8")
 
 
 HARNESS_BIN = Path(__file__).resolve().parents[1] / "bin" / "harness"

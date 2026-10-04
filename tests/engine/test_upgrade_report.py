@@ -1,10 +1,12 @@
 """engine.upgrade_report: what changed, what the human checks, one commit."""
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 
 from conftest import ASTRA_ORDERS_PY, _write, build_astralabs_094_repo, git
+from engine import sha256_file
 from engine import upgrade_report as rep
 
 
@@ -278,18 +280,65 @@ def test_a_stage_failure_fails_the_upgrade():
                               failures=[{"code": "STAGE_FAILED"}]) == "failed"
 
 
-def test_carry_records_a_run_without_a_commit_and_forgets_it_after_one(tmp_path):
-    root = build_astralabs_094_repo(tmp_path / "astra")
+def _ignore_cache(root):
     _write(root, ".gitignore", (root / ".gitignore").read_text() + ".harness/cache/\n")
     git(root, "commit", "-qam", "ignore the cache")
+
+
+def test_carry_records_hashes_and_head_and_forgets_after_a_commit(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _ignore_cache(root)
     _write(root, ".harness/schema_version", "2\n")
-    files = {"added": [], "modified": [".harness/schema_version"], "removed": []}
+    (root / ".harness/notes.jsonl").unlink()
+    files = {"added": [], "modified": [".harness/schema_version"],
+             "removed": [".harness/notes.jsonl"]}
     rep.save_carry(root, "incomplete", files)
-    assert rep.carried_paths(root) == [".harness/schema_version"]
-    assert git(root, "status", "--porcelain").stdout.strip() == "M .harness/schema_version"
+    record = json.loads((root / rep.CARRY_REL).read_text())
+    assert record["head"] == git(root, "rev-parse", "HEAD").stdout.strip()
+    assert record["paths"] == {
+        ".harness/schema_version": sha256_file(root / ".harness/schema_version"),
+        ".harness/notes.jsonl": None}
+    assert rep.carried_paths(root) == [".harness/notes.jsonl", ".harness/schema_version"]
+    assert git(root, "status", "--porcelain").stdout.count("\n") == 2   # no record file
     rep.save_carry(root, "upgraded", files)
     assert rep.carried_paths(root) == []
     assert not (root / rep.CARRY_REL).exists()
+
+
+def test_a_run_with_no_changes_and_no_commit_clears_a_stale_record(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _ignore_cache(root)
+    _write(root, ".harness/schema_version", "2\n")
+    rep.save_carry(root, "incomplete", {"added": [], "modified": [".harness/schema_version"],
+                                        "removed": []})
+    rep.save_carry(root, "checks failed", {"added": [], "modified": [], "removed": []})
+    assert not (root / rep.CARRY_REL).exists()
+
+
+def test_a_carried_path_edited_since_the_stopped_run_is_the_humans(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _ignore_cache(root)
+    _write(root, ".harness/schema_version", "2\n")
+    _write(root, "docs/glossary.md", "# Glossary\n")
+    rep.save_carry(root, "incomplete", {"added": ["docs/glossary.md"],
+                                        "modified": [".harness/schema_version"],
+                                        "removed": []})
+    _write(root, "docs/glossary.md", "# Glossary\n\nHuman edit.\n")
+    assert rep.carried_paths(root) == [".harness/schema_version"]
+
+
+def test_a_record_from_another_line_of_history_is_ignored(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _ignore_cache(root)
+    _write(root, ".harness/schema_version", "2\n")
+    rep.save_carry(root, "incomplete", {"added": [], "modified": [".harness/schema_version"],
+                                        "removed": []})
+    git(root, "commit", "-qam", "partial upgrade")          # a descendant keeps the record
+    _write(root, ".harness/schema_version", "2\n")
+    assert rep.carried_paths(root) == [".harness/schema_version"]
+    git(root, "checkout", "-q", "--orphan", "elsewhere")      # unrelated history drops it
+    git(root, "commit", "-qm", "unrelated root")
+    assert rep.carried_paths(root) == []
 
 
 def test_carry_files_adds_earlier_changes_that_are_still_uncommitted(tmp_path):
@@ -308,7 +357,6 @@ def test_carry_files_adds_earlier_changes_that_are_still_uncommitted(tmp_path):
 
 
 def test_a_corrupt_carry_file_reads_as_empty(tmp_path):
-    _write(tmp_path, rep.CARRY_REL, "{not json")
-    assert rep.carried_paths(tmp_path) == []
-    _write(tmp_path, rep.CARRY_REL, '["a"]')
-    assert rep.carried_paths(tmp_path) == []
+    for text in ("{not json", '["a"]', '{"head": null, "paths": ["a"]}'):
+        _write(tmp_path, rep.CARRY_REL, text)
+        assert rep.carried_paths(tmp_path) == []

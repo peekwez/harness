@@ -413,3 +413,19 @@ def test_a_rerun_after_a_declined_step_proposes_the_whole_upgrade(tmp_path):
                           cwd=out["commit"]["cwd"], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
     assert git(root, "status", "--porcelain").stdout == ""
+
+
+def test_a_record_from_unrelated_history_is_ignored(tmp_path):
+    from engine import upgrade_report as rep
+    from engine.cli.upgrade import make_ask, upgrade_project
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    upgrade_project(root, ask=make_ask(False, stdin=io.StringIO(), stderr=io.StringIO()))
+    record = json.loads((root / rep.CARRY_REL).read_text())
+    git(root, "stash", "-u")
+    git(root, "checkout", "-q", "--orphan", "fresh")
+    git(root, "commit", "-qm", "a new root")
+    git(root, "stash", "pop")
+    assert git(root, "rev-parse", "HEAD").stdout.strip() != record["head"]
+    out = upgrade_project(root, yes=True)
+    assert out["status"] == "upgraded"
+    assert ".harness/schema_version" not in out["commit"]["paths"]
