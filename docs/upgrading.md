@@ -6,12 +6,15 @@ This page describes the 0.10 upgrade as the engine runs it. It lists each step t
 
 ## Before you start
 
-1. Commit or stash your work. A clean tree shows exactly what the upgrade changed.
+1. Commit or stash your work. A clean tree shows exactly what the upgrade changed. Don't edit files while the upgrade runs; edits made during the run land in the proposed commit.
 2. Read the plan first. `harness upgrade --plugin --host claude --dry-run` prints only the host commands that it would run. `harness upgrade --dry-run` prints the step plan for the project. Use `--host codex` for Codex.
-3. Update the plugin and the project: `harness upgrade --plugin --host claude`.
-4. Start a new session, so that the host loads the 0.10 skills and hooks.
+3. Update the plugin with the host command that the plugin dry run printed, for example `claude plugin update harness@harness-marketplace --scope user`.
+4. Start a new session, so that the host loads the 0.10 skills, hooks and engine.
+5. In the project, run the new engine: `harness upgrade --yes`.
 
-`--plugin` updates the plugin through the host, then runs the new engine on the project. That run has no terminal, so each step that needs a confirmation is skipped. Add `--yes`, or run `harness upgrade` again in a terminal.
+From 0.9.x, use these two steps: update the plugin, then run the new engine. Do not use `harness upgrade --plugin` from 0.9. The 0.9 CLI has no `--yes`, and the 0.10 engine that it starts gets no terminal. That run skips each step that needs a confirmation. 0.9 then reports the incomplete upgrade as `command failed`, with the 0.10 report inside the message. The changes from that run stay. Run `harness upgrade --yes` with the new engine to finish.
+
+From 0.10 on, `harness upgrade --plugin --host claude --yes` does both steps. `--plugin` updates the plugin through the host, then runs the new engine on the project. That run has no terminal, so without `--yes` each step that needs a confirmation is skipped.
 
 ## Run the upgrade
 
@@ -26,7 +29,7 @@ harness upgrade --yes
 - A step that moves or deletes files asks first, with a `[y/N]` prompt.
 - `--yes` accepts each prompt. Use it in CI or in a script.
 - Without a terminal, a step that needs a confirmation is skipped. The report lists it with the fix `harness upgrade --yes`.
-- A run that stops short records the files that it changed in `.harness/cache/`. The next run adds them to its commit proposal, so one commit holds the whole upgrade.
+- Each run records the files that it changed in `.harness/cache/`. Until you commit them, the next run adds them to its commit proposal. So one commit holds the whole upgrade, and a second run before the commit proposes the same commit.
 
 The upgrade runs in this order:
 
@@ -34,7 +37,7 @@ The upgrade runs in this order:
 2. It repairs old 0.8 and 0.9 overrides and graph records.
 3. It runs each 0.10 step that has pending changes.
 4. It installs the merge drivers, refreshes the vendored engine in `.harness/engine/` and refreshes a harness-written CI workflow.
-5. It refreshes the harness commands in `.codex/hooks.json` and harness-written Claude settings.
+5. It refreshes the harness commands in `.codex/hooks.json` and harness-written Claude settings. When this removes something from `.claude/settings.json` or changes `.codex/hooks.json`, upgrade keeps the old file in `.harness/cache/<name>.pre-0.10` and prints a `check:` line. `.claude/settings.local.json` keeps each permission and key that you added.
 6. It refreshes the registry rows whose source did not change before the upgrade.
 7. It validates the substrate.
 8. It runs `harness doctor --substrate` and `harness verify`, each in a new process.
@@ -44,7 +47,9 @@ If a step fails, the steps after it do not run. The steps before it keep their c
 
 Upgrade does not commit. Its only change to the git index is `git rm --cached` for `.harness/shadows/` and `.harness/memory/`, which stay out of git from now on. The commit proposal includes these deletions. Read `git status` and `git diff`, then commit.
 
-A file without a harness marker is never edited. For such a file, upgrade prints a `check:` line that says what to change by hand. A second run finds no pending step, and it prints the `check:` lines again.
+Upgrade does not rewrite `AGENTS.md`, `CLAUDE.md`, the CI workflow or a Claude settings file that has no harness marker. It edits only the harness lines in two kinds of unmarked files: it adds and removes harness rules in `.gitattributes` and `.gitignore`, and it changes the harness commands in `.codex/hooks.json`. For an unmarked file that it does not edit, upgrade prints a `check:` line that says what to change by hand. A second run finds no pending step, and it prints the `check:` lines again.
+
+Upgrade never overwrites a backup in `.harness/cache/`. When a backup with other content is already there, upgrade uses the next free name, for example `AGENTS.md.pre-0.10.2`. The cache is gitignored, so delete each backup when you are done with it.
 
 ## What upgrade changes
 
@@ -130,17 +135,17 @@ Read the upgrade report. It is JSON with these parts:
 - `files`: the files that the upgrade added, modified and removed.
 - `checks`: the result of `harness doctor --substrate` and `harness verify`.
 - `failures`: each problem, with the step that caused it, or `none` if the problem was there before the upgrade, and the fix.
-- `human_checks`: each thing that you must do by hand. This includes a skipped step, your uncommitted edits in a file that the upgrade changed, and staged changes from before the upgrade.
-- `commit`: the one commit to run from the repo root. It is `null` unless the status is `upgraded`.
+- `human_checks`: each thing that you must do by hand. This includes a skipped step, your uncommitted edits in a file that the upgrade changed, and staged changes from before the upgrade. It also names each backup of a refreshed file.
+- `commit`: the one commit to run from the repo root. It is `null` unless the status is `upgraded`. `git commit` commits the whole index, so upgrade proposes no commit while the index holds staged changes that the upgrade did not make.
 - `warnings`: skipped steps, kept files and registry rows that were not refreshed.
 - `vendored_engine`, `workflow`, `claude` and `codex_adapter`: what upgrade did to each file that it refreshes.
 
 | Status | Meaning |
 |---|---|
 | `upgraded` | The upgrade changed files and all checks passed. Run the `commit` command. |
-| `already on 0.10` | The upgrade found nothing to change. |
+| `already on 0.10` | The upgrade found nothing to change, and you committed its earlier changes. |
 | `incomplete` | A step was skipped or still has changes. Run `harness upgrade --yes`. |
-| `checks failed` | Doctor, verify or validation found a problem. Do the fix in `failures`. |
+| `checks failed` | Doctor, verify or validation found a problem, or the index holds staged changes that the upgrade did not make. Do the fix in `failures` or in `human_checks`. |
 | `failed` | A step or another part of the upgrade stopped with an error. Fix the cause, then run `harness upgrade --yes`. |
 
 The command exits 0 for `upgraded`, `already on 0.10` and `--dry-run`. It exits 1 for `incomplete`, `checks failed` and `failed`, so CI stops. The JSON report prints in every case. Without a terminal, upgrade never prompts: it skips each step that needs confirmation and reports `incomplete`. Pass `--yes` to accept every prompt.
