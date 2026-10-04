@@ -9,6 +9,7 @@ document; close reads it into slice metrics.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 from pathlib import Path
@@ -44,8 +45,6 @@ _NO_EVIDENCE = re.compile(r"^no evidence\b", re.I)
 _NO_EVIDENCE_OK = re.compile(r"^no evidence:\s*\S", re.I)
 _CHOSEN = re.compile(r"(?:option\s+)?([A-Z])|(parked)", re.I)
 _CARD_ID = re.compile(r"D-E[0-9]+")
-_STATEMENT_LINE = re.compile(
-    r"^\s*(?:[-*]\s+)?(?:\*\*)?`?(V-[^\s:`*]*)`?(?:\*\*)?\s*:\s*(.*)$")
 _OPEN_HEAD = re.compile(r"^##\s+(\S+?)\s*:\s*(.+?)\s*$")
 _OPEN_FIELD = re.compile(r"^[-*]\s+(Owner|Trigger)\s*:\s*(.*)$", re.I)
 SKIP_MARKER = re.compile(r"^<!-- explore-skipped: (.*?) -->[ \t]*$", re.M)
@@ -401,3 +400,149 @@ def validate_cards(cards: list[dict]) -> list[str]:
             problems.append(f"{cid}: 'Chosen' is {shown!r}. Write an "
                             f"option letter from this card, or 'parked'.")
     return problems
+
+
+# ------------------------------------------------------------------ OPEN.md / VERIFY.md
+def parse_open(text: str) -> dict[str, dict]:
+    """Reads parked questions: `## <id>: <question>` plus Owner and Trigger.
+
+    Returns:
+        Map from question id to `{"question", "owner", "trigger"}`.
+    """
+    out: dict[str, dict] = {}
+    current = None
+    for line in _clean(text).splitlines():
+        head = _OPEN_HEAD.match(line)
+        if head:
+            current = {"question": head.group(2), "owner": "", "trigger": ""}
+            out[head.group(1)] = current
+            continue
+        field = _OPEN_FIELD.match(line.strip())
+        if field and current is not None:
+            current[field.group(1).lower()] = field.group(2).strip()
+    return out
+
+
+def check_statements(text: str) -> tuple[list[dict], list[str]]:
+    """Checks `explore/VERIFY.md` the way `harness compile` reads it.
+
+    Args:
+        text: The file content. Fenced blocks are skipped. HTML comments
+            are not: compile reads them (spec 6.1).
+
+    Returns:
+        (statements from `engine.statements.parse_statements`, problems).
+    """
+    from engine.statements import parse_statements, skipped_statement_lines
+    source = f"{EXPLORE_DIR}/VERIFY.md"
+    problems: list[str] = []
+    try:
+        statements = parse_statements(text, source)
+    except HarnessError as exc:
+        problems.append(str(exc))
+        statements = []
+    problems += skipped_statement_lines(text, source)
+    if not statements and not problems:
+        problems.append("explore/VERIFY.md has no statements. Write one "
+                        "V-<feature>-<n> line for each feature.")
+    return statements, problems
+
+
+# ------------------------------------------------------------------ git
+def _git(root, *args) -> str:
+    proc = subprocess.run(["git", "-C", str(root), *args],
+                          capture_output=True, text=True)
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
+def git_identity(root) -> str:
+    """`Name <email>` from git config, or "" when user.name is not set."""
+    name = _git(root, "config", "user.name")
+    email = _git(root, "config", "user.email")
+    if not name:
+        return ""
+    return f"{name} <{email}>" if email else name
+
+
+# ------------------------------------------------------------------ freeze
+def body_digest(text: str) -> str:
+    """sha256 of the DECISIONS.md body, without front matter."""
+    return hashlib.sha256(front_matter(text)[1].encode("utf-8")).hexdigest()
+
+
+def freeze_state(root) -> dict | None:
+    """`{"frozen_by", "frozen_at_commit"}` from DECISIONS.md, or None.
+
+    The digest is read with `body_digest`; compare it to `frozen_digest`.
+    """
+    path = explore_path(root, "DECISIONS.md")
+    if not path.is_file():
+        return None
+    try:
+        data, _ = front_matter(path.read_text(encoding="utf-8"))
+    except HarnessError:
+        return None
+    who, commit = data.get("frozen_by"), data.get("frozen_at_commit")
+    if not who or not commit:
+        return None
+    return {"frozen_by": str(who), "frozen_at_commit": str(commit)}
+
+
+def freeze(root) -> dict:
+    """Checks explore/ and signs DECISIONS.md (spec 5.5).
+
+    Args:
+        root: Repo root.
+
+    Returns:
+        `{"frozen": bool, "problems": [...]}` plus, when frozen,
+        `frozen_by`, `frozen_at_commit`, `frozen_digest`, `cards`, `chosen`, `parked` and
+        `statements`. Nothing is written when `problems` is not empty.
+    """
+    root = Path(root)
+    missing = [f"explore/{n} is missing. Run: harness explore"
+               for n in FILES if not explore_path(root, n).is_file()]
+    if missing:
+        return {"frozen": False, "problems": missing}
+    decisions_path = explore_path(root, "DECISIONS.md")
+    text = decisions_path.read_text(encoding="utf-8")
+    problems: list[str] = []
+    try:
+        front_matter(text)
+    except HarnessError as exc:
+        problems.append(f"explore/DECISIONS.md: {exc}. Fix the front matter.")
+    cards = parse_cards(text)
+    problems += validate_cards(cards)
+    opens = parse_open(explore_path(root, "OPEN.md")
+                       .read_text(encoding="utf-8"))
+    parked = [c for c in cards if chosen_letter(c) == "parked"]
+    for card in parked:
+        entry = opens.get(card["id"])
+        if entry is None or not entry["owner"] or not entry["trigger"] \
+                or _placeholder(entry["owner"]) \
+                or _placeholder(entry["trigger"]):
+            problems.append(f"{card['id']} is parked but explore/OPEN.md has "
+                            f"no owner and trigger for it. Add them.")
+    statements, statement_problems = check_statements(
+        explore_path(root, "VERIFY.md").read_text(encoding="utf-8"))
+    problems += statement_problems
+    who = git_identity(root)
+    if not who:
+        problems.append("git user.name is not set. Run: git config "
+                        "user.name \"<your name>\"")
+    commit = _git(root, "rev-parse", "HEAD")
+    if not commit:
+        problems.append("the repo has no commit. Commit explore/, then "
+                        "freeze again.")
+    if problems:
+        return {"frozen": False, "problems": problems}
+    digest = body_digest(text)
+    decisions_path.write_text(
+        set_front_matter(text, {"frozen_by": who, "frozen_at_commit": commit,
+                                "frozen_digest": digest}),
+        encoding="utf-8")
+    return {"frozen": True, "problems": [], "frozen_by": who,
+            "frozen_at_commit": commit, "frozen_digest": digest,
+            "cards": len(cards),
+            "chosen": len(cards) - len(parked), "parked": len(parked),
+            "statements": len(statements)}
