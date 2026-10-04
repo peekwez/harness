@@ -16,7 +16,6 @@ PENDING = {
     "engine/cli/acceptance.py",
     "engine/cli/close.py",
     "engine/cli/review.py",
-    "engine/cli/verify.py",
     "engine/review/layer0.py",
     "engine/review/rubrics.py",
 }

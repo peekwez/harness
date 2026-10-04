@@ -211,16 +211,21 @@ def cmd_verify(args):
         check_schema_version(root)
     except SchemaError as exc:
         from engine.events import make_finding
-        findings.append(make_finding("SCHEMA_MISMATCH", "gate:G1", str(exc),
-                                     severity="block", key="schema"))
+        from engine.findings import clip_words
+        findings.append(make_finding(
+            "SCHEMA_MISMATCH", "gate:G1", clip_words(str(exc)),
+            severity="block", key="schema", fix="Run: harness upgrade"))
 
     # substrate row schemas (§5.5/§5.6): a malformed row must fail here,
     # naming file/row/field, not three ceremonies later
     from engine.events import make_finding
+    from engine.findings import clip_words
     from engine.schema import validate_substrate
     for problem in validate_substrate(root):
-        findings.append(make_finding("SCHEMA_INVALID", "gate:G1", problem,
-                                     severity="block", key=problem[:80]))
+        findings.append(make_finding(
+            "SCHEMA_INVALID", "gate:G1", clip_words(problem),
+            severity="block", key=problem[:80],
+            fix="Fix the named field, then run: harness verify"))
 
     # manifest completeness against the built artifact. Files an OPEN slice
     # predicts are pending work, not the md-file-bug.
@@ -240,8 +245,11 @@ def cmd_verify(args):
                                            pending=pending))
     except HarnessError as exc:
         from engine.events import make_finding
-        findings.append(make_finding("MANIFEST_INCOMPLETE", "gate:G1", str(exc),
-                                     severity="block", key="registry"))
+        findings.append(make_finding(
+            "MANIFEST_INCOMPLETE", "gate:G1",
+            f"registry.jsonl cannot be read: {clip_words(str(exc), 18)}",
+            severity="block", key="registry",
+            fix="Repair .harness/registry.jsonl, then run: harness verify"))
         registry = []
 
     # hash validation for built entries (shadows are a lazy cache: nothing
@@ -256,14 +264,19 @@ def cmd_verify(args):
             if src.exists() and sha256_file(src) != e["source_hash"]:
                 findings.append(make_finding(
                     "HASH_MISMATCH", "gate:G1",
-                    f"registry {e['id']!r}: source_hash stale for {e['source']}",
-                    severity="block", key=e["id"]))
+                    f"registry entry {e['id']!r}: source_hash is stale for "
+                    f"{e['source']}.",
+                    severity="block", key=e["id"],
+                    fix=f"Run: harness registry refresh {e['id']}"))
         for ref in e.get("guidance_refs", []):
             if not (root / ref.split("#")[0]).exists():
                 findings.append(make_finding(
                     "MANIFEST_INCOMPLETE", "gate:G1",
-                    f"registry {e['id']!r}: guidance_ref {ref!r} missing",
-                    severity="block", key=e["id"] + "|" + ref))
+                    f"registry entry {e['id']!r}: guidance_ref {ref} does not "
+                    f"exist.",
+                    severity="block", key=e["id"] + "|" + ref,
+                    fix="Restore the file, or remove the reference from the "
+                        "ADR and run: harness compile"))
 
     # orphaned-notes detection (git failures are loud; only a non-repo skips).
     # A squash/rebase merge rewrites the sha a note was written on, so an
@@ -301,11 +314,12 @@ def cmd_verify(args):
                 continue
             findings.append(make_finding(
                 "ORPHANED_NOTE", "gate:G1",
-                f"git note on unreachable commit {n['commit']} with no "
-                f"tree-hash match in .harness/notes.jsonl "
-                f"(payload: {json.dumps(n['payload'])[:120]}); repair with "
-                f"`harness graph note --repoint <slice-id> <sha>`",
-                severity="block", key=n["commit"]))
+                f"git note on unreachable commit {n['commit'][:12]} matches no "
+                f"tree hash in .harness/notes.jsonl.",
+                severity="block", key=n["commit"],
+                inject=[f"payload: {json.dumps(n['payload'])[:120]}"],
+                fix=f"Run: harness graph note --repoint "
+                    f"{slices[0] if slices else '<slice-id>'} <sha>"))
 
     # uses/declares reconciliation for all closed slices. A missing backlog is
     # legal pre-Phase-0; a CORRUPT one must fail loud (md-file-bug class).
@@ -319,7 +333,9 @@ def cmd_verify(args):
         backlog = []
         findings.append(make_finding(
             "SCHEMA_MISMATCH", "gate:G1",
-            f"backlog.jsonl unreadable: {exc}", severity="block", key="backlog"))
+            f"backlog.jsonl cannot be read: {clip_words(str(exc), 18)}",
+            severity="block", key="backlog",
+            fix="Repair .harness/backlog.jsonl, then run: harness verify"))
     # provenance completeness: every CLOSED slice must carry a note naming
     # it. The orphan check above catches notes whose commit went away; this
     # catches the inverse — a slice closed with no note at all, which used
@@ -344,23 +360,25 @@ def cmd_verify(args):
         if not s.get("provenance_version"):
             findings.append(make_finding(
                 "LEGACY_GRAPH_PROVENANCE", "gate:G1",
-                f"closed slice {s['id']} predates complete graph evidence; "
-                "upgrade recovers explicit note facts, but historical imports and decisions "
-                "cannot be inferred", severity="advisory", key=s["id"] + "|legacy-graph"))
+                f"closed slice {s['id']} is older than complete graph "
+                f"evidence; harness cannot infer its old imports and "
+                f"decisions.",
+                severity="advisory", key=s["id"] + "|legacy-graph"))
         for gap in provenance_gaps(root, s):
             findings.append(make_finding(
                 "INCOMPLETE_GRAPH_PROVENANCE", "gate:G1",
-                f"closed slice {s['id']} is missing {gap}; restore its "
-                "recorded graph evidence", severity="block", key=s["id"] + "|" + gap))
+                f"closed slice {s['id']} is missing {clip_words(gap, 12)}.",
+                severity="block", key=s["id"] + "|" + gap,
+                fix="Restore the graph evidence of the slice from git "
+                    "history, then run: harness verify"))
         if (root / ".git").exists() and s["id"] not in noted \
                 and not _resolves(s["id"]):
             findings.append(make_finding(
                 "MISSING_PROVENANCE_NOTE", "gate:G1",
                 f"closed slice {s['id']} has no provenance note and no "
-                f"tree-hash key in .harness/notes.jsonl; provenance must "
-                f"travel with the repo — repair with `harness graph note "
-                f"--slice {s['id']} --commit <sha>`",
-                severity="block", key=s["id"] + "|note"))
+                f"tree-hash key in .harness/notes.jsonl.",
+                severity="block", key=s["id"] + "|note",
+                fix=f"Run: harness graph note --slice {s['id']} --commit <sha>"))
         if landing["mode"] == "pr" and not s.get("landed_via"):
             # closed in pr mode with no landing recorded at all: the close
             # never reached its landing step (an older close, a crash, a
@@ -368,28 +386,33 @@ def cmd_verify(args):
             # thing it must not be is silent.
             findings.append(make_finding(
                 "LANDING_PENDING", "adr:002",
-                f"slice {s['id']} is closed but records no landing "
-                f"(landed_via is unset) while landing.mode is pr — land it "
-                f"with `harness land --slice {s['id']}` from the slice's "
-                f"worktree, or record how it landed",
-                severity="advisory", key=s["id"] + "|landing"))
+                f"slice {s['id']} is closed, but it records no landing "
+                f"and landing.mode is pr.",
+                severity="advisory", key=s["id"] + "|landing",
+                fix=f"Run from the slice worktree: harness land --slice "
+                    f"{s['id']}"))
         if s.get("landed_via") == "pending":
             # closed, but the push or the PR command did not go through: not
             # a block (the work IS closed and committed), and not silence
             # either — the branch is not on the forge yet
             findings.append(make_finding(
                 "LANDING_PENDING", "adr:002",
-                f"slice {s['id']} closed but its landing did not complete: "
-                f"{str(s.get('landing_error', ''))[:200]} — re-land with "
-                f"`harness land --slice {s['id']}` from the slice's worktree",
-                severity="advisory", key=s["id"] + "|landing"))
+                f"slice {s['id']} is closed, but its landing did not finish: "
+                f"{clip_words(str(s.get('landing_error', '')), 10)}",
+                severity="advisory", key=s["id"] + "|landing",
+                fix=f"Run from the slice worktree: harness land --slice "
+                    f"{s['id']}"))
         ud = uses_vs_declares(root, s["id"])
         und = ud["unresolved"]
         if und:
             findings.append(make_finding(
                 "UNRECONCILED_SLICE", "gate:G5",
-                f"closed slice {s['id']}: undeclared uses {und}",
-                severity="block", key=s["id"]))
+                f"closed slice {s['id']} has undeclared uses: "
+                f"{', '.join(map(str, und[:3]))}.",
+                severity="block", key=s["id"],
+                fix=f"Add each use to declares_dep of slice {s['id']}, or "
+                    f"run: harness gates override --slice {s['id']} --target "
+                    f"<target> --justification \"<why>\""))
 
     passed = not any(f["severity"] == "block" for f in findings)
     report = {"passed": passed, "findings": findings}
