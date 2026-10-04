@@ -29,7 +29,7 @@ const EDIT_TOOLS = new Set(["edit", "write", "create", "apply_patch", "multi_edi
 
 type Verdict = {
   verdict: "allow" | "allow_with_findings" | "block";
-  findings: Array<{ code: string; rule_ref: string; message: string; inject?: string[] }>;
+  findings: Array<{ code: string; rule_ref: string; message: string; fix?: string | null; inject?: string[] }>;
   injections: string[];
   inert?: boolean;
   engine_error?: string;
@@ -68,13 +68,15 @@ function callEngine(
 
 function reasons(v: Verdict): string {
   if (v.engine_error) return `harness engine error: ${v.engine_error}`;
-  return v.findings
-    .map(
-      (f) =>
-        `[${f.code} ${f.rule_ref}] ${f.message}` +
-        (f.inject?.length ? "\n" + f.inject.join("\n") : ""),
-    )
-    .join("; ");
+  if (!v.findings?.length) return "";
+  const blocks = v.findings.map(
+    (f) =>
+      `[${f.code} ${f.rule_ref}] ${f.message}` +
+      (f.fix ? `\n  Fix: ${f.fix}` : "") +
+      (f.inject?.length ? "\n" + f.inject.join("\n") : ""),
+  );
+  blocks.push("Details: harness gates explain <CODE>");
+  return blocks.join("\n");
 }
 
 function filesFromInput(input: unknown): string[] {

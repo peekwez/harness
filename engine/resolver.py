@@ -233,6 +233,7 @@ def build_blocks(root, sl: dict, config: dict) -> list:
 
     add("findings", "open findings",
         [f"[{f.get('code')} {f.get('rule_ref')}] {f.get('message')}"
+         + (f"\n  Fix: {f['fix']}" if f.get("fix") else "")
          for f in _open_findings(root, sl["id"])])
     add("decisions", "decisions in scope",
         [f"{d['id']} [{d.get('domain')}] {d.get('question')} -> {d.get('answer')}"

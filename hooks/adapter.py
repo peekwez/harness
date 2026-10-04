@@ -214,6 +214,26 @@ def call_engine(event, root=None):
     return json.loads(proc.stdout)
 
 
+def render_findings(findings):
+    """`[CODE rule_ref] message`, then `  Fix: ...`, then injected lines.
+
+    Mirrors adapters/common.py:render_findings. Imports no engine code,
+    so the hook answers when the engine is broken.
+    """
+    if not findings:
+        return ""
+    blocks = []
+    for f in findings:
+        text = f"[{f['code']} {f['rule_ref']}] {f['message']}"
+        if f.get("fix"):
+            text += f"\n  Fix: {f['fix']}"
+        if f.get("inject"):
+            text += "\n" + "\n".join(f["inject"])
+        blocks.append(text)
+    blocks.append("Details: harness gates explain <CODE>")
+    return "\n".join(blocks)
+
+
 def main():
     hook = json.load(sys.stdin)
     hook_name = hook.get("hook_event_name", "")
@@ -266,10 +286,7 @@ def main():
         },
     }, root=root)
 
-    reasons = "; ".join(
-        f"[{f['code']} {f['rule_ref']}] {f['message']}"
-        + (("\n" + "\n".join(f.get("inject", []))) if f.get("inject") else "")
-        for f in verdict.get("findings", []))
+    reasons = render_findings(verdict.get("findings", []))
     if verdict.get("engine_error"):
         reasons = f"harness engine error: {verdict['engine_error']}"
     injections = "\n\n".join(verdict.get("injections", []))

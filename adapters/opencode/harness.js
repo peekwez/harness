@@ -63,13 +63,15 @@ function makeEngine(root) {
 
 function reasons(v) {
   if (v.engine_error) return `harness engine error: ${v.engine_error}`;
-  return v.findings
-    .map(
-      (f) =>
-        `[${f.code} ${f.rule_ref}] ${f.message}` +
-        (f.inject && f.inject.length ? "\n" + f.inject.join("\n") : ""),
-    )
-    .join("; ");
+  if (!v.findings || !v.findings.length) return "";
+  const blocks = v.findings.map(
+    (f) =>
+      `[${f.code} ${f.rule_ref}] ${f.message}` +
+      (f.fix ? `\n  Fix: ${f.fix}` : "") +
+      (f.inject && f.inject.length ? "\n" + f.inject.join("\n") : ""),
+  );
+  blocks.push("Details: harness gates explain <CODE>");
+  return blocks.join("\n");
 }
 
 function filesFromArgs(args) {

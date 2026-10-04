@@ -165,3 +165,15 @@ def test_missing_declared_dep_fails_loud(toy):
     write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
     with pytest.raises(SubstrateMissing, match="ghost"):
         resolve(toy, "slice-042", load_config(toy))
+
+
+def test_open_findings_block_shows_the_fix(toy):
+    append_jsonl(toy / ".harness" / "parked.jsonl", {
+        "slice": "slice-042", "finding": {
+            "finding_id": "F-2", "code": "UNDECLARED_FILE",
+            "rule_ref": "gate:G3", "message": "rogue.py is undeclared.",
+            "fix": "Add rogue.py to predicted_files.",
+            "severity": "gate", "layer": 2}})
+    text = _block(resolve(toy, "slice-042", load_config(toy)), "findings")["text"]
+    assert ("[UNDECLARED_FILE gate:G3] rogue.py is undeclared.\n"
+            "  Fix: Add rogue.py to predicted_files.") in text

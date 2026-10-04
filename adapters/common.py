@@ -133,13 +133,30 @@ def extract_paths(tool_input) -> list:
     return out
 
 
+def render_findings(findings) -> str:
+    """`[CODE rule_ref] message`, then `  Fix: ...`, then injected lines.
+
+    Mirrors hooks/adapter.py:render_findings (same text on every host).
+    Imports no engine code, so the hook answers when the engine is broken.
+    """
+    if not findings:
+        return ""
+    blocks = []
+    for f in findings:
+        text = f"[{f['code']} {f['rule_ref']}] {f['message']}"
+        if f.get("fix"):
+            text += f"\n  Fix: {f['fix']}"
+        if f.get("inject"):
+            text += "\n" + "\n".join(f["inject"])
+        blocks.append(text)
+    blocks.append("Details: harness gates explain <CODE>")
+    return "\n".join(blocks)
+
+
 def reasons_text(verdict: dict) -> str:
     if verdict.get("engine_error"):
         return f"harness engine error: {verdict['engine_error']}"
-    return "; ".join(
-        f"[{f['code']} {f['rule_ref']}] {f['message']}"
-        + (("\n" + "\n".join(f.get("inject", []))) if f.get("inject") else "")
-        for f in verdict.get("findings", []))
+    return render_findings(verdict.get("findings", []))
 
 
 def injections_text(verdict: dict) -> str:
