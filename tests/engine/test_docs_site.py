@@ -68,6 +68,17 @@ def test_trade_offs_names_the_limits_a_reader_must_know():
         assert needle in text, needle
 
 
+def test_trade_offs_states_the_shared_memory_gaps():
+    """Fix round 1: G10 scope, the host permit gap, the glob residual."""
+    text = (DOCS / "trade-offs.md").read_text()
+    for needle in ("G10 sees only edit-tool writes",
+                   "a human who reads the committed diff",
+                   "Only the Claude Code hook runs the permit layer on shell",
+                   "`.claude/memory/sh*/a.md`",
+                   "sandbox.filesystem.denyWrite"):
+        assert needle in text, needle
+
+
 def test_home_names_every_builtin_gate():
     """W7-P2: the Home page lists the gates the engine ships."""
     from engine.gates import builtin_gates

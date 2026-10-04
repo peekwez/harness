@@ -20,7 +20,7 @@ The forked reviewer reads each test. It can still miss a weak test.
 
 The pre-change gates see edits that go through the host's edit tools. A file that a shell command writes does not pass through those gates.
 
-Close finds each changed file from git and checks the full set. So harness catches a shell edit at close, not at the moment of the edit.
+Close finds each changed file from git and runs its close checks on the full set. So the close checks see a shell edit, but later than the edit. G10 does not run at close, so close does not flag a shell write to shared memory.
 
 ### Scope and non-goals
 
@@ -44,16 +44,19 @@ To clear a false block, move or rename the module.
 
 ### Shared memory writes
 
-G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
+G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 sees only edit-tool writes. It does not run at close or in the review. For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
 
 Text-level checks are best effort. These spellings do not ask:
 
 - `python3 -m engine.cli memory promote`, or a copy of the `harness` binary under another name.
 - A `cd` into the folder in one call, then a write with a relative path in a later call.
+- A redirect target with a glob, such as `.claude/memory/sh*/a.md`.
 - A wrapper such as `env`, `nohup`, `xargs` or `eval` in front of a program word that the permit layer cannot read.
 - An allowed tool that can run any code, such as `pytest` on tests that an agent wrote, `git apply` or a `git config core.fsmonitor` value.
 
-G10 and the review are the backstops. We recommend a sandbox write-deny rule on `.claude/memory/shared` in your host's sandbox profile. harness does not write that rule for you.
+Nothing in harness flags a file that a shell command wrote under `.claude/memory/shared/`. The backstop is a human who reads the committed diff.
+
+We recommend a sandbox write-deny rule. Add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. The shipped profile sets `failIfUnavailable: false`, so the rule holds only where the sandbox runs. A permission deny rule for the Edit and Write tools on that folder adds a second layer. harness does not write these rules for you.
 
 ### Text quality
 
@@ -79,7 +82,8 @@ An override is a record with a justification. It is not a barrier. harness store
 
 - harness enforces through host hooks. A host without hooks gets instructions only.
 - Claude Code is the reference host. The [host matrix](extending/hosts.md#host-matrix) lists full, degraded and instruction-only hosts.
-- The permit layer can answer `ask`. Only the Claude Code hook passes `ask` to the host. The other adapters do not, so "promote always asks" holds only on Claude Code.
+- Only the Claude Code hook runs the permit layer on shell commands. The other hosts' shipped profiles approve shell commands, so the shared-memory asks apply only on Claude Code.
+- Those profiles are `adapters/codex/autonomy.toml` (`approval_policy = "never"`), `adapters/gemini/autonomy-policy.toml` (`toolName = "*"`), `adapters/opencode/opencode-permissions.json` (`"*": "allow"`) and `adapters/cursor/cli-permissions.json` (`Shell(python3)`).
 - Cursor CLI runs in degraded mode. The edit lands first. Gates run after the edit and at stop, and they do not undo the edit. `harness verify` in CI is the backstop.
 - Gemini CLI hooks fail open. When the hook crashes, the edit goes through.
 - The host supplies the sandbox. harness writes the sandbox profile. It does not run a sandbox of its own. The shipped profile sets `failIfUnavailable: false`.
@@ -96,17 +100,17 @@ Two machines with different tree-sitter versions can build different shadows. `h
 ## Costs you pay
 
 - **Time at design.** New designs start with explore. A skip needs a recorded reason.
-- **Time per slice.** The acceptance suite runs at slice start and again at close. A slow suite makes each slice slow.
+- **Time per slice.** The acceptance suite runs at slice start and again at close. A slow suite makes each slice slow. A timeout stops only the direct child process. Processes under a wrapper such as `uv run` can stay running.
 - **Tokens.** The forked reviewer and the Claude and Codex design review use model tokens. harness does not claim a net saving.
 - **Context.** The first injection after a binding can be up to 9,000 characters. Later prompts get only the blocks that changed.
 - **CI time.** The shadow cache is not committed. CI rebuilds shadows when G5 or G6 needs them.
-- **Fail closed.** In an initialised repo, an engine error denies edits until you repair the substrate. In a repo without init, the hooks allow every action.
+- **Fail closed.** In an initialised repo, an engine error denies edits until you repair the substrate. In a repo without init, the hooks enforce nothing, and the host's own permissions still decide.
 - **Upgrades.** 0.10 breaks 0.9. `harness upgrade` migrates a repo. A slice in flight during the upgrade that has no `verifies` list gets `legacy_verification: true`. At close, it skips the red-record and statement checks.
 
 ## Design choices you may disagree with
 
 - **Personal memory stays with the host.** harness manages only `.claude/memory/shared/`. It does not know who wrote a personal note.
-- **Telemetry stays local.** Event rows stay in `.harness/cache/events.jsonl` on each machine. Close commits one summary row for each slice. There is no central dashboard.
+- **Telemetry stays local.** Event rows stay in `.harness/cache/events.jsonl` on each machine. Close commits one summary row for each slice. There is no central dashboard. `.harness/cache/events.jsonl` grows without a limit.
 - **No context budget per repo.** The injection cap is a constant. A slice that does not fit gets the advisory finding `CONTEXT_OVER_CAP`. You split the slice or shorten its rows.
 - **Contracts are not in core.** harness does not check OpenAPI files. You add a repo-local gate or a CI linter. See the [Contracts recipe](extending/contracts.md).
 - **The toy is never production code.** harness does not turn `explore/` code into production code. You write the production code in a slice.
@@ -118,6 +122,7 @@ Two machines with different tree-sitter versions can build different shadows. `h
 - A codebase mostly in a language that has no shadows.
 - A team that needs a hard security boundary. harness records and checks. It is not a sandbox.
 - A host with no hooks, when you need enforcement and not only instructions.
+- A harness root in a subfolder of a larger git repo. The CLI expects the harness root to be the git root.
 
 ## How to change a limit
 

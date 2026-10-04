@@ -24,7 +24,7 @@ harness is a poor fit for some work. [Trade-offs and limits](trade-offs.md) list
 
 ## Two-minute tour
 
-A feature moves through seven steps. Each step has a skill in Claude Code and a command in the engine.
+A feature moves through seven steps. Most steps have a skill in Claude Code and a command in the engine. Freeze is part of the explore skill.
 
 1. **Explore.** The agent builds a quick toy in `explore/`. It writes a decision card for each big decision and cites what the toy showed.
 2. **Freeze.** The agent writes statements in `explore/VERIFY.md`, such as `V-orders-3: a failed payment leaves no order row`. A human runs `harness explore --freeze`.
@@ -75,7 +75,7 @@ The engine needs Python 3.10 or later and three packages:
 pip install pyyaml tree-sitter tree-sitter-language-pack
 ```
 
-Then run `/harness:init` in your repo. Until you run init, the hooks allow every action.
+Then run `/harness:init` in your repo. Until you run init, the hooks enforce nothing, and the host's own permissions still decide.
 
 ## Where to go next
 
