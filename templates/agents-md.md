@@ -11,7 +11,7 @@ Read this file before you edit.
 3. When a row in `.harness/decisions.jsonl` answers your question, obey it. When no row exists and the question will recur, park it.
 4. To read another module's interface, run `harness resolve --module <id>`. Do not paste its source.
 5. A blocking finding must cite a `rule_ref`: `gate:GN`, `decision:D-NNN` or `adr:NNN`.
-6. STE-80: write for humans in short, active sentences with one action per step. Rules: skill `harness:harness`, file `ste80.md`. Check: `harness lint-text <paths>`.
+6. STE-80: write for humans in short, active sentences with one action per step. Use one name per concept from `docs/glossary.md`. Rules: skill `harness:harness`, file `ste80.md`. Check: `harness lint-text <paths>`.
 
 ## Autonomy: when to stop
 

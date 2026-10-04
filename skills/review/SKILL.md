@@ -90,9 +90,12 @@ Layers 1–3 — rubric-bound checks over those facts:
   disagreeing is signal. Verify every Codex finding against the substrate
   yourself, then record the real ones with
   `harness review --record-finding …`; blocking still requires a `rule_ref`,
-  so the rest are Layer-3 advisories. Pass `--message` (25 words or fewer),
+  so the rest are Layer-3 advisories. Write each finding by
+  `skills/harness/ste80.md`. Pass `--message` (25 words or fewer),
   `--failure-scenario` (a concrete input and the wrong result) and `--fix`
-  (one action; required with `--severity block`). Rules: `skills/harness/ste80.md`. Codex never auto-fixes inside the
+  (one action). The CLI rejects a `--message` over 25 words and exits 2. It
+  does not clip the message. It also exits 2 for a `--severity block`
+  finding without `--fix`. Codex never auto-fixes inside the
   slice — the slice owner applies fixes so the gates see the edits. If Codex
   is absent, skip this silently.
 - When Codex owns the slice, use Claude Code as the independent second

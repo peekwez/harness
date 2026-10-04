@@ -89,3 +89,48 @@ def test_step_is_silent_without_agents_md_or_when_rule_present(tmp_path):
     (tmp_path / "AGENTS.md").write_text(TEMPLATE.read_text())
     assert AGENTS_STE80_STEP.describe(tmp_path) == []
     assert AGENTS_STE80_STEP.advise(tmp_path) == []
+
+
+# ------------------------------------------------------- fix round 1
+def _agents(tmp_path, rules, eol="\n"):
+    text = eol.join(["# AGENTS.md", MARKER, "", "## Binding rules", "",
+                     *rules, "", "## Workflow", ""])
+    with open(tmp_path / "AGENTS.md", "w", newline="") as handle:
+        handle.write(text)
+    return tmp_path / "AGENTS.md"
+
+
+def _read(path):
+    with open(path, newline="") as handle:
+        return handle.read()
+
+
+def test_rule_carries_the_one_name_habit():
+    assert "one name per concept from `docs/glossary.md`" in STE80_RULE
+
+
+def test_insert_goes_after_continuation_lines(tmp_path):
+    path = _agents(tmp_path, ["1. first", "2. last rule", "   wraps here"])
+    AGENTS_STE80_STEP.apply(tmp_path, lambda q: True)
+    lines = _read(path).splitlines()
+    i = lines.index("   wraps here")
+    assert lines[i + 1].startswith("3. STE-80:")
+
+
+def test_number_is_max_plus_one(tmp_path):
+    path = _agents(tmp_path, ["1. a", "5. b", "2. c"])
+    AGENTS_STE80_STEP.apply(tmp_path, lambda q: True)
+    assert "\n6. STE-80:" in _read(path)
+
+
+def test_ste80_text_outside_the_rule_does_not_suppress(tmp_path):
+    _agents(tmp_path, ["1. a", "2. see STE-80 elsewhere"])
+    assert AGENTS_STE80_STEP.describe(tmp_path)
+
+
+def test_crlf_is_preserved(tmp_path):
+    path = _agents(tmp_path, ["1. a", "2. b"], eol="\r\n")
+    AGENTS_STE80_STEP.apply(tmp_path, lambda q: True)
+    text = _read(path)
+    assert "\n3. STE-80:" in text
+    assert text.count("\n") == text.count("\r\n")

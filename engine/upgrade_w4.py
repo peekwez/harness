@@ -46,41 +46,61 @@ GLOSSARY_STEP = register(Step(
 AGENTS_MARKER = "<!-- harness:agents-md 0.10 -->"
 STE80_RULE = (
     "6. STE-80: write for humans in short, active sentences with one action "
-    "per step. Rules: skill `harness:harness`, file `ste80.md`. Check: "
+    "per step. Use one name per concept from `docs/glossary.md`. Rules: "
+    "skill `harness:harness`, file `ste80.md`. Check: "
     "`harness lint-text <paths>`.")
 _NUMBERED = re.compile(r"^(\d+)\. ")
+_HAS_RULE = re.compile(r"^\d+\. STE-80:", re.MULTILINE)
 
 
 def _agents_text(root: Path) -> str | None:
     path = Path(root) / "AGENTS.md"
     try:
-        return path.read_text()
+        with open(path, newline="") as handle:
+            return handle.read()
     except (OSError, UnicodeDecodeError):
         return None
+
+
+def _section(lines: list[str]) -> tuple[int, int] | None:
+    """The line range after `## Binding rules`, up to the next heading."""
+    try:
+        start = lines.index("## Binding rules") + 1
+    except ValueError:
+        return None
+    end = next((i for i in range(start, len(lines))
+                if lines[i].startswith("## ")), len(lines))
+    return start, end
+
+
+def _has_rule(text: str) -> bool:
+    lines = text.splitlines()
+    span = _section(lines)
+    return bool(span) and any(_HAS_RULE.match(line)
+                              for line in lines[span[0]:span[1]])
 
 
 def _insertion(text: str) -> tuple[list[str], int, str] | None:
     """The lines, the index after the last binding rule, and its new rule."""
     lines = text.splitlines()
-    try:
-        start = lines.index("## Binding rules")
-    except ValueError:
+    span = _section(lines)
+    if span is None:
         return None
-    last = None
-    for i in range(start + 1, len(lines)):
-        if lines[i].startswith("## "):
-            break
-        if _NUMBERED.match(lines[i]):
-            last = i
-    if last is None:
+    start, end = span
+    numbers = [(i, int(m.group(1))) for i in range(start, end)
+               if (m := _NUMBERED.match(lines[i]))]
+    if not numbers:
         return None
-    number = int(_NUMBERED.match(lines[last]).group(1)) + 1
-    return lines, last + 1, STE80_RULE.replace("6.", f"{number}.", 1)
+    at = numbers[-1][0] + 1
+    while at < end and lines[at].strip() and not _NUMBERED.match(lines[at]):
+        at += 1
+    number = max(n for _, n in numbers) + 1
+    return lines, at, STE80_RULE.replace("6.", f"{number}.", 1)
 
 
 def _agents_describe(root: Path) -> list[str]:
     text = _agents_text(root)
-    if (text is None or AGENTS_MARKER not in text or "STE-80" in text
+    if (text is None or AGENTS_MARKER not in text or _has_rule(text)
             or _insertion(text) is None):
         return []
     return ["add the STE-80 rule to AGENTS.md binding rules"]
@@ -92,19 +112,23 @@ def _agents_apply(root: Path, ask: Ask) -> list[str]:
     text = _agents_text(root)
     lines, at, rule = _insertion(text)
     lines.insert(at, rule)
-    tail = "\n" if text.endswith("\n") else ""
-    (Path(root) / "AGENTS.md").write_text("\n".join(lines) + tail)
+    eol = "\r\n" if "\r\n" in text else "\n"
+    tail = eol if text.endswith("\n") else ""
+    with open(Path(root) / "AGENTS.md", "w", newline="") as handle:
+        handle.write(eol.join(lines) + tail)
     return ["added the STE-80 rule to AGENTS.md"]
 
 
 def _agents_advise(root: Path) -> list[str]:
     text = _agents_text(root)
-    if text is None or "STE-80" in text:
+    if text is None:
         return []
     if AGENTS_MARKER not in text:
         return ["check: AGENTS.md has no harness 0.10 marker, so upgrade "
                 "leaves it alone. Add the STE-80 rule from "
                 "templates/agents-md.md by hand."]
+    if _has_rule(text):
+        return []
     if _insertion(text) is None:
         return ["check: AGENTS.md has no numbered list under Binding rules. "
                 "Add the STE-80 rule from templates/agents-md.md by hand."]
