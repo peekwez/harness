@@ -51,8 +51,19 @@ def register(step: Step) -> Step:
     """Add one step. A second step with the same id is a bug."""
     if any(existing.id == step.id for existing in STEPS):
         raise HarnessError(f"upgrade step {step.id!r} is registered twice")
-    STEPS.append(step)
+    # Workstream order, not import order: importing upgrade_w3 before this
+    # module must not move the W3 steps after W8. Within a workstream the
+    # module's own registration order holds.
+    at = len(STEPS)
+    while at and _workstream(STEPS[at - 1]) > _workstream(step):
+        at -= 1
+    STEPS.insert(at, step)
     return step
+
+
+def _workstream(step: Step) -> int:
+    head = step.id.split(".", 1)[0]
+    return int(head[1:]) if head[:1] == "w" and head[1:].isdigit() else 0
 
 
 def plan(root: Path) -> list[dict]:
