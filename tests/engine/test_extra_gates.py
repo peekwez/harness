@@ -19,7 +19,7 @@ from engine.registry import REGISTRY_KINDS, registry_kinds
 from engine.schema import validate_substrate
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "extra_gates"
-BUILTIN_IDS = ["G1", "G3", "G5", "G6", "G10"]
+BUILTIN_IDS = ["G1", "G3", "G5", "G6", "G9", "G10"]
 
 ADR_008 = '''---
 id: "008"

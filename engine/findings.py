@@ -51,6 +51,15 @@ CATALOG: dict[str, str] = {
         "G5 found a new public interface that is very similar to an existing "
         "registry entry. This often means copied code. Reuse the entry, or "
         "record an override with a reason."),
+    "EXPLORE_IMPORT": (
+        "G9 explore-isolation. A production file imports code from "
+        "explore/. explore/ holds the toy: fast, untested, and free to "
+        "change, so production code must not depend on it. Copy the code "
+        "you need into a production module, test it there, and import that "
+        "module. G9 reads Python imports from the shadow, and Rust, "
+        "TypeScript, JavaScript and Go imports from the source. "
+        "Tests and other gates.exempt_paths are not checked. G9 is active "
+        "when explore/DECISIONS.md exists."),
     "EXTRA_GATE_LOAD_ERROR": (
         "A gate under gates.extra in .harness/config.yaml did not load. "
         "Harness blocks, because a broken gate must never pass in silence. "

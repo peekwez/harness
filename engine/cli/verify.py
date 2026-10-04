@@ -345,6 +345,11 @@ def cmd_verify(args):
         noted = {p.get("slice_id") for n in read_notes(root)
                  for p in n["payloads"]}
 
+    # G9 explore-isolation over every file in scope (spec 5.6): CI blocks
+    # an import from explore/ that no hook saw
+    from engine.gates.g9_explore import explore_findings
+    findings.extend(explore_findings(root, config))
+
     # repo-local gates (ADR-002 / D-007): a `gates.extra` entry that fails to
     # load is a blocking finding here too, and every CLOSED slice is replayed
     # through a synthetic unit_complete event so repo invariants are enforced
