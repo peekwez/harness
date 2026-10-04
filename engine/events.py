@@ -11,20 +11,14 @@ import json
 import sqlite3
 from pathlib import Path
 
+from .findings import CATALOG
 from . import (HarnessError, harness_dir, now_iso, token_estimate)
 
 EVENTS = ("session_start", "pre_context", "pre_change", "post_change", "unit_complete")
 SEVERITIES = ("gate", "block", "advisory")
 _VERDICT_RANK = {"allow": 0, "allow_with_findings": 1, "block": 2}
 
-FINDING_CODES = {
-    "MANIFEST_INCOMPLETE", "SCHEMA_MISMATCH", "UNDECLARED_FILE",
-    "NON_GOAL_VIOLATION", "UNDECLARED_USE", "DUPLICATE_CANDIDATE",
-    "INTERFACE_DRIFT", "UNSHADOWED_FILE", "UNKNOWN_LANGUAGE",
-    "HASH_MISMATCH", "ORPHANED_NOTE", "MISSING_DEPENDENCY",
-    "UNRECONCILED_SLICE", "MISSING_RULE_REF", "REVIEW_UNCERTAIN",
-    "COMPACTION_REACHED", "CONTEXT_OVER_CAP", "SHARED_MEMORY_WRITE",
-}
+FINDING_CODES = frozenset(CATALOG)
 
 
 class EventError(HarnessError):
@@ -37,7 +31,10 @@ class VerdictError(HarnessError):
 
 # ---------------------------------------------------------------- findings
 def make_finding(code, rule_ref, message, severity="advisory", layer=0,
-                 inject=None, precedents=None, key=None) -> dict:
+                 inject=None, precedents=None, key=None, fix=None) -> dict:
+    """One finding. `message`: what is wrong and the file, 25 words or
+    fewer (STE-80). `fix`: the command or action that resolves it. The fix
+    is not part of the finding id, so recorded overrides keep matching."""
     fid = "F-" + hashlib.sha1(
         f"{code}|{rule_ref}|{key or message}".encode()).hexdigest()[:10]
     return {
@@ -47,6 +44,7 @@ def make_finding(code, rule_ref, message, severity="advisory", layer=0,
         "code": code,
         "rule_ref": rule_ref,
         "message": message,
+        "fix": fix,
         "inject": list(inject or []),
         "precedents": list(precedents or []),
     }
@@ -62,6 +60,14 @@ def validate_finding(f: dict) -> None:
         # Blocking without a rule reference is a bug — rejected by the engine itself.
         raise VerdictError(
             f"blocking finding {f.get('finding_id')} ({f.get('code')}) has no rule_ref")
+    if not isinstance(f["message"], str) or not f["message"].strip():
+        raise VerdictError(
+            f"finding {f.get('finding_id')} ({f.get('code')}) has an empty message")
+    fix = f.get("fix")
+    if fix is not None and (not isinstance(fix, str) or not fix.strip()):
+        raise VerdictError(
+            f"finding {f.get('finding_id')} ({f.get('code')}): fix must be a "
+            f"non-empty string or null")
 
 
 def verdict_for(findings: list, injections=None) -> dict:

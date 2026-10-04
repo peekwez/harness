@@ -71,6 +71,21 @@ def cmd_resolve(args):
 
 # ------------------------------------------------------------------ gates
 def cmd_gates(args):
+    if args.gates_cmd == "explain":
+        import difflib
+        import sys
+        from engine.findings import CATALOG, explain
+        text = explain(args.code)
+        if text is None:
+            by_upper = {k.upper(): k for k in CATALOG}
+            near = [by_upper[m] for m in difflib.get_close_matches(
+                args.code.upper(), list(by_upper), n=3)]
+            hint = f" Did you mean: {', '.join(near)}?" if near else ""
+            print(f"error: no catalog entry for {args.code!r}.{hint}",
+                  file=sys.stderr)
+            return 1
+        print(text)
+        return 0
     root = _root(args)
     config = load_config(root)
 

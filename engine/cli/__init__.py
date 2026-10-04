@@ -131,6 +131,9 @@ def main(argv=None):
     ack.add_argument("--slice", required=True)
     ack.add_argument("--module", required=True)
     ack.add_argument("--note")
+    ex = gsub.add_parser("explain", help="print the catalog entry of a "
+                                         "finding code")
+    ex.add_argument("code")
 
     sp = sub.add_parser("verify", help="full CI check (no plugin required)")
     sp.add_argument("--built-artifact", help="validate manifests against this tree")
