@@ -97,6 +97,8 @@ def test_upgrade_without_yes_skips_only_the_destructive_step(tmp_path):
     assert reports["w1.untrack-shadows"] == ["skipped: needs confirmation"]
     assert (root / ".harness" / "shadows").exists()
     assert any("w1.untrack-shadows" in w for w in out["warnings"])
+    assert any(h.startswith("w1.untrack-shadows:") for h in out["human_checks"])
+    assert out["status"] == "incomplete"     # Task 5 turns this into exit 1
     assert _w1(upgrade_010.plan(root)) == ["w1.untrack-shadows"]
 
 

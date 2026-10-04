@@ -69,16 +69,18 @@ def test_local_upgrade_dry_run_reports_plan_without_writes(tmp_path):
     assert out["dry_run"] is True
     assert out["plan"] == [
         "migrate substrate schema",
-        "run 0.10 upgrade steps",
+        "canonicalize legacy G5 dependency overrides",
+        "repair legacy graph provenance",
+        "run the 0.10 upgrade steps",
         "install merge drivers",
         "refresh vendored engine",
         "refresh harness-generated workflow",
-        "refresh harness-owned Claude settings",
         "refresh Harness-owned Codex hook commands",
-        "canonicalize legacy G5 dependency overrides",
-        "repair legacy graph provenance",
+        "refresh harness-owned Claude settings",
         "refresh clean registry derivations",
         "validate substrate schema",
+        "run doctor and verify",
+        "propose one commit",
     ]
     assert {path: path.read_bytes() for path in tracked} == before
 

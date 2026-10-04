@@ -262,14 +262,14 @@ def _is_legacy_ignore(line: str) -> bool:
     return len(tokens) == 1 and tokens[0].strip("/") == LEGACY_IGNORE
 
 
-def _pending_git_lines(root: Path) -> list:
+def _pending_git_lines(root: Path, *, preview: bool = False) -> list:
     """[(file name, matcher, line)] for each legacy line still present.
 
     Both lines stay while the legacy folder exists (a declined retire): the
     union driver still merges a tracked durable.jsonl, and the ignore line
-    still hides session files.
+    still hides session files. `preview` lists them anyway, for the dry run.
     """
-    if (root / MEMORY_DIR).exists():
+    if (root / MEMORY_DIR).exists() and not preview:
         return []
     return ([(".gitattributes", _is_legacy_attr, line)
              for line in _lines(root / ".gitattributes")
@@ -282,6 +282,15 @@ def _pending_git_lines(root: Path) -> list:
 def describe_git_lines(root) -> list:
     return [f"remove '{line.strip()}' from {name}"
             for name, _match, line in _pending_git_lines(Path(root))]
+
+
+def preview_git_lines(root) -> list:
+    """The dry run: the lines go after w3.retire-durable-memory moves the folder."""
+    root = Path(root)
+    if not (root / MEMORY_DIR).exists():
+        return describe_git_lines(root)
+    return [f"remove '{line.strip()}' from {name} (after w3.retire-durable-memory)"
+            for name, _match, line in _pending_git_lines(root, preview=True)]
 
 
 def apply_git_lines(root, ask: Ask) -> list:
@@ -373,7 +382,7 @@ register(Step(
 register(Step(
     id="w3.memory-git-lines",
     title="Remove .harness/memory/ lines from .gitattributes and .gitignore.",
-    describe=describe_git_lines, apply=apply_git_lines))
+    describe=describe_git_lines, apply=apply_git_lines, preview=preview_git_lines))
 register(Step(
     id="w3.shared-memory-index",
     title="Create the shared memory index .claude/memory/shared/MEMORY.md.",

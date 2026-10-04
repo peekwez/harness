@@ -137,6 +137,7 @@ def test_dry_run_reports_steps_and_writes_nothing(steps, tmp_path):
     root = build_toy_repo(tmp_path / "toy")
     report = upgrade_project(root, dry_run=True)
     assert report["steps"] == [{"id": "w0.marker", "title": "Write w0.marker.done.",
+                                "destructive": False,
                                 "changes": ["write w0.marker.done"]}]
     assert not (root / "w0.marker.done").exists()
 
@@ -148,6 +149,11 @@ def test_skipped_step_is_named_in_the_warnings(steps, tmp_path, monkeypatch):
     root = build_toy_repo(tmp_path / "toy")
     report = upgrade_project(root)
     assert any("w0.marker" in w and "--yes" in w for w in report["warnings"])
+    # W8-P3: the skip is also a human check, and the upgrade is incomplete
+    assert any(h.startswith("w0.marker:") and "needs confirmation" in h
+               for h in report["human_checks"])
+    assert report["status"] == "incomplete"
+    assert report["commit"] is None
 
 
 def test_cli_accepts_yes(tmp_path):

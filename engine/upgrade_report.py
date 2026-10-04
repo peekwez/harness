@@ -12,7 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from engine import IGNORED_DIRS, HarnessError, sha256_file
+from engine import (ENGINE_VERSION, IGNORED_DIRS, SCHEMA_VERSION, HarnessError,
+                    sha256_file)
 
 COMMIT_MESSAGE = "harness: upgrade to 0.10"
 CHECK = "check: "
@@ -267,18 +268,24 @@ def attribute(failures, steps) -> list:
     return out
 
 
-def step_failure(root, exc, steps) -> dict:
-    """A step raised inside `upgrade_010.run`. The first step, in order, that
-    still has pending changes is the one that stopped."""
-    owner = "none"
+def pending_ids(root, steps) -> list[str]:
+    """The steps that still have work. A `describe` that raises counts as work,
+    so the report never crashes after the upgrade wrote files."""
+    out = []
     for step in steps:
         try:
             pending = step.describe(root)
         except Exception:
             pending = ["describe failed"]
         if pending:
-            owner = step.id
-            break
+            out.append(step.id)
+    return out
+
+
+def step_failure(root, exc, steps) -> dict:
+    """A step raised inside `upgrade_010.run`. The first step, in order, that
+    still has pending changes is the one that stopped."""
+    owner = next(iter(pending_ids(root, steps)), "none")
     return {"check": "upgrade", "code": "STEP_FAILED",
             "text": f"{type(exc).__name__}: {exc}", "step": owner, "fix": STEP_FIX}
 
@@ -301,3 +308,66 @@ def upgrade_status(*, schema_from, current, files, steps, pending, failures) -> 
     if schema_from == current and not any(files.values()):
         return "already on 0.10"
     return "upgraded"
+
+
+def make_ask(yes: bool, stdin=None, stderr=None):
+    """The `Ask` the 0.10 steps call before they move or delete files.
+
+    `--yes` accepts every prompt. Without a TTY the answer is no, so CI and
+    pipes never wait; the step then reports "skipped: needs confirmation".
+    With no streams given, it is `upgrade_010.tty_ask`.
+    """
+    from engine import upgrade_010
+    if yes:
+        return upgrade_010.always_yes
+    if stdin is None and stderr is None:
+        return lambda question: upgrade_010.tty_ask(question)
+    stdin = stdin if stdin is not None else sys.stdin
+    stderr = stderr if stderr is not None else sys.stderr
+
+    def ask(question: str) -> bool:
+        if not stdin.isatty():
+            return False
+        stderr.write(f"{question} [y/N] ")
+        stderr.flush()
+        return stdin.readline().strip().lower() in ("y", "yes")
+    return ask
+
+
+def step_warnings(steps: list, workflow: dict, claude: dict, codex: dict) -> list:
+    from engine.upgrade_010 import SKIPPED
+    out = [f"{row['id']}: {SKIPPED}. Run: harness upgrade --yes"
+           for row in steps if SKIPPED in row.get("report", [])]
+    if workflow.get("note"):
+        out.append(workflow["note"])
+    out.extend(v["note"] for v in claude.values()
+               if v.get("action") == "kept" and v.get("note"))
+    if codex.get("warning"):
+        out.append(codex["warning"])
+    if codex.get("action") in ("missing", "kept"):
+        out.append(codex["note"])
+    return out
+
+
+def dry_run_report(root: Path, version: int, plan: list, codex: dict) -> dict:
+    """The schema preflight and the plan. Nothing here writes."""
+    from engine import upgrade_010
+    from engine.migrate import MIGRATIONS
+    from engine.overrides import repair_legacy_overrides
+    if version > SCHEMA_VERSION:
+        raise HarnessError(
+            f"substrate schema {version} is newer than engine "
+            f"{SCHEMA_VERSION}; upgrade the plugin")
+    missing = [v for v in range(version, SCHEMA_VERSION) if v not in MIGRATIONS]
+    if missing:
+        raise HarnessError(
+            f"no migration path from schema {missing[0]} to "
+            f"{SCHEMA_VERSION} (fail closed)")
+    return {"dry_run": True, "plan": plan,
+            "schema": {"from": version, "to": SCHEMA_VERSION,
+                       "would_apply": list(range(version + 1, SCHEMA_VERSION + 1))},
+            "engine_version": ENGINE_VERSION,
+            "steps": upgrade_010.preview(root),
+            "advice": upgrade_010.advice(root),
+            "legacy_overrides": repair_legacy_overrides(root, dry_run=True),
+            "codex_adapter": codex}

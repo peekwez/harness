@@ -29,6 +29,9 @@ class Step:
     # every run, never counted as pending work, so idempotence holds. Use it
     # for files harness must not edit (no harness marker).
     advise: Callable[[Path], list[str]] | None = None
+    # What the dry run shows when `describe` is [] only because an earlier
+    # step has not run yet. Never counted as pending work.
+    preview: Callable[[Path], list[str]] | None = None
 
 
 STEPS: list[Step] = []
@@ -61,6 +64,13 @@ def plan(root: Path) -> list[dict]:
         if changes:
             out.append({"id": step.id, "title": step.title, "changes": changes})
     return out
+
+
+def preview(root: Path) -> list[dict]:
+    """Every step, in order, with the changes a run would make."""
+    root = Path(root)
+    return [{"id": s.id, "title": s.title, "destructive": s.destructive,
+             "changes": (s.preview or s.describe)(root)} for s in STEPS]
 
 
 def run(root: Path, ask: Ask, *, dry_run: bool) -> list[dict]:

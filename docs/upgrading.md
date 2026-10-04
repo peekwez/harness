@@ -21,7 +21,7 @@ harness upgrade
 harness upgrade --yes
 ```
 
-- `harness upgrade --dry-run` prints the plan and changes nothing. It shows the schema change, each step with its pending changes, and each `check:` line.
+- `harness upgrade --dry-run` prints the plan and changes nothing. It shows the schema change, each step with its pending changes, and each `check:` line. A step that waits for an earlier step shows its changes with the earlier step id.
 - `harness upgrade` runs the plan. `harness init --migrate` does the same thing.
 - A step that moves or deletes files asks first, with a `[y/N]` prompt.
 - `--yes` accepts each prompt. Use it in CI or in a script.
@@ -30,13 +30,18 @@ harness upgrade --yes
 The upgrade runs in this order:
 
 1. It migrates the schema: `.harness/schema_version` goes from 1 to 2.
-2. It runs each 0.10 step that has pending changes.
-3. It installs the merge drivers, refreshes the vendored engine in `.harness/engine/` and refreshes a harness-written CI workflow.
-4. It refreshes harness-written Claude settings and the harness commands in `.codex/hooks.json`.
-5. It repairs old overrides and graph records, and refreshes the registry rows whose source did not change.
-6. It validates the substrate. A problem stops the upgrade with an error that names it.
+2. It repairs old 0.8 and 0.9 overrides and graph records.
+3. It runs each 0.10 step that has pending changes.
+4. It installs the merge drivers, refreshes the vendored engine in `.harness/engine/` and refreshes a harness-written CI workflow.
+5. It refreshes the harness commands in `.codex/hooks.json` and harness-written Claude settings.
+6. It refreshes the registry rows whose source did not change before the upgrade.
+7. It validates the substrate.
+8. It runs `harness doctor --substrate` and `harness verify`, each in a new process.
+9. It proposes one commit.
 
-Upgrade does not commit. Its only change to the git index is `git rm --cached` for `.harness/shadows/` and `.harness/memory/`, which stay out of git from now on. Read `git status` and `git diff`, then commit.
+A problem does not stop the upgrade. The report lists each problem in `failures`, with the step that caused it and the fix. If a step fails, the steps before it keep their changes. Fix the cause, then run `harness upgrade --yes` again.
+
+Upgrade does not commit. Its only change to the git index is `git rm --cached` for `.harness/shadows/` and `.harness/memory/`, which stay out of git from now on. The commit proposal includes these deletions. Read `git status` and `git diff`, then commit.
 
 A file without a harness marker is never edited. For such a file, upgrade prints a `check:` line that says what to change by hand. A second run finds no pending step, and it prints the `check:` lines again.
 
@@ -115,19 +120,31 @@ Upgrade marks only the backlog of the main tree. For each worktree in `.worktree
 
 Read the upgrade report. It is JSON with these parts:
 
+- `status`: the result of the upgrade. The values are in the table below.
 - `steps`: each step that ran, with its changes and its report lines.
 - `advice`: each `check:` line, with the step id.
+- `files`: the files that the upgrade added, modified and removed.
+- `checks`: the result of `harness doctor --substrate` and `harness verify`.
+- `failures`: each problem, with the step that caused it, or `none` if the problem was there before the upgrade, and the fix.
+- `human_checks`: each thing that you must do by hand. This includes a skipped step, your uncommitted edits in a file that the upgrade changed, and staged changes from before the upgrade.
+- `commit`: the one commit to run from the repo root. It is `null` unless the status is `upgraded`.
 - `warnings`: skipped steps, kept files and registry rows that were not refreshed.
 - `vendored_engine`, `workflow`, `claude` and `codex_adapter`: what upgrade did to each file that it refreshes.
 
-Then run the checks yourself:
+| Status | Meaning |
+|---|---|
+| `upgraded` | The upgrade changed files and all checks passed. Run the `commit` command. |
+| `already on 0.10` | The upgrade found nothing to change. |
+| `incomplete` | A step was skipped or still has changes. Run `harness upgrade --yes`. |
+| `checks failed` | Doctor, verify or validation found a problem. Do the fix in `failures`. |
+| `failed` | A step stopped with an error. Fix the cause, then run `harness upgrade --yes`. |
+
+The upgrade already ran doctor and verify. Read `git status` before you commit:
 
 ```bash
-harness doctor --substrate
-harness verify
 git status
 ```
 
 - Do each `check:` line. Upgrade does not edit `AGENTS.md`, `CLAUDE.md` or the CI workflow when the file has no harness marker.
 - For Codex, approve the project hooks again with `/hooks`.
-- Commit the changes in one commit, for example `harness: upgrade to 0.10`.
+- Commit the changes in one commit. The `commit` command in the report uses the message `harness: upgrade to 0.10`.
