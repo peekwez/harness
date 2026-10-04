@@ -16,6 +16,7 @@ from engine.cli.author import (DEFAULT_WORKING_DOC, cmd_architect,
                                cmd_author_gate, cmd_backlog, cmd_compile,
                                cmd_slice)
 from engine.cli.close import cmd_close_slice, cmd_merge_slice
+from engine.cli.explore import cmd_explore
 from engine.cli.init import cmd_init
 from engine.cli.landing import cmd_land
 from engine.cli.review import cmd_adjudicate, cmd_review
@@ -37,6 +38,7 @@ COMMANDS = {
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
     "lint-text": cmd_lint_text,
     "acceptance": cmd_acceptance,
+    "explore": cmd_explore,
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
     "backlog": cmd_backlog, "slice": cmd_slice,
@@ -159,6 +161,14 @@ def main(argv=None):
     sp.add_argument("--list", action="store_true",
                     help="report paths/owners/problems; execute nothing")
     sp.add_argument("--exclude", help="slice id to leave out")
+
+    sp = sub.add_parser("explore",
+                        help="create explore/ with DECISIONS.md, VERIFY.md "
+                             "and OPEN.md; --freeze checks and signs them")
+    sp.add_argument("--freeze", action="store_true",
+                    help="check each card and statement, then write "
+                         "frozen_by and frozen_at_commit into "
+                         "explore/DECISIONS.md")
 
     sp = sub.add_parser("architect",
                         help="seed the Phase-0 working document from an "

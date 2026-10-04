@@ -248,6 +248,8 @@ Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
 installed one: schema migration, merge drivers, the vendored CI engine
 and the `harness-verify` workflow; idempotent — `init --migrate` is its
 alias),
+`explore` (creates `explore/` with `DECISIONS.md`, `VERIFY.md` and
+`OPEN.md`; `--freeze` checks the cards and signs `DECISIONS.md`),
 `architect` (`--from-spec <path>`: seeds the working document
 `docs/architecture.md` from an existing spec — headings become
 `[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, at
