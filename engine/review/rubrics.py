@@ -130,6 +130,11 @@ def _validate_model_output(out: dict, rubric_id: str) -> dict:
     return out
 
 
+def adjudicated_message(slice_id: str, rubric_id: str) -> str:
+    return (f"slice {slice_id}: rubric {rubric_id} was uncertain. "
+            "A human previously adjudicated this question. See the precedent.")
+
+
 def _already_adjudicated(root) -> set:
     """Finding IDs with a decided_by edge: the same question never parks
     twice — prior adjudications suppress the repeat park (§7.7, M6)."""
@@ -221,7 +226,8 @@ def run_review(root, facts: dict, config: dict, model=None,
                     # Adjudication already answered this exact question:
                     # surface the precedent, do not re-park (park-once).
                     f["severity"] = "advisory"
-                    f["message"] += " The question was previously adjudicated."
+                    f["message"] = adjudicated_message(facts["slice"],
+                                                       rubric["id"])
                     findings.append(f)
                 else:
                     findings.append(f)

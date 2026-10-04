@@ -190,3 +190,14 @@ def test_open_findings_block_renders_inject_lines_after_the_fix(toy):
     text = _block(resolve(toy, "slice-042", load_config(toy)), "findings")["text"]
     assert ("  Fix: Rename the span.\n"
             "Failure scenario: a filter misses every span.") in text
+
+
+def test_one_long_finding_line_is_clipped_so_it_cannot_crowd_out_decisions(toy):
+    append_jsonl(toy / ".harness" / "parked.jsonl", {
+        "slice": "slice-042", "finding": {
+            "finding_id": "F-2", "code": "REVIEW_UNCERTAIN",
+            "rule_ref": "gate:G5", "message": "short", "severity": "gate",
+            "layer": 2, "inject": ["Evidence: " + "x" * 5000]}})
+    text = _block(resolve(toy, "slice-042", load_config(toy)), "findings")["text"]
+    line = [l for l in text.splitlines() if l.startswith("Evidence: ")][0]
+    assert len(line) <= 401 and line.endswith("…")

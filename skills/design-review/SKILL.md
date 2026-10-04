@@ -60,4 +60,4 @@ Absence/failure is never a pass. Do not retry an unchanged availability failure
 at each stage, install tools or change authentication. Retry after a concrete
 availability change or user request. Honor a user opt-out; if the user expressly
 requires both approvals, require sufficient peer coverage and resolution of
-its concerns before finalization, or an explicit human waiver.
+its concerns before finalization, or an explicit human override.

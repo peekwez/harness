@@ -64,3 +64,30 @@ def test_missing_drift_baseline_keeps_the_error_in_inject(toy, monkeypatch):
     assert len(f["message"].split()) <= 25
     assert "no starting commit" in f["inject"][0]
     assert "starting revision" in f["fix"] and "harness slice --slice slice-042" in f["fix"]
+
+
+def test_park_without_fix_gets_the_default_fix(toy):
+    proc = run_cli("review", "--record-finding", "--park", "--slice", "slice-042",
+                   "--rule-ref", "decision:D-041", "--message", SUMMARY, root=toy)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["finding"]["fix"] == \
+        "Run: harness adjudicate --list"
+
+
+def test_gate_without_fix_gets_the_default_fix_and_advisory_stays_bare(toy):
+    proc = run_cli("review", "--record-finding", "--slice", "slice-042",
+                   "--rule-ref", "decision:D-041", "--severity", "gate",
+                   "--message", SUMMARY, root=toy)
+    assert json.loads(proc.stdout)["finding"]["fix"] == \
+        "Run: harness adjudicate --list"
+    proc = run_cli("review", "--record-finding", "--slice", "slice-042",
+                   "--rule-ref", "decision:D-041", "--message", SUMMARY, root=toy)
+    assert not json.loads(proc.stdout)["finding"].get("fix")
+
+
+def test_record_finding_rejects_a_code_outside_the_catalog(toy):
+    proc = run_cli("review", "--record-finding", "--slice", "slice-042",
+                   "--code", "MADE_UP_CODE", "--rule-ref", "decision:D-041",
+                   "--message", SUMMARY, root=toy)
+    assert proc.returncode == 2
+    assert "STE-80" in proc.stderr and "harness gates explain" in proc.stderr

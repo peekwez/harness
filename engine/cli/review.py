@@ -46,6 +46,13 @@ def cmd_review(args):
             print("error: a blocking finding needs --fix (STE-80). Pass one "
                   "action that resolves it.", file=sys.stderr)
             return 2
+        if severity != "advisory" and not args.fix:
+            args.fix = "Run: harness adjudicate --list"
+        from engine.findings import CATALOG
+        if args.code and args.code not in CATALOG:
+            print(f"error: --code {args.code} is not a harness code (STE-80). "
+                  "Run: harness gates explain", file=sys.stderr)
+            return 2
         finding = make_finding(
             args.code or ("REVIEW_UNCERTAIN" if args.park else "REVIEW_FINDING"),
             args.rule_ref, clip_words(args.message), severity=severity,

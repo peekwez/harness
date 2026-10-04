@@ -186,6 +186,11 @@ def block_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _clip_line(line, limit: int = 400) -> str:
+    line = str(line)
+    return line if len(line) <= limit else line[:limit] + "…"
+
+
 def _open_findings(root, slice_id: str) -> list:
     """Findings parked for this slice that still wait for a human."""
     return [row["finding"]
@@ -234,7 +239,7 @@ def build_blocks(root, sl: dict, config: dict) -> list:
     add("findings", "open findings",
         [f"[{f.get('code')} {f.get('rule_ref')}] {f.get('message')}"
          + (f"\n  Fix: {f['fix']}" if f.get("fix") else "")
-         + "".join(f"\n{line}" for line in f.get("inject") or [])
+         + "".join(f"\n{_clip_line(line)}" for line in f.get("inject") or [])
          for f in _open_findings(root, sl["id"])])
     add("decisions", "decisions in scope",
         [f"{d['id']} [{d.get('domain')}] {d.get('question')} -> {d.get('answer')}"

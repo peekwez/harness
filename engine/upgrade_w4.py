@@ -123,7 +123,10 @@ def _agents_advise(root: Path) -> list[str]:
     text = _agents_text(root)
     if text is None:
         return []
+    from .upgrade_w2 import AGENTS_MARKERS
     if AGENTS_MARKER not in text:
+        if text.splitlines()[:1] == [AGENTS_MARKERS[0]]:
+            return []  # 0.9 file: w8.agents-md swaps in the 0.10 template
         return ["check: AGENTS.md has no harness 0.10 marker, so upgrade "
                 "leaves it alone. Add the STE-80 rule from "
                 "templates/agents-md.md by hand."]

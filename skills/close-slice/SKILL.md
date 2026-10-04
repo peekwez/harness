@@ -54,7 +54,7 @@ from the wrong tree closes against the wrong substrate.
    Promote writes `.claude/memory/shared/<fact>.md` and updates
    `.claude/memory/shared/MEMORY.md` in this tree. The next step commits
    them with the slice, so they ride the slice commit, the PR or the merge.
-3. Commit the work (slice = commit boundary). Keep harness state OUT of
+3. Commit the work (slice = commit boundary). Keep substrate files OUT of
    the feature commit, because the ceremony commits its own substrate mutations:
    `git add -A -- . ':(exclude).harness' && git commit`
    This commit includes any promoted shared memory files.

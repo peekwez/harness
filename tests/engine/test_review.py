@@ -243,3 +243,10 @@ def test_suggest_command_round_trips_hostile_resolution(toy):
     parts = shlex.split(json.loads(proc.stdout)["suggest"])
     assert parts[:4] == ["harness", "memory", "promote", "--text"] and len(parts) == 5
     assert parts[4].endswith("Ruling: " + res)
+
+
+def test_previously_adjudicated_message_does_not_claim_a_park():
+    from engine.review.rubrics import adjudicated_message
+    msg = adjudicated_message("slice-042", "R-uses")
+    assert "parked" not in msg and "previously adjudicated" in msg
+    assert len(msg.split()) <= 25

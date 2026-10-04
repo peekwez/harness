@@ -76,6 +76,8 @@ def test_step_inserts_the_rule_as_the_next_number_once(tmp_path):
 
 def test_step_advises_and_never_edits_an_unmarked_file(tmp_path):
     body = _old(tmp_path, marker="<!-- other -->")
+    body = body.replace("# AGENTS.md — this repo is harness-enforced", "# Notes")
+    (tmp_path / "AGENTS.md").write_text(body)
     assert AGENTS_STE80_STEP.describe(tmp_path) == []
     assert AGENTS_STE80_STEP.apply(tmp_path, lambda q: True) == []
     advice = AGENTS_STE80_STEP.advise(tmp_path)
@@ -134,3 +136,10 @@ def test_crlf_is_preserved(tmp_path):
     text = _read(path)
     assert "\n3. STE-80:" in text
     assert text.count("\n") == text.count("\r\n")
+
+
+def test_step_is_silent_for_a_legacy_0_9_agents_md(tmp_path):
+    from engine.upgrade_w2 import AGENTS_MARKERS
+    (tmp_path / "AGENTS.md").write_text(AGENTS_MARKERS[0] + "\n\nold body\n")
+    assert AGENTS_STE80_STEP.describe(tmp_path) == []
+    assert AGENTS_STE80_STEP.advise(tmp_path) == []
