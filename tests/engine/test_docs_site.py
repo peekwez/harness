@@ -38,6 +38,63 @@ REQUIRED_HEADINGS = {
         "## When not to use harness", "## How to change a limit"],
 }
 
+# Task 4: Concepts, Workflow, Verification, Decision cards and Memory.
+# Placed before the parametrized tests: they read the keys at import time.
+REQUIRED_HEADINGS.update({
+    "concepts/philosophy.md": [
+        "# Philosophy", "## Three jobs", "## Why 0.10 changed course",
+        "## Lookup, never interpret",
+        "## Deterministic gates, advisory judgement",
+        "## Skill level changes explanation, not checks",
+        "## Writing for humans", "## Architecture in one table"],
+    "concepts/lifecycle.md": [
+        "# Slice lifecycle", "## From idea to landed code", "## Slice states",
+        "## What each transition checks", "## Events and gates",
+        "## Parks and adjudication"],
+    "concepts/substrate.md": [
+        "# Substrate files", "## Two trees", "## Authored, derived and cache",
+        "## File map", "## Merge drivers", "## CI workflow"],
+    "workflow/index.md": [
+        "# Workflow", "## Steps at a glance", "## Who signs what"],
+    "workflow/explore.md": [
+        "# Explore", "## When explore is required", "## The seven steps",
+        "## Files", "## Freeze", "## Isolation from production code"],
+    "workflow/architect.md": [
+        "# Architect", "## Three ways to start", "## Stages",
+        "## Design review by a second model", "## Compile", "## Author gate"],
+    "workflow/backlog.md": [
+        "# Backlog", "## What a slice holds", "## Add a slice",
+        "## Context cost", "## Split proposals",
+        "## Statements without a slice"],
+    "workflow/build.md": [
+        "# Build", "## One command starts a slice", "## The red record",
+        "## Context injection", "## Gates on each edit",
+        "## The permission layer", "## Composing with superpowers"],
+    "workflow/review.md": [
+        "# Review", "## The forked reviewer", "## Four layers",
+        "## The findings contract", "## Park and adjudicate"],
+    "workflow/close.md": [
+        "# Close", "## Close checks",
+        "## Drift acknowledgements and overrides", "## What close writes",
+        "## Promote memory"],
+    "workflow/land.md": [
+        "# Land", "## Local mode", "## Pull request mode",
+        "## Re-land after a failure", "## Update a slice branch",
+        "## Egress permits"],
+    "verification.md": [
+        "# Verification", "## Statements", "## Test links",
+        "## The red record", "## Close checks", "## Acceptance command",
+        "## The closed-slice suite", "## Verification skill",
+        "## Slices from before 0.10"],
+    "decision-cards.md": [
+        "# Decision cards", "## When to write a card", "## Card format",
+        "## Rules", "## From card to decision row",
+        "## Decision rows and ADRs"],
+    "memory.md": [
+        "# Memory", "## Personal memory", "## Shared memory",
+        "## Promote a fact", "## Guards", "## Upgrading from 0.9"],
+})
+
 
 @pytest.mark.parametrize("page", sorted(REQUIRED_HEADINGS))
 def test_page_has_required_headings(page):
@@ -85,3 +142,80 @@ def test_home_names_every_builtin_gate():
     text = (DOCS / "index.md").read_text()
     for gate in builtin_gates():
         assert re.search(rf"\b{gate.GATE['id']}\b", text), gate.GATE["id"]
+
+
+FENCE = re.compile(r"^\s*(```|~~~)")
+INLINE_CMD = re.compile(r"`harness ([a-z][a-z-]*)")
+FENCED_CMD = re.compile(r"^\s*(?:\$\s+)?harness ([a-z][a-z-]*)")
+SLASH = re.compile(r"/harness:([a-z][a-z-]*)")
+# a line that tells the reader a name is gone may name it
+HISTORY = re.compile(r"\b(removed|renamed|replaced)\b", re.IGNORECASE)
+
+
+def _command_mentions(text):
+    in_fence = False
+    for n, line in enumerate(text.splitlines(), 1):
+        if FENCE.match(line):
+            in_fence = not in_fence
+            continue
+        if HISTORY.search(line):
+            continue
+        if in_fence:
+            m = FENCED_CMD.match(line)
+            if m:
+                yield n, m.group(1)
+        else:
+            for m in INLINE_CMD.finditer(line):
+                yield n, m.group(1)
+
+
+def test_command_mentions_reads_inline_and_fenced_text():
+    text = ("Run `harness verify`.\n```bash\nharness upgrade --dry-run\n```\n"
+            "`harness run` was removed.\n")
+    assert list(_command_mentions(text)) == [(1, "verify"), (3, "upgrade")]
+
+
+def test_public_docs_name_real_commands():
+    from engine.cli import COMMANDS
+    bad = [f"{p.relative_to(PLUGIN_ROOT)}:{n}: harness {cmd}"
+           for p in public_docs()
+           for n, cmd in _command_mentions(p.read_text())
+           if cmd not in COMMANDS]
+    assert not bad, "unknown commands:\n" + "\n".join(bad)
+
+
+def test_public_docs_name_real_skills():
+    skills = {d.name for d in (PLUGIN_ROOT / "skills").iterdir()
+              if (d / "SKILL.md").exists()}
+    bad = [f"{p.relative_to(PLUGIN_ROOT)}:{n}: /harness:{m.group(1)}"
+           for p in public_docs()
+           for n, line in enumerate(p.read_text().splitlines(), 1)
+           if not HISTORY.search(line)
+           for m in SLASH.finditer(line)
+           if m.group(1) not in skills]
+    assert not bad, "unknown skills:\n" + "\n".join(bad)
+
+
+def test_task4_pages_state_the_code_facts():
+    """The facts where the code differs from the plan text (W7-P2..P9,
+    P21): each page names the behavior the engine has today."""
+    needles = {
+        "concepts/lifecycle.md": ["max_close_attempts", "G10", "bind",
+                                  "harness adjudicate"],
+        "workflow/explore.md": ["frozen_digest", "re-freeze", "user.name"],
+        "workflow/architect.md": ["supersedes", "keeps its stage",
+                                  "--force", "[open-question]"],
+        "workflow/build.md": ["runner_error", "is not a test.",
+                              "never overwritten"],
+        "workflow/review.md": ["/harness:harness", "decided_by"],
+        "verification.md": ["red_timeout", "runner error", "GREEN_AT_START",
+                            "verification:green-at-start", "KILLS_MISSING",
+                            "comma or space"],
+        "decision-cards.md": ["(recommended)", "**Domain:**",
+                              "explain more about X", "delegated:"],
+        "memory.md": ["legacy-memory", "G10", "ask",
+                      "sandbox.filesystem.denyWrite"],
+    }
+    missing = [f"{page}: {n}" for page, ns in needles.items()
+               for n in ns if n not in (DOCS / page).read_text()]
+    assert not missing, missing
