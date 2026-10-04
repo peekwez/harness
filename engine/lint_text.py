@@ -47,9 +47,9 @@ _GLOSSARY_ROW = re.compile(
 
 
 def _phrase(word: str) -> re.Pattern:
-    """Whole-word, case-insensitive match: `story` never matches `history`."""
-    return re.compile(r"(?<![A-Za-z0-9-])" + re.escape(word) +
-                      r"(?![A-Za-z0-9-])", re.I)
+    """Whole-word, case-insensitive match: `story` never matches `history` or `user_story_id`."""
+    return re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(word) +
+                      r"(?![A-Za-z0-9_-])", re.I)
 
 
 _BANNED_RE = [(w, _phrase(w)) for w in BANNED]
@@ -92,8 +92,8 @@ def scaffold_glossary(root: Path) -> bool:
 def _units(lines: list[str]):
     """Split markdown lines into checkable units.
 
-    Returns (units, open_fence_line). A unit is (line_no, kind, text), kind
-    "item" or "prose". Wrapped lines join their unit.
+    Returns (units, open_fence_line). A unit is (line_no, kind, text,
+    last_line), kind "item" or "prose". Wrapped lines join their unit.
     """
     units, unit = [], None
     start = 0
@@ -107,7 +107,7 @@ def _units(lines: list[str]):
     def close():
         nonlocal unit
         if unit:
-            units.append((unit[0], unit[1], " ".join(unit[2])))
+            units.append((unit[0], unit[1], " ".join(unit[2]), unit[3]))
             unit = None
 
     for n in range(start, len(lines)):
@@ -131,15 +131,16 @@ def _units(lines: list[str]):
         if not stripped or stripped.startswith(("#", "|")) or item:
             close()
             if item:
-                unit = [line_no, "item", [raw[item.end():].strip()]]
+                unit = [line_no, "item", [raw[item.end():].strip()], line_no]
             continue
         if stripped.startswith(">"):
             close()
-            unit = [line_no, "prose", [stripped.lstrip("> ")]]
+            unit = [line_no, "prose", [stripped.lstrip("> ")], line_no]
             continue
         if unit is None:
-            unit = [line_no, "prose", []]
+            unit = [line_no, "prose", [], line_no]
         unit[2].append(stripped)
+        unit[3] = line_no
     close()
     return units, fence_line
 
@@ -170,7 +171,7 @@ def lint_text(text: str, path: str,
     """
     units, open_fence = _units(text.splitlines())
     out = []
-    for line_no, kind, unit in units:
+    for line_no, kind, unit, _last in units:
         clean = _clean(unit)
         limit = LIST_LIMIT if kind == "item" else PROSE_LIMIT
         for sentence in _SENTENCE_END.split(clean):

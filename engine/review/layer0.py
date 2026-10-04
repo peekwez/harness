@@ -79,35 +79,85 @@ def _secret_findings(root, diff_text, slice_id):
     return findings
 
 
+_HUNK = re.compile(r"^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def _added_lines(diff_text):
+    """{path: set of new-file line numbers added by the diff}.
+
+    Hunk line counts decide where a hunk ends, so a `+++ ` line inside a
+    hunk is an added line, not a file header. A deleted file
+    (`+++ /dev/null`) adds nothing.
+    """
+    out, path, new_no, old_left, new_left = {}, None, 0, 0, 0
+    for line in (diff_text or "").splitlines():
+        if old_left > 0 or new_left > 0:
+            tag = line[:1]
+            if tag == "+":
+                if path:
+                    out.setdefault(path, set()).add(new_no)
+                new_no += 1
+                new_left -= 1
+                continue
+            if tag == "-":
+                old_left -= 1
+                continue
+            if tag == " " or line == "":
+                new_no += 1
+                new_left -= 1
+                old_left -= 1
+                continue
+            if tag == "\\":
+                continue
+        if line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else None
+            continue
+        m = _HUNK.match(line)
+        if m:
+            old_left = int(m.group(1) or 1)
+            new_no = int(m.group(2))
+            new_left = int(m.group(3) or 1)
+    return out
+
+
 def _glossary_findings(root, diff_text):
     """Advisory GLOSSARY_SYNONYM findings over added markdown lines.
 
-    Code files are never checked: an identifier is not prose (spec 9.2).
-    Each synonym is reported once per file.
+    It runs the lint-text synonym scan on each changed markdown file's
+    working-tree content, so fences, headings, tables, comments and front
+    matter are skipped as lint-text skips them. Only a synonym on an added
+    line counts. Each synonym is reported once per file.
     """
     from ..events import make_finding
-    from ..lint_text import GLOSSARY_PATH, find_synonyms, load_glossary
+    from ..lint_text import (GLOSSARY_PATH, _units, find_synonyms,
+                             load_glossary)
     glossary = load_glossary(Path(root) / GLOSSARY_PATH)
     if not glossary:
         return []
-    findings, current, seen = [], None, set()
-    for line in (diff_text or "").splitlines():
-        if line.startswith("+++ "):
-            current = line[6:] if line.startswith("+++ b/") else None
+    findings = []
+    for path, added in _added_lines(diff_text).items():
+        if not path.lower().endswith(".md") or path == GLOSSARY_PATH:
             continue
-        if (current is None or not current.endswith(".md")
-                or current == GLOSSARY_PATH or not line.startswith("+")):
+        try:
+            text = (Path(root) / path).read_bytes().decode("utf-8-sig")
+        except (OSError, UnicodeDecodeError):
             continue
-        for syn, term in find_synonyms(line[1:], glossary):
-            if (current, syn) in seen:
+        seen = set()
+        units, _ = _units(text.splitlines())
+        for first, _kind, unit, last in units:
+            if not added.intersection(range(first, last + 1)):
                 continue
-            seen.add((current, syn))
-            findings.append(make_finding(
-                "GLOSSARY_SYNONYM", "review:layer0",
-                f"{current}: added text uses {syn!r}; the glossary term is "
-                f"{term!r}.",
-                severity="advisory", key=f"{current}|{syn}",
-                fix=f"Replace {syn!r} with {term!r}, or edit {GLOSSARY_PATH}."))
+            for syn, term in find_synonyms(unit, glossary):
+                if syn in seen:
+                    continue
+                seen.add(syn)
+                findings.append(make_finding(
+                    "GLOSSARY_SYNONYM", "review:layer0",
+                    f"{path}: added text uses {syn!r}; the glossary term is "
+                    f"{term!r}.",
+                    severity="advisory", key=f"{path}|{syn}",
+                    fix=f"Replace {syn!r} with {term!r}, or edit "
+                        f"{GLOSSARY_PATH}."))
     return findings
 
 

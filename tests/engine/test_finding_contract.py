@@ -9,7 +9,7 @@ import shutil
 import pytest
 
 from conftest import PLUGIN_ROOT, build_toy_repo, loaded_context, make_event, run_cli
-from engine import read_jsonl, write_jsonl
+from engine import load_config, read_jsonl, write_jsonl
 from engine.events import handle_event
 from engine.findings import CATALOG, MAX_MESSAGE_WORDS
 
@@ -291,6 +291,24 @@ def _sweep(toy):
                          ("unit_complete", [])):
         findings += handle_event(make_event(event, session="sweep",
                                             files=files), toy)["findings"]
+    # G6: change a public signature after the baseline, then close the unit
+    tele = toy / "telemetry.py"
+    tele.write_text(tele.read_text().replace(
+        "def emit_span(name: str, attrs: dict) -> dict:",
+        "def emit_span(name: str, attrs: dict, level: int = 0) -> dict:"))
+    findings += handle_event(make_event("post_change", session="sweep",
+                                        files=["telemetry.py"]), toy)["findings"]
+    findings += handle_event(make_event("unit_complete", session="sweep"),
+                             toy)["findings"]
+    # G5: use a registry entry that the slice does not declare
+    from engine.extractor.engine import extract_path
+    rows = read_jsonl(toy / ".harness" / "backlog.jsonl")
+    rows[0]["declares_dep"] = ["config"]
+    write_jsonl(toy / ".harness" / "backlog.jsonl", rows)
+    (toy / "orders.py").write_text("import telemetry\n")
+    extract_path(toy, toy / "orders.py", load_config(toy))
+    findings += handle_event(make_event("post_change", session="sweep",
+                                        files=["orders.py"]), toy)["findings"]
     (toy / "tests" / "slices" / "042_orders.py").unlink()
     findings += handle_event(make_event("session_start", session="sweep-g1"),
                              toy)["findings"]
@@ -310,7 +328,8 @@ def test_the_sweep_reaches_the_main_gates(swept):
     codes = {f["code"] for f in swept}
     assert {"UNDECLARED_FILE", "NON_GOAL_VIOLATION", "MANIFEST_INCOMPLETE",
             "EXTRA_GATE_LOAD_ERROR", "SCHEMA_INVALID",
-            "SHARED_MEMORY_WRITE"} <= codes, codes
+            "SHARED_MEMORY_WRITE", "INTERFACE_DRIFT",
+            "UNDECLARED_USE"} <= codes, codes
 
 
 def test_every_swept_message_has_25_words_or_fewer(swept):
