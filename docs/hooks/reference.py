@@ -112,7 +112,7 @@ def render_gates(gates) -> str:
     for gate in gates:
         decl = gate.GATE
         doc = inspect.getdoc(gate) or ""
-        title, _, body = doc.partition("\n")
+        title, _, body = doc.partition("\n\n")
         parts.append(f"## {decl['id']}\n")
         parts.append(f"**{_cell(title)}**\n")
         if body.strip():

@@ -83,7 +83,7 @@ def test_gates_page_carries_each_module_docstring(pages):
     from engine.gates import builtin_gates
     page = pages["reference/gates.md"]
     for gate in builtin_gates():
-        first = inspect.getdoc(gate).splitlines()[0]
+        first = inspect.getdoc(gate).split("\n\n")[0]
         assert " ".join(first.split()).replace("|", "\\|") in page, first
 
 
@@ -144,3 +144,22 @@ def test_help_with_percent_default_is_formatted(hook):
     helps = [row[-1] for row in hook._arguments(parser)]
     assert "doc (default: docs/a.md)" in helps
     assert "driver (%O %A %B)" in helps
+
+
+def test_gate_title_is_the_whole_first_paragraph(pages):
+    from engine.gates import builtin_gates
+    g5 = next(g for g in builtin_gates() if g.GATE["id"] == "G5")
+    assert "similarity threshold vs registry signature_digests." in \
+        pages["reference/gates.md"]
+    assert inspect.getdoc(g5).split("\n\n")[0].count("\n") == 1
+
+
+def test_file_formats_prose_passes_the_text_lint():
+    import subprocess
+    import sys
+    out = subprocess.run(
+        [sys.executable, str(PLUGIN_ROOT / "bin" / "harness"), "lint-text",
+         "--glossary", str(PLUGIN_ROOT / "templates" / "glossary.md"),
+         str(HOOK.parent / "file-formats.md")],
+        capture_output=True, text=True)
+    assert out.returncode == 0, out.stdout + out.stderr
