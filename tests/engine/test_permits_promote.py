@@ -215,3 +215,41 @@ def test_permit_cli_asks_for_shared_memory_without_a_bound_slice(toy):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["decision"] == "ask" and out["allow"] is False
+
+
+# Round 5: with a slice bound, command_decision alone decides (deny > ask).
+@pytest.mark.parametrize("command", [
+    "git push origin main # harness", "git push origin main; ls harnes?",
+    "git push origin main && echo x > .claude/memory/shared/a.md",
+])
+def test_permit_cli_pr_mode_denies_before_asking(toy, command):
+    cfg = toy / ".harness" / "config.yaml"
+    cfg.write_text(cfg.read_text() + 'landing:\n  mode: "pr"\n'
+                   '  remote: "origin"\n  base: "main"\n')
+    proc = run_cli("permit", "--slice", "slice-042", "--session", "s",
+                   "--command", command, root=toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert (out["decision"], out["allow"]) == ("deny", False)
+
+
+# Round 5: a program word the permit cannot read asks.
+@pytest.mark.parametrize("command", [
+    "/plug/bin/harn${x:-e}ss memory promote a", "/plug/bin/harn${x-e}ss memory promote a",
+    "/plug/bin/harn$(echo e)ss memory promote a", "/plug/bin/harn`echo e`ss memory promote a",
+    "/plug/bin/harn$'\\x65'ss memory promote a", "/plug/bin/harn$'\\145'ss memory promote a",
+    "/plug/bin/harn$'e'ss memory promote a", "/plug/bin/h* memory promote a",
+    "/plug/bin/ha?ness memory promote a", "/plug/bin/harn{e,}ss memory promote a",
+    "/plug/bin/harn\"e\"ss memory promote a", "/plug/bin/harn\\ess memory promote a",
+    "X=1 /plug/bin/h* memory promote a", "git status; /plug/bin/h* memory promote a",
+    "> f /plug/bin/h* memory promote a", "(/plug/bin/h* memory promote a)",
+])
+def test_unreadable_program_word_asks(command):
+    assert command_decision(command, slice_id="s1")[:2] == ("ask", False)
+
+
+@pytest.mark.parametrize("command", [
+    "pytest -q > log.txt", 'git commit -m "$MSG"', "X=$HOME git status > f",
+])
+def test_readable_program_word_still_defers(command):
+    assert command_decision(command, slice_id="s1")[0] == "defer"

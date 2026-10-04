@@ -21,7 +21,9 @@ Two surfaces:
 - `ask_reason` — the shipped profile runs a deferred command unprompted, so
   protective outcomes are `ask`: a promotion, a command that names the shared
   memory folder (`echo x > .claude/memory/shared/a.md`), and a command that
-  is not plain and may spell `harness` (`har${x}ness`, `harnes?`).
+  is not plain and may spell `harness` (`har${x}ness`, `harnes?`) or whose
+  program word is not plain (`h*`, `harn$(echo e)ss`). In pr mode a deny
+  outranks every ask.
 """
 from __future__ import annotations
 
@@ -618,9 +620,6 @@ def command_decision(command: str, harness_bin: str | None = None,
     Returns:
         `(decision, allow, reason)`.
     """
-    why = needs_human(command)
-    if why:
-        return "ask", False, why
     from engine.cli.landing import landing_config
     allow, reason = command_allowed(command, harness_bin, config, slice_id)
     if allow:
@@ -663,16 +662,101 @@ def ask_reason(command: str, harness_bin: str | None = None):
         return why
     if touches_shared_memory(command):
         return _SHARED_REASON
-    if _may_spell_harness(command) and \
-            plain_segments(command, harness_bin) is None:
-        return _UNRESOLVED_REASON
+    if plain_segments(command, harness_bin) is None:
+        if _may_spell_harness(command):
+            return _UNRESOLVED_REASON
+        if _program_word_unreadable(command):
+            return _PROGRAM_REASON
     return None
 
 
 _SHARED_REASON = ("A command that names .claude/memory/shared needs a human. "
                   "Shared memory holds only facts a human chose.")
+_PROGRAM_REASON = ("A program name uses expansion, globs, escapes or joined "
+                   "quotes, so the permit cannot read it. A human approves it.")
 _UNRESOLVED_REASON = ("This harness command uses expansion, globs or escapes, "
                       "so the permit cannot read it. A human approves it.")
+
+
+_PROGRAM_BAD = frozenset("$`\\*?[]{}!")
+_ASSIGN_WORD = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_REDIRECT_WORD = re.compile(r"^[0-9]*(?:&>|[<>])")
+_REDIRECT_OP_ONLY = re.compile(r"^[0-9]*(?:&>>?|[<>]+&?|>\|)$")
+
+
+def _raw_segments(text: str):
+    """Split a command into segments of raw words, quotes kept, or None.
+
+    Quotes and backticks keep their contents in one word; separators
+    (`; & | ( )` and newlines) end a segment. An unterminated quote is None.
+    """
+    segments, words, word = [], [], []
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch in "'\"`":
+            j = i + 1
+            while j < n and text[j] != ch:
+                j += 2 if ch != "'" and text[j] == "\\" else 1
+            if j >= n:
+                return None
+            word.append(text[i:j + 1])
+            i = j + 1
+            continue
+        if ch == "\\":
+            word.append(text[i:i + 2])
+            i += 2
+            continue
+        if ch in " \t" or ch in ";&|()\n":
+            if word:
+                words.append("".join(word))
+                word = []
+            if ch not in " \t":
+                if words:
+                    segments.append(words)
+                words = []
+        else:
+            word.append(ch)
+        i += 1
+    if word:
+        words.append("".join(word))
+    if words:
+        segments.append(words)
+    return segments
+
+
+def _program_word_unreadable(command: str) -> bool:
+    """True when a segment's program word is not plain text.
+
+    The program word is the first word after leading `NAME=value`
+    assignments and redirections. It is unreadable when it holds `$`, a
+    backtick, a backslash, a glob or brace character, `!`, or quoted parts
+    joined to other text (`harn"e"ss`). An unterminated quote counts too.
+    """
+    segments = _raw_segments(command or "")
+    if segments is None:
+        return True
+    for words in segments:
+        k = 0
+        while k < len(words):
+            w = words[k]
+            if _ASSIGN_WORD.match(w):
+                k += 1
+            elif _REDIRECT_OP_ONLY.match(w):
+                k += 2
+            elif _REDIRECT_WORD.match(w):
+                k += 1
+            else:
+                break
+        if k >= len(words):
+            continue
+        prog = words[k]
+        if any(c in _PROGRAM_BAD for c in prog):
+            return True
+        if any(q in prog for q in "'\"") and not (
+                prog[0] in "'\"" and prog.index(prog[0], 1) == len(prog) - 1):
+            return True
+    return False
 
 
 def _may_spell_harness(command: str) -> bool:

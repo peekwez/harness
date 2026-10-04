@@ -290,13 +290,14 @@ def cmd_permit(args):
                     or sidecar.state_get("__default__", "active_slice"))
     finally:
         sidecar.close()
-    why = (ask_reason(args.command, str(PLUGIN_ROOT / "bin" / "harness"))
-           if args.command else None)
-    if why:
-        _print({"allow": False, "decision": "ask", "reason": why,
-                "slice": slice_id})
-        return 0
     if not slice_id:
+        # with a slice bound, command_decision alone decides (deny > ask)
+        why = (ask_reason(args.command, str(PLUGIN_ROOT / "bin" / "harness"))
+               if args.command else None)
+        if why:
+            _print({"allow": False, "decision": "ask", "reason": why,
+                    "slice": slice_id})
+            return 0
         _print({"allow": False, "reason": "no slice bound to this session — "
                                           "auto-approval is scoped to a bound slice"})
         return 0
