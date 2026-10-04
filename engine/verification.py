@@ -222,3 +222,137 @@ def red_advisory(root, slice_id, paths, config) -> list:
     except (HarnessError, OSError):
         return []
     return []
+
+
+def close_checks(root, sl, config):
+    """Spec 6.4 checks 3, 4 and 5 for one slice.
+
+    3. A red record exists. A record that was green at start needs an
+       override with a reason (`verification:green-at-start`).
+    4. Each statement in `verifies` has a test with a `verifies:` comment
+       in an acceptance suite: the slice's own, or a closed slice's.
+    5. Each such test has `kills:` text.
+
+    `legacy_verification: true` skips all three. Unknown IDs in the slice's
+    own acceptance files are advisory.
+
+    Returns:
+        `(findings, report)`. Blocking findings stop the close.
+    """
+    from engine.cli.acceptance import closed_acceptance
+    from engine.events import make_finding
+    from engine.findings import clip_words
+    from engine.graph import override_targets
+    from engine.statements import (expand_suite, load_statements,
+                                   scan_test_links)
+    sid = sl["id"]
+    report = {"legacy": bool(sl.get("legacy_verification")),
+              "red_record": None, "red_before_green": False,
+              "green_at_start": False, "green_at_start_override": False,
+              "statements": {}, "unknown_test_links": []}
+    if report["legacy"]:
+        report["red_record"] = "skipped: legacy_verification: true"
+        return [], report
+    findings = []
+
+    # check 3: the red record
+    if _runner_disabled(config):
+        report["red_record"] = "skipped: gates.acceptance_runner is none"
+    else:
+        try:
+            record, problem = load_red_record(root, sid), None
+        except HarnessError as exc:
+            record, problem = None, str(exc)
+        if record is None:
+            findings.append(make_finding(
+                "RED_RECORD_MISSING", RULE_RED,
+                clip_words(problem or f"No red record for slice {sid}: "
+                                      f"{record_rel(sid)} does not exist."),
+                severity="block", key=sid,
+                fix=f"harness slice --slice {sid}"))
+        else:
+            report["red_record"] = record_rel(sid)
+            if record.get("red"):
+                report["red_before_green"] = True
+            elif record.get("green_at_start"):
+                report["green_at_start"] = True
+                overrides = override_targets(root, sid, RULE_RED,
+                                             {"verification"})
+                if "green-at-start" in overrides:
+                    report["green_at_start_override"] = True
+                else:
+                    findings.append(make_finding(
+                        "GREEN_AT_START", RULE_RED,
+                        f"Slice {sid} acceptance tests passed at bind: "
+                        f"{record_rel(sid)}.",
+                        severity="block", key=sid,
+                        fix=(f"harness gates override --slice {sid} --target "
+                             f"{GREEN_OVERRIDE} --rule-ref {RULE_RED} "
+                             f"--justification \"<why>\"")))
+            else:
+                reason = record.get("runner_error") or "no failing exit code"
+                findings.append(make_finding(
+                    "RED_RECORD_MISSING", RULE_RED,
+                    clip_words(f"Red record for slice {sid} is not red: "
+                               f"{reason}."),
+                    severity="block", key=sid,
+                    fix=f"harness slice --slice {sid}"))
+
+    # checks 4 and 5: statement coverage and kills text
+    own = expand_suite(root, sl.get("acceptance") or [])
+    regression = expand_suite(
+        root, closed_acceptance(root, exclude=sid)["paths"])
+    links = scan_test_links(root, sorted(set(own) | set(regression)))
+    known = {r["id"] for r in load_statements(root)}
+    target = (sl.get("acceptance") or ["a test file"])[0]
+    for stid in sl.get("verifies") or []:
+        if stid not in known:
+            findings.append(make_finding(
+                "UNKNOWN_STATEMENT", RULE_COVERAGE,
+                f"Slice {sid} verifies {stid}, which is not in "
+                f".harness/verify.jsonl.",
+                severity="block", key=f"{sid}|{stid}", fix="harness compile"))
+            continue
+        found = links.get(stid, [])
+        report["statements"][stid] = found
+        if not found:
+            findings.append(make_finding(
+                "STATEMENT_UNTESTED", RULE_COVERAGE,
+                f"Statement {stid} has no test with a verifies: comment in "
+                f"the acceptance suites of slice {sid}.",
+                severity="block", key=f"{sid}|{stid}",
+                fix=f"Add '# verifies: {stid}  kills: <bug>' above a test "
+                    f"in {target}."))
+        for link in found:
+            if not link["kills"]:
+                findings.append(make_finding(
+                    "KILLS_MISSING", RULE_COVERAGE,
+                    f"{link['path']}:{link['line']}: the verifies: {stid} "
+                    f"comment has no kills: text.",
+                    severity="block",
+                    key=f"{stid}|{link['path']}:{link['line']}",
+                    fix="Add 'kills: <the bug this test catches>' to the "
+                        "comment."))
+    own_files = set(own)
+    for tid, found in sorted(links.items()):
+        if tid in known:
+            continue
+        for link in found:
+            if link["path"] not in own_files:
+                continue
+            report["unknown_test_links"].append({"id": tid, **link})
+            findings.append(make_finding(
+                "UNKNOWN_TEST_LINK", RULE_COVERAGE,
+                f"{link['path']}:{link['line']}: verifies: {tid} is not in "
+                f".harness/verify.jsonl.",
+                severity="advisory",
+                key=f"{tid}|{link['path']}:{link['line']}",
+                fix="Fix the ID, or add the statement and run harness "
+                    "compile."))
+    return findings, report
+
+
+def slice_metrics(report: dict) -> dict:
+    """The W5 fields for `record_slice_summary(..., extra=...)`."""
+    return {"red_before_green": bool(report.get("red_before_green")),
+            "green_at_start": bool(report.get("green_at_start"))}

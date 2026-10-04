@@ -9,6 +9,30 @@ from __future__ import annotations
 MAX_MESSAGE_WORDS = 25
 
 CATALOG: dict[str, str] = {
+    "RED_RECORD_MISSING": (
+        "Close needs proof that the slice's tests failed before the code "
+        "existed. The red record in .harness/verification/<slice>.json is "
+        "missing, unreadable, or shows a runner error instead of a failing "
+        "suite. Bind the slice again to run the suite and record red."),
+    "GREEN_AT_START": (
+        "The slice's acceptance suite passed when the slice was bound, "
+        "before any code was written. Such tests prove nothing about the "
+        "new behaviour. Make the tests fail for the missing behaviour and "
+        "bind again. For a pure refactor, record an override with a reason "
+        "on target verification:green-at-start."),
+    "UNKNOWN_STATEMENT": (
+        "The slice row lists a statement ID in verifies that is not in "
+        ".harness/verify.jsonl. The statement was renamed or removed. Run "
+        "harness compile, then fix the slice's verifies list."),
+    "STATEMENT_UNTESTED": (
+        "A statement the slice owns has no test with a verifies: comment. "
+        "Only tests in the slice's acceptance paths, or in a closed slice's "
+        "acceptance paths, count, because only those run at close. Add the "
+        "comment above the test that proves the statement."),
+    "KILLS_MISSING": (
+        "A verifies: comment has no kills: text. kills: names the bug the "
+        "test must catch. It is the mutant record. Write it on the same "
+        "line, or on the next comment line."),
     "NO_RED_RECORD": (
         "The bound slice has no red record, and the edit is to a file that "
         "is not a test. Harness records red when you bind the slice: it "

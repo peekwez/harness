@@ -137,6 +137,18 @@ def _close_ceremony(args):
                 "findings": [gate]})
     # a repo with no gate_cmd is not a repo whose gate passed: say which
     acceptance_gate = "passed" if gate_configured(config) else "skipped"
+    # Precondition 1.2 (spec 6.4 checks 3-5, W5): the red record exists (or
+    # an override records why the suite was green at start), each statement
+    # the slice verifies has a linked test, and each link has kills: text.
+    # Legacy slices skip these; acceptance and regression above still ran.
+    from engine.verification import close_checks
+    from engine.verification import slice_metrics as verification_metrics
+    v_findings, verification = close_checks(root, sl, config)
+    v_blocks = [f for f in v_findings if f["severity"] == "block"]
+    if v_blocks:
+        _fail({"closed": False, "rule_ref": v_blocks[0]["rule_ref"],
+               "reason": v_blocks[0]["message"], "findings": v_findings,
+               "verification": verification})
     try:
         source_matches_commit(root, args.commit)
     except HarnessError as exc:
@@ -345,13 +357,15 @@ def _close_ceremony(args):
                               f"re-close — provenance is not optional."})
 
     # D-0.10-11: one committed summary row per slice. Event rows stay local.
-    slice_metrics = telemetry.record_slice_summary(root, args.slice)
+    slice_metrics = telemetry.record_slice_summary(
+        root, args.slice, extra=verification_metrics(verification))
 
     result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
               "acceptance_gate": acceptance_gate, "substrate_commit": None,
               "source_commit": args.commit,
               "fork_review": fork_review, "review": review_result,
               "slice_metrics": slice_metrics,
+              "verification": verification,
               "registry_refreshed": refreshed, "flip_skipped": flip_skipped,
               "note_written": note_written, "note_tree_hash": note_row.get("tree_hash"),
               "notes_ref": NOTES_REF if note_written else None,
