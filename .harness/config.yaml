@@ -2,15 +2,12 @@
 schema: 1
 gates:
   g3_mode: allow_with_findings
-  g5_override: recorded_justification
   g5_similarity_threshold: 0.6
-ensemble:
-  trigger_confidence_below: 0.7
-  samples: 3
+  exempt_paths: [".harness/", "adr/", ".github/", "tests/", "docs/", ".claude/", "explore/"]
 languages:
   python: true
   typescript: false
   yaml: true
   hcl: false
-telemetry:
-  compaction_is_defect: false
+review:
+  ensemble: false

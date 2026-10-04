@@ -3,7 +3,6 @@ __pycache__/
 .pytest_cache/
 .harness/sidecar.db
 .harness/sidecar.db-*
-.harness/memory/session/
 .worktrees/
 .claude/settings.local.json
 .harness/cache/
