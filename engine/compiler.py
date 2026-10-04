@@ -26,6 +26,7 @@ from .registry import registry_kinds
 
 _CODE_SPAN = re.compile(r"`[^`]*`")
 PLACEHOLDER_SENTINEL = "EDIT ME"
+DECISION_ANSWER_WORDS = 150  # spec 9.2: a row answer; the reasons go in the ADR
 
 
 def _config(root) -> dict:
@@ -359,6 +360,14 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
         report["warnings"].append(
             f"non-goal {b['id']} is advisory only. Cite {b.get('rule_ref')} "
             f"in a gates.extra GATE[\"cites\"] to make G3 block it.")
+
+    for rid in sorted(set(report["decisions"])):
+        n = len(str(decisions[rid].get("answer", "")).split())
+        if n > DECISION_ANSWER_WORDS:
+            report["warnings"].append(
+                f"decision {rid}: the answer has {n} words; the limit is "
+                f"{DECISION_ANSWER_WORDS}. Move the detail into the ADR that "
+                f"the row cites.")
 
     write_jsonl(harness_dir(root) / "decisions.jsonl",
                 sorted(decisions.values(), key=lambda d: d["id"]))
