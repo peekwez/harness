@@ -28,7 +28,7 @@ results, real runtime checks and planned code-coverage/trace attribution. Keep
 the matrix in the working design and include it in the peer's input packet.
 
 **The working document needs a source.** When `docs/architecture.md`
-exists, resume at its stage marker, with one exception. If explore/ is frozen and its cards have no ADR yet, run `harness architect --from-explore` first, even when the working document exists; it adds the cards and keeps your stage.
+exists, resume at its stage marker, with one exception. If explore/ is frozen and its cards have no ADR yet, run `harness architect --from-explore` first, even when the working document exists. It adds the cards and keeps your stage.
 When the document does not exist, run one of these commands as your first
 action:
 

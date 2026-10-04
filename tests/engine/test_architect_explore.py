@@ -396,3 +396,32 @@ def test_explore_adr_uses_the_public_out_of_force():
     assert compiler.out_of_force is compiler._out_of_force
     body = (PLUGIN_ROOT / "engine" / "explore_adr.py").read_text()
     assert "import out_of_force" in body and "_out_of_force" not in body
+
+
+def test_append_relinks_a_constraint_to_the_superseding_explore_adr(toy):
+    doc = _stage5_doc(toy)
+    _frozen(toy)
+    _from_explore(toy)
+    _choose_b(toy)
+    (toy / "adr" / "009-orders-in-postgres.md").write_text(
+        "---\nid: '009'\nstatus: accepted\ndomains: [storage]\n"
+        "supersedes: ['008']\ndecision_table_rows: []\nabstractions: []\n"
+        "---\n\n# ADR-009: Orders move to Postgres\n")
+    doc.write_text(doc.read_text() + "\nHuman note: see adr/008 history.\n")
+    before = doc.read_text().splitlines()
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    new = "adr/010-where-do-orders-live.md"
+    out = json.loads(proc.stdout)
+    assert out["adrs"] == [new] and out["relinked"] == ["D-E1"]
+    after = doc.read_text().splitlines()
+    assert len(after) == len(before)
+    changed = [(a, b) for a, b in zip(before, after) if a != b]
+    assert len(changed) == 1
+    old_line, new_line = changed[0]
+    assert ADR in old_line and new in new_line
+    assert new_line == (f"Decided: Postgres. Card and reason: {new}. "
+                        f"Do not ask this again.")
+    again = _from_explore(toy)
+    assert json.loads(again.stdout)["relinked"] == []
+    assert doc.read_text().splitlines() == after

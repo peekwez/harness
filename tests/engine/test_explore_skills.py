@@ -207,7 +207,7 @@ def test_explore_skill_text_passes_lint_text():
 
 FROM_EXPLORE_FIRST = ("If explore/ is frozen and its cards have no ADR yet, "
                       "run `harness architect --from-explore` first, even "
-                      "when the working document exists; it adds the cards "
+                      "when the working document exists. It adds the cards "
                       "and keeps your stage.")
 
 

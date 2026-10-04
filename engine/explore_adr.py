@@ -213,6 +213,36 @@ def append_cards(text: str, cards: list[dict], adr_refs: dict[str, str],
     return head + sep + "\n".join(lines), added
 
 
+def relink_cards(text: str, cards: list[dict],
+                 adr_refs: dict[str, str]) -> tuple[str, list[str]]:
+    """Points seeded `Decided:` lines at each chosen card's current ADR.
+
+    Only the `Decided: ... Card and reason: adr/....md. Do not ask this
+    again.` line that the seed writes right under `[constraint] <id>:` is
+    rewritten, and only when it cites another ADR. Other text stays.
+
+    Returns:
+        (new text, relinked card ids).
+    """
+    relinked: list[str] = []
+    for card in cards:
+        ref = adr_refs.get(card["id"])
+        if ref is None:
+            continue
+        pattern = re.compile(
+            r"(^\[constraint\]\s+" + re.escape(card["id"]) + r"\s*:[^\n]*\n)"
+            r"Decided: [^\n]*? Card and reason: (adr/[^\s]+?\.md)\. "
+            r"Do not ask this again\.$", re.M)
+        found = pattern.search(text)
+        if found is None or found.group(2) == ref:
+            continue
+        line = _card_block(card, adr_refs, {})[1]
+        text = text[:found.start()] + found.group(1) + line \
+            + text[found.end():]
+        relinked.append(card["id"])
+    return text, relinked
+
+
 _STAGE = re.compile(r"<!-- stage: (\d+) -->")
 
 
@@ -227,9 +257,10 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
 
     Returns:
         `{"doc", "stage", "adrs", "unchanged", "rows", "parked", "stale",
-        "appended", "source"}`. Without `force`, an existing document keeps
-        its content and stage; `appended` lists the card ids whose blocks
-        were added to it. `stale` lists explore ADRs whose card is no
+        "appended", "relinked", "source"}`. Without `force`, an existing
+        document keeps its content and stage; `appended` lists the card ids
+        whose blocks were added to it, and `relinked` the cards whose
+        seeded `Decided:` line now cites a new ADR. `stale` lists explore ADRs whose card is no
         longer chosen; they are kept, because accepted ADRs are immutable.
 
     Raises:
@@ -307,8 +338,10 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
         doc.parent.mkdir(parents=True, exist_ok=True)
         doc.write_text(render_doc(cards, refs, opens), encoding="utf-8")
         stage, appended = 3, [c["id"] for c in _ordered(cards)]
+        relinked: list[str] = []
     else:
-        new_doc, appended = append_cards(old_doc, cards, refs, opens)
+        new_doc, relinked = relink_cards(old_doc, cards, refs)
+        new_doc, appended = append_cards(new_doc, cards, refs, opens)
         if new_doc != old_doc:
             doc.write_text(new_doc, encoding="utf-8")
         marker = _STAGE.search(old_doc)
@@ -322,5 +355,5 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
             "unchanged": unchanged, "rows": sorted(bodies),
             "parked": [c["id"] for c in cards
                        if chosen_letter(c) == "parked"],
-            "stale": stale, "appended": appended,
+            "stale": stale, "appended": appended, "relinked": relinked,
             "source": f"{EXPLORE_DIR}/DECISIONS.md"}

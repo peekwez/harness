@@ -11,7 +11,7 @@ You recommend; the human decides.
 When `docs/architecture.md` exists, resume at its stage marker, with one
 exception. If explore/ is frozen and its cards have no ADR yet, run
 `harness architect --from-explore` first, even when the working document
-exists; it adds the cards and keeps your stage.
+exists. It adds the cards and keeps your stage.
 
 Discipline:
 
