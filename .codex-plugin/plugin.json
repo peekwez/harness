@@ -1,8 +1,10 @@
 {
   "name": "harness",
-  "version": "0.9.4",
+  "version": "0.10.0",
   "description": "Spec-driven development with slice lifecycles, dependency gates, interface shadows and recoverable provenance.",
-  "author": {"name": "Kwesi P Apponsah"},
+  "author": {
+    "name": "Kwesi P Apponsah"
+  },
   "license": "MIT",
   "skills": "./skills/",
   "interface": {
@@ -12,6 +14,8 @@
     "developerName": "Kwesi P Apponsah",
     "category": "Developer Tools",
     "capabilities": [],
-    "defaultPrompt": ["Check this project's Harness substrate and guide the next slice."]
+    "defaultPrompt": [
+      "Check this project's Harness substrate and guide the next slice."
+    ]
   }
 }

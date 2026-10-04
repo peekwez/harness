@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "harness",
-      "description": "Development enforcement plugin: two-phase context injection (resolver + gates G1, G3, G5, G6, G9 and G10), interface shadows via tree-sitter, ADR-compiled decision tables, slice-based build loop with worktree partitioning, four-layer review stack (ensemble sampling and golden replay are opt-in via review.ensemble), and adjudication that converts every human intervention into durable substrate. Includes the init, explore, architect, design-review, adr-authoring, verification, backlog, build, review, close-slice and harness skills plus 4 agent personas.",
-      "version": "0.9.4",
+      "description": "Development enforcement plugin: explore-first design with decision cards, verification-first slices (a red record at start, statement coverage at close), deterministic gates G1, G3, G5, G6, G9 and G10, a capped context injection, shared team memory and an STE-80 text checker. Skills: /harness:explore, /harness:architect, /harness:design-review, /harness:adr-authoring, /harness:verification, /harness:backlog, /harness:build, /harness:review, /harness:close-slice, /harness:init and /harness:harness, plus 4 agent personas.",
+      "version": "0.10.0",
       "author": {
         "name": "Kwesi P Apponsah",
         "email": "kwesiparry@gmail.com"
