@@ -39,7 +39,7 @@ The upgrade runs in this order:
 8. It runs `harness doctor --substrate` and `harness verify`, each in a new process.
 9. It proposes one commit.
 
-A problem does not stop the upgrade. The report lists each problem in `failures`, with the step that caused it and the fix. If a step fails, the steps before it keep their changes. Fix the cause, then run `harness upgrade --yes` again.
+If a step fails, the steps after it do not run. The steps before it keep their changes. If another part of the upgrade fails, the other parts still run. The registry refresh does not run after a failure. In each case the upgrade still prints its report. The report lists each problem in `failures`, with the step or the part that caused it and the fix. Fix the cause, then run `harness upgrade --yes` again.
 
 Upgrade does not commit. Its only change to the git index is `git rm --cached` for `.harness/shadows/` and `.harness/memory/`, which stay out of git from now on. The commit proposal includes these deletions. Read `git status` and `git diff`, then commit.
 
@@ -137,7 +137,7 @@ Read the upgrade report. It is JSON with these parts:
 | `already on 0.10` | The upgrade found nothing to change. |
 | `incomplete` | A step was skipped or still has changes. Run `harness upgrade --yes`. |
 | `checks failed` | Doctor, verify or validation found a problem. Do the fix in `failures`. |
-| `failed` | A step stopped with an error. Fix the cause, then run `harness upgrade --yes`. |
+| `failed` | A step or another part of the upgrade stopped with an error. Fix the cause, then run `harness upgrade --yes`. |
 
 The upgrade already ran doctor and verify. Read `git status` before you commit:
 

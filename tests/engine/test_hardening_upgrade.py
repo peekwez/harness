@@ -420,7 +420,11 @@ def test_upgrade_never_replaces_newer_vendored_engine(tmp_path):
     binary = project / ".harness/engine/bin/harness"
     before = binary.read_bytes()
     proc = run_cli("upgrade", root=project)
-    assert proc.returncode != 0 and "downgrade" in proc.stderr
+    # the refusal is a failed stage in the report; Task 5 maps "failed" to exit 1
+    out = json.loads(proc.stdout)
+    assert out["status"] == "failed", proc.stderr
+    [failure] = [f for f in out["failures"] if f["code"] == "STAGE_FAILED"]
+    assert failure["stage"] == "refresh vendored engine" and "downgrade" in failure["detail"]
     assert version.read_text() == "999.0.0\n" and binary.read_bytes() == before
 
 

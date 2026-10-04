@@ -222,8 +222,94 @@ def test_a_broken_config_is_a_failure_and_keeps_the_claude_settings(tmp_path):
     assert out["status"] == "failed"
     crash = next(f for f in out["failures"] if f["code"] == "STEP_FAILED")
     assert "config.yaml is not valid YAML" in crash["text"]
+    assert crash["step"] == out["steps"][-1]["id"]
     failure = next(f for f in out["failures"] if f["code"] == "CONFIG_INVALID")
     assert "harness upgrade --yes" in failure["fix"]
     assert out["claude"] == {}
     assert (root / ".claude/settings.json").read_bytes() == settings
     assert out["commit"] is None
+
+
+def _noask():
+    from engine.cli.upgrade import make_ask
+    return make_ask(False, stdin=io.StringIO(), stderr=io.StringIO())
+
+
+def test_a_second_run_is_already_on_010(tmp_path):
+    from engine.cli.upgrade import make_ask, upgrade_project
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    assert upgrade_project(root, ask=make_ask(True))["status"] == "upgraded"
+    two = upgrade_project(root, ask=make_ask(True))
+    assert two["status"] == "already on 0.10", (two["files"], two["failures"])
+    assert two["commit"] is None
+
+
+def test_a_crash_after_a_declined_step_names_the_crashing_step(tmp_path, monkeypatch):
+    """Fix round 1: the rows before the crash and the skip lines stay."""
+    from engine import upgrade_010
+    from engine.cli.upgrade import upgrade_project
+
+    def apply(r, ask):
+        raise RuntimeError("disk full")
+    bomb = upgrade_010.Step(id="w8.bomb", title="b", describe=lambda r: ["x"], apply=apply)
+    monkeypatch.setattr(upgrade_010, "STEPS", [*upgrade_010.STEPS, bomb])
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    out = upgrade_project(root, ask=_noask())
+    assert out["status"] == "failed" and out["commit"] is None
+    [failure] = [f for f in out["failures"] if f["code"] == "STEP_FAILED"]
+    assert failure["step"] == "w8.bomb" and failure["text"] == "RuntimeError: disk full"
+    rows = {r["id"]: r for r in out["steps"]}
+    assert rows["w1.untrack-shadows"]["report"] == ["skipped: needs confirmation"]
+    assert out["steps"][-1]["id"] == "w8.bomb"
+    assert any(w.startswith("w1.untrack-shadows:") for w in out["warnings"])
+    assert any(h.startswith("w1.untrack-shadows:") for h in out["human_checks"])
+    assert out["registry"]["refreshed"] == []        # 0.9 rows may remain
+
+
+def test_a_stage_that_raises_still_returns_a_report(tmp_path, monkeypatch):
+    from engine.cli import upgrade
+
+    def boom(r):
+        raise OSError("read-only file system")
+    monkeypatch.setattr(upgrade, "_write_workflow", boom)
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    out = upgrade.upgrade_project(root, ask=upgrade.make_ask(True))
+    assert out["status"] == "failed" and out["commit"] is None
+    [failure] = [f for f in out["failures"] if f["code"] == "STAGE_FAILED"]
+    assert failure["stage"] == "refresh workflow"
+    assert failure["detail"] == "read-only file system"
+    assert failure["line"].endswith("harness upgrade --yes")
+    assert out["registry"]["refreshed"] == []
+    assert out["checks"]["doctor"]["passed"] is not None
+
+
+def test_a_settings_write_error_is_a_stage_failure_not_a_config_one(tmp_path, monkeypatch):
+    from engine.cli import upgrade
+
+    def boom(root, config):
+        raise OSError("disk full")
+    monkeypatch.setattr(upgrade, "_refresh_claude_settings", boom)
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    out = upgrade.upgrade_project(root, ask=upgrade.make_ask(True))
+    codes = {f["code"] for f in out["failures"]}
+    assert "STAGE_FAILED" in codes and "CONFIG_INVALID" not in codes
+    assert out["status"] == "failed"
+
+
+def test_a_raising_describe_leaves_the_upgrade_incomplete_not_crashed(tmp_path, monkeypatch):
+    from engine import upgrade_010
+    from engine.cli.upgrade import make_ask, upgrade_project
+    calls = []
+
+    def describe(r):
+        calls.append(1)
+        if len(calls) > 1:              # fine during the run, broken afterwards
+            raise ValueError("cannot read")
+        return []
+    odd = upgrade_010.Step(id="w8.odd", title="o", describe=describe,
+                           apply=lambda r, a: [])
+    monkeypatch.setattr(upgrade_010, "STEPS", [*upgrade_010.STEPS, odd])
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    out = upgrade_project(root, ask=make_ask(True))
+    assert out["status"] == "incomplete"
+    assert any("w8.odd" in h for h in out["human_checks"])

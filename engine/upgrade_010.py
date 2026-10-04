@@ -73,40 +73,52 @@ def preview(root: Path) -> list[dict]:
              "changes": (s.preview or s.describe)(root)} for s in STEPS]
 
 
+def _run_one(root: Path, step: Step, ask: Ask, dry_run: bool) -> dict | None:
+    changes = step.describe(root)
+    if not changes:
+        return None
+    row = {"id": step.id, "title": step.title, "changes": changes}
+    if dry_run:
+        return row
+    asked: list[str] = []
+
+    def recording_ask(question: str) -> bool:
+        asked.append(question)
+        return ask(question)
+
+    report = step.apply(root, recording_ask)
+    row["report"] = report
+    if step.destructive and not asked:
+        raise HarnessError(
+            f"upgrade step {step.id} is destructive but applied "
+            f"without asking. Fix the step: call ask() before any change")
+    if SKIPPED not in report:
+        left = step.describe(root)
+        if left:
+            raise HarnessError(
+                f"upgrade step {step.id} left changes undone: {left}. "
+                f"Fix the cause, then run: harness upgrade")
+    return row
+
+
 def run(root: Path, ask: Ask, *, dry_run: bool) -> list[dict]:
     """Apply every step that has work. A dry run only describes.
 
-    Raises:
-        HarnessError: a destructive step applied without asking, or a step
-            left changes undone without reporting a skip.
+    A step that raises, applies a destructive change without asking, or
+    leaves changes undone gets a row with `"error"`, and no later step runs.
+    The rows of the steps before it stay. `run` itself never raises.
     """
     root = Path(root)
     results = []
     for step in STEPS:
-        changes = step.describe(root)
-        if not changes:
-            continue
-        row = {"id": step.id, "title": step.title, "changes": changes}
-        if not dry_run:
-            asked: list[str] = []
-
-            def recording_ask(question: str, _asked=asked) -> bool:
-                _asked.append(question)
-                return ask(question)
-
-            report = step.apply(root, recording_ask)
-            if step.destructive and not asked:
-                raise HarnessError(
-                    f"upgrade step {step.id} is destructive but applied "
-                    f"without asking. Fix the step: call ask() before any change")
-            row["report"] = report
-            if SKIPPED not in report:
-                left = step.describe(root)
-                if left:
-                    raise HarnessError(
-                        f"upgrade step {step.id} left changes undone: {left}. "
-                        f"Fix the cause, then run: harness upgrade")
-        results.append(row)
+        try:
+            row = _run_one(root, step, ask, dry_run)
+        except Exception as exc:  # the report names the step; later steps wait
+            results.append({"id": step.id, "title": step.title,
+                            "error": f"{type(exc).__name__}: {exc}"})
+            break
+        if row is not None:
+            results.append(row)
     return results
 
 

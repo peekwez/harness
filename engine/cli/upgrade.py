@@ -7,8 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from engine import (ENGINE_VERSION, SCHEMA_VERSION, HarnessError, load_config,
-                    sha256_file)
+from engine import (ENGINE_VERSION, SCHEMA_VERSION, HarnessError, sha256_file)
 from engine.cli.common import PLUGIN_ROOT, _install_merge_drivers, _print
 from engine.cli.init import (VENDOR_DIR, _vendor_engine, _write_autonomy_settings,
                              _write_workflow)
@@ -219,45 +218,47 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     schema = migrate(root)
     # Which BUILT rows were clean before any upgrade write.
     clean, dirty, warnings = _clean_registry_entries(root)
-    legacy_overrides = repair_legacy_overrides(root)
-    graph = repair_legacy_provenance(root)
+    # From here on a stage that raises becomes a failure row, never a crash.
+    failures: list = []
 
-    failures = []
-    try:
-        steps = upgrade_010.run(root, ask, dry_run=False)
-    except Exception as exc:  # name the step; keep the earlier writes
-        steps = []
-        failures.append(rep.step_failure(root, exc, upgrade_010.STEPS))
+    def stage(name, func, default=None):
+        return rep.run_stage(failures, name, func, default)
+
+    legacy_overrides = stage("repair legacy overrides",
+                             lambda: repair_legacy_overrides(root), {})
+    graph = stage("repair legacy graph provenance",
+                  lambda: repair_legacy_provenance(root), {})
+    steps = upgrade_010.run(root, ask, dry_run=False)
     failures.extend(rep.reported_step_errors(steps))
 
-    _install_merge_drivers(root)
-    vendored = _vendor(root)
-    workflow = _write_workflow(root)
-    codex = _refresh_codex_hooks(root)
-    try:
-        config = load_config(root)
-        claude = _refresh_claude_settings(root, config)
-    except Exception as exc:  # YAML or schema: never write settings from it
-        config, claude = {}, {}
-        failures.append({"check": "schema", "code": "CONFIG_INVALID", "text": str(exc),
-                         "fix": "correct .harness/config.yaml, then run: harness upgrade --yes"})
+    stage("install merge drivers", lambda: _install_merge_drivers(root))
+    vendored = stage("refresh vendored engine", lambda: _vendor(root), {})
+    workflow = stage("refresh workflow", lambda: _write_workflow(root), {})
+    codex = stage("refresh Codex hooks", lambda: _refresh_codex_hooks(root), {})
+    config = rep.load_config_or_fail(root, failures)
+    claude = {} if config is None else stage(
+        "refresh Claude settings", lambda: _refresh_claude_settings(root, config), {})
     warnings.extend(step_warnings(steps, workflow, claude, codex))
-    # After a step crash the registry may still hold 0.9 rows: a rerun refreshes.
-    refreshed = [] if failures else _refresh_registry(root, clean, warnings)
+    # After any failure the registry may still hold 0.9 rows: a rerun refreshes.
+    refreshed = [] if failures else stage(
+        "refresh registry", lambda: _refresh_registry(root, clean, warnings), [])
 
-    problems = validate_substrate(root, config=config)
+    problems = stage("validate substrate",
+                     lambda: validate_substrate(root, config=config or {}), [])
     failures.extend({"check": "schema", "code": "SCHEMA_INVALID", "text": p,
                      "fix": "correct the named row, then run: harness upgrade --yes"}
                     for p in problems)
     checks = rep.final_checks(root)
-    failures = rep.attribute(
-        failures + checks["doctor"]["failures"] + checks["verify"]["failures"], steps)
-    files = rep.changed_files(before, rep.snapshot(root))
+    failures.extend(checks["doctor"]["failures"] + checks["verify"]["failures"])
+    files = stage("list changed files",
+                  lambda: rep.changed_files(before, rep.snapshot(root)),
+                  {"added": [], "modified": [], "removed": []})
     pending = rep.pending_ids(root, upgrade_010.STEPS)
-    try:
-        advice = upgrade_010.advice(root)
-    except Exception:  # the failure that broke it is already in `failures`
-        advice = []
+    advice = stage("collect advice", lambda: upgrade_010.advice(root), [])
+    commit = None
+    if not failures and not pending:
+        commit = stage("propose commit", lambda: rep.commit_proposal(root, files))
+    failures = rep.attribute(failures, steps)
     status = rep.upgrade_status(schema_from=schema["from"], current=SCHEMA_VERSION,
                                 files=files, steps=steps, pending=pending,
                                 failures=failures)
@@ -282,7 +283,7 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
             steps, pending=pending, staged_before=staged_before,
             dirty_before=dirty_before, files=files, checks=checks,
             is_repo=(root / ".git").exists(), advice=advice),
-        "commit": rep.commit_proposal(root, files) if status == "upgraded" else None,
+        "commit": commit if status == "upgraded" else None,
         "warnings": warnings,
     }
 

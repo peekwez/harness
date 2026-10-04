@@ -243,15 +243,6 @@ def _tokens(lines) -> set:
     return found
 
 
-def _owner(fix: str) -> str:
-    """Who acts on a fix: the upgrade (rerun it), a later command, or the human."""
-    if "harness upgrade" in fix:
-        return "the upgrade"
-    if fix.startswith(("harness ", "run: harness", "Run: harness")):
-        return "a later command"
-    return "the human"
-
-
 def attribute(failures, steps) -> list:
     """Name the step and the owner of each failure. The step is the last one
     whose report names a file that the failure names; `none` means no step
@@ -264,7 +255,7 @@ def attribute(failures, steps) -> list:
             "none")
         line = (f"{failure['check']} {failure['code']}: {failure['text']}. "
                 f"Step: {step}. Fix: {failure['fix']}")
-        out.append({**failure, "step": step, "owner": _owner(failure["fix"]), "line": line})
+        out.append({**failure, "step": step, "line": line})
     return out
 
 
@@ -282,12 +273,38 @@ def pending_ids(root, steps) -> list[str]:
     return out
 
 
-def step_failure(root, exc, steps) -> dict:
-    """A step raised inside `upgrade_010.run`. The first step, in order, that
-    still has pending changes is the one that stopped."""
-    owner = next(iter(pending_ids(root, steps)), "none")
-    return {"check": "upgrade", "code": "STEP_FAILED",
-            "text": f"{type(exc).__name__}: {exc}", "step": owner, "fix": STEP_FIX}
+def stage_failure(stage: str, exc: Exception) -> dict:
+    """A pipeline stage after the migration raised. The text stays short;
+    the exception text is in `detail`."""
+    return {"check": "upgrade", "code": "STAGE_FAILED", "stage": stage, "step": "none",
+            "text": f"stage {stage} raised {type(exc).__name__}",
+            "detail": str(exc)[-400:], "fix": STEP_FIX}
+
+
+def load_config_or_fail(root, failures: list):
+    """The config after the steps, or None with a CONFIG_INVALID row. Only
+    the config's own errors are caught; None means "write no settings"."""
+    from engine import load_config
+    try:
+        import yaml
+        errors = (HarnessError, yaml.YAMLError)
+    except ImportError:          # load_config reports the missing PyYAML
+        errors = (HarnessError,)
+    try:
+        return load_config(root)
+    except errors as exc:
+        failures.append({"check": "schema", "code": "CONFIG_INVALID", "text": str(exc),
+                         "fix": "correct .harness/config.yaml, then run: harness upgrade --yes"})
+        return None
+
+
+def run_stage(failures: list, stage: str, func, default=None):
+    """Run one stage. An exception becomes a STAGE_FAILED row; the upgrade goes on."""
+    try:
+        return func()
+    except Exception as exc:  # the report must come back after any write
+        failures.append(stage_failure(stage, exc))
+        return default
 
 
 def reported_step_errors(rows) -> list:
@@ -298,7 +315,7 @@ def reported_step_errors(rows) -> list:
 
 def upgrade_status(*, schema_from, current, files, steps, pending, failures) -> str:
     """A declined destructive step leaves the upgrade "incomplete"."""
-    if any(f.get("code") == "STEP_FAILED" for f in failures):
+    if any(f.get("code") in ("STEP_FAILED", "STAGE_FAILED") for f in failures):
         return "failed"
     skipped = any(NEEDS_CONFIRMATION in line for row in steps for line in step_lines(row))
     if pending or skipped:

@@ -199,8 +199,12 @@ def test_stale_vendored_engine_refuses_self_replacement_and_survives(tmp_path):
         [sys.executable, str(vendored / "bin" / "harness"),
          "--root", str(root), "upgrade"],
         cwd=root, capture_output=True, text=True)
-    assert proc.returncode != 0
-    assert "would replace" in proc.stderr
+    # the refusal is a failed stage in the report; Task 5 maps "failed" to exit 1
+    out = json.loads(proc.stdout)
+    assert out["status"] == "failed", proc.stderr
+    [failure] = [f for f in out["failures"] if f["code"] == "STAGE_FAILED"]
+    assert failure["stage"] == "refresh vendored engine"
+    assert "would replace" in failure["detail"]
     assert (vendored / "bin" / "harness").exists()
     assert (vendored / "VERSION").read_text() == "0.0.1\n"
 

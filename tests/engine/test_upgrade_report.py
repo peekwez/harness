@@ -215,16 +215,6 @@ def test_attribute_names_the_last_step_that_reported_the_file():
                               "Step: w1.drop-registry-shadow. Fix: f")
 
 
-def test_attribute_names_who_fixes_each_failure():
-    failures = [
-        {"check": "upgrade", "code": "STEP_FAILED", "text": "t", "fix": rep.STEP_FIX, "step": "a"},
-        {"check": "doctor", "code": "stale_worktrees", "text": "t",
-         "fix": "git worktree remove --force /r/x"},
-        {"check": "verify", "code": "X", "text": "t", "fix": "harness gates explain X"}]
-    assert [f["owner"] for f in rep.attribute(failures, [])] == [
-        "the upgrade", "the human", "a later command"]
-
-
 def test_reported_step_errors():
     rows = [{"id": "w2.a", "report": []}, {"id": "w2.b", "error": "disk full"}]
     assert rep.reported_step_errors(rows) == [{
@@ -258,11 +248,31 @@ def test_final_checks_run_doctor_and_verify_in_fresh_processes(tmp_path):
     assert rep.HARNESS_BIN.name == "harness"
 
 
-def test_step_failure_names_the_first_step_with_pending_changes(tmp_path):
+def test_a_stage_that_raises_becomes_a_short_failure_row():
+    failures = []
+    assert rep.run_stage(failures, "refresh workflow", lambda: 1 / 0, {}) == {}
+    assert rep.run_stage(failures, "list files", lambda: 7) == 7
+    [row] = rep.attribute(failures, [])
+    assert row["code"] == "STAGE_FAILED" and row["stage"] == "refresh workflow"
+    assert row["detail"] == "division by zero"
+    assert row["line"] == ("upgrade STAGE_FAILED: stage refresh workflow raised "
+                           "ZeroDivisionError. Step: none. Fix: " + rep.STEP_FIX)
+    assert len(row["line"].split()) <= 25 and row["line"].endswith("--yes")
+    assert "owner" not in row
+
+
+def test_a_raising_describe_counts_as_pending():
     class S:
-        def __init__(self, id, pending):
-            self.id, self._p = id, pending
-        def describe(self, root):
-            return self._p
-    out = rep.step_failure(tmp_path, OSError("disk full"), [S("a", []), S("b", ["x"]), S("c", ["y"])])
-    assert out["step"] == "b" and out["code"] == "STEP_FAILED" and "disk full" in out["text"]
+        def __init__(self, id, describe):
+            self.id, self.describe = id, describe
+
+    def boom(root):
+        raise ValueError("bad yaml")
+    steps = [S("a", lambda r: []), S("b", boom), S("c", lambda r: ["x"])]
+    assert rep.pending_ids(".", steps) == ["b", "c"]
+
+
+def test_a_stage_failure_fails_the_upgrade():
+    assert rep.upgrade_status(schema_from=1, current=2, files={"added": ["a"], "modified": [],
+                              "removed": []}, steps=[], pending=[],
+                              failures=[{"code": "STAGE_FAILED"}]) == "failed"

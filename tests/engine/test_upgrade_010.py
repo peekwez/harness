@@ -89,14 +89,30 @@ def test_run_applies_and_a_second_run_does_nothing(steps, tmp_path):
 
 def test_a_step_that_leaves_changes_fails_and_names_the_step(steps, tmp_path):
     upgrade_010.register(_marker_step(leaves=True))
-    with pytest.raises(HarnessError, match="w0.marker"):
-        upgrade_010.run(tmp_path, upgrade_010.always_yes, dry_run=False)
+    out = upgrade_010.run(tmp_path, upgrade_010.always_yes, dry_run=False)
+    assert out[-1]["id"] == "w0.marker"
+    assert "HarnessError" in out[-1]["error"] and "left changes undone" in out[-1]["error"]
 
 
 def test_destructive_step_must_ask_first(steps, tmp_path):
     upgrade_010.register(_marker_step(destructive=True, asks=False))
-    with pytest.raises(HarnessError, match="without asking"):
-        upgrade_010.run(tmp_path, upgrade_010.always_yes, dry_run=False)
+    out = upgrade_010.run(tmp_path, upgrade_010.always_yes, dry_run=False)
+    assert "without asking" in out[-1]["error"]
+
+
+def test_a_raising_step_stops_later_steps_and_keeps_earlier_rows(steps, tmp_path):
+    """Fix round 1: run records the error in the row and never raises."""
+    upgrade_010.register(_marker_step("w0.a", destructive=True))
+
+    def apply(root, ask):
+        raise OSError("disk full")
+    upgrade_010.register(Step("w0.boom", "Crash.", lambda r: ["x"], apply))
+    upgrade_010.register(_marker_step("w0.c"))
+    out = upgrade_010.run(tmp_path, lambda question: False, dry_run=False)
+    assert [r["id"] for r in out] == ["w0.a", "w0.boom"]
+    assert out[0]["report"] == [SKIPPED]
+    assert out[1]["error"] == "OSError: disk full"
+    assert not (tmp_path / "w0.c.done").exists()
 
 
 def test_declined_destructive_step_is_skipped_not_failed(steps, tmp_path):
