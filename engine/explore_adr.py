@@ -179,9 +179,67 @@ def render_doc(cards: list[dict], adr_refs: dict[str, str],
     return "\n".join(out)
 
 
+def _visible(text: str) -> list[str]:
+    """The document's lines, with fenced code blanked (same line count)."""
+    from engine.explore import _clean_fences
+    return _clean_fences(text)[0].split("\n")
+
+
+def _block_head(kind: str, card_id: str) -> re.Pattern:
+    return re.compile(r"^\[" + kind + r"\]\s+" + re.escape(card_id)
+                      + r"\s*:")
+
+
 def _has_block(text: str, card_id: str) -> bool:
-    return re.search(r"\[(?:constraint|open-question)\]\s+"
-                     + re.escape(card_id) + r"\s*:", text) is not None
+    """True when a `[constraint]` or `[open-question]` line outside fenced
+    code names `card_id`."""
+    heads = (_block_head("constraint", card_id),
+             _block_head("open-question", card_id))
+    return any(h.match(line) for line in _visible(text) for h in heads)
+
+
+_SEED_DECIDED = re.compile(r"^Decided: .*? Card and reason: "
+                           r"(adr/\S+?\.md)\. Do not ask this again\.$")
+_SEED_PARKED = re.compile(r"^\[open-question\]\s+(D-[A-Za-z0-9-]+): .+ "
+                          r"(?:deferred: .+ \(trigger: .+\)|\(parked; "
+                          r"explore/OPEN\.md names no owner\))$")
+
+
+def promote_cards(text: str, cards: list[dict], adr_refs: dict[str, str]
+                  ) -> tuple[str, list[str], list[str]]:
+    """Turns the seeded `[open-question]` of a card chosen since into its
+    `[constraint]` block.
+
+    Only a line in the seed format is replaced. Fenced code and a card
+    that already has a `[constraint]` line are left alone.
+
+    Returns:
+        (new text, promoted card ids, card ids whose open question a
+        human edited, so it stays).
+    """
+    lines = text.split("\n")
+    visible = _visible(text)
+    promoted: list[str] = []
+    edited: list[str] = []
+    for card in cards:
+        cid = card["id"]
+        if cid not in adr_refs:
+            continue
+        if any(_block_head("constraint", cid).match(v) for v in visible):
+            continue
+        head = _block_head("open-question", cid)
+        at = next((n for n, v in enumerate(visible) if head.match(v)), None)
+        if at is None:
+            continue
+        seed = _SEED_PARKED.match(visible[at])
+        if seed is None or seed.group(1) != cid:
+            edited.append(cid)
+            continue
+        block = _card_block(card, adr_refs, {})[:2]
+        lines[at:at + 1] = block
+        visible[at:at + 1] = block
+        promoted.append(cid)
+    return "\n".join(lines), promoted, edited
 
 
 def append_cards(text: str, cards: list[dict], adr_refs: dict[str, str],
@@ -219,28 +277,29 @@ def relink_cards(text: str, cards: list[dict],
 
     Only the `Decided: ... Card and reason: adr/....md. Do not ask this
     again.` line that the seed writes right under `[constraint] <id>:` is
-    rewritten, and only when it cites another ADR. Other text stays.
+    rewritten, and only when it cites another ADR. Fenced code and other
+    text stay.
 
     Returns:
         (new text, relinked card ids).
     """
+    lines = text.split("\n")
+    visible = _visible(text)
     relinked: list[str] = []
     for card in cards:
         ref = adr_refs.get(card["id"])
         if ref is None:
             continue
-        pattern = re.compile(
-            r"(^\[constraint\]\s+" + re.escape(card["id"]) + r"\s*:[^\n]*\n)"
-            r"Decided: [^\n]*? Card and reason: (adr/[^\s]+?\.md)\. "
-            r"Do not ask this again\.$", re.M)
-        found = pattern.search(text)
-        if found is None or found.group(2) == ref:
-            continue
-        line = _card_block(card, adr_refs, {})[1]
-        text = text[:found.start()] + found.group(1) + line \
-            + text[found.end():]
-        relinked.append(card["id"])
-    return text, relinked
+        head = _block_head("constraint", card["id"])
+        for n, line in enumerate(visible[:-1]):
+            if not head.match(line):
+                continue
+            found = _SEED_DECIDED.match(visible[n + 1])
+            if found and found.group(1) != ref:
+                lines[n + 1] = _card_block(card, adr_refs, {})[1]
+                relinked.append(card["id"])
+            break
+    return "\n".join(lines), relinked
 
 
 _STAGE = re.compile(r"<!-- stage: (\d+) -->")
@@ -257,10 +316,12 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
 
     Returns:
         `{"doc", "stage", "adrs", "unchanged", "rows", "parked", "stale",
-        "appended", "relinked", "source"}`. Without `force`, an existing
-        document keeps its content and stage; `appended` lists the card ids
-        whose blocks were added to it, and `relinked` the cards whose
-        seeded `Decided:` line now cites a new ADR. `stale` lists explore ADRs whose card is no
+        "appended", "relinked", "promoted", "source"}`. Without `force`,
+        an existing document keeps its content and stage; `appended` lists the card ids
+        whose blocks were added to it, `relinked` the cards whose
+        seeded `Decided:` line now cites a new ADR, and `promoted` the
+        parked cards, chosen since, whose seeded `[open-question]` became a
+        `[constraint]` block. `stale` lists explore ADRs whose card is no
         longer chosen; they are kept, because accepted ADRs are immutable.
 
     Raises:
@@ -339,8 +400,15 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
         doc.write_text(render_doc(cards, refs, opens), encoding="utf-8")
         stage, appended = 3, [c["id"] for c in _ordered(cards)]
         relinked: list[str] = []
+        promoted: list[str] = []
     else:
-        new_doc, relinked = relink_cards(old_doc, cards, refs)
+        new_doc, promoted, edited = promote_cards(old_doc, cards, refs)
+        for cid in edited:
+            print(f"check: {doc.relative_to(root)} has an edited "
+                  f"[open-question] {cid}, but the card is now chosen. "
+                  f"Replace it with a [constraint] block by hand.",
+                  file=sys.stderr)
+        new_doc, relinked = relink_cards(new_doc, cards, refs)
         new_doc, appended = append_cards(new_doc, cards, refs, opens)
         if new_doc != old_doc:
             doc.write_text(new_doc, encoding="utf-8")
@@ -356,4 +424,5 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
             "parked": [c["id"] for c in cards
                        if chosen_letter(c) == "parked"],
             "stale": stale, "appended": appended, "relinked": relinked,
+            "promoted": promoted,
             "source": f"{EXPLORE_DIR}/DECISIONS.md"}

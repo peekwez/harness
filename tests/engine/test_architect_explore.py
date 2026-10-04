@@ -425,3 +425,72 @@ def test_append_relinks_a_constraint_to_the_superseding_explore_adr(toy):
     again = _from_explore(toy)
     assert json.loads(again.stdout)["relinked"] == []
     assert doc.read_text().splitlines() == after
+
+
+def _choose_parked_a(toy):
+    path = toy / "explore" / "DECISIONS.md"
+    text = path.read_text()
+    head, tail = text.split("## D-E2", 1)
+    path.write_text(head + "## D-E2" + tail.replace(
+        "**Chosen:** parked", "**Chosen:** A"))
+    assert run_cli("explore", "--freeze", root=toy).returncode == 0
+
+
+def test_a_parked_card_chosen_later_becomes_a_constraint(toy):
+    from engine.compiler import author_gate, compile_substrate
+    doc = _stage5_doc(toy)
+    _frozen(toy)
+    _from_explore(toy)
+    assert "[open-question] D-E2:" in doc.read_text()
+    _choose_parked_a(toy)
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    new = "adr/009-which-queue-do-we-use.md"
+    assert out["adrs"] == [new] and out["promoted"] == ["D-E2"]
+    text = doc.read_text()
+    assert "[open-question] D-E2" not in text
+    assert ("[constraint] D-E2: Which queue do we use?\nDecided: Cron. Card "
+            f"and reason: {new}. Do not ask this again.\n") in text
+    assert text.startswith(STAGE5_DOC)
+    compile_substrate(toy, working_doc=doc)
+    gate = author_gate(toy, working_doc=doc)
+    assert gate["passed"], gate["gaps"]
+    again = _from_explore(toy)
+    assert json.loads(again.stdout)["promoted"] == []
+    assert doc.read_text() == text
+
+
+def test_an_edited_open_question_is_left_with_a_check_line(toy):
+    doc = _stage5_doc(toy)
+    _frozen(toy)
+    _from_explore(toy)
+    text = doc.read_text().replace(
+        "(trigger: more than 1,000 jobs a minute)",
+        "(trigger: more than 1,000 jobs a minute) — kwesi asks ops")
+    doc.write_text(text)
+    _choose_parked_a(toy)
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["promoted"] == []
+    assert doc.read_text() == text
+    check = [ln for ln in proc.stderr.splitlines() if ln.startswith("check:")]
+    assert len(check) == 1
+    assert "D-E2" in check[0] and "docs/architecture.md" in check[0]
+    assert len(check[0].split()) <= 25
+
+
+def test_fenced_examples_are_not_card_blocks(toy):
+    fenced = ("```\n[constraint] D-E1: example\nDecided: X. Card and reason: "
+              "adr/001-x.md. Do not ask this again.\n```\n")
+    doc = _stage5_doc(toy)
+    doc.write_text(STAGE5_DOC + "\n" + fenced)
+    _frozen(toy)
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["appended"] == ["D-E1", "D-E2"] and out["relinked"] == []
+    text = doc.read_text()
+    assert text.startswith(STAGE5_DOC + "\n" + fenced)
+    assert f"[constraint] D-E1: Where do orders live?\nDecided: SQLite " \
+           f"file. Card and reason: {ADR}." in text
