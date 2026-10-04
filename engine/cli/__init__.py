@@ -28,7 +28,7 @@ from engine.cli.text import cmd_lint_text
 from engine.cli.verify import cmd_doctor, cmd_event, cmd_verify
 from engine.cli.upgrade import cmd_upgrade
 
-__all__ = ["COMMANDS", "main"]
+__all__ = ["COMMANDS", "build_parser", "main"]
 
 # name -> handler. The single dispatch table: the argparse subparsers below,
 # the README-coverage test and any host enumerating the CLI all read it.
@@ -52,7 +52,8 @@ COMMANDS = {
 }
 
 
-def main(argv=None):
+def build_parser() -> argparse.ArgumentParser:
+    """The `harness` argparse parser. The docs hook reads it for the CLI reference."""
     p = argparse.ArgumentParser(prog="harness", description=__doc__)
     p.add_argument("--root", help="substrate root (default: walk up from cwd)")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -368,6 +369,11 @@ def main(argv=None):
     sp.add_argument("--domain")
     sp.add_argument("--reverses", action="store_true")
 
+    return p
+
+
+def main(argv=None):
+    p = build_parser()
     args = p.parse_args(argv)
     try:
         return COMMANDS[args.cmd](args)
