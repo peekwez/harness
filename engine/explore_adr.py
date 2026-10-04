@@ -8,6 +8,7 @@ document. Architect never asks again a question that a card answers.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 from engine import HarnessError
@@ -106,7 +107,15 @@ def render_adr(adr_id: str, card: dict, adr_ref: str, state: dict,
 
 
 def _explore_adrs(root: Path) -> dict[str, tuple[Path, str]]:
-    """Map card id -> (ADR path, ADR id) for ADRs that --from-explore wrote."""
+    """Map card id -> (ADR path, ADR id) for in-force explore ADRs.
+
+    Superseded ADRs are skipped: a changed card then gets a new ADR.
+
+    Raises:
+        HarnessError: Two in-force ADRs claim the same card.
+    """
+    from engine.compiler import _out_of_force
+    gone = _out_of_force(root)
     out: dict[str, tuple[Path, str]] = {}
     adr_dir = root / "adr"
     if not adr_dir.is_dir():
@@ -116,8 +125,14 @@ def _explore_adrs(root: Path) -> dict[str, tuple[Path, str]]:
             continue
         data, _ = front_matter(path.read_text(encoding="utf-8"))
         card_id = data.get("explore_card")
-        if card_id:
-            out[str(card_id)] = (path, str(data.get("id", "")))
+        if not card_id or str(data.get("id", "")) in gone \
+                or str(data.get("status", "")).lower() == "superseded":
+            continue
+        if str(card_id) in out:
+            raise HarnessError(
+                f"architect: {out[str(card_id)][0].name} and {path.name} "
+                f"both claim card {card_id}. Supersede one of them.")
+        out[str(card_id)] = (path, str(data.get("id", "")))
     return out
 
 
@@ -187,7 +202,7 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
         more = (f" ...and {len(problems) - 1} more." if len(problems) > 1
                 else "")
         raise HarnessError(
-            f"architect: explore/DECISIONS.md changed after freeze. "
+            f"architect: explore/DECISIONS.md is not valid. "
             f"{problems[0]}{more} Run: harness explore --freeze to list them")
     if front_matter(text)[0].get("frozen_digest") != body_digest(text):
         raise HarnessError("architect: explore/DECISIONS.md changed after "
@@ -217,14 +232,20 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
                 if kept == path.read_text(encoding="utf-8"):
                     body = kept
         bodies[card["id"]] = (path, ref, body)
-    conflicts = [ref for path, ref, body in bodies.values()
-                 if path.exists() and not force
-                 and path.read_text(encoding="utf-8") != body]
-    if conflicts:
-        raise HarnessError(
-            f"architect: accepted ADRs {conflicts} differ from their frozen "
-            f"cards. Write a superseding ADR, or re-run with --force to "
-            f"rewrite them.")
+    differ = [(path, ref) for path, ref, body in bodies.values()
+              if path.exists() and path.read_text(encoding="utf-8") != body]
+    for path, ref in differ:
+        status = str(front_matter(path.read_text(encoding="utf-8"))[0]
+                     .get("status", "")).lower()
+        if status != "accepted":
+            raise HarnessError(
+                f"architect: {ref} has status {status!r} and its card "
+                f"changed. Set it to accepted or supersede it with a new "
+                f"ADR.")
+        if not force:
+            raise HarnessError(
+                f"architect: {ref} differs from its frozen card. Write an "
+                f"ADR that supersedes {ref}, or use --force to rewrite it.")
     written, unchanged = [], []
     (root / "adr").mkdir(exist_ok=True)
     for path, ref, body in bodies.values():
@@ -239,10 +260,14 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
     refs = {cid: ref for cid, (_path, ref, _body) in bodies.items()}
     doc.parent.mkdir(parents=True, exist_ok=True)
     doc.write_text(render_doc(cards, refs, opens), encoding="utf-8")
+    stale = sorted(f"adr/{p.name}" for cid, (p, _i)
+                   in existing.items() if cid not in bodies)
+    for ref in stale:
+        print(f"check: {ref} is accepted but its card is parked or gone. "
+              f"Write an ADR that supersedes {ref}.", file=sys.stderr)
     return {"doc": str(doc), "stage": 3, "adrs": written,
             "unchanged": unchanged, "rows": sorted(bodies),
             "parked": [c["id"] for c in cards
                        if chosen_letter(c) == "parked"],
-            "stale": sorted(f"adr/{p.name}" for cid, (p, _i)
-                            in existing.items() if cid not in bodies),
+            "stale": stale,
             "source": f"{EXPLORE_DIR}/DECISIONS.md"}

@@ -90,7 +90,7 @@ def test_from_explore_refuses_cards_broken_after_freeze(toy):
     proc = _from_explore(toy)
     assert proc.returncode == 1
     err = json.loads(proc.stderr)["error"]
-    assert "changed after freeze" in err and "'Chosen' is 'C'" in err
+    assert "is not valid" in err and "'Chosen' is 'C'" in err
     assert not (toy / ADR).exists()
 
 
@@ -191,7 +191,8 @@ def test_invalid_cards_error_is_short_and_counts_problems(toy):
                     .replace("- Solves: Many writers.", ""))
     err = json.loads(_from_explore(toy).stderr)["error"]
     assert "more. Run: harness explore --freeze to list them" in err
-    assert len(err.split(".")[0].split()) <= 25
+    head = err.split(" ...and")[0]
+    assert 5 < len(head.split()) <= 25, head
 
 
 def test_refreeze_keeps_digest_and_a_body_edit_changes_it(toy):
@@ -203,3 +204,87 @@ def test_refreeze_keeps_digest_and_a_body_edit_changes_it(toy):
     path.write_text(path.read_text().replace("one writer", "two writers"))
     assert run_cli("explore", "--freeze", root=toy).returncode == 0
     assert front_matter(path.read_text())[0]["frozen_digest"] != first
+
+
+def _supersede(toy):
+    path = toy / ADR
+    path.write_text(path.read_text().replace("status: accepted",
+                                             "status: superseded"))
+
+
+def _edit_card(toy):
+    path = toy / "explore" / "DECISIONS.md"
+    path.write_text(path.read_text().replace(
+        "We have one writer for a year.", "One writer for two years."))
+    assert run_cli("explore", "--freeze", root=toy).returncode == 0
+
+
+def test_superseded_adr_gets_a_new_adr_for_a_changed_card(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    (toy / "docs" / "architecture.md").unlink()
+    _supersede(toy)
+    _edit_card(toy)
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    new = "adr/009-where-do-orders-live.md"
+    assert json.loads(proc.stdout)["adrs"] == [new]
+    assert new in (toy / "docs" / "architecture.md").read_text()
+
+
+def test_force_never_rewrites_a_superseded_adr(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    _supersede(toy)
+    before = (toy / ADR).read_text()
+    _edit_card(toy)
+    assert _from_explore(toy, "--force").returncode == 0
+    assert (toy / ADR).read_text() == before
+
+
+def test_force_refuses_a_non_accepted_adr(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    path = toy / ADR
+    path.write_text(path.read_text().replace("status: accepted",
+                                             "status: proposed"))
+    before = path.read_text()
+    _edit_card(toy)
+    assert _from_explore(toy, "--force").returncode == 1
+    assert path.read_text() == before
+
+
+def test_refusal_names_the_adr_to_supersede(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    (toy / "docs" / "architecture.md").unlink()
+    _edit_card(toy)
+    err = json.loads(_from_explore(toy).stderr)["error"]
+    assert f"supersedes {ADR}" in err and "--force" in err
+
+
+def test_stale_adr_prints_a_check_line(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    (toy / "docs" / "architecture.md").unlink()
+    path = toy / "explore" / "DECISIONS.md"
+    path.write_text(path.read_text().replace(
+        "**Chosen:** A", "**Chosen:** parked"))
+    (toy / "explore" / "OPEN.md").write_text(
+        OPEN + "\n## D-E1: Where do orders live?\n- Owner: kwesi\n"
+        "- Trigger: later\n")
+    assert run_cli("explore", "--freeze", root=toy).returncode == 0
+    proc = _from_explore(toy)
+    assert proc.returncode == 0, proc.stderr
+    assert f"check: {ADR}" in proc.stderr
+
+
+def test_two_adrs_for_one_card_are_refused(toy):
+    _frozen(toy)
+    _from_explore(toy)
+    dup = toy / "adr" / "009-copy.md"
+    dup.write_text((toy / ADR).read_text().replace("id: '008'", "id: '009'")
+                   .replace("id: 008", "id: 009"))
+    (toy / "docs" / "architecture.md").unlink()
+    err = json.loads(_from_explore(toy).stderr)["error"]
+    assert "008-where" in err and "009-copy" in err
