@@ -31,7 +31,8 @@ _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _CARD = re.compile(r"^##\s+(D-[A-Za-z0-9-]+)\s*:\s*(.+?)\s*$")
 _CARD_LOOSE = re.compile(r"^##\s+(D-[A-Za-z0-9-]*)")
 _OPTION_LOOSE = re.compile(r"^###\s+Option\b", re.I)
-_FENCE = re.compile(r"^\s*(```+|~~~+)")
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+_FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 _OTHER_H2 = re.compile(r"^#{1,2}\s")
 _OPTION = re.compile(r"^###\s+Option\s+([A-Z])\s*:\s*(.+?)\s*$")
 _RECOMMENDED = re.compile(r"\s*\(recommended\)\s*$", re.I)
@@ -149,23 +150,45 @@ def set_front_matter(text: str, updates: dict) -> str:
     return f"---\n{head}\n---\n{body}"
 
 
+def _clean_fences(text: str) -> tuple[str, int | None]:
+    """Blanks fenced code. Returns (text, line of an unclosed fence or None).
+
+    A closing fence has the opener's character, at least as many of them,
+    and no info string. Text after an unclosed fence stays visible.
+    """
+    out: list[str] = []
+    held: list[str] = []
+    fence = None  # (character, length, line number)
+    for n, line in enumerate(text.split("\n"), 1):
+        if fence is None:
+            m = _FENCE.match(line)
+            if m:
+                fence = (m.group(1)[0], len(m.group(1)), n)
+                held = [line]
+            else:
+                out.append(line)
+            continue
+        held.append(line)
+        m = _FENCE_CLOSE.match(line)
+        if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= fence[1]:
+            out.extend([""] * len(held))
+            fence, held = None, []
+    if fence is not None:
+        out.extend(held)
+        return "\n".join(out), fence[2]
+    return "\n".join(out), None
+
+
 def _clean(text: str) -> str:
     """Front matter, HTML comments and fenced code become blank lines."""
     text = _FRONT.sub(_blank, text, count=1)
     text = _COMMENT.sub(_blank, text)
-    out, fence = [], None
-    for line in text.split("\n"):
-        m = _FENCE.match(line)
-        if fence is None and m:
-            fence = m.group(1)[0]
-            out.append("")
-        elif fence is not None:
-            if m and m.group(1)[0] == fence:
-                fence = None
-            out.append("")
-        else:
-            out.append(line)
-    return "\n".join(out)
+    return _clean_fences(text)[0]
+
+
+class CardList(list):
+    """The cards of a file. `unclosed_fence` is a line number or None."""
+    unclosed_fence: int | None = None
 
 
 def sentence_count(text: str) -> int:
@@ -193,9 +216,12 @@ def parse_cards(text: str) -> list[dict]:
         `{"letter", "name", "recommended", "fields"}`. `unknown` lists
         field labels that are not in the card format.
     """
-    lines = _clean(text).splitlines()
+    cleaned, unclosed = _clean_fences(
+        _COMMENT.sub(_blank, _FRONT.sub(_blank, text, count=1)))
+    lines = cleaned.splitlines()
     raw_lines = text.splitlines()
-    cards: list[dict] = []
+    cards = CardList()
+    cards.unclosed_fence = unclosed
     card = option = None
     last = None  # (mapping, key) that a continuation line extends
     for i, line in enumerate(lines):
@@ -305,10 +331,14 @@ def validate_cards(cards: list[dict]) -> list[str]:
     Returns:
         One STE-80 problem line per defect. An empty list means valid.
     """
-    if not cards:
-        return ["explore/DECISIONS.md has no decision cards. Write one card "
-                "for each big decision."]
     problems: list[str] = []
+    line = getattr(cards, "unclosed_fence", None)
+    if line:
+        problems.append(f"Line {line}: a code fence opens here and never "
+                        f"closes. Close it with ```.")
+    if not cards:
+        return problems + ["explore/DECISIONS.md has no decision cards. "
+                           "Write one card for each big decision."]
     seen: set[str] = set()
     for card in cards:
         cid = card["id"]
@@ -367,6 +397,7 @@ def validate_cards(cards: list[dict]) -> list[str]:
         if chosen and not _placeholder(chosen) and (
                 letter is None
                 or (letter != "parked" and letter not in letters)):
-            problems.append(f"{cid}: 'Chosen' is {clip_words(chosen, 5)!r}. Write an option "
-                            f"letter from this card, or 'parked'.")
+            shown = clip_words(chosen, 5)
+            problems.append(f"{cid}: 'Chosen' is {shown!r}. Write an "
+                            f"option letter from this card, or 'parked'.")
     return problems

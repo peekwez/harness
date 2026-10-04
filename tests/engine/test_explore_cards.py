@@ -229,3 +229,30 @@ def test_long_values_are_clipped_in_problems():
         problems = _problems(text)
         assert problems
         assert all(len(p.split()) <= 25 for p in problems)
+
+
+def test_an_unclosed_fence_is_reported_and_later_cards_still_parse():
+    text = ("# Decisions\n\n" + CARD + "\n```\n\n"
+            + CARD.replace("D-E1", "D-E2"))
+    cards = parse_cards(text)
+    assert [c["id"] for c in cards] == ["D-E1", "D-E2"]
+    line = text.splitlines().index("```") + 1
+    problems = validate_cards(cards)
+    assert [p for p in problems if "fence" in p] == [
+        f"Line {line}: a code fence opens here and never closes. "
+        "Close it with ```."]
+    assert len(problems[0].split()) <= 25
+
+
+def test_a_closing_fence_must_match_the_opener():
+    # ```` opened, ``` does not close it, so the fence stays open.
+    text = "````\n```\n" + CARD
+    assert any("never closes" in p for p in _problems(text))
+    # ~~~ does not close ```; a bare ``` does.
+    assert parse_cards("```\n~~~\n" + CARD) and any(
+        "never closes" in p for p in _problems("```\n~~~\n" + CARD))
+    assert not any("never closes" in p
+                   for p in _problems("```\n" + CARD + "```\n" + CARD))
+    # An info string cannot close a fence.
+    assert any("never closes" in p
+               for p in _problems("```\n```md\n" + CARD))
