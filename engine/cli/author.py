@@ -199,6 +199,25 @@ def _backlog_add(args):
               f"{unknown} — add the abstraction to an ADR and recompile, "
               f"or fix the id", file=sys.stderr)
         return 1
+    from engine.statements import (VERIFY_JSONL, load_statements,
+                                   parse_id_list)
+    try:
+        verifies = parse_id_list(getattr(args, "verifies", None) or [])
+    except HarnessError as exc:
+        print(f"error: backlog add: {exc}", file=sys.stderr)
+        return 1
+    if verifies:
+        if not (harness_dir(root) / VERIFY_JSONL).exists():
+            print("error: backlog add: .harness/verify.jsonl does not exist. "
+                  "Run harness compile first.", file=sys.stderr)
+            return 1
+        known_ids = {r["id"] for r in load_statements(root)}
+        missing = [v for v in verifies if v not in known_ids]
+        if missing:
+            print(f"error: backlog add: {missing} not in "
+                  f".harness/verify.jsonl. Fix the IDs, or add the statements "
+                  f"and run harness compile.", file=sys.stderr)
+            return 1
     row = {"id": args.id, "spec": args.spec,
            "title": args.title or args.id, "status": "planned",
            "declares_dep": list(args.declares or []),
@@ -206,6 +225,9 @@ def _backlog_add(args):
            "predicted_files": list(dict.fromkeys(
                (args.predicts or []) + list(args.acceptance))),
            "depends_on": list(args.depends or []), "worktree": None}
+    # always written, also when empty: the W5 upgrade step reads a missing
+    # `verifies` key as "written before 0.10" (spec 12 step 9)
+    row["verifies"] = verifies
     if getattr(args, "linear", None):
         row["linear"] = validate_linear(args.linear)
     row["context_cost_estimate"] = _slice_context(root, row, config)["tokens"]
@@ -219,6 +241,7 @@ def cmd_backlog(args):
     if getattr(args, "backlog_cmd", None) == "add":
         return _backlog_add(args)
     from engine.resolver import MAX_INJECTION_CHARS, over_cap_finding
+    from engine.statements import unowned_statements
     root = _root(args)
     config = load_config(root)
     rows = load_backlog(root)
@@ -308,7 +331,8 @@ def cmd_backlog(args):
     _print({"slices": [s["id"] for s in out], "split": split,
             "split_refused": refused, "split_proposals": proposals,
             "context": contexts, "warnings": warnings,
-            "cap": MAX_INJECTION_CHARS})
+            "cap": MAX_INJECTION_CHARS,
+            "unowned_statements": unowned_statements(root, out)})
     return 0
 
 
