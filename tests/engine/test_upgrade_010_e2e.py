@@ -256,14 +256,15 @@ def test_the_proposed_command_leaves_a_clean_tree_and_a_rerun_is_a_no_op(tmp_pat
 
 
 @pytest.mark.parametrize("version", sorted(BUILDERS))
-def test_second_run_changes_no_file_and_reports_already_on_010(tmp_path, version):
+def test_second_run_changes_no_file_and_proposes_the_same_commit(tmp_path, version):
+    """Before the human commits, a rerun proposes the first run's commit again."""
     root = BUILDERS[version](tmp_path / "repo")
-    _upgrade(root)
+    proc, first = _upgrade(root)
     before, status = tree_bytes(root), git(root, "status", "--porcelain").stdout
     proc, out = _upgrade(root)
     assert proc.returncode == 0, out.get("failures")
-    assert out["status"] == "already on 0.10"
-    assert out["commit"] is None
+    assert out["status"] == "upgraded"
+    assert out["commit"] == first["commit"]
     assert tree_bytes(root) == before
     assert git(root, "status", "--porcelain").stdout == status
 
@@ -444,4 +445,7 @@ def test_a_stashed_upgrade_on_a_new_branch_carries_nothing_of_the_humans(tmp_pat
     proc, out = _upgrade(root)
     assert out["status"] == "upgraded", out["failures"]
     assert any(".harness/config.yaml" in h for h in _uncommitted_check(out))
-    assert not (root / ".harness/cache/upgrade-carry.json").exists()
+    # the record now holds this run's changes only
+    record = json.loads((root / ".harness/cache/upgrade-carry.json").read_text())
+    touched = {p for paths in out["files"].values() for p in paths}
+    assert set(record["paths"]) == touched

@@ -77,26 +77,6 @@ def _clean_registry_entries(root: Path) -> tuple[list[str], list[str], list[str]
     return clean, dirty, warnings
 
 
-def _refresh_claude_settings(root: Path, config: dict) -> dict:
-    report = {}
-    for local, key in ((False, "settings"), (True, "settings_local")):
-        name = "settings.local.json" if local else "settings.json"
-        path = root / ".claude" / name
-        if not path.exists():
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "missing"}
-        elif "harness autonomy profile" not in path.read_text():
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "kept",
-                           "note": "not a Harness-owned profile"}
-        else:
-            _write_autonomy_settings(root, quiet=True, local=local,
-                                     config=config)
-            report[key] = {"path": str(path.relative_to(root)),
-                           "action": "refreshed"}
-    return report
-
-
 def _is_harness_adapter_command(command: object) -> bool:
     if not isinstance(command, str):
         return False
@@ -153,7 +133,14 @@ def _refresh_codex_hooks(root: Path, *, dry_run: bool = False) -> dict:
 
     visit(payload)
     if changed and not dry_run:
+        # hooks.json has no harness marker: keep the old bytes for the human
+        from engine.upgrade_010 import keep_backup
+        backup = keep_backup(root, path.name, path.read_bytes())
         path.write_text(json.dumps(payload, indent=2) + "\n")
+        report["backup"] = backup
+        report["check"] = (f"check: the upgrade changed Harness commands in "
+                           f"{report['path']}. The old file is in the gitignored "
+                           f"backup {backup}.")
     report["action"] = ("would_refresh" if dry_run else "refreshed") \
         if changed else "unchanged"
     report["commands"] = changed
@@ -201,7 +188,7 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
         return dry_run_report(root, version, PROJECT_PLAN,
                               _refresh_codex_hooks(root, dry_run=True))
 
-    from engine import upgrade_010
+    from engine import claude_settings, upgrade_010
     from engine import upgrade_report as rep
     from engine.graph import repair_legacy_provenance
     from engine.migrate import migrate
@@ -210,12 +197,12 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
 
     ask = ask or make_ask(yes)
     before = rep.snapshot(root)
-    staged_before = rep.staged_paths(root)
     record = rep.carry_record(root)         # an earlier run's own changes
+    staged_before = rep.staged_before(root, record)
     carried = rep.carried_paths(root, record)
     dirty = set(rep.dirty_paths(root))
     dirty_before = sorted(dirty - set(carried))
-    edited = sorted((set(record) - set(carried)) & dirty)
+    edited = sorted(((set(record) - set(carried)) | set(rep.carry_mixed(root))) & dirty)
 
     # Migration is deliberately the first write.  New code must never read
     # old substrate rows as though they already had the current schema.
@@ -241,7 +228,8 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     codex = stage("refresh Codex hooks", lambda: _refresh_codex_hooks(root), {})
     config = rep.load_config_or_fail(root, failures)
     claude = {} if config is None else stage(
-        "refresh Claude settings", lambda: _refresh_claude_settings(root, config), {})
+        "refresh Claude settings", lambda: claude_settings.refresh(
+            root, config, _write_autonomy_settings, upgrade_010.keep_backup), {})
     warnings.extend(step_warnings(steps, workflow, claude, codex))
     # After any failure the registry may still hold 0.9 rows: a rerun refreshes.
     refreshed = [] if failures else stage(
@@ -260,15 +248,20 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
                   {"added": [], "modified": [], "removed": []})
     pending = rep.pending_ids(root, upgrade_010.STEPS)
     advice = stage("collect advice", lambda: upgrade_010.advice(root), [])
+    foreign = stage("read the index", lambda: rep.foreign_staged(root, files), [])
     commit = None
-    if not failures and not pending:
+    if not failures and not pending and not foreign:
         commit = stage("propose commit", lambda: rep.commit_proposal(root, files))
-    failures = rep.attribute(failures, steps)
-    status = rep.upgrade_status(schema_from=schema["from"], current=SCHEMA_VERSION,
-                                files=files, steps=steps, pending=pending,
-                                failures=failures)
+
+    def settle():
+        return rep.attribute(failures, steps), rep.upgrade_status(
+            schema_from=schema["from"], current=SCHEMA_VERSION, files=files,
+            steps=steps, pending=pending, failures=failures, foreign=foreign)
+    failures, status = settle()
     stage("record the changes for the next run",
-          lambda: rep.save_carry(root, status, files))
+          lambda: rep.save_carry(root, status, files,
+                                 rep.mixed_paths(dirty_before, files, edited)))
+    failures, status = settle()     # a failed record is a failed upgrade
     return {
         "status": status,
         "schema": schema,
@@ -289,7 +282,8 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
         "human_checks": rep.human_checks(
             steps, pending=pending, staged_before=staged_before,
             dirty_before=dirty_before, files=files, checks=checks,
-            is_repo=(root / ".git").exists(), advice=advice, edited=edited),
+            is_repo=(root / ".git").exists(), advice=advice, edited=edited,
+            foreign=foreign, refreshed=rep.refresh_checks(claude, codex)),
         "commit": commit if status == "upgraded" else None,
         "warnings": warnings,
     }

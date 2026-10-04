@@ -285,7 +285,7 @@ def _ignore_cache(root):
     git(root, "commit", "-qam", "ignore the cache")
 
 
-def test_carry_records_hashes_and_head_and_forgets_after_a_commit(tmp_path):
+def test_carry_records_hashes_and_head_and_forgets_after_a_run_with_no_changes(tmp_path):
     root = build_astralabs_094_repo(tmp_path / "astra")
     _ignore_cache(root)
     _write(root, ".harness/schema_version", "2\n")
@@ -300,7 +300,9 @@ def test_carry_records_hashes_and_head_and_forgets_after_a_commit(tmp_path):
         ".harness/notes.jsonl": None}
     assert rep.carried_paths(root) == [".harness/notes.jsonl", ".harness/schema_version"]
     assert git(root, "status", "--porcelain").stdout.count("\n") == 2   # no record file
-    rep.save_carry(root, "upgraded", files)
+    rep.save_carry(root, "upgraded", files)      # kept for a rerun before the commit
+    assert rep.carried_paths(root) == [".harness/notes.jsonl", ".harness/schema_version"]
+    rep.save_carry(root, "already on 0.10", {"added": [], "modified": [], "removed": []})
     assert rep.carried_paths(root) == []
     assert not (root / rep.CARRY_REL).exists()
 

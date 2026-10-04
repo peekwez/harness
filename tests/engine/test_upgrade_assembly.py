@@ -81,10 +81,10 @@ def test_make_ask_on_a_tty_reads_one_answer():
     class Tty(io.StringIO):
         def isatty(self):
             return True
-    err = io.StringIO()
+    err = Tty()
     assert make_ask(False, stdin=Tty("y\n"), stderr=err)("Delete .harness/shadows?") is True
     assert "Delete .harness/shadows? [y/N] " in err.getvalue()
-    assert make_ask(False, stdin=Tty("\n"), stderr=io.StringIO())("Delete?") is False
+    assert make_ask(False, stdin=Tty("\n"), stderr=Tty())("Delete?") is False
 
 
 def test_make_ask_without_streams_uses_the_tty_ask_seam(monkeypatch):
@@ -237,10 +237,13 @@ def _noask():
     return make_ask(False, stdin=io.StringIO(), stderr=io.StringIO())
 
 
-def test_a_second_run_is_already_on_010(tmp_path):
+def test_a_second_run_after_the_commit_is_already_on_010(tmp_path):
     from engine.cli.upgrade import make_ask, upgrade_project
     root = build_astralabs_094_repo(tmp_path / "astra")
-    assert upgrade_project(root, ask=make_ask(True))["status"] == "upgraded"
+    one = upgrade_project(root, ask=make_ask(True))
+    assert one["status"] == "upgraded"
+    subprocess.run(["bash", "-c", one["commit"]["command"]], cwd=one["commit"]["cwd"],
+                   check=True, capture_output=True)
     two = upgrade_project(root, ask=make_ask(True))
     assert two["status"] == "already on 0.10", (two["files"], two["failures"])
     assert two["commit"] is None
@@ -286,11 +289,12 @@ def test_a_stage_that_raises_still_returns_a_report(tmp_path, monkeypatch):
 
 
 def test_a_settings_write_error_is_a_stage_failure_not_a_config_one(tmp_path, monkeypatch):
+    from engine import claude_settings
     from engine.cli import upgrade
 
-    def boom(root, config):
+    def boom(*args):
         raise OSError("disk full")
-    monkeypatch.setattr(upgrade, "_refresh_claude_settings", boom)
+    monkeypatch.setattr(claude_settings, "refresh", boom)
     root = build_astralabs_094_repo(tmp_path / "astra")
     out = upgrade.upgrade_project(root, ask=upgrade.make_ask(True))
     codes = {f["code"] for f in out["failures"]}

@@ -21,6 +21,9 @@ CHECK = "check: "
 NEEDS_CONFIRMATION = "needs confirmation"
 # gitignored machine state: never part of the upgrade's file report
 MACHINE_STATE = (".harness/cache/", ".harness/sidecar.db")
+# W1 and W3 `git rm --cached` these: their staged deletions are the upgrade's
+INDEX_DELETIONS = (".harness/shadows/", ".harness/memory/")
+UNSTAGE_FIX = "Commit or unstage them, then run: harness upgrade"
 
 
 def _git(root, *args) -> subprocess.CompletedProcess:
@@ -90,6 +93,33 @@ def staged_paths(root) -> list[str]:
     return sorted(_nul_list(_git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").stdout))
 
 
+def _own_deletions(root) -> set:
+    """Staged deletions of shadows and durable memory that are gone from disk."""
+    out = _nul_list(_git(root, "diff", "--cached", "--name-only", "--no-renames",
+                         "--diff-filter=D", "-z").stdout)
+    return {p for p in out if p.startswith(INDEX_DELETIONS)
+            and not (Path(root) / p).exists()}
+
+
+def staged_before(root, record) -> list[str]:
+    """What the index held before this run that is not the upgrade's own: the
+    paths an earlier run recorded and the W1/W3 deletions are left out."""
+    if not _is_repo(root):
+        return []
+    own = _own_deletions(root)
+    return [p for p in staged_paths(root) if p not in record and p not in own]
+
+
+def foreign_staged(root, files) -> list[str]:
+    """Staged paths the proposed commit would sweep in that the upgrade did
+    not change. `git commit` commits the whole index."""
+    if not _is_repo(root) or not any(files.values()):
+        return []           # no commit to propose
+    own = (set(files["added"]) | set(files["modified"]) | set(files["removed"])
+           | _own_deletions(root))
+    return [p for p in staged_paths(root) if p not in own]
+
+
 def dirty_paths(root) -> list[str]:
     if not _is_repo(root):
         return []
@@ -112,10 +142,20 @@ def step_lines(row: dict) -> list[str]:
     return [str(line) for line in lines]
 
 
+def mixed_paths(dirty_before, files, edited) -> list[str]:
+    """Upgrade paths that also hold the human's uncommitted edits."""
+    touched = set(files["added"]) | set(files["modified"]) | set(files["removed"])
+    return sorted((set(dirty_before) & touched) | set(edited))
+
+
 def human_checks(steps, *, pending, staged_before, dirty_before, files,
-                 checks, is_repo, advice=(), edited=()) -> list[str]:
-    """`edited`: files an earlier run wrote that the human changed since."""
+                 checks, is_repo, advice=(), edited=(), foreign=(),
+                 refreshed=()) -> list[str]:
+    """`edited`: files an earlier run wrote that the human changed since.
+    `foreign`: staged paths that block the commit proposal. `refreshed`: the
+    check lines of the settings and hooks refreshes."""
     out = [f"{row['id']}: {row['check']}" for row in advice]
+    out.extend(refreshed)
     for row in steps:
         for line in step_lines(row):
             if line.startswith(CHECK) or NEEDS_CONFIRMATION in line:
@@ -123,16 +163,22 @@ def human_checks(steps, *, pending, staged_before, dirty_before, files,
     if pending:
         out.append(f"{CHECK}steps {_few(pending)} still have changes. "
                    "Run: harness upgrade --yes")
-    touched = set(files["added"]) | set(files["modified"]) | set(files["removed"])
-    mixed = sorted((set(dirty_before) & touched) | set(edited))
+    mixed = mixed_paths(dirty_before, files, edited)
     if mixed:
         out.append(f"{CHECK}you had uncommitted edits in {_few(mixed)}. "
                    "Review them before you commit.")
-    if staged_before:
+    if foreign:
+        out.append(f"{CHECK}the index holds staged changes the upgrade did not make: "
+                   f"{_few(foreign)}. {UNSTAGE_FIX}")
+    earlier = [p for p in staged_before if p not in set(foreign)]
+    if earlier:
         out.append(f"{CHECK}the index held staged changes before the upgrade: "
-                   f"{_few(staged_before)}. Commit or unstage them first.")
+                   f"{_few(earlier)}. Commit or unstage them first.")
     deps = ((checks or {}).get("doctor") or {}).get("deps_missing") or []
-    if deps:
+    if len(deps) > 3:
+        out.append(f"{CHECK}engine dependencies are missing: {_few(deps)}. "
+                   "Run: harness doctor --substrate to list them, then pip install each.")
+    elif deps:
         out.append(f"{CHECK}engine dependencies are missing: {' '.join(deps)}. "
                    f"Run: pip install {' '.join(deps)}")
     if not is_repo:
@@ -159,11 +205,10 @@ def commit_proposal(root, files) -> dict | None:
             "command": command}
 
 
-# The changes of a run that proposed no commit, with the bytes it left. The
-# next run adds a path to its own changes only while the path still holds
-# those bytes; anything else is the human's edit.
+# The changes of the last run, with the bytes it left. The next run adds a
+# path to its own changes only while the path still holds those bytes and is
+# uncommitted; a changed path is the human's edit.
 CARRY_REL = ".harness/cache/upgrade-carry.json"
-COMMITTED = ("upgraded", "already on 0.10")
 
 
 def _head(root) -> str | None:
@@ -189,18 +234,31 @@ def _digest(root, rel):
     return sha256_file(path) if path.is_file() else None
 
 
-def carry_record(root) -> dict:
-    """{path: sha256 or None for a removal} from an earlier run on this line
-    of history. A missing, unreadable or foreign record is empty."""
+def _load_carry(root) -> dict:
+    """The record of an earlier run on this line of history, or {}."""
     try:
         data = json.loads((Path(root) / CARRY_REL).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    paths = data.get("paths") if isinstance(data, dict) else None
-    if not isinstance(paths, dict) or not _same_history(root, data.get("head")):
+    if (not isinstance(data, dict) or not isinstance(data.get("paths"), dict)
+            or not _same_history(root, data.get("head"))):
         return {}
+    return data
+
+
+def carry_record(root) -> dict:
+    """{path: sha256 or None for a removal} from an earlier run on this line
+    of history. A missing, unreadable or foreign record is empty."""
+    paths = _load_carry(root).get("paths", {})
     return {p: h for p, h in paths.items()
             if isinstance(p, str) and (h is None or isinstance(h, str))}
+
+
+def carry_mixed(root) -> list[str]:
+    """The paths an earlier run reported as mixed with the human's edits. A
+    rerun names them again."""
+    mixed = _load_carry(root).get("mixed")
+    return [p for p in mixed if isinstance(p, str)] if isinstance(mixed, list) else []
 
 
 def carried_paths(root, record=None) -> list[str]:
@@ -230,15 +288,15 @@ def carry_files(root, files: dict, carried) -> dict:
     return {k: sorted(v) for k, v in out.items()}
 
 
-def save_carry(root, status: str, files: dict) -> None:
-    """Keep this run's paths, their bytes and HEAD for the next run when it
-    proposed no commit. Otherwise forget the record. A run with no changes
-    clears it too: no recorded path still holds the upgrade's bytes. The
-    record lives in the gitignored cache only."""
+def save_carry(root, status: str, files: dict, mixed=()) -> None:
+    """Keep this run's paths, their bytes and HEAD for the next run, so a
+    rerun before the human commits proposes the same commit. A run with no
+    changes clears the record: everything the upgrade wrote is committed or
+    edited. The record lives in the gitignored cache only."""
     root = Path(root)
     path = root / CARRY_REL
     paths = sorted(set(files["added"]) | set(files["modified"]) | set(files["removed"]))
-    if status in COMMITTED or not paths:
+    if not paths:
         path.unlink(missing_ok=True)
         return
     if _is_repo(root) and subprocess.run(
@@ -246,7 +304,8 @@ def save_carry(root, status: str, files: dict) -> None:
             capture_output=True).returncode != 0:
         return                  # never leave an untracked file in the tree
     record = {"head": _head(root) if _is_repo(root) else None,
-              "paths": {rel: _digest(root, rel) for rel in paths}}
+              "paths": {rel: _digest(root, rel) for rel in paths},
+              "mixed": sorted(mixed)}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -409,25 +468,25 @@ def reported_step_errors(rows) -> list:
             for row in rows if row.get("error")]
 
 
-def upgrade_status(*, schema_from, current, files, steps, pending, failures) -> str:
-    """A declined destructive step leaves the upgrade "incomplete"."""
+def upgrade_status(*, schema_from, current, files, steps, pending, failures,
+                   foreign=()) -> str:
+    """A declined destructive step leaves the upgrade "incomplete". Staged
+    human work (`foreign`) fails the checks: the commit would sweep it in."""
     if any(f.get("code") in ("STEP_FAILED", "STAGE_FAILED") for f in failures):
         return "failed"
     skipped = any(NEEDS_CONFIRMATION in line for row in steps for line in step_lines(row))
     if pending or skipped:
         return "incomplete"
-    if failures:
-        return "checks failed"
     if schema_from == current and not any(files.values()):
-        return "already on 0.10"
-    return "upgraded"
+        return "checks failed" if failures else "already on 0.10"
+    return "checks failed" if failures or foreign else "upgraded"
 
 
 def make_ask(yes: bool, stdin=None, stderr=None):
     """The `Ask` the 0.10 steps call before they move or delete files.
 
-    `--yes` accepts every prompt. Without a TTY the answer is no, so CI and
-    pipes never wait; the step then reports "skipped: needs confirmation".
+    `--yes` accepts every prompt. Unless stdin and stderr are both a TTY the
+    answer is no, so CI, pipes and a 0.9 parent never wait; the step then reports "skipped: needs confirmation".
     With no streams given, it is `upgrade_010.tty_ask`.
     """
     from engine import upgrade_010
@@ -439,12 +498,17 @@ def make_ask(yes: bool, stdin=None, stderr=None):
     stderr = stderr if stderr is not None else sys.stderr
 
     def ask(question: str) -> bool:
-        if not stdin.isatty():
+        if not (stdin.isatty() and stderr.isatty()):
             return False
         stderr.write(f"{question} [y/N] ")
         stderr.flush()
         return stdin.readline().strip().lower() in ("y", "yes")
     return ask
+
+
+def refresh_checks(claude: dict, codex: dict) -> list:
+    """The check lines of the Claude settings and Codex hooks refreshes."""
+    return [v["check"] for v in [*claude.values(), codex] if v.get("check")]
 
 
 def step_warnings(steps: list, workflow: dict, claude: dict, codex: dict) -> list:

@@ -38,6 +38,7 @@ This page is for contributors who change harness itself. The engine is plain Pyt
 | `engine/upgrade_010.py` | the 0.10 upgrade step registry and its runner |
 | `engine/upgrade_w1.py` to `engine/upgrade_w8.py` | the upgrade steps of each workstream |
 | `engine/upgrade_report.py` | the upgrade report: changed files, human checks and the commit proposal |
+| `engine/claude_settings.py` | refreshes a harness Claude settings file; backs up what a refresh drops and keeps human entries in `settings.local.json` |
 | `engine/lint_text.py` | the STE-80 text lint |
 | `engine/context_cost.py` | the always-on context cost of each session |
 | `engine/telemetry.py` | local event rows and the slice metrics row |

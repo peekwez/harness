@@ -1,5 +1,6 @@
 """0.10 removed working and durable memory (D-0.10-02). Nothing that ships
-may write or read it. `engine/upgrade_w3.py` and `engine/upgrade_w8.py` migrate old repos, so
+may write or read it. `engine/upgrade_w3.py` and `engine/upgrade_w8.py` migrate old repos, and
+`engine/upgrade_report.py` leaves their index deletions out of the human's staged work, so
 they are the allowed references."""
 import re
 
@@ -15,7 +16,7 @@ SCANNED = ("bin", "engine", "hooks", "adapters", "skills", "agents",
            "templates")
 SUFFIXES = {".py", ".js", ".ts", ".json", ".toml", ".md", ".yml", ".yaml",
             ".sh", ""}
-ALLOWED = {"engine/upgrade_w3.py", "engine/upgrade_w8.py"}
+ALLOWED = {"engine/upgrade_w3.py", "engine/upgrade_w8.py", "engine/upgrade_report.py"}
 
 
 def _shipped_files():

@@ -464,6 +464,7 @@ def _write_autonomy_settings(root, quiet=False, local=False, config=None):
     # the sandbox and permission scope follow the TREE this profile governs:
     # a slice worktree confines writes to itself
     text = text.replace("{{PROJECT_DIR}}", str(Path(root).resolve()))
+    owned = text
     from engine import HarnessError, load_config
     from engine.cli.landing import landing_config
     if config is None:
@@ -473,6 +474,9 @@ def _write_autonomy_settings(root, quiet=False, local=False, config=None):
             config = {}          # pre-substrate init: local mode by default
     landing = landing_config(config)
     text = _pr_landing_rules(text, landing)
+    if local and target.exists():   # gitignored: keep what a human added
+        from engine.claude_settings import merge_local
+        text = merge_local(target.read_text(), text, owned)
     target.write_text(text)
     if quiet:
         return str(target)
