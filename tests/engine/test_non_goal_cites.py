@@ -3,7 +3,7 @@ GATE["cites"] (boundary id or rule ref). compile reports the others as
 advisory only."""
 import yaml
 
-from conftest import cite_non_goals, make_event
+from conftest import cite_non_goals, finding_text, make_event
 from engine import load_config, read_jsonl
 from engine.compiler import compile_substrate
 from engine.events import handle_event
@@ -24,8 +24,9 @@ def test_uncited_non_goal_is_advisory(toy):
     hits = _non_goal(v)
     assert hits and all(f["severity"] == "advisory" for f in hits)
     assert v["verdict"] == "allow_with_findings"
-    assert "B-legacy" in hits[0]["message"]
-    assert hits[0]["message"].endswith('cite adr:007 in a gates.extra GATE["cites"].')
+    assert "B-legacy" in finding_text(hits[0])
+    assert finding_text(hits[0]).endswith(
+        'Cite adr:007 in a gates.extra GATE["cites"].')
 
 
 def test_non_goal_cited_by_boundary_id_blocks(toy):
@@ -34,7 +35,7 @@ def test_non_goal_cited_by_boundary_id_blocks(toy):
     hits = _non_goal(v)
     assert v["verdict"] == "block"
     assert hits[0]["severity"] == "block" and hits[0]["rule_ref"] == "adr:007"
-    assert "boundary:B-legacy" in hits[0]["message"]
+    assert "boundary:B-legacy" in finding_text(hits[0])
 
 
 def test_non_goal_cited_by_rule_ref_blocks(toy):

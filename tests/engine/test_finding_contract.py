@@ -17,13 +17,6 @@ PENDING = {
     "engine/cli/close.py",
     "engine/cli/review.py",
     "engine/cli/verify.py",
-    "engine/gates/extra.py",
-    "engine/gates/g1_manifest.py",
-    "engine/gates/g10_shared_memory.py",
-    "engine/gates/g3_scope.py",
-    "engine/gates/g5_conformance.py",
-    "engine/gates/g6_drift.py",
-    "engine/registry.py",
     "engine/review/layer0.py",
     "engine/review/rubrics.py",
 }

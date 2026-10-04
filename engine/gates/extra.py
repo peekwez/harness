@@ -446,20 +446,27 @@ def cited_rules(gates: list) -> set:
 
 def _load_error(entry, exc: BaseException) -> dict:
     """Build the blocking finding for an entry that could not be loaded."""
-    message = (f"gates.extra entry {entry!r} failed to load: "
-               f"{type(exc).__name__}: {exc}")
-    return make_finding(LOAD_ERROR_CODE, RULE_REF, message[:_MESSAGE_LIMIT],
-                        severity="block", key=f"extra|{entry}")
+    return make_finding(
+        LOAD_ERROR_CODE, RULE_REF,
+        f"gates.extra entry {entry!r} failed to load: {type(exc).__name__}.",
+        severity="block", key=f"extra|{entry}",
+        inject=[f"{type(exc).__name__}: {exc}"[:_MESSAGE_LIMIT]],
+        fix=f"Fix {entry}, or remove it from gates.extra in "
+            f".harness/config.yaml.")
 
 
 def _run_error(entry, exc: BaseException) -> dict:
     """Build the blocking finding for a gate that misbehaved while running."""
     frame = _last_frame(exc)
     where = f" at {frame}" if frame else ""
-    message = (f"gates.extra entry {entry!r} failed while running{where}: "
-               f"{type(exc).__name__}: {exc}")
-    return make_finding(RUN_ERROR_CODE, RULE_REF, message[:_MESSAGE_LIMIT],
-                        severity="block", key=f"extra-run|{entry}")
+    return make_finding(
+        RUN_ERROR_CODE, RULE_REF,
+        f"gates.extra entry {entry!r} failed while running{where}: "
+        f"{type(exc).__name__}.",
+        severity="block", key=f"extra-run|{entry}",
+        inject=[f"{type(exc).__name__}: {exc}"[:_MESSAGE_LIMIT]],
+        fix=f"Fix run() in {entry}, or remove it from gates.extra in "
+            f".harness/config.yaml.")
 
 
 def _last_frame(exc: BaseException):

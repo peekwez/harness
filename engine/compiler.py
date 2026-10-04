@@ -339,7 +339,8 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
         root, config, reserved_ids=reserved_gate_ids())
     # a broken citing gate must be named, not just leave its non-goals
     # listed as advisory only
-    report["warnings"].extend(f["message"] for f in load_errors)
+    report["warnings"].extend(
+        " ".join([f["message"], *f.get("inject", [])]) for f in load_errors)
     cited = cited_rules(extra)
     # a boundary id is a hash of the non-goal text: editing the text
     # orphans a cite of the old id, so a cite that matches nothing is named

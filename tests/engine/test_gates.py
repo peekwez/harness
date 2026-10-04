@@ -135,7 +135,7 @@ def test_g6_drift_blocks_until_acknowledged(toy):
     v = handle_event(make_event("unit_complete", session=session), toy)
     drift = [f for f in v["findings"] if f["code"] == "INTERFACE_DRIFT"]
     assert drift and v["verdict"] == "block"
-    assert "ack-drift" in drift[0]["message"]
+    assert "ack-drift" in drift[0]["fix"]
 
     from engine.gates.g6_drift import acknowledge
     edge = acknowledge(toy, "slice-042", "telemetry", "level param approved in review")

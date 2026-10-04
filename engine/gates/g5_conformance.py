@@ -86,10 +86,13 @@ def check(ctx) -> list:
                 continue
             findings.append(make_finding(
                 "UNDECLARED_USE", GATE["rule_ref"],
-                f"{rel} uses registry abstraction {tid!r} which slice "
-                f"{ctx.work_unit_id} does not declare; declare it or record an "
-                f"override with justification",
-                severity=sev, key=rel + "|uses|" + tid))
+                f"{rel} uses registry entry {tid!r}, which slice "
+                f"{ctx.work_unit_id} does not declare.",
+                severity=sev, key=rel + "|uses|" + tid,
+                fix=f"Add {tid} to declares_dep of slice {ctx.work_unit_id}, "
+                    f"or run: harness gates override --slice "
+                    f"{ctx.work_unit_id} --target registry:{tid} "
+                    f"--justification \"<why>\""))
 
         # reimplementation check vs registry signature_digests (declared or
         # not: copying a declared dep instead of using it is still the bug)
@@ -105,10 +108,12 @@ def check(ctx) -> list:
             if sim >= threshold:
                 findings.append(make_finding(
                     "DUPLICATE_CANDIDATE", GATE["rule_ref"],
-                    f"{rel} public surface is {sim:.0%} similar to registry entry "
-                    f"{e['id']!r} ({e.get('source')}); reuse it, or override with "
-                    f"recorded justification (`harness gates override`)",
-                    severity=sev, key=rel + "|dup|" + e["id"]))
+                    f"{rel} public interface is {sim:.0%} similar to registry "
+                    f"entry {e['id']!r} ({e.get('source')}).",
+                    severity=sev, key=rel + "|dup|" + e["id"],
+                    fix=f"Reuse {e['id']}, or run: harness gates override "
+                        f"--slice {ctx.work_unit_id} --target "
+                        f"registry:{e['id']} --justification \"<why>\""))
     return findings
 
 

@@ -9,7 +9,7 @@ import os
 import shutil
 from pathlib import Path
 
-from conftest import loaded_context, make_event, run_cli
+from conftest import finding_text, loaded_context, make_event, run_cli
 from engine import load_config, read_jsonl, write_jsonl
 from engine.compiler import compile_substrate
 from engine.events import handle_event
@@ -275,8 +275,8 @@ def test_bad_gate_is_one_loud_blocking_finding(toy):
     assert err["code"] == "EXTRA_GATE_LOAD_ERROR"
     assert err["severity"] == "block"
     assert err["rule_ref"] == "adr:002"
-    assert bad in err["message"]
-    assert "deliberate import failure" in err["message"]
+    assert bad in finding_text(err)
+    assert "deliberate import failure" in finding_text(err)
 
     v = handle_event(make_event("pre_change", session="kbad",
                                 files=["rogue.py"]), toy)
@@ -292,7 +292,7 @@ def test_missing_entry_file_is_a_load_error(toy):
     gates, errors = load_extra_gates(toy, config)
     assert gates == []
     assert len(errors) == 1
-    assert ".harness/gates/nope.py" in errors[0]["message"]
+    assert ".harness/gates/nope.py" in finding_text(errors[0])
     assert errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
 
 
@@ -302,7 +302,7 @@ def test_gate_missing_required_declaration_fields_is_a_load_error(toy):
     gates, errors = load_extra_gates(toy, config)
     assert gates == []
     assert errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
-    assert "id" in errors[0]["message"]
+    assert "id" in finding_text(errors[0])
 
 
 # ------------------------------------------------------------------ verify
@@ -375,8 +375,8 @@ def _assert_rejected_uncontained(toy, entry, marker):
     err = errors[0]
     assert err["code"] == "EXTRA_GATE_LOAD_ERROR"
     assert err["severity"] == "block" and err["rule_ref"] == "adr:002"
-    assert entry in err["message"]
-    assert "must be repo-relative and inside the repo" in err["message"]
+    assert entry in finding_text(err)
+    assert "must be repo-relative and inside the repo" in finding_text(err)
     assert not marker.exists(), "an uncontained gate must never execute"
 
 
@@ -401,7 +401,7 @@ def test_absolute_path_inside_the_repo_is_still_rejected(toy):
     gates, errors = load_extra_gates(toy, _configure(toy, extra=[absolute]))
     assert gates == []
     assert errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
-    assert "must be repo-relative and inside the repo" in errors[0]["message"]
+    assert "must be repo-relative and inside the repo" in finding_text(errors[0])
 
 
 def test_symlink_escaping_the_repo_is_rejected(toy, tmp_path):
@@ -425,9 +425,9 @@ def test_block_without_rule_ref_becomes_a_run_error(toy):
     assert "SLOPPY" not in codes
     hits = [f for f in v["findings"] if f["code"] == "EXTRA_GATE_RUN_ERROR"]
     assert len(hits) == 1
-    assert entry in hits[0]["message"]
+    assert entry in finding_text(hits[0])
     assert hits[0]["severity"] == "block" and hits[0]["rule_ref"] == "adr:002"
-    assert "rule_ref" in hits[0]["message"]
+    assert "rule_ref" in finding_text(hits[0])
 
 
 def test_verify_rejects_a_rule_ref_less_block_from_an_extra_gate(toy):
@@ -438,7 +438,7 @@ def test_verify_rejects_a_rule_ref_less_block_from_an_extra_gate(toy):
     assert code == 1
     assert "SLOPPY" not in _codes(out)
     hits = [f for f in out["findings"] if f["code"] == "EXTRA_GATE_RUN_ERROR"]
-    assert hits and entry in hits[0]["message"]
+    assert hits and entry in finding_text(hits[0])
 
 
 def test_finding_without_severity_does_not_crash_verify(toy):
@@ -449,7 +449,7 @@ def test_finding_without_severity_does_not_crash_verify(toy):
     code, out = _verify(toy)
     assert code == 1
     hits = [f for f in out["findings"] if f["code"] == "EXTRA_GATE_RUN_ERROR"]
-    assert hits and entry in hits[0]["message"]
+    assert hits and entry in finding_text(hits[0])
     assert all("severity" in f for f in out["findings"])
 
 
@@ -461,7 +461,7 @@ def test_gate_raising_in_run_is_a_run_error_with_a_frame(toy):
                                 files=["rogue.py"]), toy)
     hits = [f for f in v["findings"] if f["code"] == "EXTRA_GATE_RUN_ERROR"]
     assert len(hits) == 1
-    msg = hits[0]["message"]
+    msg = finding_text(hits[0])
     assert entry in msg and "boom in run" in msg
     assert "raiser.py:" in msg, msg   # last traceback frame, file:line
     builtin_refs = {f"gate:G{i}" for i in (1, 3, 5, 6, 8)}
@@ -475,7 +475,7 @@ def test_gate_returning_a_non_list_is_a_run_error(toy):
     assert errors == [] and len(gates) == 1
     out = run_gate(gates[0], _ctx(toy, config))
     assert len(out) == 1 and out[0]["code"] == "EXTRA_GATE_RUN_ERROR"
-    assert entry in out[0]["message"] and "dict" in out[0]["message"]
+    assert entry in finding_text(out[0]) and "dict" in finding_text(out[0])
 
 
 # ------------------------------------------------------ declaration checks
@@ -485,7 +485,7 @@ def test_id_colliding_with_a_builtin_gate_is_a_load_error(toy):
                                      reserved_ids={"G3"})
     assert gates == []
     assert errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
-    assert "G3" in errors[0]["message"]
+    assert "G3" in finding_text(errors[0])
 
 
 def test_id_colliding_with_a_builtin_is_caught_on_dispatch(toy):
@@ -504,7 +504,7 @@ def test_unknown_event_name_is_a_load_error(toy):
     gates, errors = load_extra_gates(toy, _configure(toy, extra=[entry]))
     assert gates == []
     assert errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
-    assert "pre_commit" in errors[0]["message"]
+    assert "pre_commit" in finding_text(errors[0])
 
 
 # ---------------------------------------------------------- verify hygiene
@@ -538,4 +538,4 @@ def test_retired_builtin_ids_stay_reserved(toy):
     from engine.gates import reserved_gate_ids
     gates, errors = load_extra_gates(toy, config, reserved_ids=reserved_gate_ids())
     assert gates == [] and errors[0]["code"] == "EXTRA_GATE_LOAD_ERROR"
-    assert "G7" in errors[0]["message"]
+    assert "G7" in finding_text(errors[0])

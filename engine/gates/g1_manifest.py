@@ -20,8 +20,10 @@ def check(ctx) -> list:
         if not (hdir / name).exists():
             findings.append(make_finding(
                 "MANIFEST_INCOMPLETE", GATE["rule_ref"],
-                f".harness/{name} missing — substrate incomplete; run /harness:init",
-                severity="block", key=name))
+                f".harness/{name} is missing, so the substrate is incomplete.",
+                severity="block", key=name,
+                fix="Run: harness init. In an existing repo, run: "
+                    "harness upgrade"))
     if findings:
         return findings  # registry unreadable; fail loud on the substrate first
     pending = set()
@@ -47,7 +49,8 @@ def check(ctx) -> list:
                     continue
                 findings.append(make_finding(
                     "MANIFEST_INCOMPLETE", GATE["rule_ref"],
-                    f"slice {sl['id']}: acceptance test {t!r} missing — "
-                    f"slices start from red acceptance tests",
-                    severity="block", key=sl["id"] + "|" + t))
+                    f"slice {sl['id']}: acceptance test {t} does not exist.",
+                    severity="block", key=sl["id"] + "|" + t,
+                    fix=f"Write the red acceptance test {t} before you edit "
+                        f"source files."))
     return findings

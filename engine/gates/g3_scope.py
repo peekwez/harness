@@ -13,6 +13,7 @@ from fnmatch import fnmatch
 from pathlib import PurePosixPath
 
 from ..events import make_finding
+from ..findings import clip_words
 from . import exempt
 
 GATE = {"id": "G3", "rule_ref": "gate:G3",
@@ -41,7 +42,8 @@ def _declared_set(ctx) -> set:
     return declared
 
 
-def _non_goal_finding(rel, pat, boundary, overridden, cited) -> dict:
+def _non_goal_finding(rel, pat, boundary, overridden, cited,
+                      slice_id=None) -> dict:
     """One NON_GOAL_VIOLATION. Blocks only when a gates.extra gate cites the
     boundary id or its rule ref; a recorded override downgrades a block to
     an audited advisory (spec 4.1)."""
@@ -51,21 +53,25 @@ def _non_goal_finding(rel, pat, boundary, overridden, cited) -> dict:
     if bid in overridden or rel in overridden:
         return make_finding(
             "NON_GOAL_VIOLATION", rule_ref,
-            f"{rel} matches non-goal boundary {pat!r} but carries a "
-            f"recorded override (audited)",
+            f"{rel} matches non-goal {bid} ({pat}); a recorded override "
+            f"accepts it.",
             severity="advisory", key=rel + "|" + pat + "|ovr")
     if bid in cited or rule_ref in cited:
         return make_finding(
             "NON_GOAL_VIOLATION", rule_ref,
-            f"{rel} matches non-goal boundary {pat!r}: "
-            f"{boundary.get('text', '')} (override with `harness gates "
-            f"override --target boundary:{bid}` + justification)",
-            severity="block", key=rel + "|" + pat)
+            f"{rel} matches non-goal {bid} ({pat}): "
+            f"{clip_words(boundary.get('text', ''), 12)}",
+            severity="block", key=rel + "|" + pat,
+            fix=f"Move the change out of {pat}, or run: harness gates "
+                f"override --slice {slice_id or '<slice>'} "
+                f"--target boundary:{bid} --justification \"<why>\"")
     return make_finding(
         "NON_GOAL_VIOLATION", rule_ref,
-        f"G3: {rel} is inside non-goal {bid}, which no gate cites. To block "
-        f"it, cite {rule_ref} in a gates.extra GATE[\"cites\"].",
-        severity="advisory", key=rel + "|" + pat + "|uncited")
+        f"{rel} is inside non-goal {bid}, which no gate cites, so it only "
+        f"warns.",
+        severity="advisory", key=rel + "|" + pat + "|uncited",
+        fix=f"Cite {rule_ref} in a gates.extra "
+            f"GATE[\"cites\"].")
 
 
 def check(ctx) -> list:
@@ -79,7 +85,8 @@ def check(ctx) -> list:
             for pat in b.get("patterns", []):
                 if fnmatch(rel, pat):
                     findings.append(_non_goal_finding(rel, pat, b, overridden,
-                                                      ctx.cited))
+                                                      ctx.cited,
+                                                      ctx.work_unit_id))
 
     if not ctx.work_unit_id:
         return findings
@@ -98,7 +105,9 @@ def check(ctx) -> list:
             continue  # same-package auto-allow
         findings.append(make_finding(
             "UNDECLARED_FILE", GATE["rule_ref"],
-            f"G3: {rel} is not in the declared files of slice "
-            f"{ctx.work_unit_id}. Add it to predicted_files in .harness/backlog.jsonl.",
-            severity="advisory", key=rel + "|" + ctx.work_unit_id))
+            f"{rel} is outside the declared files of slice "
+            f"{ctx.work_unit_id}.",
+            severity="advisory", key=rel + "|" + ctx.work_unit_id,
+            fix=f"Add {rel} to predicted_files of slice {ctx.work_unit_id} "
+                f"in .harness/backlog.jsonl."))
     return findings

@@ -113,13 +113,17 @@ def validate_manifests(root, entries=None, base=None, pending=None) -> list:
         if unexcused:
             findings.append(make_finding(
                 "MANIFEST_INCOMPLETE", "gate:G1",
-                f"registry entry {e['id']!r}: manifest paths missing: {unexcused}",
-                severity="block", key=e["id"] + "|" + ",".join(unexcused)))
+                f"registry entry {e['id']!r}: {len(unexcused)} manifest paths "
+                f"are missing: {', '.join(unexcused[:3])}.",
+                severity="block", key=e["id"] + "|" + ",".join(unexcused),
+                fix="Create the missing files, or remove them from the "
+                    "manifest of the entry."))
         else:
             findings.append(make_finding(
                 "MANIFEST_INCOMPLETE", "gate:G1",
-                f"registry entry {e['id']!r}: manifest paths {missing} not yet "
-                f"built (declared by the active slice — will flip at close)",
+                f"registry entry {e['id']!r}: manifest paths "
+                f"{', '.join(missing[:3])} are not built yet. Close marks "
+                f"them built.",
                 severity="advisory", key=e["id"] + "|pending"))
     return findings
 

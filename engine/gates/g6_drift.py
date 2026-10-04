@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..events import make_finding
+from ..findings import clip_words
 from ..registry import public_symbols
 
 GATE = {"id": "G6", "rule_ref": "gate:G6",
@@ -29,8 +30,13 @@ def check(ctx) -> list:
     try:
         ensure_baseline(ctx.root, ctx.sidecar, ctx.work_unit_id)
     except HarnessError as exc:
-        return [make_finding("MISSING_DRIFT_BASELINE", GATE["rule_ref"],
-                             str(exc), severity="block", key=ctx.work_unit_id)]
+        return [make_finding(
+            "MISSING_DRIFT_BASELINE", GATE["rule_ref"],
+            f"slice {ctx.work_unit_id} has no interface baseline: "
+            f"{clip_words(str(exc), 14)}",
+            severity="block", key=ctx.work_unit_id,
+            fix=f"Bind the slice before you change code: harness slice "
+                f"--slice {ctx.work_unit_id}")]
     baseline = ctx.sidecar.snapshot_get(ctx.work_unit_id)
     if not baseline:
         return []
@@ -74,11 +80,12 @@ def check(ctx) -> list:
         removed = sorted(set(old_syms) - set(new_syms))
         findings.append(make_finding(
             "INTERFACE_DRIFT", GATE["rule_ref"],
-            f"public interface of {module_id!r} drifted since slice start "
-            f"(+{len(added)}/-{len(removed)}): added {added[:5]}, removed "
-            f"{removed[:5]}; acknowledge with `harness gates ack-drift "
-            f"--slice {ctx.work_unit_id} --module {module_id}`",
-            severity="block", key=ctx.work_unit_id + "|" + module_id))
+            f"public interface of {module_id!r} changed since slice start: "
+            f"{len(added)} added, {len(removed)} removed.",
+            severity="block", key=ctx.work_unit_id + "|" + module_id,
+            inject=[f"added: {added[:5]}", f"removed: {removed[:5]}"],
+            fix=f"Run: harness gates ack-drift --slice {ctx.work_unit_id} "
+                f"--module {module_id}"))
     return findings
 
 

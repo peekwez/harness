@@ -24,8 +24,8 @@ def test_agent_write_into_shared_memory_is_blocked(toy, rel):
     [finding] = _g10(v)
     assert finding["rule_ref"] == "gate:G10"
     assert finding["severity"] == "block"
-    assert "harness memory promote" in finding["message"]
-    assert len(finding["message"].split("Fix:")[0].split()) <= 25
+    assert "harness memory promote" in finding["fix"]
+    assert len(finding["message"].split()) <= 25
 
 
 def test_absolute_path_is_blocked(toy):

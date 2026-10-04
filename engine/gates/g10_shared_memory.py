@@ -29,7 +29,7 @@ def check(ctx) -> list:
             continue
         findings.append(make_finding(
             "SHARED_MEMORY_WRITE", GATE["rule_ref"],
-            f"G10: agents may not write {rel}. "
-            "Fix: ask a human to run harness memory promote <file>.",
-            severity="block", key=rel))
+            f"Agents may not write {rel}.",
+            severity="block", key=rel,
+            fix="Ask a human to run: harness memory promote <file>"))
     return findings
