@@ -291,3 +291,39 @@ def test_index_line_truncates_multibyte_text():
     line = sm.index_line("é" * 300, "slug", "日本語" * 100)
     assert len(line) <= sm.MAX_INDEX_LINE
     assert line.startswith("- [é") and "](slug.md)" in line
+
+
+def _index_with(toy, n):
+    sm.ensure_index(toy)
+    lines = "".join(f"- [f{i}](f{i}.md) — fact {i}\n" for i in range(n))
+    index = toy / sm.INDEX_REL
+    index.write_text(index.read_text() + lines)
+
+
+def test_doctor_warns_above_forty_shared_entries(toy):
+    from conftest import run_cli
+    _index_with(toy, 41)
+    out = json.loads(run_cli("doctor", "--substrate", root=toy).stdout)
+    assert out["shared_memory"]["entries"] == 41
+    assert out["shared_memory"]["limit"] == 40
+    assert any("41 entries" in w for w in out["shared_memory"]["warnings"])
+    # advisory: warnings never change substrate health
+    assert out["substrate_healthy"] is True
+
+
+def test_doctor_is_quiet_at_forty_entries(toy):
+    _index_with(toy, 40)
+    assert sm.shared_memory_health(toy)["warnings"] == []
+
+
+def test_doctor_warns_when_shared_memory_is_git_ignored(toy):
+    sm.ensure_index(toy)
+    gi = toy / ".gitignore"
+    gi.write_text((gi.read_text() if gi.exists() else "") + ".claude/\n")
+    warnings = sm.shared_memory_health(toy)["warnings"]
+    assert any("gitignored" in w for w in warnings)
+
+
+def test_doctor_names_a_missing_index(toy):
+    warnings = sm.shared_memory_health(toy)["warnings"]
+    assert any("harness upgrade" in w for w in warnings)

@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .shared_memory import INDEX_REL
+
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -63,8 +65,7 @@ def always_on_cost(root, plugin_root=None) -> dict:
         "skills": listing_chars(plugin_root / "skills", "*/SKILL.md"),
         "agents": listing_chars(plugin_root / "agents", "*.md"),
         "agents_md": _file_chars(root / "AGENTS.md"),
-        "shared_memory": _file_chars(
-            root / ".claude" / "memory" / "shared" / "MEMORY.md"),
+        "shared_memory": _file_chars(root / INDEX_REL),
         "last_injection": last,
     }
     total = sum(chars.values())

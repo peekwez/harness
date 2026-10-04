@@ -378,3 +378,25 @@ def add_claude_import(root) -> bool:
     text = path.read_text(encoding="utf-8").rstrip("\n")
     path.write_text(f"{text}\n{CLAUDE_IMPORT}\n", encoding="utf-8")
     return True
+
+
+# ------------------------------------------------------------------ doctor
+def shared_memory_health(root) -> dict:
+    """Advisory health of the shared folder for `doctor --substrate`."""
+    root = Path(root)
+    entries = len(index_entries(root))
+    warnings = []
+    if not (root / INDEX_REL).exists():
+        warnings.append("Shared memory index is missing. "
+                        "Fix: run harness upgrade.")
+    elif (root / ".git").exists() and subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "-q", INDEX_REL],
+            capture_output=True).returncode == 0:
+        warnings.append("Shared memory index is gitignored. "
+                        "Fix: remove the matching line from .gitignore.")
+    if entries > ENTRY_WARN_LIMIT:
+        warnings.append(f"Shared memory index has {entries} entries "
+                        f"(limit {ENTRY_WARN_LIMIT}). "
+                        f"Fix: merge related facts in {SHARED_DIR}/.")
+    return {"entries": entries, "limit": ENTRY_WARN_LIMIT,
+            "warnings": warnings}

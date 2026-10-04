@@ -127,6 +127,9 @@ def _substrate_health(root, fix=False) -> dict:
             sidecar.close()
         stale_bindings = []
 
+    from engine.shared_memory import shared_memory_health
+    shared_memory = shared_memory_health(root)
+
     healthy = not (problems["schema"] or stale_bindings or stale_worktrees
                    or parked or missing_notes
                    or vendored["status"] == "stale")
@@ -144,6 +147,7 @@ def _substrate_health(root, fix=False) -> dict:
         "parked_findings": len(parked),
         "missing_notes": missing_notes,
         "unshadowed_files": _unshadowed_files(root, config),
+        "shared_memory": shared_memory,           # advisory: not in `healthy`
         "fixed": fixed if fix else None,
         "next": ("harness adjudicate --list" if parked else
                  (f"harness land --slice {missing_notes[0]} (landing.mode: "
