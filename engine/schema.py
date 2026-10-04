@@ -25,8 +25,12 @@ SCHEMAS = {
                    # landing (ADR-002 / D-009): the tracker id the PR quotes,
                    # and how the slice actually reached the base branch
                    ("linear", str, False), ("landed_via", str, False),
-                   ("pr_url", str, False), ("landing_error", str, False)],
+                   ("pr_url", str, False), ("landing_error", str, False),
+                   # verification first (spec 6.1, 12 step 9)
+                   ("verifies", list, False),
+                   ("legacy_verification", bool, False)],
         "enums": {"status": SLICE_STATUS, "landed_via": LANDED_VIA},
+        "statement_id_lists": ("verifies",),
     },
     "registry.jsonl": {
         "id_field": "id",
@@ -49,8 +53,17 @@ SCHEMAS = {
                    ("reversals", dict, False),
                    ("max_injection_chars", int, False),
                    ("compactions", int, False), ("parks", int, False),
-                   ("source", str, False)],
+                   ("source", str, False),
+                   ("red_before_green", bool, False),
+                   ("green_at_start", bool, False)],
         "enums": {"source": ("close", "upgrade")},
+    },
+    "verify.jsonl": {
+        "id_field": "id",
+        "fields": [("id", str, True), ("feature", str, True),
+                   ("statement", str, True), ("source", str, True)],
+        "enums": {},
+        "statement_ids": ("id",),
     },
 }
 
@@ -100,6 +113,22 @@ def validate_rows(filename: str, rows: list, kinds=None) -> list:
                 problems.append(
                     f"{filename}: row {rid!r} has {field}={value!r}; "
                     f"expected one of {list(allowed)}")
+        from .statements import STATEMENT_ID
+        for field in spec.get("statement_ids", ()):
+            value = row.get(field)
+            if isinstance(value, str) and not STATEMENT_ID.fullmatch(value):
+                problems.append(
+                    f"{filename}: row {rid!r} field {field!r} is {value!r}; "
+                    f"expected V-<feature>-<n>")
+        for field in spec.get("statement_id_lists", ()):
+            value = row.get(field)
+            if isinstance(value, list):
+                bad = [v for v in value if not (
+                    isinstance(v, str) and STATEMENT_ID.fullmatch(v))]
+                if bad:
+                    problems.append(
+                        f"{filename}: row {rid!r} field {field!r} has invalid "
+                        f"statement IDs {bad}; expected V-<feature>-<n>")
     return problems
 
 

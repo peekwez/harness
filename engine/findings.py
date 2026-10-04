@@ -136,6 +136,12 @@ CATALOG: dict[str, str] = {
         "A closed slice uses registry entries that it never declared and "
         "that no override covers. Declare them on the slice, or record an "
         "override."),
+    "UNKNOWN_TEST_LINK": (
+        "A test comment says verifies: with an ID that is not in "
+        ".harness/verify.jsonl. A typo breaks the link, so no statement "
+        "gets credit for the test. Fix the ID, or add the statement to "
+        "explore/VERIFY.md or the verification matrix and run harness "
+        "compile."),
     "UNSHADOWED_FILE": (
         "The file is outside the repo root, so harness does not shadow or "
         "check it."),

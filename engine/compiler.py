@@ -369,6 +369,16 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
                 f"{DECISION_ANSWER_WORDS}. Move the detail into the ADR that "
                 f"the row cites.")
 
+    # spec 6.1 / 6.2 (W5): statements -> .harness/verify.jsonl, and
+    # verifies: comments that name no statement. Runs before every write:
+    # a malformed statement ID fails the compile with nothing written.
+    from .statements import compile_statements
+    statements = compile_statements(root, working_doc=working_doc)
+    report["statements"] = statements["statements"]
+    report["statements_source"] = statements["source"]
+    report["unknown_test_links"] = statements["unknown_links"]
+    report["warnings"].extend(statements["warnings"])
+
     write_jsonl(harness_dir(root) / "decisions.jsonl",
                 sorted(decisions.values(), key=lambda d: d["id"]))
     write_jsonl(harness_dir(root) / "registry.jsonl",
