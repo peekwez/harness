@@ -189,3 +189,36 @@ def test_rust_brace_group_resolves_into_explore(toy):
     assert codes == ["EXPLORE_IMPORT"]
     (toy / "src" / "lib.rs").write_text("use crate::{orders, x};\n")
     assert file_findings(toy, "src/lib.rs", load_config(toy)) == []
+
+
+def test_verify_computes_python_module_ids_once(toy, monkeypatch):
+    _explore(toy)
+    for i in range(5):
+        (toy / f"m{i}.py").write_text("x = 1\n")
+    (toy / "orders.py").write_text(BAD_ORDERS)
+    from engine.extractor import modules
+    calls = []
+    real = modules.python_module_ids
+    monkeypatch.setattr(modules, "python_module_ids",
+                        lambda *a, **k: calls.append(1) or real(*a, **k))
+    found = explore_findings(toy, load_config(toy))
+    assert [f["code"] for f in found] == ["EXPLORE_IMPORT"]
+    assert len(calls) == 1
+
+
+def test_root_aliases_comments_and_rust_path_attribute(toy):
+    _explore(toy)
+    config = load_config(toy)
+    (toy / "web").mkdir()
+    (toy / "web" / "a.ts").write_text('import t from "@/explore/toy";\n')
+    (toy / "web" / "b.ts").write_text('import t from "~/explore/toy";\n')
+    (toy / "web" / "c.ts").write_text(
+        '// import t from "../explore/toy";\n'
+        '/* import u from "../explore/u"; */\n'
+        'import v from "https://x.dev/v";\n')
+    (toy / "src").mkdir()
+    (toy / "src" / "lib.rs").write_text(
+        '#[path = "../explore/toy.rs"]\nmod toy;\n')
+    for rel, n in (("web/a.ts", 1), ("web/b.ts", 1), ("web/c.ts", 0),
+                   ("src/lib.rs", 1)):
+        assert len(file_findings(toy, rel, config)) == n, rel

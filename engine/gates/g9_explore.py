@@ -100,10 +100,17 @@ def _rust_specs(text: str) -> list[str]:
     for m in _RS_USE.finditer(text):
         specs += _rust_firsts(m.group(1))
     specs += [m.group(1) for m in _RS_CRATE.finditer(text)]
+    specs += ["path:" + m.group(1) for m in _RS_PATH_ATTR.finditer(text)]
     return specs
 
 
+_JS_COMMENT = re.compile(r"/\*.*?\*/|(?<!:)//[^\n]*", re.S)
+_RS_PATH_ATTR = re.compile(r'#\[\s*path\s*=\s*"([^"]+)"\s*\]')
+
+
 def _js_specs(text: str) -> list[str]:
+    # limit: a `//` inside a string, not after `:`, is read as a comment
+    text = _JS_COMMENT.sub("", text)
     return [m.group(2) for m in _JS_SPEC.finditer(text)]
 
 
@@ -120,7 +127,9 @@ READERS = {"python": _python_specs, "rust": _rust_specs,
            "go": _go_specs}
 
 
-def import_specs(root, rel: str, config, *, in_scope: bool = False) -> tuple[str | None, list[str]]:
+def import_specs(root, rel: str, config, *, in_scope: bool = False,
+                 cache: dict | None = None
+                 ) -> tuple[str | None, list[str]]:
     """The language and import strings of one file.
 
     Args:
@@ -129,6 +138,8 @@ def import_specs(root, rel: str, config, *, in_scope: bool = False) -> tuple[str
         config: Loaded engine config.
         in_scope: True when the caller listed `rel` from `scope_files`, so
             the per-file scope check (one `git check-ignore`) is skipped.
+        cache: A dict a loop passes in; the repo's Python module ids are
+            computed once into it, not once per file.
 
     Returns:
         (language, import strings). (None, []) for a file that G9 does not
@@ -143,7 +154,12 @@ def import_specs(root, rel: str, config, *, in_scope: bool = False) -> tuple[str
     if not in_scope and not in_shadow_scope(root, rel, config):
         return None, []
     if lang == "python":
-        shadow = shadow_for(root, path, config,
+        if cache is None:
+            cache = {}
+        if "known" not in cache:
+            from ..extractor.modules import python_module_ids
+            cache["known"] = python_module_ids(root, config)
+        shadow = shadow_for(root, path, config, known_modules=cache["known"],
                             ignored=set() if in_scope else None)
         if shadow is not None and shadow.get("language") == lang:
             return lang, list(shadow.get("imports", []))
@@ -181,10 +197,16 @@ def resolves_into_explore(root, rel: str, lang: str, spec: str,
     """True when import `spec` in file `rel` names code under `explore/`."""
     if lang == "python":
         return spec == EXPLORE_DIR or spec.startswith(EXPLORE_DIR + ".")
+    if lang == "rust" and spec.startswith("path:"):
+        target = posixpath.normpath(
+            posixpath.join(posixpath.dirname(rel), spec[5:]))
+        return target == EXPLORE_DIR or target.startswith(EXPLORE_DIR + "/")
     if lang == "rust":
         return EXPLORE_DIR in _rust_firsts(spec)
     if lang in ("typescript", "javascript"):
-        if spec.startswith("."):
+        if spec.startswith(("@/", "~/")):
+            target = spec[2:]  # a common root alias
+        elif spec.startswith("."):
             target = posixpath.join(posixpath.dirname(rel), spec)
         elif spec.startswith("/"):
             try:
@@ -202,7 +224,8 @@ def resolves_into_explore(root, rel: str, lang: str, spec: str,
     return False
 
 
-def file_findings(root, rel: str, config, *, in_scope: bool = False) -> list:
+def file_findings(root, rel: str, config, *, in_scope: bool = False,
+                  cache: dict | None = None) -> list:
     """G9 findings for one repo-relative file.
 
     `in_scope`: the file came from `scope_files`; skip the scope check."""
@@ -211,7 +234,8 @@ def file_findings(root, rel: str, config, *, in_scope: bool = False) -> list:
     if rel == EXPLORE_DIR or rel.startswith(EXPLORE_DIR + "/") \
             or exempt(rel, config):
         return []
-    lang, specs = import_specs(root, rel, config, in_scope=in_scope)
+    lang, specs = import_specs(root, rel, config, in_scope=in_scope,
+                              cache=cache)
     if lang is None:
         return []
     go_prefix = go_explore_prefix(root, rel) if lang == "go" else None
@@ -236,10 +260,12 @@ def check(ctx) -> list:
     if not touched and ctx.work_unit_id:
         touched = sorted(ctx.sidecar.touched_paths(slice_id=ctx.work_unit_id))
     findings = []
+    cache: dict = {}
     for rel in touched:
         if Path(rel).is_absolute():
             continue  # out-of-root rows: never a crash
-        findings.extend(file_findings(ctx.root, rel, ctx.config))
+        findings.extend(file_findings(ctx.root, rel, ctx.config,
+                                      cache=cache))
     return findings
 
 
@@ -249,7 +275,9 @@ def explore_findings(root, config) -> list:
         return []
     from ..extractor.engine import scope_files
     findings = []
+    cache: dict = {}
     for rel in scope_files(root, config):
         if PurePosixPath(rel).suffix.lower() in G9_LANGS:
-            findings.extend(file_findings(root, rel, config, in_scope=True))
+            findings.extend(file_findings(root, rel, config, in_scope=True,
+                                          cache=cache))
     return findings

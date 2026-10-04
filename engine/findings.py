@@ -59,7 +59,9 @@ CATALOG: dict[str, str] = {
         "module. G9 reads Python imports from the shadow, and Rust, "
         "TypeScript, JavaScript and Go imports from the source. "
         "Tests and other gates.exempt_paths are not checked. G9 is active "
-        "when explore/DECISIONS.md exists."),
+        "when explore/DECISIONS.md exists. Not checked: dynamic imports "
+        "such as import(`..${x}`) or importlib.import_module. A bare "
+        "npm package named explore is flagged."),
     "EXTRA_GATE_LOAD_ERROR": (
         "A gate under gates.extra in .harness/config.yaml did not load. "
         "Harness blocks, because a broken gate must never pass in silence. "
