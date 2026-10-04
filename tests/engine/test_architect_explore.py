@@ -193,6 +193,7 @@ def test_invalid_cards_error_is_short_and_counts_problems(toy):
     assert "more. Run: harness explore --freeze to list them" in err
     head = err.split(" ...and")[0]
     assert 5 < len(head.split()) <= 25, head
+    assert "D-E1" in head and "Solves" in head, head
 
 
 def test_refreeze_keeps_digest_and_a_body_edit_changes_it(toy):
