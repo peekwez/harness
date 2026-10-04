@@ -305,6 +305,14 @@ def scan_test_links(root, paths) -> dict[str, list[dict]]:
     return links
 
 
+def has_statements(text: str) -> bool:
+    """True when the text holds at least one statement line."""
+    try:
+        return bool(parse_statements(text, "document"))
+    except HarnessError:
+        return True
+
+
 def compile_statements(root, working_doc=None) -> dict:
     """Write `.harness/verify.jsonl` and report unknown test links.
 
@@ -343,7 +351,18 @@ def compile_statements(root, working_doc=None) -> dict:
         if doc_rows:
             source, rows = doc_source, doc_rows
     if rows is not None:
-        write_jsonl(target, sorted(rows, key=lambda r: statement_key(r["id"])))
+        kept = []
+        if target.exists():
+            kept = [r for r in load_statements(root)
+                    if r.get("source") != source]
+        clash = sorted({r["id"] for r in kept} & {r["id"] for r in rows})
+        if clash:
+            raise HarnessError(
+                f"{source}: statement ID {clash[0]} is also in "
+                f"{VERIFY_JSONL} from another source. Give each statement "
+                f"its own ID. Nothing was written.")
+        write_jsonl(target, sorted(
+            kept + rows, key=lambda r: statement_key(r["id"])))
         out["source"] = source
     elif not target.exists():
         return out

@@ -46,6 +46,8 @@ sizing rules in `slice-decomposition.md`):
   predeclared expected effects, app write-fingerprint observability and
   read-only Python storage probes. A direct storage fixture never proves an app write.
   Stubs are starting points; they must become behavior assertions before done.
+  Write real behaviour assertions before the slice is bound. Never use `assert False` placeholders.
+  Bind records red once, and a red record is final. A red record taken on stubs proves nothing.
   Put a link comment above each red test, in the test's comment syntax:
   `# verifies: V-orders-3  kills: <the bug this test catches>`.
   Close blocks when a statement in `verifies` has no linked test, or a link has no `kills:` text.

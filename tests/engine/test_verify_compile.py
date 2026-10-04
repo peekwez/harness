@@ -117,3 +117,26 @@ def test_schema_checks_metrics_bool_fields():
 def test_catalog_has_unknown_test_link():
     from engine.findings import CATALOG
     assert "UNKNOWN_TEST_LINK" in CATALOG
+
+
+def test_compile_warns_when_the_default_doc_has_uncompiled_statements(toy):
+    doc = toy / "docs" / "architecture.md"
+    doc.parent.mkdir(exist_ok=True)
+    doc.write_text("# Architecture\n\nV-orders-1: an order has one row\n")
+    proc = run_cli("compile", root=toy)
+    assert proc.returncode == 0, proc.stderr
+    assert "V-" in proc.stderr and "--doc docs/architecture.md" in proc.stderr
+    assert not (toy / ".harness" / "verify.jsonl").exists()
+    _verify_md(toy, "V-orders-1: x\n")
+    assert "--doc" not in run_cli("compile", root=toy).stderr
+    (toy / "explore" / "VERIFY.md").unlink()
+    assert "--doc" not in run_cli("compile", "--doc", "docs/architecture.md",
+                                  root=toy).stderr
+
+
+def test_backlog_add_fix_names_both_statement_sources(toy):
+    proc = run_cli("backlog", "add", "--id", "slice-050", "--acceptance",
+                   "tests/slices/050_x.py", "--verifies", "V-orders-1",
+                   root=toy)
+    assert proc.returncode == 1
+    assert "--doc" in proc.stderr

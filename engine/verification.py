@@ -263,6 +263,7 @@ def close_checks(root, sl, config):
             record, problem = load_red_record(root, sid), None
         except HarnessError as exc:
             record, problem = None, str(exc)
+            report["red_record_corrupt"] = True
         if record is None:
             findings.append(make_finding(
                 "RED_RECORD_MISSING", RULE_RED,
@@ -311,7 +312,8 @@ def close_checks(root, sl, config):
                 "UNKNOWN_STATEMENT", RULE_COVERAGE,
                 f"Slice {sid} verifies {stid}, which is not in "
                 f".harness/verify.jsonl.",
-                severity="block", key=f"{sid}|{stid}", fix="harness compile"))
+                severity="block", key=f"{sid}|{stid}",
+                fix="harness compile --doc <working document>"))
             continue
         found = links.get(stid, [])
         report["statements"][stid] = found
@@ -321,8 +323,8 @@ def close_checks(root, sl, config):
                 f"Statement {stid} has no test with a verifies: comment in "
                 f"the acceptance suites of slice {sid}.",
                 severity="block", key=f"{sid}|{stid}",
-                fix=f"Add '# verifies: {stid}  kills: <bug>' above a test "
-                    f"in {target}."))
+                fix=f"Add a comment `verifies: {stid} kills: <mistake>` to a "
+                    f"test in the slice's suite ({target})."))
         for link in found:
             if not link["kills"]:
                 findings.append(make_finding(
@@ -354,5 +356,8 @@ def close_checks(root, sl, config):
 
 def slice_metrics(report: dict) -> dict:
     """The W5 fields for `record_slice_summary(..., extra=...)`."""
+    if report.get("legacy") or str(report.get("red_record") or "").startswith(
+            "skipped"):
+        return {}
     return {"red_before_green": bool(report.get("red_before_green")),
             "green_at_start": bool(report.get("green_at_start"))}

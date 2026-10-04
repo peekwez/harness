@@ -146,9 +146,15 @@ def _close_ceremony(args):
     v_findings, verification = close_checks(root, sl, config)
     v_blocks = [f for f in v_findings if f["severity"] == "block"]
     if v_blocks:
+        # a corrupt red record and a green start need a human, not a retry:
+        # they must not push the slice toward auto-park.
+        human = any(f["code"] == "GREEN_AT_START"
+                    or (f["code"] == "RED_RECORD_MISSING"
+                        and verification.get("red_record_corrupt"))
+                    for f in v_blocks)
         _fail({"closed": False, "rule_ref": v_blocks[0]["rule_ref"],
                "reason": v_blocks[0]["message"], "findings": v_findings,
-               "verification": verification})
+               "verification": verification}, attempt=not human)
     try:
         source_matches_commit(root, args.commit)
     except HarnessError as exc:

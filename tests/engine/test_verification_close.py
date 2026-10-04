@@ -263,3 +263,51 @@ def test_a_statement_with_no_test_blocks_close(tmp_path):
     out = json.loads(proc.stdout)
     assert out["verification"]["red_before_green"] is True
     assert _last_metrics(toy)["red_before_green"] is True
+
+
+# ------------------------------------------------------------- final-fix wave
+def test_metrics_omit_the_red_fields_for_legacy_and_skipped(tmp_path):
+    toy = _setup(tmp_path)
+    sl = get_slice(toy, "slice-042")
+    sl["legacy_verification"] = True
+    save_slice(toy, sl)
+    assert slice_metrics(_check(toy)[1]) == {}
+    import yaml
+    toy2 = _setup(tmp_path / "two")
+    cfg_path = toy2 / ".harness" / "config.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text())
+    cfg["gates"]["acceptance_runner"] = "none"
+    cfg_path.write_text(yaml.safe_dump(cfg))
+    assert slice_metrics(_check(toy2)[1]) == {}
+
+
+def test_the_fix_texts_name_both_statement_sources_and_no_hash(tmp_path):
+    toy = _setup(tmp_path, verifies=["V-orders-9", "V-orders-1"],
+                 record=RED, statements=("V-orders-1",))
+    findings, _ = _check(toy)
+    by = {f["code"]: f for f in findings}
+    assert "--doc" in by["UNKNOWN_STATEMENT"]["fix"]
+    assert "#" not in by["STATEMENT_UNTESTED"]["fix"]
+    assert "verifies: V-orders-1" in by["STATEMENT_UNTESTED"]["fix"]
+
+
+def _attempts(toy):
+    from engine.events import Sidecar
+    sc = Sidecar(toy)
+    try:
+        return sc.state_get("__attempts__", "slice-042")
+    finally:
+        sc.close()
+
+
+def test_green_at_start_and_a_corrupt_record_do_not_count_as_attempts(
+        tmp_path):
+    toy = build_toy_repo(tmp_path / "toy", legacy_verification=False)
+    session = _work_and_commit(toy, orders_first=True)
+    assert _close(toy, session).returncode == 1
+    assert not _attempts(toy)
+    path = toy / ".harness" / "verification" / "slice-042.json"
+    path.write_text("{not json")
+    proc = _close(toy, session)
+    assert "RED_RECORD_MISSING" in proc.stdout
+    assert not _attempts(toy)

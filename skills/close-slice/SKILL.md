@@ -89,6 +89,9 @@ The engine also checks verification first:
 - Each such statement has a test with a `verifies:` comment. Only tests in an acceptance suite count. A missing test blocks with `STATEMENT_UNTESTED`.
 - Each such comment has `kills:` text. Missing text blocks with `KILLS_MISSING`.
 
+When `gates.acceptance_runner` is `none`, the red record check is skipped.
+`harness compile` also warns with `UNKNOWN_TEST_LINK` when a test names a statement that is not in `verify.jsonl`. This warning is advisory.
+
 Slices with `legacy_verification: true` skip these checks. They still run acceptance and regression.
 `GREEN_AT_START` needs
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates override --slice $1 --target verification:green-at-start --rule-ref verify:red-record --justification "<why>"`.

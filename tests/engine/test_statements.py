@@ -316,3 +316,33 @@ def test_compile_surfaces_skipped_statement_lines(tmp_path):
     _write(toy, {"explore/VERIFY.md": "V-a-1: ok\n- [ ] V-a-2: lost\n"})
     out = compile_statements(toy)
     assert any("explore/VERIFY.md:2" in w for w in out["warnings"])
+
+
+# ---- final-fix wave -------------------------------------------------------
+def test_compile_keeps_rows_from_other_sources(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"docs/a.md": "V-a-1: first\nV-a-2: second\n",
+                 "docs/b.md": "V-b-1: bee\n"})
+    compile_statements(toy, toy / "docs" / "a.md")
+    compile_statements(toy, toy / "docs" / "b.md")
+    assert [r["id"] for r in load_statements(toy)] == ["V-a-1", "V-a-2",
+                                                       "V-b-1"]
+    first = _verify_bytes(toy)
+    compile_statements(toy, toy / "docs" / "b.md")
+    assert _verify_bytes(toy) == first
+    _write(toy, {"docs/a.md": "V-a-1: changed\n"})
+    compile_statements(toy, toy / "docs" / "a.md")
+    rows = {r["id"]: r for r in load_statements(toy)}
+    assert sorted(rows) == ["V-a-1", "V-b-1"]
+    assert rows["V-a-1"]["statement"] == "changed"
+
+
+def test_compile_duplicate_id_across_sources_fails_and_writes_nothing(
+        tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"docs/a.md": "V-a-1: first\n", "docs/b.md": "V-a-1: dup\n"})
+    compile_statements(toy, toy / "docs" / "a.md")
+    before = _verify_bytes(toy)
+    with pytest.raises(HarnessError, match="V-a-1"):
+        compile_statements(toy, toy / "docs" / "b.md")
+    assert _verify_bytes(toy) == before

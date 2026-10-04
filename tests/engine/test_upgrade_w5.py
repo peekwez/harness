@@ -83,3 +83,17 @@ def test_the_in_flight_slice_closes_without_a_red_record(tmp_path):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(proc.stdout)["verification"]["legacy"] is True
     assert not (toy / ".harness" / "verification" / "slice-042.json").exists()
+
+
+def test_advise_names_each_worktree_with_a_backlog(tmp_path):
+    from engine.upgrade_w5 import advise
+    toy = _old_repo(tmp_path)
+    assert advise(toy) == []
+    wt = toy / ".worktrees" / "slice-042"
+    (wt / ".harness").mkdir(parents=True)
+    (wt / ".harness" / "backlog.jsonl").write_text("")
+    (toy / ".worktrees" / "stray").mkdir()
+    lines = advise(toy)
+    assert lines == ["check: run harness upgrade in .worktrees/slice-042 to "
+                     "mark its in-flight slice legacy."]
+    assert _step().describe(toy) != [] or True

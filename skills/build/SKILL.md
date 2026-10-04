@@ -45,6 +45,8 @@ Loop discipline — in order:
    - `green_at_start: true`: the tests pass before you write code. Make each test fail for the missing behaviour. Then run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" slice --slice $1` to record red again.
    - A pure refactor stays green. Record the reason:
      `"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates override --slice $1 --target verification:green-at-start --rule-ref verify:red-record --justification "<why>"`.
+   - Acceptance tests must be real behaviour assertions before bind. Bind records red once, and a red record is final. A red record taken on `assert False` stubs proves nothing.
+   - Bind runs the suite with `acceptance_python` or the engine's interpreter. A wrong interpreter, such as a missing project venv in a worktree, can give a false red. Set `acceptance_python` or `acceptance.cmd` before you bind.
    - `runner_error`: the suite did not run. A spawn failure, a missing interpreter, a missing test path, no tests collected or a timeout is a runner error, not red. Fix the test command, then bind again.
    - A corrupt record blocks bind and close. It can hold real red evidence. Repair it, then bind again. Delete it only if you accept that loss.
 

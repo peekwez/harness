@@ -17,6 +17,7 @@ from engine.cli.slice import _bind_slice
 
 
 DEFAULT_WORKING_DOC = "docs/architecture.md"
+VERIFY_MD = "explore/VERIFY.md"
 #: tracker ids a slice row may carry (`linear`, schema §5.6). Deliberately
 #: narrow: the id is interpolated into a PR title and a Linear URL, so a
 #: free-form string would produce a dead link nobody notices.
@@ -145,6 +146,12 @@ def cmd_compile(args):
             print(f"warning: {DEFAULT_WORKING_DOC} carries harness-decisions/"
                   f"harness-abstractions tables that this run did NOT compile "
                   f"— re-run with --doc {DEFAULT_WORKING_DOC}", file=sys.stderr)
+        elif default.exists() and not (Path(root) / VERIFY_MD).is_file():
+            from engine.statements import has_statements
+            if has_statements(default.read_text(encoding="utf-8")):
+                print(f"warning: {DEFAULT_WORKING_DOC} holds V-...: "
+                      f"statements that this run did NOT compile. Re-run "
+                      f"with --doc {DEFAULT_WORKING_DOC}.", file=sys.stderr)
     _print(compile_substrate(root, working_doc=doc))
     return 0
 
@@ -209,7 +216,8 @@ def _backlog_add(args):
     if verifies:
         if not (harness_dir(root) / VERIFY_JSONL).exists():
             print("error: backlog add: .harness/verify.jsonl does not exist. "
-                  "Run harness compile first.", file=sys.stderr)
+                  "Run harness compile, with --doc <working document> "
+                  "when there is no explore/VERIFY.md.", file=sys.stderr)
             return 1
         known_ids = {r["id"] for r in load_statements(root)}
         missing = [v for v in verifies if v not in known_ids]

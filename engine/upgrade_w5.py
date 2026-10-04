@@ -45,9 +45,25 @@ def _apply(root: Path, ask: Ask) -> list[str]:
             for sid in sorted(pending)]
 
 
+def advise(root: Path) -> list[str]:
+    """One `check:` line for each worktree that holds its own backlog.
+
+    A slice in flight in a worktree carries its own `backlog.jsonl`. This
+    step marks only the main tree, so the user runs upgrade in each one.
+    """
+    base = Path(root) / ".worktrees"
+    if not base.is_dir():
+        return []
+    return [f"check: run harness upgrade in .worktrees/{d.name} to mark its "
+            f"in-flight slice legacy."
+            for d in sorted(base.iterdir())
+            if (d / ".harness" / "backlog.jsonl").is_file()]
+
+
 LEGACY_STEP = register(Step(
     id="w5.legacy-verification",
     title="Mark each slice that is not closed legacy_verification: true.",
     describe=_describe,
     apply=_apply,
+    advise=advise,
 ))
