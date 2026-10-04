@@ -37,7 +37,7 @@ The upgrade runs in this order:
 2. It repairs old 0.8 and 0.9 overrides and graph records.
 3. It runs each 0.10 step that has pending changes.
 4. It installs the merge drivers, refreshes the vendored engine in `.harness/engine/` and refreshes a harness-written CI workflow.
-5. It refreshes the harness commands in `.codex/hooks.json` and harness-written Claude settings. When this removes something from `.claude/settings.json` or changes `.codex/hooks.json`, upgrade keeps the old file in `.harness/cache/<name>.pre-0.10` and prints a `check:` line. `.claude/settings.local.json` keeps each permission and key that you added.
+5. It refreshes the harness commands in `.codex/hooks.json` and harness-written Claude settings. When this removes something from `.claude/settings.json` or changes `.codex/hooks.json`, upgrade keeps the old file in `.harness/cache/<name>.pre-0.10` and prints a `check:` line. `.claude/settings.local.json` keeps each permission and key that you added, and gets the 0.10 harness entries back. It is gitignored, so upgrade backs it up after any change and prints a `check:` line. Compare that backup with the new file. Remove each entry that you had dropped on purpose. Also remove each stale entry, such as an old forge host or project folder.
 6. It refreshes the registry rows whose source did not change before the upgrade.
 7. It validates the substrate.
 8. It runs `harness doctor --substrate` and `harness verify`, each in a new process.

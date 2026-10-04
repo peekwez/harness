@@ -266,7 +266,31 @@ def test_settings_local_keeps_human_rules_in_place(tmp_path):
     # the harness-owned keys are the 0.10 ones
     assert "Bash(*/bin/harness memory promote:*)" in after["permissions"]["ask"]
     assert "harness autonomy profile" in after["_comment"]
-    assert not (root / ".harness/cache/settings.local.json.pre-0.10").exists()
+    # gitignored: any change is backed up and named
+    backup = root / ".harness/cache/settings.local.json.pre-0.10"
+    assert "Bash(npm run e2e:*)" in backup.read_text()
+    assert any("settings.local.json.pre-0.10" in h for h in out["human_checks"])
+
+
+def test_settings_local_backs_up_a_template_entry_the_human_removed(tmp_path):
+    """The merge brings a removed template entry back. That change is not in
+    any diff, so the old file is backed up and a check line says what to do."""
+    root = build_astralabs_094_repo(tmp_path / "repo")
+    local = root / ".claude/settings.local.json"
+    data = json.loads((root / ".claude/settings.json").read_text())
+    data["permissions"]["allow"].remove("Bash(git stash:*)")
+    data["sandbox"]["network"]["allowedDomains"].remove("crates.io")
+    local.write_text(json.dumps(data, indent=2) + "\n")
+    proc, out = _upgrade(root)
+    after = json.loads(local.read_text())
+    # documented behaviour: harness-owned entries come back
+    assert "Bash(git stash:*)" in after["permissions"]["allow"]
+    assert "crates.io" in after["sandbox"]["network"]["allowedDomains"]
+    backup = root / ".harness/cache/settings.local.json.pre-0.10"
+    assert "Bash(git stash:*)" not in json.loads(backup.read_text())["permissions"]["allow"]
+    [line] = [h for h in out["human_checks"] if "settings.local.json.pre-0.10" in h]
+    assert "dropped on purpose" in line and len(line.split()) <= 25
+    assert out["claude"]["settings_local"]["backup"] == ".harness/cache/settings.local.json.pre-0.10"
 
 
 def test_a_changed_codex_hooks_file_is_backed_up_with_a_check(tmp_path):

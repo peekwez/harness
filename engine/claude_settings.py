@@ -4,7 +4,8 @@
 something the new one lacks, the old bytes go to a gitignored backup and the
 report names it. `.claude/settings.local.json` is gitignored, so a lost edit
 there is gone for good: it keeps every key and list entry a human added, and
-only the harness-owned values change.
+only the harness-owned values change. Any change to it gets a backup and a
+check line, because no commit diff shows it.
 """
 from __future__ import annotations
 
@@ -52,6 +53,14 @@ def _merge(old, new, owned):
     return new
 
 
+def changes_text(old: str, new: str) -> bool:
+    """True when `new` differs from `old` in any key, entry or value."""
+    try:
+        return json.loads(old) != json.loads(new)
+    except ValueError:
+        return old != new
+
+
 def merge_local(old_text: str, new_text: str, template_text: str) -> str:
     """The settings.local.json to write. An unreadable old file is replaced;
     the caller keeps a backup of it."""
@@ -87,7 +96,15 @@ def refresh(root: Path, config: dict, write, keep_backup) -> dict:
         backup = keep_backup(root, name, old)
         write(root, quiet=True, local=local, config=config)
         entry = {"path": rel, "action": "refreshed"}
-        if drops_text(old.decode("utf-8", errors="replace"), path.read_text()):
+        old_text, new_text = old.decode("utf-8", errors="replace"), path.read_text()
+        if local and changes_text(old_text, new_text):
+            # gitignored: no diff shows the change, so any change gets a backup.
+            # The merge can also bring back a template entry the human removed.
+            entry["backup"] = backup
+            entry["check"] = (f"check: the upgrade merged the 0.10 profile into {rel}. "
+                              f"Compare the gitignored backup {backup} and remove any "
+                              "entry you had dropped on purpose.")
+        elif not local and drops_text(old_text, new_text):
             entry["backup"] = backup
             entry["check"] = (f"check: the refresh removed your own entries from {rel}. "
                               f"Copy them back from the gitignored backup {backup}.")
