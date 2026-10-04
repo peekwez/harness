@@ -65,6 +65,13 @@ planned checks are not executed evidence.
    the cause, reruns the failed check, then affected required checks. Never
    weaken an AC, delete a relevant assertion or retry blindly to obtain green.
 
+## Statements and test links
+
+`harness compile` writes statements to `.harness/verify.jsonl`. The source is `explore/VERIFY.md`, or the verification matrix in the working document.
+A test links to a statement with a comment: `verifies: V-orders-3  kills: <the bug this test catches>`.
+Read each link. Check that the test would fail if the `kills:` bug existed.
+A link without that power is a gap, even when close passes.
+
 Output this compact result in the existing review/PR record:
 
 ```text

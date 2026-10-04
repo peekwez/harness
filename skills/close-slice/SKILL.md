@@ -81,6 +81,18 @@ The engine enforces these checks:
   from an independent forked reviewer (ADR-001). Dispatch the
   harness:reviewer agent. It records `harness review --record-fork`.
 
+The engine also checks verification first:
+
+- A red record exists in `.harness/verification/$1.json`. A missing record blocks with `RED_RECORD_MISSING`. Run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" slice --slice $1` to record red.
+- If the suite was green at start, an override with a reason exists. Without it, close blocks with `GREEN_AT_START`.
+- Each statement in the slice's `verifies` is in `.harness/verify.jsonl`. An unknown ID blocks with `UNKNOWN_STATEMENT`.
+- Each such statement has a test with a `verifies:` comment. Only tests in an acceptance suite count. A missing test blocks with `STATEMENT_UNTESTED`.
+- Each such comment has `kills:` text. Missing text blocks with `KILLS_MISSING`.
+
+Slices with `legacy_verification: true` skip these checks. They still run acceptance and regression.
+`GREEN_AT_START` needs
+`"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates override --slice $1 --target verification:green-at-start --rule-ref verify:red-record --justification "<why>"`.
+
 Shadows are a gitignored cache under `.harness/cache/`. The engine builds a
 shadow when it needs one. The close commits no shadows.
 If it reports a block, the fix is named in the finding — G6 drift needs

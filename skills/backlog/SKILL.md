@@ -24,7 +24,8 @@ Generate slices via the CLI — never hand-edit `.harness/backlog.jsonl`
 
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog add --id <slice-id> --title "…"
 --spec <spec> --declares <registry-ids…> --predicts <files…>
---acceptance tests/slices/NNN_x.py --depends <slice-ids…>`
+--acceptance tests/slices/NNN_x.py --depends <slice-ids…>
+--verifies <V-ids,…>`
 
 It validates ids and declared deps against the registry, dedupes predicted
 files, and computes the context-cost estimate. Row semantics (schema and
@@ -45,6 +46,12 @@ sizing rules in `slice-decomposition.md`):
   predeclared expected effects, app write-fingerprint observability and
   read-only Python storage probes. A direct storage fixture never proves an app write.
   Stubs are starting points; they must become behavior assertions before done.
+  Put a link comment above each red test, in the test's comment syntax:
+  `# verifies: V-orders-3  kills: <the bug this test catches>`.
+  Close blocks when a statement in `verifies` has no linked test, or a link has no `kills:` text.
+- `verifies`: the statement IDs this slice proves, from `.harness/verify.jsonl`.
+  Run `harness compile` first. `backlog add` refuses an ID that is not there.
+  Repeat `--verifies` or separate IDs with commas.
 - `predicted_files`: every file the slice is expected to touch.
 - `depends_on`: slice ordering derived from the registry dependency graph.
 
@@ -52,6 +59,9 @@ Then compute cost estimates and request proposals for oversized slices
 (estimate > resolver budget × 0.8):
 
 !`"${CLAUDE_PLUGIN_ROOT}/bin/harness" backlog --split`
+
+Read `unowned_statements` in the same output. Give each statement to one slice with
+`--verifies`. If no slice proves a statement, tell the human why.
 
 Read `split_proposals` and `split_refused`. For each proposal, author separate
 acceptance tests and predicted files for every child, create the children

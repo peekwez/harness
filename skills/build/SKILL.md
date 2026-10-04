@@ -39,8 +39,16 @@ module's shadow replaces the ADR guidance listed in its `supersedes_guidance`.
 
 Loop discipline — in order:
 
-1. **Work the red tests.** The slice's `acceptance` tests define done. Run
-   them first; they must fail before you write implementation. Inside them,
+1. **Read the red record.** `harness start` runs the slice's acceptance suite once.
+   It writes `.harness/verification/$1.json` and prints `red_record`.
+   - `red: true`: the tests fail. Continue.
+   - `green_at_start: true`: the tests pass before you write code. Make each test fail for the missing behaviour. Then run `"${CLAUDE_PLUGIN_ROOT}/bin/harness" slice --slice $1` to record red again.
+   - A pure refactor stays green. Record the reason:
+     `"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates override --slice $1 --target verification:green-at-start --rule-ref verify:red-record --justification "<why>"`.
+   - `runner_error`: the suite did not run. A spawn failure, a pytest usage error or a timeout is a runner error, not red. Fix the test command, then bind again.
+   - A corrupt record blocks bind and close. Repair or delete it, then bind again.
+
+   **Work the red tests.** The slice's `acceptance` tests define done. Inside them,
    drive every unit with `superpowers:test-driven-development`: one failing
    unit test, watch it fail, minimal code to green, repeat.
    Use `harness:verification` to map the actual ACs to implementation and

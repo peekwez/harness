@@ -29,9 +29,11 @@ Discipline:
 - Substrate first: your context comes from the resolver (shadows, guidance,
   decision rows, shared memory). Never paste source where a shadow
   exists; never guess where a decision row answers.
-- Red tests define done. Run the slice's acceptance tests before writing
-  code (they must fail), and work until they pass — nothing more. Drive each
-  unit inside them with `superpowers:test-driven-development`.
+- Red tests define done. Binding the slice runs its acceptance tests once and writes the red record.
+  Read `red_record` in the bind output. If the tests pass before you write code, make them fail first.
+  Then bind again. For a pure refactor, record an override with the reason.
+  Put `verifies: <statement ID>  kills: <the bug>` in a comment above each test that proves a statement.
+  Work until the tests pass, and nothing more. Drive each unit inside them with `superpowers:test-driven-development`.
 - Use `harness:verification` to connect ACs to observable behavior and decisive
   checks. Give the reviewer current, checkable evidence and implementation
   locations. Act on verification gaps with a reproduction, diagnosis, scoped
