@@ -28,6 +28,8 @@ GATE_RULE_REF = "adr:002"
 GATE_REASON = "acceptance gate command failed"
 SPAWN_FAILED_RC = 127          # the shell's "command not found"
 GATE_CODE = "ACCEPTANCE_GATE_FAILED"
+JUNIT_PLACEHOLDER = "{junit}"
+PYTEST_RUNNER_ERRORS = (4, 5)  # usage error; no tests collected
 
 
 def _acceptance_block(config) -> dict:
@@ -52,17 +54,20 @@ def _acceptance_block(config) -> dict:
     return block
 
 
-def _acceptance_cmd(config, paths, interpreter) -> list[str]:
+def _acceptance_cmd(config, paths, interpreter, junit=None) -> list[str]:
     """The argv that decides acceptance for the given paths.
 
     `{paths}` is substituted with the shell-quoted paths and the result
     split with `shlex`; a custom command that never names `{paths}` gets
     them appended, so a bare `uv run pytest -q` still receives its targets.
+    `{junit}` is substituted with the shell-quoted JUnit XML path, or with
+    `os.devnull` when no path is given (close and regression runs).
 
     Args:
         config: The merged engine config.
         paths: Repo-relative acceptance paths, already glob-expanded.
         interpreter: Python used by the default command.
+        junit: Absolute JUnit XML path for the red record, or None.
 
     Returns:
         The argv list to execute (no shell is involved).
@@ -70,11 +75,73 @@ def _acceptance_cmd(config, paths, interpreter) -> list[str]:
     cmd = _acceptance_block(config).get("cmd")
     paths = [str(p) for p in paths]
     if not cmd:
-        return [interpreter, "-m", "pytest", *paths, "-q"]
+        argv = [interpreter, "-m", "pytest", *paths, "-q"]
+        if junit:
+            argv.append(f"--junitxml={junit}")
+        return argv
+    if JUNIT_PLACEHOLDER in cmd:
+        cmd = cmd.replace(JUNIT_PLACEHOLDER,
+                          shlex.quote(str(junit or os.devnull)))
     if "{paths}" in cmd:
         quoted = " ".join(shlex.quote(p) for p in paths)
         return shlex.split(cmd.replace("{paths}", quoted))
     return [*shlex.split(cmd), *paths]
+
+
+def junit_enabled(config) -> bool:
+    """`acceptance.junit`: record each test's result in the red record.
+
+    Raises:
+        HarnessError: The value is not a boolean.
+    """
+    value = _acceptance_block(config).get("junit", False)
+    if not isinstance(value, bool):
+        raise HarnessError(f"config `acceptance.junit` must be true or false, "
+                           f"got {value!r}")
+    return value
+
+
+def run_slice_suite(root, sl, config, junit=None) -> dict:
+    """One run of the slice's own acceptance command. No regression suite.
+
+    The red record (spec 6.3) calls this at bind. A command that cannot
+    run is a runner error, never a red result.
+
+    Args:
+        root: Repo root.
+        sl: The slice row.
+        config: The merged engine config.
+        junit: Absolute JUnit XML path, or None.
+
+    Returns:
+        `{"exit_code", "output_tail", "runner_error"}`. `exit_code` is None
+        when the command never ran. `runner_error` is None for a real
+        pass or fail.
+    """
+    declared = sl.get("acceptance", []) or []
+    if not declared:
+        return {"exit_code": None, "output_tail": "",
+                "runner_error": "slice declares no acceptance paths"}
+    paths, error = _expand(root, declared)
+    if error:
+        return {"exit_code": None, "output_tail": "", "runner_error": error}
+    interpreter = _acceptance_python(root, config)
+    custom = bool(_acceptance_block(config).get("cmd"))
+    if not custom and not Path(interpreter).exists():
+        return {"exit_code": None, "output_tail": "",
+                "runner_error": f"acceptance interpreter {interpreter!r} "
+                                f"does not exist"}
+    proc = _run(_acceptance_cmd(config, paths, interpreter, junit=junit),
+                root, config)
+    tail = "\n".join((proc.stdout or "").strip().splitlines()[-20:])
+    runner_error = None
+    if proc.returncode == SPAWN_FAILED_RC:
+        runner_error = "acceptance command could not run (exit 127)"
+    elif not custom and proc.returncode in PYTEST_RUNNER_ERRORS:
+        runner_error = (f"pytest exit {proc.returncode}: usage error or no "
+                        f"tests collected")
+    return {"exit_code": proc.returncode, "output_tail": tail,
+            "runner_error": runner_error}
 
 
 def _acceptance_cwd(root, config) -> str:

@@ -133,7 +133,8 @@ def make_config(g3_mode="allow_with_findings"):
         """)
 
 
-def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
+def build_toy_repo(root: Path, oversized=False, legacy_verification=True,
+                   **cfg_kw) -> Path:
     """Substrate + two modules (telemetry built, config planned) + slice-042."""
     hdir = root / ".harness"
     hdir.mkdir(parents=True)
@@ -180,7 +181,10 @@ def build_toy_repo(root: Path, oversized=False, **cfg_kw) -> Path:
          "status": "planned", "declares_dep": ["telemetry", "config"],
          "acceptance": ["tests/slices/042_orders.py"],
          "predicted_files": ["orders.py"],
-         "context_cost_estimate": 0, "depends_on": [], "worktree": None},
+         "context_cost_estimate": 0, "depends_on": [], "worktree": None,
+         **({} if legacy_verification is None
+            else {"legacy_verification": legacy_verification}),
+         },
     ])
     write_jsonl(hdir / "boundaries.jsonl", [
         {"id": "B-legacy", "source_adr": "007", "rule_ref": "adr:007",

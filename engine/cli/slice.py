@@ -147,6 +147,13 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
     if dirty:
         save_slice(root, sl)
 
+    # spec 6.3 (W5): run the slice's suite once and record that it fails.
+    # Legacy slices (in flight at upgrade) skip it.
+    red_record = None
+    if not sl.get("legacy_verification"):
+        from engine.verification import ensure_red_record
+        red_record = ensure_red_record(root, sl, load_config(root))
+
     # G6 baseline at bind: Phase-1 hook events may never route to this
     # substrate (worktree sessions), so binding is the reliable slice-start
     # moment (S1). INSERT OR IGNORE keeps the earliest baseline on re-bind.
@@ -170,7 +177,8 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
             "context_cut": res["cut"],
             "injections": res["injections"],
             "acceptance_python": _acceptance_python(root, load_config(root)),
-            "started_at_commit": sl.get("started_at_commit")}
+            "started_at_commit": sl.get("started_at_commit"),
+            "red_record": red_record}
 
 
 def _acceptance_green(root, sl, config):

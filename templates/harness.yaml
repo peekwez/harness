@@ -48,6 +48,13 @@ gates:
 #   cmd: "uv run pytest {paths} -q"
 #   cwd: "."                        # repo-root-relative
 #   env: {PYTHONHASHSEED: "0"}      # overlaid on os.environ; values must be strings
+#   # Red record (spec 6.3): `harness slice --slice` and `harness start` run
+#   # the slice's suite once and write .harness/verification/<slice>.json.
+#   # The suite must fail. With junit: true harness also records each test.
+#   # The default pytest command gets --junitxml. A custom cmd must name
+#   # {junit}, the XML path harness reads.
+#   junit: false
+#   # cmd: "uv run pytest {paths} -q --junitxml={junit}"
 #   # The repo's own whole-tree gate. Runs ONCE per ceremony: at close (after
 #   # acceptance is green, before the substrate commit) and on the merged
 #   # tree in merge-slice — never on every event. A non-zero exit is the
