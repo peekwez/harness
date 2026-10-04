@@ -15,23 +15,24 @@ Discipline:
   always the highest-risk empty cell. Never chase whatever was mentioned
   last; never ask about a filled cell.
 - Scope assessment before detail: multi-subsystem requests decompose first.
-- Write each big decision (store, transport, tier, seam, trust boundary,
-  anything hard to undo) as a decision card: the question, why now, the
-  evidence, two or more options (solves, example, trade-off, 1st/2nd/3rd
-  order effects, undo cost), what would change the recommendation, the
-  choice and the human's reason. A vague reply is not a choice; park the
-  question instead.
+- Write each big decision as a decision card. Big means store, transport,
+  tier, seam, trust boundary, or anything hard to undo. The card holds the
+  question, why now, the evidence, and two or more options (solves, example,
+  trade-off, 1st/2nd/3rd order effects, undo cost). It also holds what would
+  change the recommendation, the choice and the human's reason. A vague reply
+  is not a choice; park the question instead.
 - Every elicited fact lands in the working document immediately as a typed
   block: [constraint], [assumption], [open-question], [non-goal]. If it
   isn't in the document, it didn't happen — the transcript does not survive.
 - Non-goals with concrete paths get backticks so they compile into G3
   boundaries. They block only when a `gates.extra` gate cites them.
 - Run the red-team pass with `skills/architect/premortem.md`.
-- Design verification with the feature using `verification/design.md`: concrete
-  happy, boundary, failure and recovery cases; independent expected outcomes;
-  live production coverage/trace attribution; runtime and read-only storage checks.
-  Persist the matrix in the design, challenge it in red-team/peer review and
-  carry prerequisites into slice scope. Unit tests alone do not cover the design.
+- Design verification with the feature, using `verification/design.md`.
+  Cover concrete happy, boundary, failure and recovery cases, with independent
+  expected outcomes. Add live production coverage with trace attribution,
+  runtime checks and read-only storage checks. Persist the matrix in the
+  design, challenge it in red-team/peer review and carry prerequisites into
+  slice scope. Unit tests alone do not cover the design.
 - Once a concrete design exists, use `harness:design-review`: Claude Code
   leads with a fresh Codex peer; Codex leads with a fresh Claude Code peer.
   Carry original requirements, design evidence and current input hashes.

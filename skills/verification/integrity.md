@@ -43,10 +43,10 @@ and schema provisioning are separate setup, never evidence of a business AC.
 If the app cannot create the required scenario, report that failure and fix
 the app within scope. Do not bypass it to continue toward PASS. Ordinary unit
 test fixtures may isolate code, but their directly seeded state cannot serve
-as app-write integrity evidence. If a probe writes application storage, or the
-verifier writes outside the app's supported flow, invalidate that run, preserve
-the failure evidence and rerun via the app in a fresh isolated namespace after
-correcting the cause. A driver completing the app-issued upload/finalization
+as app-write integrity evidence. A probe that writes application storage
+invalidates the run. So does a verifier write outside the app's supported
+flow. Then preserve the failure evidence, correct the cause, and rerun via
+the app in a fresh isolated namespace.
 flow is an app action; it does not authorize storage writes by observation probes.
 
 ## Fingerprints belong to the real write path

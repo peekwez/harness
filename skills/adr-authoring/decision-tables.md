@@ -18,18 +18,9 @@ origin: phase0|adjudication, created}`.
 
 Domain routing (how a row reaches a builder):
 
-- A row's `domain` should name the module/domain that IMPLEMENTS the rule
-  (the registry entry's id or its `domain` field), not the feature area it
-  serves — `domain: errors` for a validation rule the errors slice builds,
-  even if it's "about" the API. `kind` is a structural bucket
-  (config/logging/errors/telemetry/util/component/other); the entry's
-  `domain` (preserved from any custom kind, e.g. `data`, `api`) is the
-  semantic key that both decision routing and author-gate coverage use.
-  Only a literal domain of `other` is exempt from coverage.
-- Safety net: rows authored in an ADR that a slice loads as guidance are
-  injected into that slice's decisions block regardless of domain — but
-  route by domain anyway; the safety net stops working once the entry is
-  built and the ADR's guidance is superseded by its shadow.
+- A row's `domain` names the module or domain that IMPLEMENTS the rule: the registry entry's id or its `domain` field. It does not name the feature area that the rule serves. Example: `domain: errors` for a validation rule that the errors slice builds, even if it is "about" the API.
+- `kind` is a structural bucket: config, logging, errors, telemetry, util, component or other. The entry's `domain` is the semantic key. It keeps any custom kind, such as `data` or `api`. Decision routing and author-gate coverage both use it. Only a literal domain of `other` is exempt from coverage.
+- Safety net: a slice that loads an ADR as guidance gets the rows of that ADR in its decisions block, whatever their domain. Route by domain anyway. The safety net stops when the entry is built and its shadow supersedes the ADR guidance.
 
 Rules:
 

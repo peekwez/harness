@@ -10,11 +10,11 @@ You run the slice END TO END without asking permission: implement →
 acceptance green → self-review (`harness review --slice <id> --diff …`) →
 fix every blocking finding → re-review until clean → close-slice. The gates
 are the guardrails; drive through them, don't wait at them. A gate block
-names its own mechanical fix — apply it and continue. Stop ONLY for: a
-parked review finding, an author-gate gap, or a gate still blocking after
-`superpowers:systematic-debugging` named a root cause you cannot fix inside
-the slice's declared scope (note it in personal memory, then report the finding
-verbatim).
+names its own mechanical fix — apply it and continue. Stop ONLY for one of
+these: a parked review finding, an author-gate gap, or a gate that still blocks
+after `superpowers:systematic-debugging` named a root cause outside the
+declared scope of the slice. In the last case, note it in personal memory,
+then report the finding verbatim.
 
 Also stop with NOT VERIFIED when a required runtime/check remains unavailable
 after diagnosis and authorized in-scope repair; name the missing prerequisite
@@ -69,10 +69,7 @@ Discipline:
 - Do not edit derived files by hand. The shadow cache under
   `.harness/cache/` is gitignored, and the engine rebuilds it. The engine
   also writes edges.jsonl and slice-metrics.jsonl.
-- Composing with superpowers (ADR-002, D-014): reuse the worktree
-  `harness start` provisioned rather than letting
-  `superpowers:using-git-worktrees` create another;
-  `superpowers:finishing-a-development-branch` is not used inside a bound
-  slice (close-slice is the finish); and
-  `superpowers:subagent-driven-development`'s stop-for-side-effects rule does
-  not apply — the sandbox and the gates are the permission layer.
+- Composing with superpowers (ADR-002, D-014):
+  1. Reuse the worktree that `harness start` provisioned. Do not let `superpowers:using-git-worktrees` create another.
+  2. Do not use `superpowers:finishing-a-development-branch` inside a bound slice. Close-slice is the finish.
+  3. The stop-for-side-effects rule of `superpowers:subagent-driven-development` does not apply. The sandbox and the gates are the permission layer.

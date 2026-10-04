@@ -19,11 +19,15 @@ instead of erroring*. For every artifact the design reads, ask:
 - Grep the design for "fallback", "default", "or empty", "if exists" —
   each one is either justified in writing or a latent no-op bug.
 
-**Standard failure families** to elicit after the silent-degradation pass:
-scale cliffs (what breaks at 10x/100x), concurrency (two writers, one
-file), partial failure (step 3 of 5 dies — what state remains), permission
-and secret expiry, clock and timezone assumptions, retry storms,
-schema-version skew between components.
+**Standard failure families.** Ask about each one after the silent-degradation pass:
+
+- scale cliffs: what breaks at 10x and at 100x;
+- concurrency: two writers, one file;
+- partial failure: step 3 of 5 dies, and some state remains;
+- permission and secret expiry;
+- clock and timezone assumptions;
+- retry storms;
+- schema-version skew between components.
 
 Every risk found resolves into a decision or an explicit `[accepted-risk]`
 block — a risk that's merely "noted" is a defect in the premortem itself.

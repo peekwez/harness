@@ -20,14 +20,11 @@ For each `[open-question]` in the working document:
    `{id, status, domains[], supersedes[], decision_table_rows[]}` — using the
    adr-authoring skill and `templates/adr.md`. Recurring choices go into
    `decision_table_rows` (lookup, never interpret); one-off architecture
-   stays prose. Keep pending ADRs in the adr-authoring skill's nonbinding
-   draft directory; put them in `adr/` only after acceptance under the human's
-   existing choice/delegation, with the review limitation disclosed.
+   stays prose. Keep pending ADRs in the nonbinding draft directory of the
+   adr-authoring skill. Move an ADR to `adr/` only after acceptance under the
+   human's existing choice or delegation, and disclose the review limitation.
 
-A row whose decision needs no ADR prose (a convention, a naming rule, the
-rows a `--from-spec` seed is waiting for) may instead be written straight
-into the working document's fenced tables, which compile identically
-(ADR-002 D-013):
+Some rows need no ADR prose: a convention, a naming rule, or the rows that a `--from-spec` seed waits for. Write these rows into the fenced tables of the working document. They compile the same way (ADR-002 D-013):
 
 ````
 ```harness-decisions

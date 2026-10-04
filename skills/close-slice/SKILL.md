@@ -36,8 +36,8 @@ from the wrong tree closes against the wrong substrate.
    Run:
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory changed --slice $1`
    The output lists the personal memory files that changed since the slice
-   started (`files`), the folder it read (`dir`) and whether that folder
-   exists (`dir_exists`). Harness finds the folder in this order:
+   started (`files`). It also gives the folder it read (`dir`) and whether
+   that folder exists (`dir_exists`). Harness finds the folder in this order:
    1. `autoMemoryDirectory` in `.claude/settings.local.json`, then in
       `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`).
    2. Else `~/.claude/projects/<slug>/memory/`. The slug is the main repo
@@ -54,17 +54,16 @@ from the wrong tree closes against the wrong substrate.
    Promote writes `.claude/memory/shared/<fact>.md` and updates
    `.claude/memory/shared/MEMORY.md` in this tree. The next step commits
    them with the slice, so they ride the slice commit, the PR or the merge.
-3. Commit the work (slice = commit boundary), keeping harness state OUT of
-   the feature commit — the ceremony commits its own substrate mutations:
+3. Commit the work (slice = commit boundary). Keep harness state OUT of
+   the feature commit, because the ceremony commits its own substrate mutations:
    `git add -A -- . ':(exclude).harness' && git commit`
    This commit includes any promoted shared memory files.
 4. Run the ceremony (from the slice's tree):
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" close-slice --slice $1 --commit HEAD`
-   (`--commit HEAD` on purpose — the engine resolves it to the sha; a
-   `$(git rev-parse HEAD)` substitution can never be
-   permission-auto-approved. `--commit` is REQUIRED in a git repo: the
-   slice's provenance note is written onto that commit, and a close that
-   records no provenance is not a close.)
+   Use `--commit HEAD` on purpose. The engine resolves it to the sha. A
+   `$(git rev-parse HEAD)` substitution can never be permission-auto-approved.
+   `--commit` is REQUIRED in a git repo. The provenance note of the slice is
+   written onto that commit, and a close that records no provenance is not a close.
 
 The engine enforces these checks:
 
@@ -88,20 +87,20 @@ If it reports a block, the fix is named in the finding — G6 drift needs
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" gates ack-drift`, a use outside `declares_dep` needs a declaration
 amendment or a recorded override with justification.
 
-On success the engine has: written the git note (slice, modules touched,
-registry used), flipped registry statuses planned->built,
-marked the slice closed, and committed
-those substrate mutations itself (`substrate_commit` in the output — no
-manual follow-up commit needed). You finish the mechanical tail:
+On success the engine has written the git note (slice, modules touched,
+registry used). It flipped registry statuses planned->built and marked the
+slice closed. It also committed those substrate mutations itself
+(`substrate_commit` in the output), so you need no manual follow-up commit.
+You finish the mechanical tail:
 
 5. Land it. Which command depends on `landing.mode` in
    `.harness/config.yaml` (ADR-002 / D-009) — check it before you reach for
    `merge-slice`.
 
 **`landing.mode: pr`** — there is no merge step. The close you just ran WAS
-the landing: it pushed `slice/$1` to `landing.remote` and opened the pull
-request (`landed`, `pr_url` in the output; the PR title/body carry the
-slice's `linear` id when the row has one). `merge-slice` refuses here with
+the landing. It pushed `slice/$1` to `landing.remote` and opened the pull
+request (`landed` and `pr_url` in the output). The PR title and body carry the
+`linear` id of the slice when the row has one. `merge-slice` refuses here with
 `LANDING_MODE_PR` — merging locally is how a protected base branch gets
 bypassed. If the output says `"landed": false`, the close is recorded but the
 PR is not: the row now carries `landed_via: pending` + `landing_error` and
@@ -117,14 +116,15 @@ tree hash; if `harness verify` ever reports `ORPHANED_NOTE` or
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" graph note --repoint $1 <merged-sha>`.
 
 If the base branch moves while the PR is open, update the branch LOCALLY
-from the slice's worktree (`git fetch <remote> && git merge <remote>/<base>`)
-— never GitHub's "Update branch" button, whose server-side merge cannot run
-the repo's `harness-substrate` merge driver and conflicts inside
+from the worktree of the slice (`git fetch <remote> && git merge <remote>/<base>`).
+Never use the GitHub "Update branch" button. Its server-side merge cannot run
+the `harness-substrate` merge driver of the repo, so it conflicts inside
 `.harness/backlog.jsonl`. Then re-land:
 `"${CLAUDE_PLUGIN_ROOT}/bin/harness" land --slice $1`
-It is idempotent: it re-notes HEAD (the update gave it a tree no recorded
-note keyed, which would otherwise be `MISSING_PROVENANCE_NOTE` after the
-squash), pushes, and skips the PR command because the row already has one.
+The command is idempotent. It re-notes HEAD, because the update gave it a tree
+that no recorded note keyed, which would otherwise be
+`MISSING_PROVENANCE_NOTE` after the squash. It also pushes, and it skips the
+PR command because the row already has one.
 
 **`landing.mode: local`** (the default) — merge, one command, run from the
 MAIN tree:

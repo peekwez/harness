@@ -41,9 +41,9 @@ sizing rules in `slice-decomposition.md`):
   Use `harness:verification` to turn each actual AC into an observable result
   and a check that would detect it being broken. Name needed fixtures/services
   and any required integration/browser check in the existing slice spec.
-  For state changes, include app-only sample seeding, predeclared expected
-  effects, app write-fingerprint observability and read-only Python storage
-  probes in that scope; no direct storage fixtures as proof of app writes.
+  For state changes, put four things in scope: app-only sample seeding,
+  predeclared expected effects, app write-fingerprint observability and
+  read-only Python storage probes. A direct storage fixture never proves an app write.
   Stubs are starting points; they must become behavior assertions before done.
 - `predicted_files`: every file the slice is expected to touch.
 - `depends_on`: slice ordering derived from the registry dependency graph.

@@ -129,3 +129,15 @@ def test_close_slice_names_every_blocking_unit_complete_source():
     para = para[:para.index("Reconciliation passes")]
     for needle in ("G1", "G6", "gates.extra", "cites", "(G3)"):
         assert needle in para, needle
+
+
+def test_skills_and_agents_pass_lint_text():
+    """Spec 9.2: skills and agents are STE-80 text. Rewrite flagged lines
+    by skills/harness/ste80.md. The harness repo's docs/glossary.md applies
+    when that file exists."""
+    from engine.lint_text import format_row, lint_paths
+
+    glossary = PLUGIN_ROOT / "docs" / "glossary.md"
+    rows = lint_paths([PLUGIN_ROOT / "skills", PLUGIN_ROOT / "agents"],
+                      glossary if glossary.exists() else None)
+    assert not rows, "\n".join(format_row(r) for r in rows)

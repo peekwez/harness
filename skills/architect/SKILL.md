@@ -46,10 +46,7 @@ need design review; imported approval claims do not count as this repo's review.
 Determine the current stage by reading the working document's `<!-- stage: N -->`
 marker (default 1 if absent), then follow the matching protocol file:
 
-1. Brainstorm — `stage-brainstorm.md` (with `coverage-map.md`). When
-   superpowers is installed, `superpowers:brainstorming` drives this stage;
-   the spec file it writes IS `docs/architecture.md` and the step after the
-   design is approved is stage 2 below, never `superpowers:writing-plans`.
+1. Brainstorm: follow `stage-brainstorm.md` (with `coverage-map.md`). With superpowers installed, `superpowers:brainstorming` drives this stage. The spec file it writes IS `docs/architecture.md`. After design approval, go to stage 2 below, never `superpowers:writing-plans`.
 2. Red-team — `stage-redteam.md` (with `premortem.md`)
 3. Converge — `stage-converge.md`
 4. Compile — `stage-compile.md`

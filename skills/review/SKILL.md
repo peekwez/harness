@@ -73,31 +73,25 @@ Layers 1–3 — rubric-bound checks over those facts:
 - Every blocking finding MUST cite a `rule_ref` (gate:GN, decision:D-NNN, or
   adr:NNN). No blocking on taste — taste becomes a Layer-3 advisory plus a
   proposed rule. The engine rejects rule-ref-less blocks; do not fight it.
-- If your confidence on a would-block finding is below 0.7, say so
-  explicitly and mark the finding `uncertain` — it parks for adjudication
+- If your confidence in a would-block finding is below 0.7, say so
+  explicitly and mark the finding `uncertain`. It parks for adjudication
   rather than blocking on a coin flip. Ensemble sampling and golden replay
   are opt-in via `review.ensemble: true`.
 - Layer 3 only: run `superpowers:requesting-code-review` when it is
-  installed and treat everything it returns as ADVISORY input. Its
+  installed. Treat everything it returns as ADVISORY input. Its
   Critical/Important/Minor severities carry no blocking power here. Promote
   one of its findings to a blocking finding ONLY when you can cite a
-  `rule_ref` for it; otherwise record it as a Layer-3 advisory plus a
+  `rule_ref` for it. Otherwise record it as a Layer-3 advisory plus a
   proposed rule.
-- Layer 3, second opinion: when Codex is available (an MCP tool named
-  `codex`, or the `codex` CLI on PATH), run it over the same slice diff —
-  `make review-codex` if the repo's Makefile defines that target, else
-  `codex review` (or `codex exec` with the diff). Two independent reviewers
-  disagreeing is signal. Verify every Codex finding against the substrate
-  yourself, then record the real ones with
-  `harness review --record-finding …`; blocking still requires a `rule_ref`,
-  so the rest are Layer-3 advisories. Write each finding by
-  `skills/harness/ste80.md`. Pass `--message` (25 words or fewer),
-  `--failure-scenario` (a concrete input and the wrong result) and `--fix`
-  (one action). The CLI rejects a `--message` over 25 words and exits 2. It
-  does not clip the message. It also exits 2 for a `--severity block`
-  finding without `--fix`. Codex never auto-fixes inside the
-  slice — the slice owner applies fixes so the gates see the edits. If Codex
-  is absent, skip this silently.
+- Layer 3, second opinion: run Codex over the same slice diff when it is available.
+  Codex is an MCP tool named `codex`, or the `codex` CLI on PATH.
+  1. Run `make review-codex` if the Makefile of the repo defines that target. Otherwise run `codex review`, or `codex exec` with the diff.
+  2. Two independent reviewers that disagree are a signal. Verify every Codex finding against the substrate yourself.
+  3. Record the real ones with `harness review --record-finding …`. Blocking still requires a `rule_ref`, so the rest are Layer-3 advisories.
+  4. Write each finding by `skills/harness/ste80.md`. Pass `--message` (25 words or fewer), `--failure-scenario` (a concrete input and the wrong result) and `--fix` (one action).
+  5. The CLI rejects a `--message` over 25 words and exits 2. It does not clip the message. It also exits 2 for a `--severity block` finding without `--fix`.
+  6. Codex never auto-fixes inside the slice. The slice owner applies fixes, so the gates see the edits.
+  7. If Codex is absent, skip this silently.
 - When Codex owns the slice, use Claude Code as the independent second
   opinion if available. Start a fresh `claude -p` process with the diff and
   requirements; request structured findings with file, line, evidence and
