@@ -381,6 +381,16 @@ def add_claude_import(root) -> bool:
 
 
 # ------------------------------------------------------------------ doctor
+def _git_ignores(root, rel) -> bool:
+    """True when git ignores `rel`. Not a repo, or no git: False."""
+    try:
+        done = subprocess.run(["git", "-C", str(root), "check-ignore", "-q",
+                               rel], capture_output=True)
+    except OSError:
+        return False
+    return done.returncode == 0
+
+
 def shared_memory_health(root) -> dict:
     """Advisory health of the shared folder for `doctor --substrate`."""
     root = Path(root)
@@ -389,9 +399,7 @@ def shared_memory_health(root) -> dict:
     if not (root / INDEX_REL).exists():
         warnings.append("Shared memory index is missing. "
                         "Fix: run harness upgrade.")
-    elif (root / ".git").exists() and subprocess.run(
-            ["git", "-C", str(root), "check-ignore", "-q", INDEX_REL],
-            capture_output=True).returncode == 0:
+    elif _git_ignores(root, INDEX_REL):
         warnings.append("Shared memory index is gitignored. "
                         "Fix: remove the matching line from .gitignore.")
     if entries > ENTRY_WARN_LIMIT:

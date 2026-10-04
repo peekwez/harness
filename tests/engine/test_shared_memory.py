@@ -327,3 +327,19 @@ def test_doctor_warns_when_shared_memory_is_git_ignored(toy):
 def test_doctor_names_a_missing_index(toy):
     warnings = sm.shared_memory_health(toy)["warnings"]
     assert any("harness upgrade" in w for w in warnings)
+
+
+def test_doctor_warns_for_a_harness_root_inside_a_repo_subdirectory(tmp_path):
+    sub = tmp_path / "mono" / "sub"
+    sub.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(tmp_path / "mono")], check=True)
+    (tmp_path / "mono" / ".gitignore").write_text(".claude/\n")
+    sm.ensure_index(sub)
+    assert any("gitignored" in w
+               for w in sm.shared_memory_health(sub)["warnings"])
+
+
+def test_doctor_does_not_crash_without_git(toy, monkeypatch):
+    sm.ensure_index(toy)
+    monkeypatch.setenv("PATH", "/nonexistent")
+    assert sm.shared_memory_health(toy)["warnings"] == []
