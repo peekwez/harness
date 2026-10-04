@@ -207,7 +207,7 @@ def main(argv=None):
                     help="tracker id for this slice (e.g. GOO-73): quoted in "
                          "the PR title and linked in its body under "
                          "landing.mode: pr")
-    ba.add_argument("--verifies", nargs="+", default=[],
+    ba.add_argument("--verifies", nargs="+", action="extend", default=[],
                     help="statement IDs from .harness/verify.jsonl that this "
                          "slice proves, comma- or space-separated: "
                          "V-orders-1,V-orders-2")

@@ -214,9 +214,12 @@ def _backlog_add(args):
         known_ids = {r["id"] for r in load_statements(root)}
         missing = [v for v in verifies if v not in known_ids]
         if missing:
-            print(f"error: backlog add: {missing} not in "
-                  f".harness/verify.jsonl. Fix the IDs, or add the statements "
-                  f"and run harness compile.", file=sys.stderr)
+            shown = ", ".join(missing[:3])
+            if len(missing) > 3:
+                shown += f" and {len(missing) - 3} more"
+            print(f"error: backlog add: {shown} not in verify.jsonl. "
+                  f"Fix the IDs, or add them and run harness compile.",
+                  file=sys.stderr)
             return 1
     row = {"id": args.id, "spec": args.spec,
            "title": args.title or args.id, "status": "planned",

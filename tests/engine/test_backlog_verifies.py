@@ -67,3 +67,43 @@ def test_backlog_reports_statements_no_slice_owns(toy):
     proc = run_cli("backlog", "--no-split", root=toy)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["unowned_statements"] == ["V-orders-2"]
+
+
+def test_backlog_add_accumulates_a_repeated_flag(toy):
+    _statements(toy, "V-orders-1", "V-orders-2")
+    proc = _add(toy, "--verifies", "V-orders-1", "--verifies", "V-orders-2")
+    assert proc.returncode == 0, proc.stderr
+    assert get_slice(toy, "slice-050")["verifies"] == ["V-orders-1",
+                                                       "V-orders-2"]
+
+
+def test_backlog_add_drops_duplicate_ids(toy):
+    _statements(toy, "V-orders-1")
+    proc = _add(toy, "--verifies", "V-orders-1,V-orders-1")
+    assert proc.returncode == 0, proc.stderr
+    assert get_slice(toy, "slice-050")["verifies"] == ["V-orders-1"]
+
+
+def test_backlog_add_tolerates_spaces_and_trailing_comma(toy):
+    _statements(toy, "V-orders-1", "V-orders-2")
+    proc = _add(toy, "--verifies", "V-orders-1, V-orders-2,")
+    assert proc.returncode == 0, proc.stderr
+    assert get_slice(toy, "slice-050")["verifies"] == ["V-orders-1",
+                                                       "V-orders-2"]
+
+
+def test_backlog_add_accepts_mixed_comma_and_space(toy):
+    _statements(toy, "V-orders-1", "V-orders-2", "V-orders-3")
+    proc = _add(toy, "--verifies", "V-orders-1,V-orders-2", "V-orders-3")
+    assert proc.returncode == 0, proc.stderr
+    assert get_slice(toy, "slice-050")["verifies"] == [
+        "V-orders-1", "V-orders-2", "V-orders-3"]
+
+
+def test_unknown_ids_message_is_plain_and_capped(toy):
+    _statements(toy, "V-orders-1")
+    proc = _add(toy, "--verifies",
+                "V-a-1,V-a-2,V-a-3,V-a-4,V-a-5")
+    assert proc.returncode == 1
+    assert "[" not in proc.stderr
+    assert "V-a-1, V-a-2, V-a-3 and 2 more" in proc.stderr
