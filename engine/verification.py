@@ -11,7 +11,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from engine import HarnessError, harness_dir, now_iso
+from engine import HarnessError, get_slice, harness_dir, now_iso
 
 RULE_RED = "verify:red-record"
 RULE_COVERAGE = "verify:statement-coverage"
@@ -182,3 +182,43 @@ def ensure_red_record(root, sl, config) -> dict:
     if "skipped" in record:
         return record
     return _summary(record, reused=False)
+
+
+def red_advisory(root, slice_id, paths, config) -> list:
+    """One advisory when a non-test file is edited before the red record.
+
+    Engine-side, not a gate: spec 4.1's gate table does not change. Legacy
+    and closed slices, a disabled runner, test files, acceptance files and
+    `gates.exempt_paths` give nothing. It reads the record path only: no
+    subprocess, no test run, and a corrupt record never raises (a hook must
+    not crash). A record that exists, valid or not, silences the advisory.
+
+    Returns:
+        `[]` or one `NO_RED_RECORD` advisory finding.
+    """
+    from engine.events import make_finding, rel_in_root
+    from engine.gates import exempt
+    from engine.statements import expand_suite, is_test_path
+    if not slice_id or _runner_disabled(config):
+        return []
+    try:
+        sl = get_slice(root, slice_id)
+        if sl.get("legacy_verification") or sl.get("status") == "closed":
+            return []
+        if red_record_path(root, slice_id).exists():
+            return []
+        suite = set(expand_suite(root, sl.get("acceptance") or []))
+        for raw in paths:
+            if not rel_in_root(root, raw):
+                continue
+            rel = Path(raw).as_posix()
+            if rel in suite or is_test_path(rel) or exempt(rel, config):
+                continue
+            return [make_finding(
+                "NO_RED_RECORD", RULE_RED,
+                f"No red record for slice {slice_id}: {rel} is not a test.",
+                severity="advisory", key=slice_id,
+                fix=f"harness slice --slice {slice_id}")]
+    except (HarnessError, OSError):
+        return []
+    return []

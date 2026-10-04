@@ -313,6 +313,13 @@ def handle_event(raw: dict, root) -> dict:
             record_touched_uses(root, sidecar, session, slice_id, config)
 
         findings = context_findings + run_gates(root, evt, config, sidecar)
+        if event == "pre_change":
+            # spec 6.3 (W5): one advisory line when source is edited before
+            # the slice's red record exists. Not a gate; never blocks.
+            from .verification import red_advisory
+            findings = findings + red_advisory(
+                root, slice_id, [f["path"] for f in evt["payload"]["files"]],
+                config)
         verdict = merge_verdicts([verdict_for(findings, injections)])
 
         if event == "pre_change" and verdict["verdict"] != "block":

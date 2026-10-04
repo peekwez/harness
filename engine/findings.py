@@ -9,6 +9,12 @@ from __future__ import annotations
 MAX_MESSAGE_WORDS = 25
 
 CATALOG: dict[str, str] = {
+    "NO_RED_RECORD": (
+        "The bound slice has no red record, and the edit is to a file that "
+        "is not a test. Harness records red when you bind the slice: it "
+        "runs the acceptance suite once and expects it to fail. Bind the "
+        "slice before you write code. This is advisory. Close blocks later "
+        "if the record is still missing."),
     "ACCEPTANCE_GATE_FAILED": (
         "The acceptance gate command exited non-zero, or it did not start. "
         "Close and merge stop until it passes. Fix the code or the "
