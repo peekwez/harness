@@ -80,5 +80,5 @@ Gaps: criterion, reproduction, expected/actual, cause confidence, next action
 sufficient, current PASS evidence. Otherwise use `NOT VERIFIED` and name the
 gaps; do not average scores or substitute model agreement. Reuse current
 evidence for unchanged scope, and rerun when edits, failures or uncertainty
-invalidate it. Persist reproducible failed/abandoned approaches through
-Harness attempt memory; keep raw logs in artifacts, not the context window.
+invalidate it. Record reproducible failed or abandoned approaches in your
+personal memory; keep raw logs in artifacts, not the context window.

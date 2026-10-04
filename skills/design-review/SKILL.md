@@ -28,7 +28,7 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    [coverage.md](coverage.md) for fingerprints and durable records. Prefer
    interfaces and
    focused excerpts to whole repositories. Exclude builder transcripts and
-   `.harness/memory/session/`. The peer identifies missing evidence explicitly.
+   personal memory. The peer identifies missing evidence explicitly.
 3. **Critique.** Ask for at most five highest-impact findings: severity,
    evidence (path/section), affected requirement, consequence, proposed fix
    and uncertainty. Check assumptions, failure/recovery, security, migrations,

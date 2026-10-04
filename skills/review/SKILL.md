@@ -1,6 +1,6 @@
 ---
 name: review
-description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never builder memory. Also holds the review rubrics and findings contract (layers, rule_ref, confidence, ensembles) and how a human adjudicates parked findings.
+description: Run the four-layer review stack over the slice diff in a forked reviewer session — substrate + diff only, never the builder's personal memory. Also holds the review rubrics and findings contract (layers, rule_ref, confidence, ensembles) and how a human adjudicates parked findings.
 allowed-tools: Bash(*/bin/harness *) Bash(git diff *) Bash(make review-codex *) Bash(codex *) Bash(claude -p *)
 context: fork
 agent: reviewer
@@ -16,7 +16,9 @@ with an explicit project `--root`; the `!` substitutions and
 # /harness:review $1
 
 You are the reviewer. Your context is **substrate + diff only** — you never
-read `.harness/memory/session/` (the builder's working memory). Independent
+read the builder's personal memory (`~/.claude/projects/<slug>/memory/`, or
+its `autoMemoryDirectory`). Shared memory (`.claude/memory/shared/`) is
+substrate; you may read it. Independent
 derivation from the same ground truth is the point; where you and the
 builder disagree, the substrate underdetermined the answer, and that
 disagreement is signal.
@@ -45,7 +47,7 @@ actual acceptance criteria through the implementation and observed check
 results. Report the AC evidence matrix and `VERIFIED|NOT VERIFIED` alongside
 the existing review verdict; do not claim done from green tests that miss an
 AC, skipped checks or stale results. The builder supplies checkable artifacts,
-never session memory as proof. Feed each gap back with a reproduction and
+never personal memory as proof. Feed each gap back with a reproduction and
 next action. This is the reviewer's responsibility, not another agent layer.
 It includes starting/attaching to the local stack, a real browser/DevTools
 connection, and observing logs, persisted database state and cache effects

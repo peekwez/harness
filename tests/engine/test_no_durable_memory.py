@@ -11,7 +11,8 @@ FORBIDDEN = re.compile(
     r"|\.harness/memory|memory/session|durable\.jsonl"
     r"|durable[ _]memor|session memory|attempt memory"
     r"|compact_to_durable|from engine import memory|from \. import memory")
-SCANNED = ("bin", "engine", "hooks", "adapters", "templates")
+SCANNED = ("bin", "engine", "hooks", "adapters", "skills", "agents",
+           "templates")
 SUFFIXES = {".py", ".js", ".ts", ".json", ".toml", ".md", ".yml", ".yaml",
             ".sh", ""}
 ALLOWED = {"engine/upgrade_w3.py"}

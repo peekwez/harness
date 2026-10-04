@@ -1,6 +1,6 @@
 ---
 name: close-slice
-description: The close ceremony — acceptance green, uses/declares reconciled, drift acknowledged, commit + git note, memory compaction, registry flips, worktree merge.
+description: The close ceremony — acceptance green, uses/declares reconciled, drift acknowledged, commit + git note, registry flips, shared memory promotion offer, worktree merge.
 allowed-tools: Bash(*/bin/harness *) Bash(git *)
 argument-hint: "<slice-id>"
 ---
@@ -66,12 +66,28 @@ If it reports a block, the fix is named in the finding — G6 drift needs
 amendment or a recorded override with justification.
 
 On success the engine has: written the git note (slice, modules touched,
-registry used, memory ids), flipped registry statuses planned->built,
-compacted session memory to durable, marked the slice closed, and committed
+registry used), flipped registry statuses planned->built,
+marked the slice closed, and committed
 those substrate mutations itself (`substrate_commit` in the output — no
 manual follow-up commit needed). You finish the mechanical tail:
 
-4. Land it. Which command depends on `landing.mode` in
+4. Offer personal memory for promotion. Run:
+   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory changed --slice $1`
+   The output lists the personal memory files that changed since the slice
+   started (`files`) and the folder it read (`dir`). Harness finds the folder
+   in this order:
+   1. `autoMemoryDirectory` in `.claude/settings.local.json`, then in
+      `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`).
+   2. Else `~/.claude/projects/<slug>/memory/`. The slug is the main repo
+      path with each character that is not a letter or digit changed to `-`.
+      All worktrees of the repo share this folder.
+   If `files` is empty, go to the next step.
+   Otherwise show the list and ask the human: "Promote any to shared?"
+   For each file the human picks, run:
+   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory promote <file>`
+   The host asks the human to approve each run. Never write
+   `.claude/memory/shared/` yourself. Gate G10 blocks it.
+5. Land it. Which command depends on `landing.mode` in
    `.harness/config.yaml` (ADR-002 / D-009) — check it before you reach for
    `merge-slice`.
 
@@ -113,4 +129,4 @@ MAIN tree:
    resolve mechanically via the merge drivers (union for append-only logs,
    `harness merge-substrate` for keyed rows); a real keyed-row conflict is
    reported with the ids and left for you.
-5. Show the user this slice's row in `.harness/slice-metrics.jsonl` (close wrote it): gates fired, overrides, compactions, parks and the maximum injection size.
+6. Show the user this slice's row in `.harness/slice-metrics.jsonl` (close wrote it): gates fired, overrides, compactions, parks and the maximum injection size.

@@ -22,7 +22,7 @@ blocks. **No blocking on taste**: if something offends your sensibilities
 but no rule covers it, that is a Layer-3 advisory plus a proposed rule, and
 next slice it can block legitimately.
 
-Reviewer hygiene: substrate + diff only; never the builder's session memory.
+Reviewer hygiene: substrate + diff only; never the builder's personal memory.
 Golden-set replay (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --replay`)
 re-runs stored diff+verdict pairs whenever rubrics change. It is part of the
 ensemble opt-in and refuses to run unless `review.ensemble: true`.

@@ -29,7 +29,7 @@ first — foundations exist so consumers can rely on them. Overriding needs a
 recorded reason: `--force --justification "<why>"`.
 
 Read the `injections` from that output — that is your context (shadows,
-guidance, decision rows, durable memories). `acceptance_python` is the
+guidance, decision rows, shared memory). `acceptance_python` is the
 interpreter for the acceptance tests. **From here on run every command —
 harness, git, pytest — from the `worktree` path in that output.** Mixing
 trees splits substrate state.

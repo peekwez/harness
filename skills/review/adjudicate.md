@@ -7,16 +7,19 @@ skill. The forked reviewer never adjudicates. List the queue:
 
 For each parked finding, present to the human: the finding (code, rule_ref,
 message, evidence), and its nearest precedents (the `precedents` ids —
-fetch their content from `.harness/memory/durable.jsonl`).
+read the decision row or the edge `meta.resolution`).
 
 Ask the human for a resolution. Then write it back — every resolution MUST
-write substrate; a resolution that only lives in conversation will recur:
+write a decision row or an edge; a resolution that only lives in conversation will recur:
 
 - Recurring question -> decision row:
   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" adjudicate --finding-id <id> --resolution "<answer>"
   --decision-id D-NNN --domain <domain>`
-- One-off judgment -> durable memory:
+- One-off judgment -> adjudication edge only:
   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" adjudicate --finding-id <id> --resolution "<judgment>"`
+  The output has `suggest`: a `harness memory promote --text` command.
+  Show it to the human. The human decides whether to run it. Adjudication
+  never writes memory.
 - If the resolution reverses a builder override, add `--reverses` (the
   slice metrics count overrides per rule).
 

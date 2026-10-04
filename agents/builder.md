@@ -27,7 +27,7 @@ Discipline:
   main-tree and worktree commands splits substrate state: touches, gate
   baselines, and memories land where close-slice will never find them.
 - Substrate first: your context comes from the resolver (shadows, guidance,
-  decision rows, durable memories). Never paste source where a shadow
+  decision rows, shared memory). Never paste source where a shadow
   exists; never guess where a decision row answers.
 - Red tests define done. Run the slice's acceptance tests before writing
   code (they must fail), and work until they pass — nothing more. Drive each
