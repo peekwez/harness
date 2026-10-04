@@ -302,7 +302,7 @@ G5 and the resolver match registry entries by longest dotted prefix; a repo
 with no source root keeps the dotted relative path it always had (ADR-002 /
 D-008).
 
-`docs/SPEC.md` defines every `§`/`C`/`T`/`M` marker the skills cite.
+`docs/internal/SPEC.md` defines every `§`/`C`/`T`/`M` marker the skills cite.
 
 Five events: `session_start`, `pre_context`, `pre_change`, `post_change`,
 `unit_complete`. Eight gates: G1 manifest-complete, G2 context-loaded,
@@ -356,7 +356,7 @@ in Codex, for an existing design. These are skill workflows, not a new engine
 subcommand or an MCP service.
 
 The lead reconciles findings into the design and stores the reviewed inputs,
-peer response, dispositions and coverage in `docs/design-reviews/`. One initial
+peer response, dispositions and coverage in `docs/internal/design-reviews/`. One initial
 critique and at most one focused follow-up bound the additional model cost;
 unchanged reviewed inputs reuse their record. Missing credentials, unavailable
 CLIs and failed reviews are reported, with local review continuing. This adds
@@ -710,7 +710,7 @@ make replay    # reviewer regression against the golden set
 
 Two of those tests keep the docs honest: every CLI subcommand must appear in
 this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
-defined in `docs/SPEC.md`.
+defined in `docs/internal/SPEC.md`.
 
 ## Changelog
 

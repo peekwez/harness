@@ -108,10 +108,10 @@ def test_spec_glossary_resolves_every_referenced_marker():
     """The skills cite §5.6 / C7 / T1 — an agent told to look things up must
     be able to."""
     import re
-    glossary = (PLUGIN_ROOT / "docs" / "SPEC.md").read_text()
+    glossary = (PLUGIN_ROOT / "docs" / "internal" / "SPEC.md").read_text()
     refs = set()
     for p in (PLUGIN_ROOT / "skills").rglob("*.md"):
         refs |= set(re.findall(r"§[\d.]+|\bC[1-9]\b|\bT[1-3]\b|\bM[1-9]\b",
                                p.read_text()))
     missing = sorted(r for r in refs if r not in glossary)
-    assert not missing, f"SPEC.md does not define: {missing}"
+    assert not missing, f"docs/internal/SPEC.md does not define: {missing}"
