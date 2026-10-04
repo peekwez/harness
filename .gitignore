@@ -7,3 +7,4 @@ __pycache__/
 .worktrees/
 .claude/settings.local.json
 .harness/cache/
+/site/

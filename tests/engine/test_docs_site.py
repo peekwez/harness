@@ -1,8 +1,12 @@
 """W7: the docs site. Page structure, STE-80 text and real names."""
+import importlib.util
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 from conftest import PLUGIN_ROOT
 
@@ -366,3 +370,132 @@ def test_glossary_synonyms_are_enforced(tmp_path):
     page.write_text("Each ticket is small.\n")
     findings = lint_paths([page], DOCS / "glossary.md")
     assert any("ticket" in f["text"].lower() for f in findings), findings
+
+
+class _MkdocsLoader(yaml.SafeLoader):
+    """mkdocs.yml uses !!python/name tags; read them as plain strings."""
+
+
+_MkdocsLoader.add_multi_constructor(
+    "tag:yaml.org,2002:python/name:", lambda loader, suffix, node: suffix)
+
+
+def _mkdocs_config():
+    return yaml.load((PLUGIN_ROOT / "mkdocs.yml").read_text(),
+                     Loader=_MkdocsLoader)
+
+
+def _nav_pages(nav):
+    for item in nav:
+        values = [item] if isinstance(item, str) else list(item.values())
+        for value in values:
+            if isinstance(value, list):
+                yield from _nav_pages(value)
+            else:
+                yield value
+
+
+def _hook_module():
+    spec = importlib.util.spec_from_file_location(
+        "docs_reference_hook_site", DOCS / "hooks" / "reference.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_nav_matches_spec_section_11():
+    titles = [next(iter(item)) for item in _mkdocs_config()["nav"]]
+    assert titles == [
+        "Home", "Concepts", "Workflow", "Verification", "Decision cards",
+        "Memory", "Reference", "Extending", "Internals",
+        "Trade-offs and limits", "Upgrading 0.9 to 0.10", "Changelog",
+        "Glossary"]
+
+
+def test_every_nav_page_exists_or_is_generated():
+    generated = set(_hook_module().GENERATED_PAGES)
+    missing = [p for p in _nav_pages(_mkdocs_config()["nav"])
+               if p not in generated and not (DOCS / p).is_file()]
+    assert not missing, missing
+
+
+def test_every_published_page_is_in_nav():
+    excluded = _mkdocs_config()["exclude_docs"].split()
+    published = {str(p.relative_to(DOCS)) for p in DOCS.rglob("*.md")
+                 if not any(str(p.relative_to(DOCS)).startswith(e)
+                            for e in excluded)}
+    orphans = published - set(_nav_pages(_mkdocs_config()["nav"]))
+    assert not orphans, sorted(orphans)
+
+
+def test_generated_pages_have_no_hand_written_copy():
+    clash = [p for p in _hook_module().GENERATED_PAGES if (DOCS / p).exists()]
+    assert not clash, clash
+
+
+def test_internal_folders_are_excluded():
+    excluded = _mkdocs_config()["exclude_docs"].split()
+    for folder in ("internal/", "hooks/", "superpowers/", "design-reviews/",
+                   "requirements.txt"):
+        assert folder in excluded, folder
+
+
+def test_strict_build_mermaid_and_hook_are_configured():
+    cfg = _mkdocs_config()
+    assert cfg["strict"] is True
+    assert cfg["site_url"] == "https://peekwez.github.io/harness/"
+    assert cfg["hooks"] == ["docs/hooks/reference.py"]
+    assert cfg["theme"]["name"] == "material"
+    fences = next(ext["pymdownx.superfences"]["custom_fences"]
+                  for ext in cfg["markdown_extensions"]
+                  if isinstance(ext, dict) and "pymdownx.superfences" in ext)
+    assert {"name": "mermaid", "class": "mermaid",
+            "format": "pymdownx.superfences.fence_code_format"} in fences
+
+
+def test_docs_requirements_are_pinned():
+    lines = [ln.strip() for ln in
+             (DOCS / "requirements.txt").read_text().splitlines()
+             if ln.strip() and not ln.startswith("#")]
+    assert all(re.fullmatch(r"[A-Za-z0-9_.-]+==[0-9][\w.]*", ln)
+               for ln in lines), lines
+    names = {ln.split("==")[0] for ln in lines}
+    assert {"mkdocs", "mkdocs-material", "pymdown-extensions"} <= names
+
+
+def test_every_public_page_passes_lint_text():
+    from engine.lint_text import lint_paths
+    findings = lint_paths(public_docs(), _glossary())
+    assert findings == [], "\n".join(
+        f"{f['path']}:{f['line']}: {f['rule']}: {f['text']}"
+        for f in findings)
+
+
+def test_mkdocs_build_strict(tmp_path):
+    pytest.importorskip("material")
+    site = tmp_path / "site"
+    proc = subprocess.run(
+        [sys.executable, "-m", "mkdocs", "build", "--strict",
+         "--site-dir", str(site)],
+        cwd=PLUGIN_ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr[-3000:]
+    assert (site / "reference" / "gates" / "index.html").is_file()
+    assert (site / "changelog" / "index.html").is_file()
+    for hidden in ("internal", "hooks", "superpowers", "design-reviews",
+                   "requirements.txt"):
+        assert not (site / hidden).exists(), hidden
+    formats = (site / "reference" / "file-formats" / "index.html").read_text()
+    assert "verify.jsonl" in formats  # hand-written input reached the page
+
+
+def test_hand_written_reference_page_is_refused(tmp_path):
+    pytest.importorskip("material")
+    from mkdocs.config import load_config
+    from mkdocs.exceptions import PluginError
+    from mkdocs.structure.files import File, Files
+    cfg = load_config(config_file=str(PLUGIN_ROOT / "mkdocs.yml"))
+    # File.generated needs a running plugin; a plain File is the same to the hook
+    files = Files([File("reference/cli.md", str(tmp_path),
+                        str(tmp_path / "site"), True)])
+    with pytest.raises(PluginError, match="reference/cli.md is generated"):
+        _hook_module().on_files(files, cfg)
