@@ -181,3 +181,51 @@ def test_set_front_matter_keeps_the_body():
     again = set_front_matter(out, {"frozen_at_commit": "abc"})
     assert front_matter(again)[0] == {"frozen_by": "t <t@t>",
                                       "frozen_at_commit": "abc"}
+
+
+def test_fenced_cards_are_not_read():
+    for fence in ("```", "~~~"):
+        text = f"# Decisions\n\n{fence}md\n{CARD}{fence}\n\n" + CARD
+        cards = parse_cards(text)
+        assert [c["id"] for c in cards] == ["D-E1"]
+        assert cards[0]["line"] == text.splitlines().index(
+            "## D-E1: Where do orders live?", 5) + 1
+
+
+def test_a_bad_card_heading_is_reported():
+    for heading in ("## D-E1 Where do orders live?", "## D-E1:"):
+        text = CARD.replace("## D-E1: Where do orders live?", heading)
+        problems = _problems(text)
+        assert any("D-E1 line 1" in p and "## D-E1: <question>" in p
+                   for p in problems), problems
+
+
+def test_a_bad_option_heading_is_reported_and_does_not_leak():
+    text = CARD.replace("### Option B: Postgres", "### Option b - Postgres")
+    cards = parse_cards(text)
+    assert [o["letter"] for o in cards[0]["options"]] == ["A"]
+    assert "Solves" in cards[0]["options"][0]["fields"]
+    assert cards[0]["options"][0]["fields"]["Solves"].startswith("One file")
+    problems = validate_cards(cards)
+    assert any("option heading" in p and "### Option A: <name>" in p
+               for p in problems)
+
+
+def test_a_repeated_field_is_reported():
+    card_dup = CARD.replace("**Domain:** storage",
+                            "**Domain:** storage\n**Domain:** other")
+    assert any("field 'Domain' appears twice" in p for p in _problems(card_dup))
+    opt_dup = CARD.replace("- Trade-off: One writer at a time.",
+                           "- Trade-off: One writer at a time.\n"
+                           "- Trade-off: Again.")
+    assert any("D-E1 option A: field 'Trade-off' appears twice" in p
+               for p in _problems(opt_dup))
+
+
+def test_long_values_are_clipped_in_problems():
+    long = " ".join(["word"] * 40)
+    for text in (CARD.replace("**Chosen:** A", f"**Chosen:** {long}"),
+                 CARD.replace("**Domain:** storage", f"**{long}:** x")):
+        problems = _problems(text)
+        assert problems
+        assert all(len(p.split()) <= 25 for p in problems)
