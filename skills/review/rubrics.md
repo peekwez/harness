@@ -22,6 +22,11 @@ blocks. **No blocking on taste**: if something offends your sensibilities
 but no rule covers it, that is a Layer-3 advisory plus a proposed rule, and
 next slice it can block legitimately.
 
+Write each finding in STE-80 (`skills/harness/ste80.md`).
+`harness review --record-finding` takes `--message` (25 words or fewer),
+`--failure-scenario` (a concrete input and the wrong result) and `--fix` (one
+action). A `--severity block` finding needs `--fix`.
+
 Reviewer hygiene: substrate + diff only; never the builder's personal memory.
 Golden-set replay (`"${CLAUDE_PLUGIN_ROOT}/bin/harness" review --replay`)
 re-runs stored diff+verdict pairs whenever rubrics change. It is part of the

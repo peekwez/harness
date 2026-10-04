@@ -54,3 +54,5 @@ Each gate finding names its fix. Apply the fix, then retry.
 - G10 shared-memory: agents cannot write `.claude/memory/shared/`. Ask a human to run `harness memory promote <file>`.
 - Unshadowed files: `harness doctor --substrate` lists source files that no extractor enforces under `unshadowed_files`. It is advisory.
 - Repo-local gates: modules listed under `gates.extra` in `.harness/config.yaml` run beside the builtin gates. A load or run error blocks and names the entry. Fix that module.
+
+Write text for humans by the rules in [ste80.md](ste80.md).
