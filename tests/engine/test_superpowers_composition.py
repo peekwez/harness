@@ -35,7 +35,8 @@ def _prose_files():
             if path.is_file() and path.suffix in TEXT_SUFFIXES \
                     and "__pycache__" not in path.parts:
                 yield path
-    yield PLUGIN_ROOT / "README.md"
+    from test_docs_site import public_docs
+    yield from public_docs()
 
 
 def _norm(text):

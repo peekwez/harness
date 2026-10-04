@@ -310,7 +310,8 @@ def test_toy_repo_doctor_stays_healthy(tmp_path):
 
 
 # ---------------------------------------------------------------- docs
-def test_readme_documents_vendoring_and_upgrade():
-    body = (PLUGIN_ROOT / "README.md").read_text()
+def test_docs_document_vendoring_and_upgrade():
+    from test_docs_site import public_docs_text
+    body = public_docs_text()
     assert ".harness/engine" in body
-    assert "`upgrade`" in body
+    assert "harness upgrade" in body

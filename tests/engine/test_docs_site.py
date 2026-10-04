@@ -17,8 +17,9 @@ NOT_PUBLIC = ("internal", "superpowers", "design-reviews")
 
 def public_docs() -> list:
     """Every Markdown file a reader of the site or the repo sees."""
-    return [p for p in sorted(DOCS.rglob("*.md"))
-            if p.relative_to(DOCS).parts[0] not in NOT_PUBLIC]
+    pages = [p for p in sorted(DOCS.rglob("*.md"))
+             if p.relative_to(DOCS).parts[0] not in NOT_PUBLIC]
+    return [PLUGIN_ROOT / "README.md", *pages]
 
 
 def public_docs_text() -> str:
@@ -499,3 +500,15 @@ def test_hand_written_reference_page_is_refused(tmp_path):
                         str(tmp_path / "site"), True)])
     with pytest.raises(PluginError, match="reference/cli.md is generated"):
         _hook_module().on_files(files, cfg)
+
+
+# Task 8: the README is the front door; detail lives on the site.
+def test_readme_is_short_and_points_at_the_site():
+    text = (PLUGIN_ROOT / "README.md").read_text()
+    assert len(text.splitlines()) < 300
+    assert "https://peekwez.github.io/harness/" in text
+    lines = text.splitlines()
+    for heading in ("## Install", "## Quick start", "## Upgrade from 0.9"):
+        assert heading in lines, heading
+    assert "## Changelog" not in lines
+    assert "CHANGELOG.md" in text

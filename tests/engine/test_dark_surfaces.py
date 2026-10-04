@@ -118,8 +118,8 @@ def test_scaffolded_ci_workflow_is_valid_yaml_with_the_engine_step(tmp_path):
 
 
 def test_this_repo_actually_runs_its_own_ship_gate():
-    """README: "`harness verify` runs in this repo's CI ... the ship gate for
-    every release." That claim needs a workflow to exist."""
+    """README: "This repo runs its own ship gate." That claim needs a
+    workflow to exist."""
     import yaml
     wf_path = PLUGIN_ROOT / ".github" / "workflows" / "harness-verify.yml"
     assert wf_path.exists(), "the self-hosting claim needs a real workflow"

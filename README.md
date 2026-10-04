@@ -1,896 +1,99 @@
-# harness — development enforcement plugin
+# harness
 
-harness enforces spec-driven development for autonomous coding agents:
-(a) the agent always has the context for the file it is touching, (b) it
-cannot silently drift from architectural decisions, and (c) every human
-intervention becomes durable substrate so the same intervention never
-recurs. **Skills guide the workflow, hooks bind the rules, a
-framework-agnostic engine decides.**
+harness is a Claude Code plugin and a Python engine for building software with coding agents. It records decisions, proves behavior and keeps agent actions safe.
+
+**Documentation: https://peekwez.github.io/harness/**
+
+## What it does
+
+- **Decisions.** Each design decision becomes a decision row. Agents look the answer up instead of guessing.
+- **Proof.** Each slice records that its tests failed before the code existed. Close checks that each statement has a test.
+- **Safety.** Deterministic gates and a permission layer decide what an agent can do without a human.
+
+Read [Trade-offs and limits](https://peekwez.github.io/harness/trade-offs/) before you adopt harness.
 
 ## Install
 
-This repo is its own single-plugin marketplace
-(`.claude-plugin/marketplace.json`, plugin source `"."`). In Claude Code:
+In Claude Code:
 
-```
-# from GitHub (after pushing this repo):
-/plugin marketplace add <your-github-user>/harness
-# or from a local checkout (works for testing):
-/plugin marketplace add /path/to/harness
-
+```text
+/plugin marketplace add peekwez/harness
 /plugin install harness@harness-marketplace
 ```
 
-Validate the metadata any time with `claude plugin validate .`. Engine
-dependencies (Python 3.10+):
+The engine needs Python 3.10 or later:
 
-```
+```bash
 pip install pyyaml tree-sitter tree-sitter-language-pack
 ```
 
-The engine is fully usable standalone — CI and other agent frameworks call
-`bin/harness` directly with no plugin installed.
+Then run `/harness:init` in your repo. Until you run init, the hooks enforce nothing.
 
-Enforcement is opt-in per repo: in a repo that has never run `/harness:init`
-the hooks are inert (everything allowed). Inside an initialised repo any
-engine error fails closed — edits are denied until the substrate is repaired.
+The engine also runs without the plugin. CI calls `bin/harness verify` directly.
 
-## Uninterrupted slices
+For Codex, register this repo as a Codex marketplace and install `harness@harness-marketplace`. Then follow [adapters/codex/README.md](adapters/codex/README.md) to install the hooks.
 
-`/harness:build <slice>` (or `harness start --slice <slice>`) is the whole
-setup: it creates the isolated worktree `.worktrees/<slice>` on branch
-`slice/<slice>`, provisions a **sandboxed** autonomy profile there
-(`sandbox.enabled` + `autoAllowBashIfSandboxed`, writes confined to that
-tree, egress limited to package registries, `git push`/`remote`/`fetch`
-denied), binds the slice, snapshots the drift baseline, and emits the
-Phase-1 context. From there the slice runs to close without a single
-permission prompt, because **the gates are the permission layer**: the
-PreToolUse hook answers the host's approval question from the same
-deterministic verdict that enforces scope — work inside the slice's declared
-scope is auto-approved, the loop's command surface (harness, tests, local
-git) is auto-approved, and anything else stays silent so the normal flow
-(and you) decides. A prompt therefore means *you have wandered outside the
-declaration* — amend it, don't approve it.
+## Quick start
 
-`harness init --autonomy` writes the same profile at the repo root for
-serial (no-worktree) work. This is safe precisely because approval prompts
-were never the enforcement layer here — the gates and CI verify are.
+Run these in your repo:
 
-### Campaign mode: `harness run`
-
-Once architecture and backlog are authored, `harness run` drives the whole
-backlog unattended: it walks the dependency DAG in waves, runs `harness
-start` per ready slice, launches your configured builder in the worktree,
-verifies the slice actually **closed on its branch**, serializes the
-merges (cumulative acceptance suite, rollback on red), retries up to
-`run.max_slice_attempts`, and parks what still fails — then stops loudly
-(exit 2) so a human adjudicates. The engine orchestrates; the LLM builder
-is the host's, injected via config:
-
-```yaml
-# .harness/config.yaml
-run:
-  builder_cmd: "bash /path/to/plugin/templates/claude-builder.sh"
-  max_slice_attempts: 3
-  builder_timeout: 3600   # seconds per builder attempt
+```text
+/harness:init                    # create the substrate and wire the hooks
+/harness:explore                 # toy, decision cards and statements in explore/
+harness explore --freeze         # you sign the cards and the statements
+/harness:architect               # cards become decision rows and ADRs; you sign
+/harness:backlog                 # slices with red acceptance tests
+/harness:build slice-001         # worktree, sandbox and red record; the slice runs to close
+/harness:review slice-001        # a forked reviewer reads the substrate and the diff
+/harness:close-slice slice-001   # proof checks, commit, git note, then merge or pull request
 ```
 
-`templates/claude-builder.sh` is the reference builder (headless
-`claude -p` inside the provisioned sandbox profile);
-`templates/claude-builder-sdk.py` is the Claude Agent SDK equivalent. Any
-command that exits 0 after `close-slice` reports `{"closed": true}`
-satisfies the contract — that boundary is what makes the dispatcher
-framework-agnostic. `harness run --dry-run` prints the waves;
-`--lanes N` builds independent slices in parallel worktrees.
+You have a spec already? Start with `harness architect --from-spec docs/spec.md`.
 
-## The two-tree model
+The [Workflow](https://peekwez.github.io/harness/workflow/) pages explain each step.
 
-**The plugin** (this repo) installs once, is versioned, and holds zero
-project state. **The substrate** is scaffolded into each target repo by
-`/harness:init` and holds all of it: `.harness/` (registry, decisions,
-backlog, edges, telemetry, memory, shadows, one gitignored SQLite sidecar),
-`adr/`, `contracts/`, a CI verify workflow and the vendored engine it runs
-(`.harness/engine/`, so CI needs nothing from this repo), per-commit git
-notes under `refs/notes/harness`, plus agent-facing repo docs: `AGENTS.md` (the working
-agreement, cross-tool standard) and `CLAUDE.md` (imports it via `@AGENTS.md`).
-Existing CLAUDE.md/AGENTS.md files are never overwritten.
-
-Workflow skills (`/harness:*` in Claude Code) run ceremonies for work you
-request. The shared skills are discoverable by both Claude Code and Codex;
-their instructions limit execution to that requested work. Asking an agent
-to "run init" can invoke the same engine command directly. In Codex, resolve
-the plugin root from the installed skill path and pass the project's
-`--root` explicitly; `${CLAUDE_PLUGIN_ROOT}` is Claude Code syntax.
-
-## Landing modes
-
-How a closed slice reaches the base branch is `landing.mode` in
-`.harness/config.yaml` (ADR-002, decision rows **D-009**–**D-011**):
-
-```yaml
-landing:
-  mode: pr            # local (default) | pr
-  remote: origin
-  base: main
-  pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
-```
-
-**`local`** is the default and unchanged: `merge-slice` merges `slice/<id>`
-into the checked-out base and nothing leaves the machine. A repo with no
-`landing:` block behaves exactly as before.
-
-**`pr`** is for a base branch nobody may push to. `close-slice` becomes the
-landing: after the ceremony's own substrate commit and provenance note it
-pushes `slice/<id>` to `landing.remote` and runs `landing.pr_cmd` (split
-with `shlex`, run without a shell; `{base}` `{branch}` `{title}` `{body}`
-are substituted inside their own token, `{body}` being a temp file holding
-the generated PR body). **`pr_cmd` must print the pull request's URL** —
-`gh pr create` does — because that URL is what `pr_url` records, and a
-re-land uses it to know a PR already exists; a command that prints nothing
-lands once and would open a second PR if it ever had to re-land. The slice
-row records `landed_via: pr` and the first URL the command printed as
-`pr_url`; an optional `linear` id on the row
-prefixes the PR title and is linked in the body. That metadata is committed
-and pushed by the landing itself, so a pr-mode close leaves nothing
-uncommitted and the PR carries it. The slice's own branch must be checked
-out — pushing `slice/<id>` from another tree would publish a stale branch,
-so that is a hard error naming both branches.
-
-If the push or the PR command fails the close still stands — it is already
-committed — and the output is `{"closed": true, "landed": false, "error": …}`
-with exit 1. The row records `landed_via: pending` and `landing_error`
-(committed too, so the state is not lost with the shell), `harness verify`
-reports the advisory finding `LANDING_PENDING`, and `harness land --slice
-<id>` re-runs just the push and the PR command — never the ceremony, and
-never `pr_cmd` again once the row has a `pr_url` (no duplicate PRs). A
-failure to push the metadata counts as a failed landing too: the PR is open
-but its branch does not carry the row, so the slice goes `pending` with its
-`pr_url` kept.
-`merge-slice` refuses with the blocking finding `LANDING_MODE_PR`, and
-`harness run` refuses up front: a campaign cannot merge PRs for you. A
-closed slice in pr mode that records no landing at all (`landed_via` unset)
-also gets the advisory `LANDING_PENDING` — the state is never silent.
-
-**Updating a slice branch from a moved base.** With slices landing in
-parallel the base moves under an open PR. Do the update **locally** —
-`git fetch <remote> && git merge <remote>/<base>` (or rebase) in the slice's
-worktree — and then re-land:
-
-```
-harness land --slice <id>
-```
-
-Never GitHub's "Update branch" button: a server-side merge cannot run the
-`harness-substrate` merge driver, so it conflicts inside
-`.harness/backlog.jsonl` (and every other keyed log) instead of resolving
-row by row. `harness land` is idempotent — it re-notes HEAD when the update
-changed the tree no recorded note keyed (`renoted: true` in its output,
-riding in its own `.harness` commit), pushes again, and skips `pr_cmd`
-whenever the row already landed, so it never opens a second pull request.
-Without that re-note the squash merge would leave `verify` reporting
-`MISSING_PROVENANCE_NOTE` on work that had landed.
-
-Two things follow from pushing inside a sandboxed slice:
-
-- **Egress permits (D-011).** In `pr` mode the permit layer auto-approves
-  exactly `git push [-u] <remote> slice/<bound-slice>`,
-  `git fetch <remote> [--prune|--tags]` and `gh pr create|view|checks|status`.
-  Everything else stops for a human: another slice's branch, the base
-  branch, `--force`, a fetch refspec or `--upload-pack=…` (which executes a
-  command of the caller's choosing), `gh --repo/-R` (which retargets any
-  repo the token can reach) and `gh --web`. **In pr mode the hook is the
-  decider, not the settings file:** the generated profile drops the blanket
-  `git push`/`git fetch` denies (a deny outranks everything) but adds no
-  egress allow rule, because a Bash prefix rule cannot express "this slice's
-  own branch" — `Bash(git push origin slice/:*)` would also open
-  `slice/x:main`. The PreToolUse hook answers `allow` for the exact shapes
-  above and `deny`, with the reason, for every other egress command. The
-  profile does add the forge host to the sandbox's `allowedDomains` (derived
-  from `landing.remote` when it is a URL, else
-  `github.com`/`api.github.com`/`ssh.github.com`) — a permission decision
-  does not open a socket. In `local` mode nothing changes: no egress is ever
-  auto-approved and the hook stays silent, exactly as in 0.7.
-
-  Residual, by design: `gh pr create --body-file <path>` is auto-approved
-  with any path, so a body file is an exfiltration surface an agent could
-  point at a secret — the PR content itself is not gated. Review the PR body
-  like any other artifact the slice produced, and keep secrets out of the
-  worktree (they should never be readable there in the first place).
-- **Squash-safe provenance (D-010).** Notes are keyed twice — on the commit,
-  and in the derived append-only `.harness/notes.jsonl` by
-  `{slice_id, tree_hash, source_tree}`. When a squash or rebase merge makes
-  the noted commit unreachable, `harness verify` resolves the slice against
-  a reachable commit carrying one of those keys (reported in `resolved_via`)
-  instead of reporting `ORPHANED_NOTE` forever; only a slice with neither
-  key is `MISSING_PROVENANCE_NOTE`. `harness graph note --repoint <slice-id>
-  <sha>` re-attaches the note itself to the commit that landed.
-  `.harness/notes.jsonl` is history: union-merged, never regenerated by G7,
-  never hand-edited.
-
-## The provenance rule
-
-Every artifact is either **authored** (human judgment, written once, amended
-via adjudication) or **derived** (regenerated by hooks — hand-editing one is
-a bug, and CI proves derived artifacts regenerate identically). If you can't
-tell which a file is, that's a design defect: flag it in review.
-
-Note: `.harness/boundaries.jsonl` (derived) and `.harness/parked.jsonl`
-(runtime queue) are engine-internal files not shown in the original tree —
-compiled G3 boundaries and the adjudication queue respectively.
-`.harness/notes.jsonl` is derived too, but append-only history: G7 never
-regenerates it (there is nothing to re-derive it from), it union-merges, and
-hand-editing it is a bug like any other derived file.
-
-## 10-minute walkthrough
-
-```
-/harness:init          # scaffold substrate, detect languages, wire hooks
-/harness:architect     # Phase 0: brainstorm -> red-team -> converge ->
-                       #   compile -> author-gate (the human signs here).
-                       #   Already have a spec? `harness architect
-                       #   --from-spec docs/spec.md` seeds the working
-                       #   document at stage 3 instead of re-deriving it.
-/harness:backlog       # spec + ADRs -> slices, estimates, decomposition proposals
-/harness:build slice-001   # worktree + sandbox + binding + context, then
-                       #   the slice runs to close uninterrupted
-/harness:review slice-001  # forked reviewer: substrate + diff only
-/harness:close-slice slice-001  # commit + note, registry flips, memory
-                       #   compacts, then merge-slice finishes the merge
-/harness:harness      # status view: slice metrics and gate outcomes
-/harness:harness      # also resolves parked disputes (adjudicate)
-```
-
-## Engine CLI (the portability boundary)
-
-`bin/harness` subcommands: `event` (stdin EnforcementEvent -> stdout
-Verdict), `doctor` (+ `--substrate` repo health, `--fix`), `init`,
-`upgrade` (bring a substrate scaffolded by an older plugin up to the
-installed one: schema migration, merge drivers, the vendored CI engine
-and the `harness-verify` workflow; idempotent — `init --migrate` is its
-alias),
-`explore` (creates `explore/` with `DECISIONS.md`, `VERIFY.md` and
-`OPEN.md`; `--freeze` checks the cards and signs `DECISIONS.md`),
-`architect` (seeds the working document `docs/architecture.md` at
-`<!-- stage: 3 -->` from one source. `--from-explore`: one ADR and one
-decision row per chosen card in the frozen `explore/DECISIONS.md`, parked
-cards as deferred `[open-question]`s; refuses when the file is not frozen
-or changed after freeze. With an existing document it appends the blocks of
-new cards and keeps the stage; `--force` reseeds the document. It never
-rewrites an existing ADR: a changed card needs an ADR that supersedes the
-old one. `--from-spec <path>`: headings become
-`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, and it
-refuses to overwrite the document without `--force`. `--skip-explore "<reason>"`:
-records the reason in the document and, at close, in slice metrics as
-`explore_skipped`. With no source and no frozen `explore/`, `architect`
-refuses and names the three ways forward),
-`compile`, `author-gate`, `resolve`, `extract`,
-`gates`, `verify` (the CI entry),
-`acceptance` (`--closed [--list] [--exclude <slice>]`: the cumulative
-closed-slice suite through the configured runner; `--list` selects
-without executing),
-`backlog` (+ `add`, which takes `--linear GOO-NN`), `slice`,
-`start` (worktree + sandbox + binding + context, no prompts),
-`run` (campaign dispatcher: builds every ready slice via `run.builder_cmd`
-until the backlog is empty or a park needs a human — reference builders in
-`templates/claude-builder.sh` (headless `claude -p`) and
-`templates/claude-builder-sdk.py` (Claude Agent SDK); any CLI that closes
-the slice works),
-`permit` (host permission query),
-`close-slice`, `merge-slice`,
-`land` (`landing.mode: pr` — re-note HEAD, re-push a closed slice's branch
-and open its PR if it has none; idempotent),
-`registry`, `merge-substrate`,
-`review` (+ `--replay`, `--record-finding`, `--park`, `--record-fork`),
-`graph` (`neighbors`, `provenance`, `uses-declares`, `note` — `--slice/--commit`
-to (re)write a note, `--repoint <slice-id> <sha>` to move one onto the commit
-a squash/rebase landed, `edge`),
-`memory`, `precompact`, `status`, `adjudicate`,
-`lint-text` (the STE-80 text check: `file:line: rule: text`, `--glossary`,
-`--json`; exit 1 on findings). Make targets in `Makefile` wrap
-these thinly. Exit code 0 = verdict emitted (semantics in the JSON);
-2 = malformed input; 1 = check failed.
-
-Language packs: Python, TypeScript/TSX, Rust, Go, YAML, HCL/Terraform —
-detected at `init`, toggled in `.harness/config.yaml`. Anything else is
-enumerated by G8 as unenforced surface, never silently skipped.
-
-Python namespace packages are first class: shadows keep the whole dotted
-import (`kente.telemetry.decorators`), and a module id strips the first
-matching `extractor.src_roots` glob (default `["src", "packages/*/src"]`),
-so `packages/kente-config/src/kente/config/__init__.py` is `kente.config`.
-G5 and the resolver match registry entries by longest dotted prefix; a repo
-with no source root keeps the dotted relative path it always had (ADR-002 /
-D-008).
-
-`docs/internal/SPEC.md` defines every `§`/`C`/`T`/`M` marker the skills cite.
-
-Five events: `session_start`, `pre_context`, `pre_change`, `post_change`,
-`unit_complete`. Eight gates: G1 manifest-complete, G2 context-loaded,
-G3 spec-bound, G4 shadow-fresh, G5 registry-conform, G6 interface-drift,
-G7 derivation-integrity, G8 coverage-boundary. Every blocking finding cites
-a `rule_ref`; the engine rejects blocks without one.
-
-## Composing with superpowers
-
-With the superpowers plugin installed, the two compose on a fixed boundary
-(ADR-002, decision row **D-014**), and `harness init` writes it into the
-repo's `AGENTS.md` so both plugins' agents read the same rule. **harness owns
-the outer loop** — session start, slice bind/scope/declarations, attempts
-memory, the review contract (`rule_ref`), close and landing. **superpowers
-owns the inner loop** — `superpowers:brainstorming` runs as architect stage 1
-(its spec file IS `docs/architecture.md`, and the next step is stage 2
-red-team, not `superpowers:writing-plans`),
-`superpowers:test-driven-development` per unit,
-`superpowers:systematic-debugging` on any red test or gate block, and
-`superpowers:verification-before-completion` immediately before
-`close-slice`. Inside a bound slice
-`superpowers:finishing-a-development-branch` is not used (close-slice is the
-finish) and `superpowers:subagent-driven-development`'s stop-for-side-effects
-rule does not apply (the sandbox and the gates are the permission layer);
-`superpowers:using-git-worktrees` reuses the `.worktrees/<slice>` that
-`harness start` provisioned. `superpowers:requesting-code-review` runs only
-as review Layer 3, advisory — anything blocking still cites a `rule_ref`.
-When Codex is available (an MCP tool named `codex`, or the `codex` CLI on
-PATH), `/harness:review` runs it as a second Layer-3 advisory over the same
-slice diff under the same contract — verify, record with
-`harness review --record-finding`, block only with a `rule_ref`, and never let
-it fix the slice itself.
-
-For a Codex-led slice, the reciprocal review can run through a fresh
-`claude -p` process with the diff, read-only file tools and JSON output.
-Check both its exit status and `is_error`, verify its findings, and record
-them through the same Harness review contract. Claude Code's built-in
-`claude mcp serve` exports tools; an MCP wrapper around print mode would be
-needed to expose an actual Claude reviewer as a tool. Direct CLI invocation
-already supports the review, so no wrapper is required. See the official
-[MCP server explanation](https://code.claude.com/docs/en/mcp#use-claude-code-as-an-mcp-server)
-and [programmatic usage](https://code.claude.com/docs/en/headless).
-
-Architecture uses the same two-host principle through
-[`design-review`](skills/design-review/SKILL.md). Claude Code leads with a
-fresh Codex critique; Codex leads with a fresh Claude Code critique, whenever
-the other provider is available. This runs during `/harness:architect`, for
-imported specs and before accepting new/superseding ADRs. Invoke
-`/harness:design-review` directly in Claude Code, or the `design-review` skill
-in Codex, for an existing design. These are skill workflows, not a new engine
-subcommand or an MCP service.
-
-The lead reconciles findings into the design and stores the reviewed inputs,
-peer response, dispositions and coverage in `docs/internal/design-reviews/`. One initial
-critique and at most one focused follow-up bound the additional model cost;
-unchanged reviewed inputs reuse their record. Missing credentials, unavailable
-CLIs and failed reviews are reported, with local review continuing. This adds
-review tokens; its benefit is independent scrutiny before implementation,
-not a guaranteed token saving. Human signoff and deterministic gates retain
-their existing authority.
-
-Update the host plugin with `harness upgrade --plugin --host claude` or
-`--host codex`, then start a fresh session to load these skills. Upgrade also
-refreshes the vendored engine/templates; existing authored `AGENTS.md` files
-remain user-owned. Merge the design-review guidance from
-`templates/agents-md.md` when a project's custom working agreement needs it.
-
-## The acceptance command (`acceptance.*`)
-
-The existing reviewer uses the [`verification` skill](skills/verification/SKILL.md)
-to judge whether work meets its acceptance criteria: criterion → implementation
-→ decisive check → observed evidence. It returns `VERIFIED` or `NOT VERIFIED`,
-per-criterion `PASS/FAIL/NOT_RUN/INCONCLUSIVE`, and reproducible next actions for
-gaps. Builders prepare that map before coding and use failures to diagnose,
-fix and rerun. No extra reviewer is required. Invoke `/harness:verification`
-in Claude Code or the `verification` skill in Codex for a standalone check.
-
-Tests passing is evidence only for what they actually assert on the tested
-revision. Skipped checks, disabled runners and unavailable services do not
-prove completion. The `harness verify` CLI checks substrate consistency and
-does not run application acceptance; the skill and the command have distinct
-purposes. Verification alone never closes a slice or deploys anything.
-
-Every verification pass discovers and starts/attaches to the local runtime.
-For apps this includes Docker/services, the real UI and browser/DevTools,
-console/network and application logs, scoped SQL extracts/stored-data checks,
-and cache contents/invalidation where present. Screenshots and data/log evidence
-are tied to the AC and the running revision. Missing connections remain gaps;
-only components genuinely absent from the project are not applicable.
-
-For state-changing ACs, [app-write integrity verification](skills/verification/integrity.md)
-defines known sample inputs and expected results before execution. Agents seed
-through the application's UI/API/import/CLI, then run project-specific read-only
-Python probes against the actual database, cache and blob store. The app's normal
-write path supplies correlated operation/entity IDs, versions or content digests;
-probes check real contents and required effects, not just marker existence.
-Direct SQL/Redis/blob writes cannot manufacture proof of app behavior. Probes
-must not repair state or copy observed values into the expected result. Cases,
-scripts, receipts and evidence stay reproducible in the consuming project.
-
-[Verification is designed with the feature](skills/verification/design.md),
-before implementation: concrete happy-path and relevant boundary, concurrency,
-failure and recovery scenarios, each with an independent oracle and planned
-runtime observations. Architecture and peer review challenge the matrix; backlog
-and builders carry its test seams, instrumentation and probe work into scope.
-
-[Live execution coverage](skills/verification/coverage.md) connects each scenario
-to production blocks/branches in the running app and workers, then joins that
-execution to trace/operation identity and independently verified effects. Unit-suite
-percentages and probe-only coverage cannot establish which code produced a result.
-Coverage proves execution, not correct output or a successful commit; both types
-of evidence are required. Missing instrumentation or attribution stays a gap.
-
-Acceptance is decided by a command, and that command is yours (ADR-002,
-D-012). Nothing configured means nothing changes: the engine runs the
-historical `<python> -m pytest <paths> -q` with the project's own venv
-interpreter. Override it per repo:
-
-```yaml
-# .harness/config.yaml
-acceptance:
-  cmd: "uv run pytest {paths} -q"   # {paths} = the slice's acceptance paths
-  cwd: "."                          # run from here (repo-root-relative)
-  env: {PYTHONHASHSEED: "0"}        # overlaid on the environment; values are strings
-  gate_cmd: "make check"            # whole-tree gate, once per close/merge
-```
-
-`{paths}` is substituted with the shell-quoted, glob-expanded acceptance
-paths and the command is split with `shlex` (no shell); a `cmd` that never
-names `{paths}` gets them appended. The same runner decides the cumulative
-regression suite at close and at `merge-slice`, so one repo has one way of
-running tests.
-
-`gate_cmd` is the repo's own whole-tree gate — `make check`, `npm run
-verify`. It runs **once per ceremony**, after acceptance is green and
-before the substrate commit at close, and again on the merged tree in
-`merge-slice`; never on every event. A non-zero exit is the blocking
-finding `ACCEPTANCE_GATE_FAILED` (`rule_ref: adr:002`) whose message
-carries the last 20 lines of combined stdout/stderr, and in `merge-slice`
-the merge is rolled back. A command that cannot even be spawned (missing
-binary, typo, nonexistent `cwd`) is an ordinary red result carrying
-`cannot run …` — never an exception that escapes the rollback. At merge
-the gate runs on the merged tree but reads the config of the tree you
-merge *into*, so a slice that introduces `gate_cmd` on its own branch is
-honoured from the next merge on. `cwd` must be repo-relative and stay
-inside the repo (the containment rule `gates.extra` uses).
-
-### The closed-slice suite
-
-One selector decides what the cumulative suite is, and close,
-`merge-slice` and `harness acceptance --closed` all read it. A closed
-slice whose declared acceptance file is gone, or whose glob matches
-nothing, is a **red** result naming the slice and pattern — never a
-silent drop from coverage. Retiring a suite is an explicit backlog
-change, never inferred from file absence. An honestly empty declaration
-is not a problem. `gates.acceptance_runner: none` is reported as disabled
-at close, merge and in the CLI alike, not executed-and-passed.
-`harness acceptance --closed --list` reports `paths`, `owners` and
-`problems` (exit 1 on problems) and executes nothing; without `--list`
-it runs the suite (exit 1 on red, spawn failures included). `verify`
-never runs it: the scaffolded workflow offers it as the opt-in
-`closed-acceptance` input, with `acceptance-setup` for the caller's own
-dependency installation.
-
-## Backlog estimates and splitting
-
-`harness backlog` writes each slice's `context_cost_estimate` from the
-same candidate layer the resolver injects from — same supersession
-filtering, same `#anchor` extraction, one count per distinct section
-across all declared deps — so the estimate equals the resolver's
-`declared_demand` for the same deps. The output carries the itemised
-breakdown under `estimates` (`shadows`, `guidance`, `guidance_refs`,
-`anchor_fallbacks`, `missing_refs`, `superseded`, `unknown_deps`).
-A guidance ref whose anchor is not found falls back to the whole file at
-full cost and is reported (`anchor-missing` in the resolver's `dropped`,
-`anchor_fallbacks` in the estimate); it is never a silent whole-file
-load. `resolve` also reports `demand` (everything that qualified) next
-to `token_estimate` (what fit the budget).
-
-Context savings come from compact API shadows, selecting only relevant
-dependencies/guidance, and suppressing unchanged resolver output within a
-session. Suppression checks the rendered content as well as its IDs, so a
-changed decision or API signature is injected again. The budget applies to
-Harness's injected context, not the host's whole conversation. Estimates
-are not measured model usage: reviews, findings and retries also consume
-tokens, so Harness does not claim a net billed-token saving.
-
-Oversized free planned slices produce `split_proposals`; the parent remains
-intact. Each proposed child needs its own acceptance tests and predicted
-files before it can become executable work. Copying the full parent contract
-while partitioning only dependencies is not a valid decomposition. Existing
-child-ID collisions fail before any backlog write. Closed, bound or parked
-rows and parents with dependents appear in `split_refused` with a reason.
-Both `start` and direct `slice` binding enforce prerequisites. A justified
-`start --force` records its exception in the target worktree.
-
-## Repo-local gates (`gates.extra`)
-
-The eight builtin gates enforce the *method*. A repo's own invariants — "no
-distribution ships `src/<ns>/__init__.py`", "nothing imports upward across
-the package DAG" — are deterministic too, so they belong in gates, not in
-prose an agent may skim. List them in `.harness/config.yaml`:
-
-```yaml
-gates:
-  extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
-registry:
-  kinds_extra: [package, protocol]   # widen the registry `kind` enum
-```
-
-An entry is a **repo-relative `.py` path** or a **dotted module name**, either
-optionally suffixed `:ATTR` to name the declaration attribute (default
-`GATE`). A path entry names code the engine will *execute*, so it is
-**contained**: the path is resolved and must land under the repo root.
-Absolute paths are rejected outright, and `../` traversal or a symlink
-pointing outside the repo is rejected before the module runs. A gate module
-exposes exactly what G1–G8 expose:
-
-```python
-GATE = {"id": "K1", "rule_ref": "adr:002",
-        "preferred": ["pre_change", "unit_complete"],
-        "fallback": ["post_change"]}
-
-
-def run(ctx) -> list:
-    from engine.events import make_finding
-    return [make_finding("NAMESPACE_CAPTURE", GATE["rule_ref"],
-                         f"{ctx.rel(p)} captures the namespace package",
-                         severity="block", key=ctx.rel(p))
-            for p in ctx.touched_files()
-            if ctx.rel(p).endswith("src/kente/__init__.py")]
-```
-
-`ctx` is an `engine.gates.GateContext`: `root` (repo root `Path`), `config`
-(the loaded engine config), `slice` (the active backlog row, or `None`),
-`payload` (the event's `files` / `context_loaded` / `diff` / `prompt`),
-`touched_files()` (the paths this event carries) and `rel(path)`
-(root-relative form). Richer substrate — `registry`, `decisions`,
-`boundaries`, `context_loaded` — is available on the same object. A blocking
-finding **must** carry a `rule_ref`, exactly like a builtin gate; the engine
-rejects blocks without one.
-
-`preferred`/`fallback` name events from the five-event contract, and the
-`fallback` list is only consulted under `gates.degraded_mode` (T1), just as
-for the builtin pack.
-
-**Fail closed and loud**, in two named codes — never a silent skip, and the
-builtin gates keep running either way:
-
-- `EXTRA_GATE_LOAD_ERROR` — the entry does not exist, is absolute or escapes
-  the repo, fails to import, declares no valid `GATE` (`id` + `preferred`,
-  known event names, an id that does not collide with another gate), or
-  exposes no callable `run(ctx)`.
-- `EXTRA_GATE_RUN_ERROR` — the gate raised (the message carries the last
-  traceback frame, `file:line`), returned something that is not a list, or
-  produced a finding the engine rejects. That last case is the one to know:
-  a **blocking finding with no `rule_ref` never reaches a verdict**, from a
-  repo-local gate exactly as from a builtin one.
-
-**CI caveat.** `harness verify` replays every **closed** slice through a
-synthetic `unit_complete` event whose files are that slice's
-`predicted_files ∪ acceptance` (the ones that exist), so repo invariants are
-enforced on landed work — including diffs no hook ever saw. A gate that
-declares only `pre_change` therefore **does not run in CI**: there is no edit
-to intercept. Give a gate `unit_complete` in `preferred` if you want it
-checked there.
-
-Both keys are optional and default to absent: a repo that sets neither
-behaves exactly as it did before.
-
-## Porting to another agent framework
-
-Write one file like `hooks/adapter.py` (~130 lines): translate your
-framework's hook events into the five-event contract and its verdicts back.
-Then make `tests/adapter-conformance/` pass. Frameworks without pre-change
-interception run gates in degraded revert-and-retry mode (gates declare
-preferred/fallback events; set `gates.degraded_mode: true`).
-
-See `ADAPTERS.md` for the researched compatibility matrix: Codex CLI,
-Factory Droid, Gemini CLI, Cursor (IDE), pi, OpenCode, and Amp all support
-full pre-change interception as of mid-2026; Cursor CLI runs degraded;
-Aider is instruction-only.
-
-## Self-hosting
-
-This repo carries its own substrate: every skill directory and query pack is
-a registry entry whose manifest is validated by the plugin's own engine
-(`harness verify` runs in this repo's CI). `harness verify` green on the
-harness repo itself is the ship gate for every release.
-
-### Self-contained CI: the vendored engine
-
-Consumer repos carry everything their `harness-verify` workflow needs.
-`harness init` copies the engine and its upgrade support files into `.harness/engine/` and the scaffolded
-`.github/workflows/harness-verify.yml` runs that copy:
-`python3 .harness/engine/bin/harness verify`. Nothing is cloned from this
-repo, no repository variable or token is needed, and the engine that
-verifies landed work is the same version that scaffolded the substrate.
-Only the PyPI dependencies (`pyyaml`, `tree-sitter`,
-`tree-sitter-language-pack`) are installed in CI. `.harness/engine/` is
-derived: commit it, never edit it.
-
-After upgrading the plugin, run `harness upgrade` in each consumer repo and
-commit the result. It replaces `.harness/engine/` wholesale, refreshes the
-harness-generated workflow (a hand-authored one is kept and the step to add
-is named), runs the schema migration and reinstalls the merge drivers.
-`doctor --substrate` reports the vendored copy as `current`, `stale`
-(unhealthy — CI would enforce different rules than the hooks) or
-`missing` (a substrate scaffolded before 0.8.5; CI still works via the
-clone fallback below), and names `harness upgrade` as the fix.
-
-### Upgrade the plugin and project together
+## Upgrade from 0.9
 
 ```bash
-harness --root /path/to/project upgrade --dry-run
-harness --root /path/to/project upgrade
-harness --root /path/to/project upgrade --plugin --host claude --dry-run
-harness --root /path/to/project upgrade --plugin --host claude
-harness --root /path/to/project upgrade --plugin --host codex
+harness upgrade --plugin --host claude --dry-run
+harness upgrade --plugin --host claude
+harness upgrade
 ```
 
-A plain upgrade uses the installed engine and needs no network. `--plugin`
-updates Harness through the selected host, locates the new installation,
-and runs its engine against the project. Claude uses its plugin update
-command; Codex refreshes the selected marketplace and reinstalls Harness.
-If selection is ambiguous, provide `--plugin-id harness@<marketplace>`
-and, for duplicate Claude installations, `--scope user|project|local`.
-A local Codex marketplace reinstalls from its current checkout; a Git
-marketplace is refreshed first.
-The command reports versions and reload/new-thread steps, and refuses
-to delegate to an older release or downgrade a newer vendored engine. It does not pull
-or overwrite your application's source code.
+- The `--dry-run` run prints the plan and changes nothing.
+- `--plugin` updates the plugin, then runs the new engine on the project. Use `--host codex` for Codex.
+- The plugin run has no terminal, so it skips each step that asks first. Run `harness upgrade` again in a terminal, or add `--yes`.
+- Upgrade does not commit. Run `harness doctor --substrate` and `harness verify`, read `git diff`, then commit.
 
-The project upgrade refreshes the vendored engine, generated shadows and
-Harness-owned integration files, applies supported schema migrations, and
-recovers historical graph facts available in Git notes. Authored decisions,
-backlog contracts and custom configuration remain authoritative. Existing
-source changes are not ratified by refreshing their registry hashes. Review
-and commit the generated changes in each consumer repository.
+See [Upgrading 0.9 to 0.10](https://peekwez.github.io/harness/upgrading/).
 
-The repository includes native Codex metadata and a host-neutral Harness
-skill. Register this repository as a Codex marketplace and install
-`harness@harness-marketplace` to use native plugin management. Skills alone
-do not install project hooks: follow `adapters/codex/README.md` and retain
-the host's hook-trust check. Shared workflow guides contain Claude command
-substitutions; their Codex instructions use explicit engine paths.
+## Repository layout
 
-### Integrity and telemetry in 0.9
+| Path | Contents |
+|---|---|
+| `skills/` | the 11 workflow skills |
+| `agents/` | the builder, reviewer, architect and red-team agents |
+| `engine/` | the engine; `bin/harness` is its CLI |
+| `hooks/` | the Claude Code hook wiring and adapter |
+| `adapters/` | adapters for other agent hosts |
+| `templates/` | the files that `harness init` writes |
+| `docs/` | the source of the docs site; `docs/internal/` holds design history and is not published |
+| `tests/` | the test suite |
 
-Close validates the exact committed source before and after acceptance,
-discovers changes from Git even if hooks were skipped, and checks the full
-file set before recording provenance. A completion journal makes an
-interrupted substrate commit recoverable. Merge failures retain the slice
-branch for repair.
+## Contribute
 
-Graph history stays append-only. A complete dependency snapshot defines the
-current uses/declares projection, so removing an import or deleting a file
-retires its dependency without deleting history. Overrides apply only to
-their named gate and target namespace. New closures record file/module,
-revision and governing-decision evidence, and verification detects missing
-evidence. Legacy closures report incomplete historical coverage; upgrade
-recovers only facts supported by their existing notes.
-
-SQLite stores session state and recoverable interface baselines. When a
-sidecar is lost, active Git-backed slices recover their original baseline
-from `started_at_commit`; unrecoverable baselines fail visibly. Shadow
-identity includes extraction configuration, and incremental verification
-checks source/configuration inputs as well as the generated shadow.
-
-The gitignored `.harness/sidecar.db` holds loaded-context IDs/fingerprints,
-active session/slice bindings, touched paths, interface snapshots,
-derivation-check caches, and telemetry awaiting a flush. Its SQLite-managed
-`-wal` companion holds changed database pages until checkpointed into the
-main database; `-shm` holds the WAL index and reader/locking coordination,
-not Harness records. Leave both under SQLite's control while it is running.
-Deleting the sidecar loses transient session state and unflushed telemetry,
-even though authoritative JSONL and recoverable Git baselines survive.
-See [SQLite's WAL format](https://sqlite.org/walformat.html).
-
-Telemetry is advisory. Stable event IDs, append-before-ack flushing and
-archive-aware reads make retries and rotation safe. Status reports sample
-counts, time bounds, outcomes and automatic parks; `--since` applies to
-both telemetry and graph observations. Compaction is context pressure by
-default (`telemetry.compaction_is_defect: false`); existing explicit settings
-are respected. Sparse observations never automatically justify promoting a
-rule into enforcement. Logging failures warn without blocking core work.
-
-**Clone fallback (repos that have not run `upgrade`).** When no
-`.harness/engine/` exists the workflow falls back to cloning the engine
-and prints a warning naming `harness upgrade`. Point it at the engine with
-the `harness-repo` workflow input or the `HARNESS_REPO` repository variable
-(Settings > Secrets and variables > Actions > Variables); if that repo is
-**private**, add a `HARNESS_TOKEN` repository secret: a fine-grained PAT
-with **Contents: read**, resource owner = the org that holds the engine.
-The workflow injects it into the clone URL as `x-access-token` and clones
-`--quiet`, so the credentialled URL is never echoed into the log.
-
-## Tests
-
-```
-make test      # pytest: unit, golden, integration, adapter-conformance
-make verify    # the CI check, no plugin required
-make replay    # reviewer regression against the golden set
+```bash
+make test
+python3 -m pip install -r docs/requirements.txt
+mkdocs serve
 ```
 
-Two of those tests keep the docs honest: every CLI subcommand must appear in
-this README, and every `§`/`C`/`T`/`M` marker cited by a skill must be
-defined in `docs/internal/SPEC.md`.
+- `make test` runs the full test suite.
+- This repo runs its own ship gate. `.github/workflows/harness-verify.yml` runs `harness verify` on each pull request.
+- The Reference pages come from the code. A change to a gate docstring, a CLI help string or a finding catalog entry changes the site in the same pull request.
+- The docs follow STE-80. CI runs `harness lint-text` on them.
+- Release notes go in [CHANGELOG.md](CHANGELOG.md).
 
-## Changelog
+## License
 
-### 0.9.4 — verification design and live execution coverage
-
-- Design happy-path and relevant edge/failure/recovery verification with features;
-  review independent oracles and runtime observation plans before implementation.
-- Require scenario-attributed coverage of live production paths and branches,
-  including workers, correlated with the action and independently verified result.
-- Reject aggregate/probe-only/stale coverage as execution evidence and preserve
-  missing instrumentation as a verification gap throughout the build/close workflow.
-
-### 0.9.3 — app-seeded integrity verification
-
-- Require pre-action known-answer cases, app-interface seeding and independent
-  read-only Python probes for state-changing acceptance criteria.
-- Trace app-produced write fingerprints through real database/cache/blob contents;
-  reject fabricated storage outputs, self-derived expectations and mutating probes.
-- Carry the evidence requirements through builders, reviewers, close and headless
-  templates; missing or contaminated evidence leaves the work NOT VERIFIED.
-
-### 0.9.2 — reciprocal design review and acceptance verification
-
-- Add a shared `design-review` skill for Claude Code/Codex collaboration in
-  Phase 0, imported specs, resumed designs and proposed ADRs.
-- Persist structured peer findings and input coverage; reconcile decisions,
-  preserve accepted ADRs and limit reviews to an initial pass plus one follow-up.
-- Report unavailable/failed peers honestly, retain local review and human
-  authority, and ship the guidance to both host plugins and generated templates.
-- Add `verification` to the existing reviewer: trace ACs to implementation and
-  current evidence, distinguish missing proof from defects, and return actionable
-  feedback through the build/review/close loop.
-
-### 0.9.1 — preserve legacy G5 approvals during upgrade
-
-- Recognize justified `gate:G5` overrides using historical `deps:<registry-id>`
-  targets in graph reconciliation, live gates and closed-slice verification.
-  Known manifest names, file paths, unknown IDs and other gates retain their
-  existing scope.
-- Upgrade appends canonical `registry:` aliases without rewriting old graph
-  records or reopening landed slices. The report and dry-run show
-  `legacy_overrides`; repeated upgrades add no duplicate aliases. Original
-  justifications, finding IDs and commit references remain auditable.
-- Canonicalize new legacy-form inputs and count migration aliases as the
-  original approvals in telemetry, rather than additional override decisions.
-
-### 0.9.0 — lifecycle integrity and cross-host upgrades
-
-- Validate the committed source at closure, recover interrupted finalization,
-  and roll back failed merges without losing pre-existing tracked work.
-- Use current dependency snapshots, gate-specific overrides, recoverable
-  SQLite baselines, and complete modern graph evidence.
-- Resolve Python relative/submodule imports and invalidate shadow caches on
-  source, extractor and configuration changes.
-- Replace unsafe automatic slice splits with authored-child proposals; enforce
-  prerequisites for every binding path and reap timed-out builder processes.
-- Make telemetry durable through retries, archive-aware and advisory by default.
-- Add Claude/Codex plugin upgrade orchestration, safer project upgrades, native
-  Codex metadata, and reciprocal Claude review guidance.
-
-
-### 0.8.6
-
-Codex Astra handoff, wave 1 — the integrity fixes that need no new rule.
-
-- **`backlog` never rewrites closed, bound or parked slices, nor a parent
-  other slices depend on.** The split loop replaced ANY oversized row
-  with `-a`/`-b` children, which could erase a closed slice's provenance
-  and dangle other slices' `depends_on`. Refusals are reported under
-  `split_refused`.
-- **`adjudicate --decision-id` refuses an existing id** before any write
-  (row, edge, queue). Revision and supersession are lifecycle work
-  proposed in ADR-003.
-- **Closed-slice acceptance has one selector and a public entry point.**
-  `harness acceptance --closed [--list]`; close, merge and the CLI read
-  the same selection; a declared suite that disappeared is red naming
-  the slice and pattern instead of silently leaving coverage;
-  `acceptance_runner: none` is reported as disabled at merge too. The
-  scaffolded workflow gains the opt-in `closed-acceptance` /
-  `acceptance-setup` inputs.
-- **The backlog estimate and the resolver share one guidance layer.**
-  Same supersession, anchors and dedup; `backlog` reports an itemised
-  breakdown; a missing anchor is a reported whole-file fallback;
-  `resolve` reports `demand` and `declared_demand` next to what fit.
-- **`compile` warns when a proposed ADR carries binding frontmatter
-  rows.** Rows still bind (no silent behaviour change).
-- **ADR-003 (proposed)** — finding records, review snapshots,
-  decision-row lifecycle, follow-ups and cancellation of unbuilt work:
-  the contract the remaining Codex Astra items (E2, E3, E4, E5
-  cancellation) wait on. Binds nothing until accepted. Tests in
-  `tests/engine/test_codex_astra_wave1.py`.
-
-### 0.8.5
-
-- **Self-contained CI verify.** `init` vendors the engine into
-  `.harness/engine/` and the scaffolded `harness-verify.yml` runs that
-  copy, so a consumer repo's workflow no longer depends on cloning this
-  repo (no `HARNESS_REPO` variable, no `HARNESS_TOKEN`). The clone path
-  survives only as a fallback for substrates that have not been upgraded,
-  and warns.
-- **`harness upgrade`.** One command brings a substrate scaffolded by an
-  older plugin up to the installed one: vendors/refreshes the engine,
-  refreshes the harness-generated workflow (hand-authored ones are kept,
-  with the step to add named), runs the schema migration, reinstalls the
-  merge drivers and refreshes a harness-written autonomy profile.
-  Idempotent; `init --migrate` is now its alias. `doctor --substrate`
-  reports the vendored engine as `current` / `stale` / `missing` and
-  names `upgrade` as the fix. Tests in
-  `tests/engine/test_vendored_engine.py`.
-
-### 0.8.4
-
-- **`author-gate --report` for skill preambles.** The architect/backlog
-  skills run author-gate at every invocation for workflow-state context;
-  gaps are the normal state through stages 1–4, but the exit-1 rendered as
-  a shell error in the host UI. `--report` always exits 0 once a verdict
-  is emitted (the verdict lives in the JSON `passed` field); the bare
-  command keeps exit 1 for automation. Both skill preambles now use it and
-  explain that gaps before stage 5 are expected.
-
-### 0.8.3
-
-- **Fresh-init UX: no phantom files, no EDIT-ME rows.** `init` no longer
-  seeds `.harness/decisions.jsonl` / `.harness/backlog.jsonl` with EDIT-ME
-  placeholder rows — both start empty. The author-gate's domain-coverage
-  check (every registry domain needs a decision row) already provides the
-  same blocks-until-decided guarantee with a clearer message, and the
-  seeded backlog row invited exactly the hand-editing the backlog skill
-  forbids. `author-gate --doc` on a missing working document now reports a
-  gate gap that names the next action (`/harness:architect` or
-  `architect --from-spec`) instead of erroring — so the architect/backlog
-  skill preambles no longer greet a fresh repo with
-  "docs/architecture.md does not exist". Tests in
-  `tests/engine/test_init_ux.py`.
-- **Version declarations realigned.** 0.8.2 bumped only `plugin.json`;
-  `ENGINE_VERSION` and `marketplace.json` now agree again.
-
-### 0.8.1
-
-- **Review Layer 1 honours G5 overrides.** The deterministic `R-uses` rubric
-  read `uses_declares.undeclared`, so a use resolved through
-  `g5_override: recorded_justification` cleared the close ceremony's own
-  uses ⊆ declares check and then blocked the same close at Layer 1 with no
-  adjudicable finding (kente slice 001, GOO-45). It now reads the
-  override-aware `unresolved` set — the one the ceremony reads — and its
-  evidence names the overridden targets. Regression test in
-  `tests/engine/test_review_at_close.py`.
-
-### 0.8.0
-
-Makes harness kente-capable and superpowers-composable (ADR-002, Linear
-GOO-72). Every 0.7.1 repo keeps its behaviour: each addition below is
-opt-in through `.harness/config.yaml`.
-
-- **GOO-73 — repo-local gates (`gates.extra`, D-007).** A consumer repo
-  loads its own deterministic gates into `all_gates()` and `harness verify`;
-  an entry that fails to import is a blocking `EXTRA_GATE_LOAD_ERROR`, one
-  that raises is `EXTRA_GATE_RUN_ERROR`, never a silent skip.
-- **GOO-74 — namespace-package awareness (`extractor.src_roots`, D-008).**
-  Shadows keep the whole dotted import, `module_id` strips the matching
-  source root, and G5/the resolver match registry entries by longest dotted
-  prefix — so PEP 420 packages are enforced, not invisible.
-- **GOO-75 — pr landing (`landing.mode: pr`, D-009/D-010/D-011).**
-  `close-slice` pushes `slice/<id>` and opens the PR, `merge-slice` refuses,
-  provenance is keyed twice so a squash merge keeps `verify` green, and the
-  permit layer auto-approves exactly the slice's own egress.
-- **GOO-76 — `compile --doc` / `architect --from-spec` (D-013).** Decision
-  rows and abstractions are authored in `docs/architecture.md`'s fenced
-  `harness-decisions` / `harness-abstractions` tables; an existing spec is
-  compiled instead of re-derived.
-- **GOO-77 — configurable acceptance (`acceptance.cmd`/`gate_cmd`, D-012).**
-  The command that decides a slice is green is the repo's, and its
-  whole-tree gate runs once per ceremony (`ACCEPTANCE_GATE_FAILED`).
-- **GOO-78 — superpowers composition (D-014).** One working agreement says
-  which plugin owns the outer loop and which the inner one.
-- **GOO-79 — plugin-root-agnostic rules + private-engine CI.**
-  `allowed-tools` and generated settings resolve `*/bin/harness` at runtime;
-  the CI template clones a private engine with `HARNESS_TOKEN`.
-
-Also in this release: `harness land` (re-note + re-push + re-open a failed
-landing, idempotent), the advisory `LANDING_PENDING` finding,
-`backlog add --linear`, and abstraction tables that carry `source` /
-`module_id`.
+MIT. See [LICENSE](LICENSE).

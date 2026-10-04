@@ -127,8 +127,9 @@ def test_the_clone_never_echoes_the_credentialled_url():
         assert "x-access-token" in step["run"], path
 
 
-def test_readme_documents_the_private_engine_repo_setup():
-    body = (PLUGIN_ROOT / "README.md").read_text()
+def test_docs_document_the_private_engine_repo_setup():
+    from test_docs_site import public_docs_text
+    body = public_docs_text()
     assert "HARNESS_TOKEN" in body and "HARNESS_REPO" in body
 
 

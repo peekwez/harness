@@ -326,8 +326,9 @@ def test_the_lifecycle_adr_is_proposed_and_binds_nothing():
         assert needle in body.lower(), needle
 
 
-def test_readme_documents_the_new_surface():
-    body = (PLUGIN_ROOT / "README.md").read_text()
-    assert "`acceptance`" in body
-    assert "split_refused" in body or "never split" in body
+def test_docs_document_the_new_surface():
+    from test_docs_site import public_docs_text
+    body = public_docs_text()
+    assert "harness acceptance --closed" in body
+    assert "split_refused" in body
     assert "anchor" in body

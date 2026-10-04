@@ -2,8 +2,6 @@
 substrate, adjudication is reachable, G2 certifies only what was emitted,
 G7 scales, substrate writes are atomic, docs stay true, metrics are honest."""
 import json
-import subprocess
-import sys
 
 from conftest import PLUGIN_ROOT, run_cli
 from engine import read_jsonl
@@ -92,18 +90,6 @@ def test_substrate_writes_are_atomic(toy, tmp_path):
 
 
 # ---------------------------------------------------------------- R6
-def test_readme_documents_every_cli_subcommand():
-    """Docs drift is a correctness bug in a tool whose whole thesis is
-    'lookup, never interpret'."""
-    readme = (PLUGIN_ROOT / "README.md").read_text()
-    proc = subprocess.run([sys.executable, str(PLUGIN_ROOT / "bin" / "harness"),
-                           "--help"], capture_output=True, text=True)
-    body = proc.stdout.split("{", 1)[1].split("}", 1)[0]
-    subcommands = [s.strip() for s in body.split(",") if s.strip()]
-    missing = [s for s in subcommands if f"`{s}`" not in readme]
-    assert not missing, f"README does not document: {missing}"
-
-
 def test_spec_glossary_resolves_every_referenced_marker():
     """The skills cite §5.6 / C7 / T1 — an agent told to look things up must
     be able to."""
