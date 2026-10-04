@@ -41,6 +41,10 @@ _CARD_FIELD = re.compile(r"^\*\*([^*:]+):\*\*\s*(.*)$")
 _OPTION_FIELD = re.compile(r"^[-*]\s+([^:]+?):\s*(.*)$")
 _SENTENCE_END = re.compile(r"[.!?](?=\s+[A-Z0-9\"'(`])")
 _UNDO = re.compile(r"^(low|medium|high)\b\s*[,:;.-]?\s*\S", re.I)
+_UNDO_TEMPLATE = re.compile(r"^low\s*\|\s*medium\s*\|\s*high\b", re.I)
+# a template slot such as `<why>`: at the start, or after a space, `(` or
+# `:`, so code like `Vec<u8>` is not template text
+_SLOT = re.compile(r"(?:^|(?<=[\s(:]))<[a-z][^<>\n]*>")
 _NO_EVIDENCE = re.compile(r"^no evidence\b", re.I)
 _NO_EVIDENCE_OK = re.compile(r"^no evidence:\s*\S", re.I)
 _CHOSEN = re.compile(r"(?:option\s+)?([A-Z])|(parked)", re.I)
@@ -83,9 +87,15 @@ def scaffold(root) -> dict:
                and any(p.name not in FILES for p in folder.iterdir()))
     folder.mkdir(parents=True, exist_ok=True)
     created, kept = [], []
+    warnings = []
     for name in FILES:
         target = folder / name
         rel = f"{EXPLORE_DIR}/{name}"
+        if target.is_symlink() and not target.exists():
+            warnings.append(f"{rel} is a broken symlink, so harness did not "
+                            f"write it. Remove the link, then run harness "
+                            f"explore again.")
+            continue
         if target.exists():
             kept.append(rel)
             continue
@@ -101,9 +111,11 @@ def scaffold(root) -> dict:
                       "explore/DECISIONS.md. Then run: harness explore "
                       "--freeze"}
     if foreign:
-        result["warning"] = ("explore/ already held other files. G9 now "
-                             "blocks production imports from them. Move "
-                             "production code out of explore/.")
+        warnings.insert(0, "explore/ already held other files. G9 now "
+                           "blocks production imports from them. Move "
+                           "production code out of explore/.")
+    if warnings:
+        result["warning"] = " ".join(warnings)
     return result
 
 
@@ -197,8 +209,12 @@ def sentence_count(text: str) -> int:
 
 
 def _placeholder(value: str) -> bool:
+    """True when `value` still holds template text: a `<slot>`, or the
+    template's `low | medium | high` undo levels."""
     value = value.strip()
-    return value.startswith("<") and value.endswith(">")
+    if value.startswith("<") and value.endswith(">"):
+        return True
+    return bool(_SLOT.search(value) or _UNDO_TEMPLATE.match(value))
 
 
 # ------------------------------------------------------------------ cards
@@ -488,6 +504,20 @@ def freeze_state(root) -> dict | None:
     return {"frozen_by": str(who), "frozen_at_commit": str(commit)}
 
 
+def _row_problems(cards: list[dict]) -> list[str]:
+    """The `architect --from-explore` row limit, checked at freeze time."""
+    from engine.explore_adr import row_answer
+    problems = []
+    for card in cards:
+        if chosen_letter(card) == "parked":
+            continue
+        try:
+            row_answer(card, "adr/000-decision.md")
+        except HarnessError as exc:
+            problems.append(str(exc))
+    return problems
+
+
 def freeze(root) -> dict:
     """Checks explore/ and signs DECISIONS.md (spec 5.5).
 
@@ -523,6 +553,8 @@ def freeze(root) -> dict:
                 or _placeholder(entry["trigger"]):
             problems.append(f"{card['id']} is parked but explore/OPEN.md has "
                             f"no owner and trigger for it. Add them.")
+    if not problems:
+        problems += _row_problems(cards)
     statements, statement_problems = check_statements(
         explore_path(root, "VERIFY.md").read_text(encoding="utf-8"))
     problems += statement_problems
@@ -602,6 +634,15 @@ def skip_reason(root) -> str | None:
     read in path order, because `architect --doc` can name another file.
     Markers inside fenced code blocks do not count.
     """
+    found = _skip_marker(root)
+    return found[0] if found else None
+
+
+_EXPLORE_BLOCK = re.compile(r"^\[constraint\]\s+D-E[0-9]+\s*:", re.M)
+
+
+def _skip_marker(root) -> tuple[str, str] | None:
+    """(reason, fence-free document text) of the first skip marker."""
     docs = Path(root) / "docs"
     if not docs.is_dir():
         return None
@@ -615,18 +656,22 @@ def skip_reason(root) -> str | None:
                                                errors="replace"))
         m = SKIP_MARKER.search(text)
         if m:
-            return m.group(1)
+            return m.group(1), text
     return None
 
 
 def explore_summary_extra(root) -> dict:
     """Slice-metrics fields for `record_slice_summary(..., extra=)`.
 
+    The skip marker counts unless the document holding it was seeded by
+    `architect --from-explore`: it has a `[constraint] D-E<n>:` block. A
+    frozen `explore/` from an earlier design does not hide a later skip.
+
     Returns:
-        `{"explore_skipped": "<reason>"}` when the design skipped explore
-        and `explore/` is not frozen; otherwise `{}`.
+        `{"explore_skipped": "<reason>"}` when the design skipped explore;
+        otherwise `{}`.
     """
-    if freeze_state(root) is not None:
+    found = _skip_marker(root)
+    if not found or _EXPLORE_BLOCK.search(found[1]):
         return {}
-    reason = skip_reason(root)
-    return {"explore_skipped": reason} if reason else {}
+    return {"explore_skipped": found[0]}

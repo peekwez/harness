@@ -128,7 +128,7 @@ READERS = {"python": _python_specs, "rust": _rust_specs,
 
 
 def import_specs(root, rel: str, config, *, in_scope: bool = False,
-                 cache: dict | None = None
+                 cache: dict | None = None, ignored: set | None = None
                  ) -> tuple[str | None, list[str]]:
     """The language and import strings of one file.
 
@@ -140,6 +140,8 @@ def import_specs(root, rel: str, config, *, in_scope: bool = False,
             the per-file scope check (one `git check-ignore`) is skipped.
         cache: A dict a loop passes in; the repo's Python module ids are
             computed once into it, not once per file.
+        ignored: A precomputed `git_ignored_set` covering `rel`, so a loop
+            runs one `git check-ignore` call, not one per file.
 
     Returns:
         (language, import strings). (None, []) for a file that G9 does not
@@ -151,7 +153,8 @@ def import_specs(root, rel: str, config, *, in_scope: bool = False,
     path = Path(root) / rel
     if lang is None or not path.is_file():
         return None, []
-    if not in_scope and not in_shadow_scope(root, rel, config):
+    if not in_scope and not in_shadow_scope(root, rel, config,
+                                            ignored=ignored):
         return None, []
     if lang == "python":
         if cache is None:
@@ -160,7 +163,7 @@ def import_specs(root, rel: str, config, *, in_scope: bool = False,
             from ..extractor.modules import python_module_ids
             cache["known"] = python_module_ids(root, config)
         shadow = shadow_for(root, path, config, known_modules=cache["known"],
-                            ignored=set() if in_scope else None)
+                            ignored=set() if in_scope else ignored)
         if shadow is not None and shadow.get("language") == lang:
             return lang, list(shadow.get("imports", []))
         # no shadow (language off) or a degenerate one (no tree-sitter):
@@ -225,17 +228,19 @@ def resolves_into_explore(root, rel: str, lang: str, spec: str,
 
 
 def file_findings(root, rel: str, config, *, in_scope: bool = False,
-                  cache: dict | None = None) -> list:
+                  cache: dict | None = None,
+                  ignored: set | None = None) -> list:
     """G9 findings for one repo-relative file.
 
-    `in_scope`: the file came from `scope_files`; skip the scope check."""
+    `in_scope`: the file came from `scope_files`; skip the scope check.
+    `ignored`: a precomputed `git_ignored_set` covering `rel`."""
     from . import exempt
     rel = PurePosixPath(rel).as_posix()
     if rel == EXPLORE_DIR or rel.startswith(EXPLORE_DIR + "/") \
             or exempt(rel, config):
         return []
     lang, specs = import_specs(root, rel, config, in_scope=in_scope,
-                              cache=cache)
+                               cache=cache, ignored=ignored)
     if lang is None:
         return []
     go_prefix = go_explore_prefix(root, rel) if lang == "go" else None
@@ -259,13 +264,15 @@ def check(ctx) -> list:
     touched = [ctx.rel(p) for p in ctx.touched_files()]
     if not touched and ctx.work_unit_id:
         touched = sorted(ctx.sidecar.touched_paths(slice_id=ctx.work_unit_id))
+    from ..extractor.engine import git_ignored_set
+    touched = [r for r in touched if not Path(r).is_absolute()]  # out-of-root rows
+    ignored = git_ignored_set(ctx.root, [PurePosixPath(r).as_posix()
+                                         for r in touched])      # once
     findings = []
     cache: dict = {}
     for rel in touched:
-        if Path(rel).is_absolute():
-            continue  # out-of-root rows: never a crash
         findings.extend(file_findings(ctx.root, rel, ctx.config,
-                                      cache=cache))
+                                      cache=cache, ignored=ignored))
     return findings
 
 

@@ -56,3 +56,16 @@ def test_templates_keep_examples_out_of_live_statements():
     text = re.sub(r"```.*?```", "", text, flags=re.S)
     live = [ln for ln in text.splitlines() if re.match(r"\s*[-*]\s+V-", ln)]
     assert live == []
+
+
+def test_explore_never_writes_through_a_dangling_symlink(toy, tmp_path):
+    (toy / "explore").mkdir()
+    outside = tmp_path / "elsewhere.md"
+    (toy / "explore" / "OPEN.md").symlink_to(outside)
+    proc = run_cli("explore", root=toy)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert not outside.exists()
+    assert "explore/OPEN.md" not in out["created"]
+    assert "explore/OPEN.md" in out["warning"]
+    assert len(out["warning"].split()) <= 25

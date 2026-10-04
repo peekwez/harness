@@ -222,3 +222,27 @@ def test_root_aliases_comments_and_rust_path_attribute(toy):
     for rel, n in (("web/a.ts", 1), ("web/b.ts", 1), ("web/c.ts", 0),
                    ("src/lib.rs", 1)):
         assert len(file_findings(toy, rel, config)) == n, rel
+
+
+def test_g9_check_asks_git_for_ignored_files_once(toy, monkeypatch):
+    from engine.extractor import engine as ex
+    from engine.gates import GateContext
+    from engine.gates.extra import _NullSidecar
+    from engine.gates.g9_explore import check
+    _explore(toy)
+    files = [f"m{i}.py" for i in range(4)] + ["orders.py"]
+    for rel in files[:-1]:
+        (toy / rel).write_text("x = 1\n")
+    (toy / "orders.py").write_text(BAD_ORDERS)
+    single, batch = [], []
+    real_set = ex.git_ignored_set
+    monkeypatch.setattr(ex, "git_ignored",
+                        lambda *a, **k: single.append(a) or False)
+    monkeypatch.setattr(ex, "git_ignored_set",
+                        lambda *a, **k: batch.append(a) or real_set(*a, **k))
+    ctx = GateContext(toy, make_event("post_change", files=files),
+                      load_config(toy), _NullSidecar())
+    found = check(ctx)
+    assert [f["code"] for f in found] == ["EXPLORE_IMPORT"]
+    assert single == []
+    assert len(batch) == 1

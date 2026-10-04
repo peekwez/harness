@@ -256,3 +256,25 @@ def test_a_closing_fence_must_match_the_opener():
     # An info string cannot close a fence.
     assert any("never closes" in p
                for p in _problems("```\n```md\n" + CARD))
+
+
+@pytest.mark.parametrize("old, new", [
+    ("- Undo cost: low, the toy has no Postgres code yet.",
+     "- Undo cost: low | medium | high, <why>"),
+    ("- Undo cost: low, the toy has no Postgres code yet.",
+     "- Undo cost: low | medium | high"),
+    ("- Undo cost: low, the toy has no Postgres code yet.",
+     "- Undo cost: low | medium | high, the toy has no code yet."),
+    ("- Solves: Many writers.", "- Solves: Many writers <plain words>."),
+])
+def test_template_text_inside_a_value_is_a_problem(old, new):
+    assert old in CARD
+    problems = _problems(CARD.replace(old, new))
+    assert any("template text" in p and "option B" in p for p in problems), \
+        problems
+
+
+def test_angle_brackets_in_code_are_not_template_text():
+    text = CARD.replace("- Example: Two workers write orders at once.",
+                        "- Example: Two workers share a Vec<u8> buffer.")
+    assert _problems(text) == []

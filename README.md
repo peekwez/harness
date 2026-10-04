@@ -254,9 +254,12 @@ alias),
 `<!-- stage: 3 -->` from one source. `--from-explore`: one ADR and one
 decision row per chosen card in the frozen `explore/DECISIONS.md`, parked
 cards as deferred `[open-question]`s; refuses when the file is not frozen
-or changed after freeze. `--from-spec <path>`: headings become
-`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s. Both refuse
-to overwrite the document without `--force`. `--skip-explore "<reason>"`:
+or changed after freeze. With an existing document it appends the blocks of
+new cards and keeps the stage; `--force` reseeds the document. It never
+rewrites an existing ADR: a changed card needs an ADR that supersedes the
+old one. `--from-spec <path>`: headings become
+`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, and it
+refuses to overwrite the document without `--force`. `--skip-explore "<reason>"`:
 records the reason in the document and, at close, in slice metrics as
 `explore_skipped`. With no source and no frozen `explore/`, `architect`
 refuses and names the three ways forward),

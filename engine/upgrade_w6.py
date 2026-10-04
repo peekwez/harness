@@ -15,6 +15,7 @@ WORKFLOW_NEW = ("init -> explore -> architect -> author-gate "
                 "# Phase 0: a human signs")
 _OLD = re.compile(r"^init -> architect -> author-gate( +)# Phase 0",
                   re.MULTILINE)
+_WORKFLOW = re.compile(r"^.*\barchitect\s*->.*$", re.MULTILINE)
 
 
 def _describe(root: Path) -> list[str]:
@@ -37,8 +38,14 @@ def _apply(root: Path, ask: Ask) -> list[str]:
 
 def _advise(root: Path) -> list[str]:
     text = _agents_text(root)
-    if text is None or AGENTS_MARKER in text:
+    if text is None:
         return []
+    if AGENTS_MARKER in text:
+        line = _WORKFLOW.search(text)
+        if line is None or "explore" in line.group(0) or _OLD.search(text):
+            return []
+        return ["check: add explore before architect in the AGENTS.md "
+                "workflow line by hand."]
     from .upgrade_w2 import AGENTS_MARKERS
     if text.splitlines()[:1] == [AGENTS_MARKERS[0]]:
         return []  # 0.9 file: w8.agents-md swaps in the 0.10 template

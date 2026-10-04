@@ -14,10 +14,11 @@ first card when explore did not run.
 
 The coverage map below still governs the questions and the exit criteria. Without superpowers, follow this protocol as written.
 
-Socratic elicitation. One question at a time; multiple-choice preferred (2–4
-options plus "other"). Map the problem space before you choose. When a big
-decision comes up, write a decision card with [../explore/card.md](../explore/card.md)
-and recommend one option. Do not pick a design without the human. The human
+Socratic elicitation. One question at a time. Ordinary questions are multiple
+choice (2–4 options plus "other"). Big decisions use the decision card. Map
+the problem space before you choose. When a big decision comes up, write a
+decision card with [../explore/card.md](../explore/card.md) and recommend one
+option. On the skip or spec path, write each card in the working document under its `[open-question]` block. At stage 3 the full card moves into the ADR body. Do not pick a design without the human. The human
 answers with a letter, "explain more about X", or "not sure, park it".
 
 Order of operations:

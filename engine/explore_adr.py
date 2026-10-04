@@ -114,8 +114,8 @@ def _explore_adrs(root: Path) -> dict[str, tuple[Path, str]]:
     Raises:
         HarnessError: Two in-force ADRs claim the same card.
     """
-    from engine.compiler import _out_of_force
-    gone = _out_of_force(root)
+    from engine.compiler import out_of_force
+    gone = out_of_force(root)
     out: dict[str, tuple[Path, str]] = {}
     adr_dir = root / "adr"
     if not adr_dir.is_dir():
@@ -144,31 +144,76 @@ def _next_number(root: Path) -> int:
     return max(nums, default=0) + 1
 
 
+def _card_block(card: dict, adr_refs: dict[str, str],
+                opens: dict[str, dict]) -> list[str]:
+    """The typed block lines for one card: chosen -> `[constraint]`,
+    parked -> `[open-question]`."""
+    if chosen_letter(card) != "parked":
+        opt = chosen_option(card)
+        return [f"[constraint] {card['id']}: {card['question']}",
+                f"Decided: {_sentence(opt['name'])} Card and reason: "
+                f"{adr_refs[card['id']]}. Do not ask this again.", ""]
+    entry = opens.get(card["id"])
+    if entry and entry["owner"] and entry["trigger"]:
+        return [f"[open-question] {card['id']}: {card['question']} "
+                f"deferred: {entry['owner']} (trigger: "
+                f"{entry['trigger']})", ""]
+    return [f"[open-question] {card['id']}: {card['question']} "
+            f"(parked; explore/OPEN.md names no owner)", ""]
+
+
+def _ordered(cards: list[dict]) -> list[dict]:
+    """Chosen cards first, then parked cards, each in file order."""
+    return ([c for c in cards if chosen_letter(c) != "parked"]
+            + [c for c in cards if chosen_letter(c) == "parked"])
+
+
 def render_doc(cards: list[dict], adr_refs: dict[str, str],
                opens: dict[str, dict]) -> str:
     """The stage-3 working document seeded from the cards."""
     from engine.docsections import DECISIONS_TABLE_HEADER
     out = [SEED_HEADER, "", "<!-- stage: 3 -->", ""]
-    for card in cards:
-        if chosen_letter(card) == "parked":
-            continue
-        opt = chosen_option(card)
-        out += [f"[constraint] {card['id']}: {card['question']}",
-                f"Decided: {_sentence(opt['name'])} Card and reason: "
-                f"{adr_refs[card['id']]}. Do not ask this again.", ""]
-    for card in cards:
-        if chosen_letter(card) != "parked":
-            continue
-        entry = opens.get(card["id"])
-        if entry and entry["owner"] and entry["trigger"]:
-            out += [f"[open-question] {card['id']}: {card['question']} "
-                    f"deferred: {entry['owner']} (trigger: "
-                    f"{entry['trigger']})", ""]
-        else:
-            out += [f"[open-question] {card['id']}: {card['question']} "
-                    f"(parked; explore/OPEN.md names no owner)", ""]
+    for card in _ordered(cards):
+        out += _card_block(card, adr_refs, opens)
     out += ["```harness-decisions", *DECISIONS_TABLE_HEADER, "```", ""]
     return "\n".join(out)
+
+
+def _has_block(text: str, card_id: str) -> bool:
+    return re.search(r"\[(?:constraint|open-question)\]\s+"
+                     + re.escape(card_id) + r"\s*:", text) is not None
+
+
+def append_cards(text: str, cards: list[dict], adr_refs: dict[str, str],
+                 opens: dict[str, dict]) -> tuple[str, list[str]]:
+    """Adds the blocks of cards that the document does not hold yet.
+
+    Args:
+        text: The existing working document. Its content and stage marker
+            stay as they are.
+        cards: The frozen cards.
+        adr_refs: Card id -> ADR path, for chosen cards.
+        opens: Parked questions from `explore/OPEN.md`.
+
+    Returns:
+        (new text, appended card ids). A card id that already has a
+        `[constraint]` or `[open-question]` block is skipped.
+    """
+    added: list[str] = []
+    lines: list[str] = []
+    for card in _ordered(cards):
+        if _has_block(text, card["id"]):
+            continue
+        lines += _card_block(card, adr_refs, opens)
+        added.append(card["id"])
+    if not added:
+        return text, []
+    head = text if text.endswith("\n") or not text else text + "\n"
+    sep = "" if not head or head.endswith("\n\n") else "\n"
+    return head + sep + "\n".join(lines), added
+
+
+_STAGE = re.compile(r"<!-- stage: (\d+) -->")
 
 
 def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
@@ -177,18 +222,21 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
     Args:
         root: Repo root.
         doc: The working document to write.
-        force: Overwrite an existing working document and rewrite explore
-            ADRs whose content changed.
+        force: Reseed the working document from scratch. It never
+            rewrites an ADR that already exists.
 
     Returns:
         `{"doc", "stage", "adrs", "unchanged", "rows", "parked", "stale",
-        "source"}`. `stale` lists explore ADRs whose card is no longer
-        chosen; they are kept, because accepted ADRs are immutable.
+        "appended", "source"}`. Without `force`, an existing document keeps
+        its content and stage; `appended` lists the card ids whose blocks
+        were added to it. `stale` lists explore ADRs whose card is no
+        longer chosen; they are kept, because accepted ADRs are immutable.
 
     Raises:
         HarnessError: explore/ is not frozen, a card is not valid, the
-            document exists without `force`, or an accepted explore ADR
-            differs from its card without `force`.
+            cards changed after freeze, two ADRs claim one card, or an
+            explore ADR in force differs from its card. Nothing is written
+            then.
     """
     root = Path(root)
     state = freeze_state(root)
@@ -207,10 +255,6 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
     if front_matter(text)[0].get("frozen_digest") != body_digest(text):
         raise HarnessError("architect: explore/DECISIONS.md changed after "
                            "freeze. Run: harness explore --freeze")
-    if doc.exists() and not force:
-        raise HarnessError(
-            f"architect: working document {doc.relative_to(root)} already "
-            f"exists. Edit it, or re-run with --force to overwrite it.")
     existing = _explore_adrs(root)
     number = _next_number(root)
     bodies: dict[str, tuple[Path, str, str]] = {}
@@ -232,9 +276,9 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
                 if kept == path.read_text(encoding="utf-8"):
                     body = kept
         bodies[card["id"]] = (path, ref, body)
-    differ = [(path, ref) for path, ref, body in bodies.values()
-              if path.exists() and path.read_text(encoding="utf-8") != body]
-    for path, ref in differ:
+    for cid, (path, ref, body) in bodies.items():
+        if not path.exists() or path.read_text(encoding="utf-8") == body:
+            continue
         status = str(front_matter(path.read_text(encoding="utf-8"))[0]
                      .get("status", "")).lower()
         if status != "accepted":
@@ -242,32 +286,41 @@ def seed_from_explore(root, doc: Path, force: bool = False) -> dict:
                 f"architect: {ref} has status {status!r} and its card "
                 f"changed. Set it to accepted or supersede it with a new "
                 f"ADR.")
-        if not force:
-            raise HarnessError(
-                f"architect: {ref} differs from its frozen card. Write an "
-                f"ADR that supersedes {ref}, or use --force to rewrite it.")
-    written, unchanged = [], []
-    (root / "adr").mkdir(exist_ok=True)
-    for path, ref, body in bodies.values():
-        if path.exists() and path.read_text(encoding="utf-8") == body:
-            unchanged.append(ref)
-            continue
-        path.write_text(body, encoding="utf-8")
-        written.append(ref)
+        raise HarnessError(
+            f"architect: {ref} records a different choice for {cid}. Write "
+            f"an ADR that supersedes it, then run this again.")
     open_path = explore_path(root, "OPEN.md")
     opens = (parse_open(open_path.read_text(encoding="utf-8"))
              if open_path.is_file() else {})
     refs = {cid: ref for cid, (_path, ref, _body) in bodies.items()}
-    doc.parent.mkdir(parents=True, exist_ok=True)
-    doc.write_text(render_doc(cards, refs, opens), encoding="utf-8")
+    old_doc = (doc.read_text(encoding="utf-8")
+               if doc.exists() and not force else None)
+    written, unchanged = [], []
+    (root / "adr").mkdir(exist_ok=True)
+    for path, ref, body in bodies.values():
+        if path.exists():
+            unchanged.append(ref)
+            continue
+        path.write_text(body, encoding="utf-8")
+        written.append(ref)
+    if old_doc is None:
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text(render_doc(cards, refs, opens), encoding="utf-8")
+        stage, appended = 3, [c["id"] for c in _ordered(cards)]
+    else:
+        new_doc, appended = append_cards(old_doc, cards, refs, opens)
+        if new_doc != old_doc:
+            doc.write_text(new_doc, encoding="utf-8")
+        marker = _STAGE.search(old_doc)
+        stage = int(marker.group(1)) if marker else 1
     stale = sorted(f"adr/{p.name}" for cid, (p, _i)
                    in existing.items() if cid not in bodies)
     for ref in stale:
         print(f"check: {ref} is accepted but its card is parked or gone. "
               f"Write an ADR that supersedes {ref}.", file=sys.stderr)
-    return {"doc": str(doc), "stage": 3, "adrs": written,
+    return {"doc": str(doc), "stage": stage, "adrs": written,
             "unchanged": unchanged, "rows": sorted(bodies),
             "parked": [c["id"] for c in cards
                        if chosen_letter(c) == "parked"],
-            "stale": stale,
+            "stale": stale, "appended": appended,
             "source": f"{EXPLORE_DIR}/DECISIONS.md"}

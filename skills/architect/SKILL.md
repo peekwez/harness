@@ -13,8 +13,8 @@ with an explicit project `--root`; the `!` substitutions and
 # /harness:architect
 
 You drive Phase 0 in five stages. The working document is
-`docs/architecture.md` (a source command creates it (`--from-explore`, `--from-spec`
-or `--skip-explore`)). Every stage writes typed
+`docs/architecture.md`. A source command creates it: `--from-explore`, `--from-spec`
+or `--skip-explore`. Every stage writes typed
 blocks to that document as it goes: long architecting is multiple short
 sessions over a durable artifact — never rely on transcript survival.
 
@@ -28,10 +28,11 @@ results, real runtime checks and planned code-coverage/trace attribution. Keep
 the matrix in the working design and include it in the peer's input packet.
 
 **The working document needs a source.** When `docs/architecture.md`
-exists, resume at its stage marker. Otherwise run one of these commands as
-your first action:
+exists, resume at its stage marker, with one exception. If explore/ is frozen and its cards have no ADR yet, run `harness architect --from-explore` first, even when the working document exists; it adds the cards and keeps your stage.
+When the document does not exist, run one of these commands as your first
+action:
 
-- `explore/DECISIONS.md` is frozen: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-explore`. It writes one ADR and one decision row for each chosen card. It seeds the document at stage 3.
+- `explore/DECISIONS.md` is frozen: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-explore`. It writes one ADR and one decision row for each chosen card. It seeds the document at stage 3. It never rewrites an existing ADR. When a card changes after its ADR exists, write an ADR that supersedes it, then run the command again.
 - The repo has a spec (a design doc, an RFC, a platform spec): `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-spec <path>`. Do not derive the spec again question by question.
 - The human chose to skip explore: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --skip-explore "<reason>"`. Write the human's reason in their words. It records the reason in the working document. A new document starts at stage 1.
 
@@ -92,5 +93,5 @@ remaining decisions to the human at final signoff.
 
 At every stage boundary: update the `<!-- stage: N -->` marker, tell the user
 the session can safely end, and name the workflow that resumes: `/harness:architect`
-in Claude Code, or the architect skill in Codex. The CLI `architect --from-spec`
-seeds a document; it is not the command for resuming the design conversation.
+in Claude Code, or the architect skill in Codex. The source commands `architect --from-explore`, `--from-spec`
+and `--skip-explore` seed a document; they are not the commands for resuming the design conversation.

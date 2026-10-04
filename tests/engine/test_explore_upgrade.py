@@ -73,3 +73,26 @@ def test_a_repo_without_explore_verifies_with_no_g9_finding(toy):
     proc = run_cli("verify", root=toy)
     assert "EXPLORE_IMPORT" not in proc.stdout
     assert not (toy / "explore").exists()
+
+
+def test_marked_agents_with_a_custom_workflow_line_gets_a_check_line(toy):
+    body = (f"{MARK}\n```\ninit -> architect -> review -> author-gate "
+            f"# mine\n```\n")
+    _agents(toy, body)
+    step = _step()
+    assert step.describe(toy) == []
+    assert step.advise(toy) == [
+        "check: add explore before architect in the AGENTS.md workflow "
+        "line by hand."]
+    assert step.apply(toy, None) == []
+    assert (toy / "AGENTS.md").read_text() == body
+
+
+def test_marked_agents_with_explore_or_old_line_gets_no_check_line(toy):
+    step = _step()
+    _agents(toy, f"{MARK}\n```\n{NEW}\n```\n")
+    assert step.advise(toy) == []
+    _agents(toy, f"{MARK}\n```\n{OLD}\n```\n")
+    assert step.advise(toy) == []
+    _agents(toy, f"{MARK}\n# AGENTS\n")
+    assert step.advise(toy) == []

@@ -111,7 +111,7 @@ def _boundary(text: str, patterns: list, source: str, rule_ref: str) -> dict:
             "text": text, "patterns": patterns}
 
 
-def _out_of_force(root) -> set:
+def out_of_force(root) -> set:
     """ADR ids that no longer bind: status superseded, or named in another
     ADR's supersedes list."""
     out = set()
@@ -125,6 +125,9 @@ def _out_of_force(root) -> set:
         for s in fm.get("supersedes", []) or []:
             out.add(str(s))
     return out
+
+
+_out_of_force = out_of_force  # the pre-0.10 private name
 
 
 def compile_substrate(root, working_doc=None, config=None) -> dict:
@@ -145,7 +148,7 @@ def compile_substrate(root, working_doc=None, config=None) -> dict:
               "pruned": [], "warnings": [], "adrs": [],
               "skipped_superseded": [], "advisory_only": []}
     now = now_iso()
-    superseded_adrs = _out_of_force(root)
+    superseded_adrs = out_of_force(root)
     # per-compile authored view of each abstraction, rebuilt from in-force ADRs
     authored: dict = {}  # aid -> {"kind":…, "domain":…, "refs":[…]}
     # which ADR claimed each id: a doc row claiming it too is a hard error
@@ -478,10 +481,10 @@ def author_gate(root, working_doc=None) -> dict:
                 shown = str(doc.resolve().relative_to(root.resolve()))
             except ValueError:
                 shown = str(working_doc)
-            gaps.append(f"working document {shown!r} does not exist yet — "
-                        f"start Phase 0 with /harness:architect (stage 1 "
-                        f"creates it), or seed it from an existing spec: "
-                        f"harness architect --from-spec <path>")
+            gaps.append(f"working document {shown!r} does not exist yet. "
+                        f"Run harness explore, then harness architect "
+                        f"--from-explore. Or pass --from-spec <path> or "
+                        f"--skip-explore \"<reason>\".")
         else:
             for q in _unresolved_open_questions(doc.read_text(encoding="utf-8")):
                 gaps.append(f"open question unresolved and not deferred-with-owner: {q}")

@@ -140,3 +140,15 @@ def test_freeze_without_git_identity_fails(toy):
     assert proc.returncode == 1
     out = json.loads(proc.stdout)
     assert any("git user.name is not set" in p for p in out["problems"])
+
+
+def test_freeze_refuses_a_row_over_150_words(toy):
+    long = " ".join(["word"] * 160)
+    _write(toy, decisions=DECISIONS.replace(
+        "- Solves: One file holds all orders. No server runs.",
+        f"- Solves: {long}."))
+    code, out = _freeze(toy)
+    assert code == 1
+    assert out["frozen"] is False
+    assert any("D-E1" in p and "limit is 150" in p for p in out["problems"])
+    assert freeze_state(toy) is None

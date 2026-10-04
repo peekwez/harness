@@ -144,8 +144,8 @@ def test_architect_skill_names_the_three_sources_and_the_card():
                  "refuses to start", "../explore/card.md"):
         assert text in body, text
     assert "create it if missing" not in body
-    assert ("a source command creates it (`--from-explore`, `--from-spec` "
-            "or `--skip-explore`)") in body
+    assert ("A source command creates it: `--from-explore`, `--from-spec` "
+            "or `--skip-explore`.") in body
     assert "../explore/card.md" in _read("skills/architect/stage-converge.md")
     assert "--skip-explore" in _read("skills/architect/stage-brainstorm.md")
 
@@ -203,3 +203,42 @@ def test_explore_skill_text_passes_lint_text():
     paths = sorted(SKILL.glob("*.md")) + [PLUGIN_ROOT / "agents" /
                                          "architect.md"]
     assert lint_paths(paths, PLUGIN_ROOT / "templates" / "glossary.md") == []
+
+
+FROM_EXPLORE_FIRST = ("If explore/ is frozen and its cards have no ADR yet, "
+                      "run `harness architect --from-explore` first, even "
+                      "when the working document exists; it adds the cards "
+                      "and keeps your stage.")
+
+
+def test_resume_rule_runs_from_explore_first_for_new_cards():
+    for rel in ("skills/architect/SKILL.md", "agents/architect.md"):
+        body = _flat(_read(rel))
+        assert FROM_EXPLORE_FIRST in body, rel
+        assert "resume at its stage marker" in body, rel
+
+
+def test_architect_skill_names_all_three_seed_commands():
+    body = _flat(_read("skills/architect/SKILL.md"))
+    assert ("The source commands `architect --from-explore`, `--from-spec` "
+            "and `--skip-explore` seed a document") in body
+    assert "use --force to rewrite" not in body
+
+
+def test_multiple_choice_is_for_ordinary_questions_only():
+    for rel in ("agents/architect.md", "skills/architect/stage-brainstorm.md"):
+        body = _flat(_read(rel))
+        assert "Ordinary questions are multiple choice" in body, rel
+        assert "Big decisions use the decision card" in body, rel
+
+
+def test_agent_reuses_explore_skill_levels():
+    body = _flat(_read("agents/architect.md"))
+    assert ("After `--from-explore`, reuse the skill levels gauged during "
+            "explore. Do not calibrate again.") in body
+
+
+def test_brainstorm_says_where_skip_path_cards_live():
+    body = _flat(_read("skills/architect/stage-brainstorm.md"))
+    assert ("On the skip or spec path, write each card in the working "
+            "document under its `[open-question]` block") in body
