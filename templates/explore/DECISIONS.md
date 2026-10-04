@@ -4,6 +4,8 @@ Write one card for each big decision. Big decisions are stores,
 transports, tiers, seams, trust boundaries, and anything that is hard to
 undo. The card format is in the explore skill, in `card.md`.
 The human signs this file with `harness explore --freeze`.
+Mark exactly one option `(recommended)`. When you show a card, end with:
+"Reply with a letter, 'explain more about X', or 'not sure, park it'."
 
 <!-- Copy this card for each decision. Harness does not read text inside this comment.
 
