@@ -37,6 +37,12 @@ gates:
   # verify` (a `fallback` entry does not qualify): a pre_change-only gate
   # has no edit to intercept in CI.
   # extra: [".harness/gates/namespace.py", "my_gates.dag:GATE"]
+  # A host that cannot stop an edit before it lands sets this to true (for
+  # example Cursor CLI). Each gate then also runs at its fallback events.
+  # degraded_mode: false
+  # At close, harness also runs the acceptance tests of every closed slice.
+  # Set this to false to skip that regression run.
+  # regression_at_close: true
 # acceptance:
 #   # The command that decides a slice is green (ADR-002 / D-012). Omit the
 #   # whole block and the engine runs the historical
@@ -105,10 +111,16 @@ gates:
 #   remote: origin
 #   base: main
 #   pr_cmd: "gh pr create --base {base} --head {branch} --title {title} --body-file {body}"
+# run:
+#   # After this many failed closes, harness parks the slice.
+#   max_close_attempts: 3
 review:
   # Ensemble sampling and golden replay (opt-in, default off). On, a
   # low-confidence would-block rubric answer is resampled 3 times and a
   # split parks; `harness review --replay` runs the golden set.
   ensemble: false
+  # Close runs the review stack over the slice diff. Set this to false to
+  # skip that review run.
+  # run_at_close: true
 languages:
 {{languages}}

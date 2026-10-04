@@ -54,7 +54,12 @@ A fresh `harness init` creates the files that name init in the last column. The 
 | `.claude/settings.local.json` | derived profile | no | `harness start`, in the slice worktree |
 | git notes under `refs/notes/harness` | derived | yes, as a git ref | close |
 
-[File formats](../reference/file-formats.md) gives the fields of each JSONL file.
+[File formats](../reference/file-formats.md) gives the fields of `backlog.jsonl`, `registry.jsonl`, `decisions.jsonl`, `slice-metrics.jsonl` and `verify.jsonl`. `harness verify` checks these files row by row.
+
+Two other files have no row schema:
+
+- Each row of `.harness/edges.jsonl` is one edge: `ts`, `type`, `from`, `to`, `commit` and `meta`. The engine accepts only its known edge types, for example `implements`, `uses`, `supersedes` and `override`.
+- Each row of `.harness/parked.jsonl` is one parked finding: `slice` and `finding`. `finding` is the full finding, with its `finding_id`.
 
 ## Merge drivers
 

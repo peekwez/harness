@@ -71,11 +71,13 @@ The engine enforces these checks:
 - The review stack runs over this slice's own diff and records its verdict.
   A blocking finding stops the close. That finding can come from the engine
   or from a reviewer agent. Nothing may stay parked for this slice.
-- The unit_complete gates pass: G1 manifest, G6 drift acknowledged, and
-  every `gates.extra` gate that runs at unit_complete. A touched file inside
-  a non-goal that a `gates.extra` gate cites blocks (G3).
-  Other G3 scope findings and G5 conformance advise; close lists undeclared
-  files under `scope_advisory`.
+- The unit_complete gates pass: G5, G6, G9 and every `gates.extra` gate
+  that runs at unit_complete. G6 blocks until each drift is acknowledged.
+  G9 blocks an import from `explore/`. G5 advises. A touched file inside a non-goal that a `gates.extra`
+  gate cites blocks (G3). Other G3 scope findings advise; close lists
+  undeclared files under `scope_advisory`.
+- Close itself blocks with rule_ref `gate:G1` on a parked slice or a
+  provenance note that it cannot write.
 - Reconciliation passes: uses ⊆ declares.
 - A slice that resolves security-marked decision rows needs a pass verdict
   from an independent forked reviewer (ADR-001). Dispatch the

@@ -123,12 +123,34 @@ def test_architect_agent_uses_decision_cards():
 
 
 def test_close_slice_names_every_blocking_unit_complete_source():
-    """R6: close blocks on G1, G6, cited non-goals (G3) and gates.extra."""
+    """R6: close blocks on G6, cited non-goals (G3) and gates.extra. The
+    gate list comes from the GATE dicts (final review: G1 is not one)."""
+    from engine.gates import builtin_gates
     text = (PLUGIN_ROOT / "skills" / "close-slice" / "SKILL.md").read_text()
     para = text[text.index("The unit_complete gates pass"):]
     para = para[:para.index("Reconciliation passes")]
-    for needle in ("G1", "G6", "gates.extra", "cites", "(G3)"):
+    for needle in ("G6", "gates.extra", "cites", "(G3)"):
         assert needle in para, needle
+    for gate in builtin_gates():
+        gid = gate.GATE["id"]
+        if "unit_complete" in gate.GATE["preferred"]:
+            assert re.search(rf"\b{gid}\b", para), gid
+    gates_line = para.split(".")[0]
+    assert "G1" not in gates_line, gates_line
+
+
+def test_agent_guidance_never_says_hand_edit_the_backlog():
+    """Final review: no CLI amends a slice row; never-hand-edit holds."""
+    rels = ("skills/build/SKILL.md", "skills/close-slice/SKILL.md",
+            "skills/harness/SKILL.md", "agents/builder.md")
+    offenders = [
+        f"{rel}:{i}: {line.strip()}"
+        for rel in rels
+        for i, line in enumerate((PLUGIN_ROOT / rel).read_text().splitlines(), 1)
+        if re.search(r"(add|edit|put)\b[^.]*\bpredicted_files\b", line,
+                     re.IGNORECASE)
+        or "slice row in `.harness/backlog.jsonl`" in line]
+    assert not offenders, "\n".join(offenders)
 
 
 def test_skills_and_agents_pass_lint_text():

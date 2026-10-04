@@ -4,7 +4,7 @@ harness 0.10 does not check API contracts. This page shows two ways to add the c
 
 ## Why contracts left core
 
-Decision D-0.10-09 removed contracts from core. Many repos had an unused `contracts/api.yaml`, and few used the stub generation or the contract lint.
+The [0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#d-010-09-contracts) removed contracts from core. Many repos had an unused `contracts/api.yaml`, and few used the stub generation or the contract lint.
 
 - `harness init` no longer writes `contracts/`. `harness compile` generates no stubs. `harness verify` does not lint contracts.
 - The `contract-first` skill was removed.
@@ -57,7 +57,7 @@ gates: {extra: [".harness/gates/contracts.py"]}
 ```
 
 - `adr:004` stands for your repo's ADR for the contract rule. A blocking finding must cite one.
-- The gate runs after each edit and at `unit_complete`, so `harness verify` also runs it in CI.
+- The gate runs after each edit and at `unit_complete`, so `harness verify` also runs it in CI. In CI it checks only the files that a closed slice declares.
 - The harness catalog lists only builtin codes. Describe `CONTRACT_NO_OPERATION_ID` in your own docs.
 
 [Repo-local gates](extra-gates.md) gives the full gate contract.

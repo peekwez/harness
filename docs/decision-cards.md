@@ -85,18 +85,19 @@ The example card in `card.md` chooses option A, "SQLite file", for "Where do ord
 SQLite file. One file holds all orders. No server runs. Trade-off: One writer at a time. Undo cost: medium, the SQL is portable but the file path is everywhere. Full card: adr/004-where-do-orders-live.md.
 ```
 
-The 0.10 design spec records its own decisions, D-0.10-01 to D-0.10-14, in a compact form of the card. It shows the chosen option in full and lists the other options under `Rejected`. This is D-0.10-05, copied from the spec:
+The [0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#3-decision-log) records its own decisions, D-0.10-01 to D-0.10-14, in a compact form of the card. It shows the chosen option in full and lists the other options under `Rejected`. This is D-0.10-03, copied from the spec:
 
 ```markdown
-### D-0.10-05: Commit shadows or not
+### D-0.10-03: How to enforce verification first
 
-- **Chosen:** shadows are a gitignored cache, built lazily.
-- **Solves:** repo weight, diff noise and G7 false blocks. Example: a change in `site/` changes no tracked file.
-- **Trade-off:** CI rebuilds shadows when G5 or G6 needs them. This adds seconds.
-- **1st order:** G7 is deleted.
-- **2nd order:** two machines with different tree-sitter versions can build different shadows. `doctor` reports the version.
-- **3rd order:** PRs lose shadow diffs. G6 drift acknowledgements become the only record of interface change, so G6 stays blocking.
+- **Chosen:** record red at slice start, check at close. An edit before the red record gives a one-line advisory.
+- **Solves:** tests that pass before the code exists. Example: a slice whose suite is green at start cannot close without a recorded reason.
+- **Trade-off:** an agent can still edit source before the red record. Close catches it.
+- **1st order:** `harness slice start` runs the acceptance suite once.
+- **2nd order:** each slice stores evidence that its tests could fail.
+- **3rd order:** the "wrong object" defect class from astralabs becomes visible at close.
 - **Undo cost:** low.
+- **Rejected:** block all edits until red (extra friction on each slice); execute mutants at close (slow; needs a mutation format).
 ```
 
 ## Decision rows and ADRs

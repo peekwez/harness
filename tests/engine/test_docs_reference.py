@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import inspect
 import json
+import re
 
 import pytest
 
@@ -94,9 +95,88 @@ def test_config_page_lists_every_default_key(pages):
     assert not missing, missing
     assert "```yaml" in page   # the annotated template
     assert "only in the annotated template" in page   # W7-P23
-    for key in ("acceptance.*", "landing.*", "gates.extra",
-                "gates.degraded_mode"):
-        assert f"`{key}`" in page, key
+
+
+def test_template_only_sentence_is_computed(hook, pages):
+    """Final review: the sentence names template keys minus the defaults."""
+    from engine import DEFAULT_CONFIG
+    template = (PLUGIN_ROOT / "templates" / "harness.yaml").read_text()
+    defaults = set(_flatten(DEFAULT_CONFIG))
+    only = [k for k in hook.template_keys(template) if k not in defaults
+            and not any(d.startswith(k + ".") for d in defaults)]
+    line = next(ln for ln in pages["reference/config.md"].splitlines()
+                if "only in the annotated template" in ln)
+    for key in ("gates.extra", "gates.degraded_mode", "acceptance.cmd",
+                "landing.mode", "run.max_close_attempts",
+                "review.run_at_close", "gates.regression_at_close"):
+        assert key in only, key
+    assert all(f"`{k}`" in line for k in only), line
+    assert "`gates.g3_mode`" not in line
+    assert "`languages`" not in line   # a default section, not a new key
+
+
+def test_template_is_valid_yaml():
+    import yaml
+    text = (PLUGIN_ROOT / "templates" / "harness.yaml").read_text()
+    doc = yaml.safe_load(text.replace("{{languages}}", "  python: true"))
+    assert doc["schema"] == 1 and "gates" in doc
+
+
+# A config read in the engine: `config.get("a"...).get("b"`,
+# `config["a"].get("b"`, `(config or {}).get("a")`, and so on. Each quoted
+# key after the first `config` on the line is one more dotted segment.
+# The first step must follow `config` at once: `f(config, x.get("id"))`
+# passes config on and reads no key.
+_CONFIG_READ = re.compile(
+    r"\bconfig\b(\s*(?:or \{\}\))?\s*(?:\.get\(|\[)\s*[\"']\w+[\"'].*)")
+_KEY_STEP = re.compile(r"(?:\.get\(|\[)\s*[\"'](\w+)[\"']")
+# `name = <config read of section S>` makes `name.get("k")` read S.k
+_ALIAS = re.compile(r"^\s*(\w+) = .*\bconfig\b.*\.get\(\s*[\"'](\w+)[\"']\)")
+# helper accessors: the call returns one config section
+_HELPERS = {"_acceptance_block(config)": "acceptance",
+            "landing_config(config)": "landing"}
+# keys read without a literal at the call site; each names its reason
+_NOT_STATIC = {
+    # landing.py validates every key against LANDING_DEFAULTS
+    "landing": ["landing." + k for k in ("mode", "remote", "base", "pr_cmd")],
+}
+
+
+def engine_config_reads() -> set:
+    keys = set()
+    for path in sorted((PLUGIN_ROOT / "engine").rglob("*.py")):
+        aliases = {}
+        for line in path.read_text().splitlines():
+            code = line.split("#", 1)[0]
+            alias = _ALIAS.match(code)
+            if alias and alias.group(1) != "config":
+                aliases[alias.group(1)] = alias.group(2)
+            for helper, section in _HELPERS.items():
+                for m in re.finditer(re.escape(helper)
+                                     + r"(?:\.get\(|\[)\s*[\"'](\w+)", code):
+                    keys.add(f"{section}.{m.group(1)}")
+            for name, section in aliases.items():
+                for m in re.finditer(rf"\b{name}\.get\(\s*[\"'](\w+)", code):
+                    keys.add(f"{section}.{m.group(1)}")
+            found = _CONFIG_READ.search(code)
+            if found:
+                keys.add(".".join(_KEY_STEP.findall(found.group(1))))
+    for extra in _NOT_STATIC.values():
+        keys.update(extra)
+    return keys
+
+
+def test_every_engine_config_read_is_on_the_config_page(pages):
+    """Final review: a key the engine reads is a key the page documents."""
+    page = pages["reference/config.md"]
+    reads = engine_config_reads()
+    assert {"run.max_close_attempts", "gates.regression_at_close",
+            "review.run_at_close", "gates.degraded_mode",
+            "acceptance.gate_cmd"} <= reads, reads
+    missing = sorted(k for k in reads
+                     if f"`{k}`" not in page
+                     and not ("." not in k and f"`{k}." in page))
+    assert not missing, missing
 
 
 def test_findings_page_lists_every_catalog_code(pages):

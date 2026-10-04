@@ -30,7 +30,7 @@ Close finds each changed file from git and runs its close checks on the full set
 
 ### Duplicate code
 
-G5 checks that a module uses only what its slice declares, and it looks for reimplementation. Its findings are advisory. Close blocks when uses are not within declares. G5 does not find a copy that has a different shape.
+G5 checks that a module uses only what its slice declares, and it looks for reimplementation. Its findings are advisory. Close blocks when uses are not within declares. At close, the review rubric R-dup can still block a reimplementation. G5 does not find a copy that has a different shape.
 
 ### Imports from the toy
 

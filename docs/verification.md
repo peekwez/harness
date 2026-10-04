@@ -34,7 +34,7 @@ def test_rollback_leaves_no_event_row(): ...
 - `kills:` names the bug that the test must catch. It can also go on the next comment line. harness does not run that bug as a mutant.
 - The link moves with the test. No mapping file exists.
 
-A typo breaks the link (D-0.10-07), so harness reports unknown ids in two places:
+A typo breaks the link (see [the 0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#d-010-07-how-a-test-links-to-a-statement)), so harness reports unknown ids in two places:
 
 - `harness compile` warns with `UNKNOWN_TEST_LINK` for each test comment that names an id that is not in `verify.jsonl`.
 - Close blocks with `UNKNOWN_STATEMENT` when the slice's `verifies` names an unknown id. It warns with `UNKNOWN_TEST_LINK` for an unknown id in the slice's own acceptance files.
@@ -50,7 +50,7 @@ harness writes `.harness/verification/<slice>.json`, and close commits it. The r
 | `slice` | the slice id |
 | `commit` | `HEAD` at the bind |
 | `ran_at` | the time of the run |
-| `exit_code` | the exit code of the suite, or null when it could not run |
+| `exit_code` | the exit code of the suite, or null when the suite did not start or timed out |
 | `output_tail` | the last 20 lines of output |
 | `red` | true when the suite ran and failed |
 | `green_at_start` | true when the suite ran and passed |

@@ -164,8 +164,9 @@ CATALOG: dict[str, str] = {
         "harness memory promote with the file."),
     "UNDECLARED_FILE": (
         "G3 found a change to a file outside the predicted files of the "
-        "slice. This finding is advisory. Add the file to predicted_files "
-        "before close."),
+        "slice. This finding is advisory. Record the reason with "
+        "`harness gates override --target file:<path>`. When the file "
+        "changes the slice scope, stop and tell the human."),
     "UNDECLARED_USE": (
         "G5 found an import of a registry entry that the slice does not "
         "declare. Close requires each use to be declared or overridden."),

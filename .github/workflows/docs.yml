@@ -12,13 +12,13 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
     if: github.repository == 'peekwez/harness'
+    # A new push to a pull request cancels its older build; main never does.
+    concurrency:
+      group: docs-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +32,10 @@ jobs:
       - name: Install docs tools
         run: pip install -r docs/requirements.txt
 
-      # Same pages the site publishes: README.md plus docs/ minus the
-      # unpublished folders. The default glossary is docs/glossary.md.
+      # README.md (linted, not published) plus the docs pages the site
+      # publishes. docs/hooks/ holds build inputs: a unit test lints
+      # file-formats.md, the prose of the generated File formats page.
+      # The default glossary is docs/glossary.md.
       - name: Lint docs text (STE-80)
         run: |
           find docs -name '*.md' \
@@ -51,6 +53,10 @@ jobs:
   deploy:
     if: github.repository == 'peekwez/harness' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
+    # One deploy at a time. A queued deploy waits and is never cancelled.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       pages: write

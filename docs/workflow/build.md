@@ -16,8 +16,8 @@ harness start --slice orders-1
 2. It creates the worktree `.worktrees/<slice>` on the branch `slice/<slice>`. When the worktree exists, it resumes there.
 3. It writes a sandbox profile to `.claude/settings.local.json` in the worktree. Git does not track that file.
 4. It binds the slice to the session and as the repo default. It sets the status to `in_progress` and records `started_at_commit`.
-5. It takes the G6 baseline of the public interfaces.
-6. It writes the red record.
+5. It writes the red record.
+6. It takes the G6 baseline of the public interfaces.
 7. It prints the slice context, under the cap.
 
 The sandbox profile has these parts:

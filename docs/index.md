@@ -77,6 +77,21 @@ pip install pyyaml tree-sitter tree-sitter-language-pack
 
 Then run `/harness:init` in your repo. Until you run init, the hooks enforce nothing, and the host's own permissions still decide.
 
+A first run in your repo uses these steps:
+
+```text
+/harness:init                    # create the substrate and wire the hooks
+/harness:explore                 # toy, decision cards and statements in explore/
+harness explore --freeze         # you sign the cards and the statements
+/harness:architect               # cards become decision rows and ADRs; you sign
+/harness:backlog                 # slices with red acceptance tests
+/harness:build slice-001         # worktree, sandbox and red record; the slice runs to close
+/harness:review slice-001        # manual: build runs review; use this to review again
+/harness:close-slice slice-001   # resume: build runs close; use this when a close stopped
+```
+
+You have a spec already? Start with `harness architect --from-spec docs/spec.md`.
+
 ## Where to go next
 
 - [Slice lifecycle](concepts/lifecycle.md) shows the full flow as a diagram.

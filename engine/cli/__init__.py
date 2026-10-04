@@ -31,7 +31,8 @@ from engine.cli.upgrade import cmd_upgrade
 __all__ = ["COMMANDS", "build_parser", "main"]
 
 # name -> handler. The single dispatch table: the argparse subparsers below,
-# the README-coverage test and any host enumerating the CLI all read it.
+# the docs CLI reference test (tests/engine/test_docs_reference.py) and any
+# host enumerating the CLI all read it.
 COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
     "upgrade": cmd_upgrade, "extract": cmd_extract,

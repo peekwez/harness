@@ -108,6 +108,6 @@ def check(ctx) -> list:
             f"{rel} is outside the declared files of slice "
             f"{ctx.work_unit_id}.",
             severity="advisory", key=rel + "|" + ctx.work_unit_id,
-            fix=f"Add {rel} to predicted_files of slice {ctx.work_unit_id} "
-                f"in .harness/backlog.jsonl."))
+            fix=f"harness gates override --slice {ctx.work_unit_id} "
+                f"--target file:{rel} --justification \"<why>\"."))
     return findings

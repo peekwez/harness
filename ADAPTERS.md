@@ -35,9 +35,9 @@ enforcement is available almost everywhere.
   guidance is universal even before an adapter exists.
 - **`harness verify` in CI** — zero framework involvement; the enforcement
   backstop is identical regardless of which agent produced the commits.
-- **The CLI itself** — every harness above can shell out, so the full
-  workflow (`resolve`, `gates`, `close-slice`, `review`, `status`) is usable
-  from any of them today, adapter or not.
+- **The CLI itself** — every harness above can shell out. So each of them
+  can use the full workflow (`resolve`, `gates`, `close-slice`, `review`,
+  `status`) today, with or without an adapter.
 
 ## Shipped adapters
 
@@ -65,10 +65,10 @@ Approval prompts are not the enforcement layer in a harness repo — the
 pre-change gates and CI verify are — so each host's prompts can be safely
 pre-approved, with network-egress commands (`git push`/`git remote`) kept
 denied everywhere. Slice worktrees live at `.worktrees/<slice>` INSIDE the
-repo precisely so these profiles cover them: acceptEdits (Claude Code),
-workspace-write sandboxes (Codex), and workspace-scoped `Write(**)` allows
-(Cursor) all stop at the workspace boundary, and an out-of-repo worktree
-would prompt — or be blocked — on every edit:
+repo, so these profiles cover them. acceptEdits (Claude Code),
+workspace-write sandboxes (Codex) and workspace-scoped `Write(**)` allows
+(Cursor) all stop at the workspace boundary. An out-of-repo worktree
+would prompt, or be blocked, on every edit:
 
 | Host | Profile | Mechanism |
 |---|---|---|
@@ -83,7 +83,7 @@ would prompt — or be blocked — on every edit:
 
 1. Map the host's events onto: `session_start`, `pre_context`, `pre_change`,
    `post_change`, `unit_complete` (see `hooks/adapter.py` — the Claude Code
-   reference is 346 lines).
+   reference is about 350 lines).
 2. Translate verdicts: `block` → the host's deny mechanism; `injections` →
    the host's context-injection mechanism; respect the host's loop guards
    (e.g. Codex/Claude `stop_hook_active`, Cursor `loop_count`).

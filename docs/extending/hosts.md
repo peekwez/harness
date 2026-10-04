@@ -28,7 +28,7 @@ The exit code tells the adapter what happened:
 
 ## Write an adapter
 
-An adapter is one file. It translates the host's hooks to the five events, and the verdict back to the host's answers. The Claude Code adapter is [`hooks/adapter.py`](https://github.com/peekwez/harness/blob/main/hooks/adapter.py), 346 lines. Most of that file is the permit layer for shell commands and the fallback when the engine is down.
+An adapter is one file. It translates the host's hooks to the five events, and the verdict back to the host's answers. The Claude Code adapter is [`hooks/adapter.py`](https://github.com/peekwez/harness/blob/main/hooks/adapter.py), about 350 lines. Most of that file is the permit layer for shell commands and the fallback when the engine is down.
 
 An adapter does these things:
 
@@ -58,7 +58,7 @@ Each adapter must pass the tests in `tests/adapter-conformance/`:
 - `test_multi_adapters.py` checks the Codex, Gemini and Cursor adapters. It checks deny before the slice context loads, injection, a non-goal deny, compaction, the inert repo and the loop guards.
 - `test_opencode_adapter.py` runs the OpenCode plugin under node. It skips when node is missing.
 
-`make test` runs them with the rest of the suite, so one run keeps each adapter correct (D-0.10-10). The Claude Code plugin does not load the other adapters, so they cost no tokens.
+`make test` runs them with the rest of the suite, so one run keeps each adapter correct. The [0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#d-010-10-other-host-adapters) gives the reasons. The Claude Code plugin does not load the other adapters, so they cost no tokens.
 
 ## Degraded mode
 

@@ -12,7 +12,7 @@ Pass `--commit HEAD`. The engine resolves it to a SHA, and the git note goes ont
 
 ## Close checks
 
-Close blocks when one of the six checks from the spec is false:
+Close blocks when one of the six [close checks](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#64-close-checks) is false:
 
 1. The acceptance suite of the slice is green.
 2. The regression suite of the closed slices is green.
@@ -76,6 +76,6 @@ In pull request mode, close then pushes the branch and opens the pull request. S
 
 After review and before the commit, the close-slice skill offers personal memory for promotion. It runs `harness memory changed --slice <id>`. The output lists the personal memory files that changed since the slice started.
 
-When the list is not empty, the agent asks the human: "Promote any to shared?" For each file that the human picks, the agent runs `harness memory promote <file>`, and the host asks the human to approve it.
+When the list is not empty, the agent asks the human: "Promote any to shared?" For each file that the human picks, the agent runs `harness memory promote <file>`. On Claude Code, the host asks the human to approve it.
 
 The promoted facts go into the slice commit. See [Memory](../memory.md).

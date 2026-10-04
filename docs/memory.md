@@ -1,6 +1,6 @@
 # Memory
 
-harness 0.10 manages one kind of memory: shared team facts that a human chose. Each person's own agent memory stays with the host (D-0.10-02).
+harness 0.10 manages one kind of memory: shared team facts that a human chose. Each person's own agent memory stays with the host. The [0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#d-010-02-memory) gives the reasons.
 
 ## Personal memory
 
@@ -44,7 +44,7 @@ Promote writes into the current tree. At close, the promoted files go into the s
 
 Two layers stop an agent from writing shared memory:
 
-- **G10** blocks each write to `.claude/memory/shared/` through the host's edit tools. It runs in the engine at `pre_change`, so each host adapter gets it. No override and no exempt path applies. Its fix names `harness memory promote`.
+- **G10** blocks each write to `.claude/memory/shared/` through the host's edit tools. It runs in the engine at `pre_change`. On Claude Code it stops the write. On Cursor CLI (degraded mode) it runs only after the edit lands, so it reports the write and does not undo it. No override and no exempt path applies. Its fix names `harness memory promote`.
 - **The permit layer** asks a human for each `harness memory promote`, and for each other `harness memory` subcommand except `changed`. It also asks for a shell command that names the shared folder. It never approves these on its own.
 
 The shipped Claude Code profile also has `ask` rules for `harness memory promote`. A human approves each promotion.
@@ -63,9 +63,9 @@ The backstop for a shell write is a human who reads the committed diff. We recom
 
 harness 0.9 kept its own memory in `.harness/memory/`. `harness upgrade` retires it in these steps:
 
-1. It exports the rows that 0.9 kept on purpose to `.harness/cache/durable-memory-export.md`: attempts, adjudications and reasoning marked `promote`.
-2. Each exported row has a ready `harness memory promote --text` command.
-3. It asks first, then moves `.harness/memory/` to `.harness/cache/legacy-memory/<stamp>/`. It does not delete the folder.
+1. It asks first. When you answer no, it changes nothing.
+2. It exports the rows that 0.9 kept on purpose to `.harness/cache/durable-memory-export.md`: attempts, adjudications and reasoning marked `promote`. Each exported row has a ready `harness memory promote --text` command.
+3. It moves `.harness/memory/` to `.harness/cache/legacy-memory/<stamp>/`. It does not delete the folder.
 4. It removes the `.harness/memory/` lines from `.gitattributes` and `.gitignore`.
 5. It creates `.claude/memory/shared/MEMORY.md` when the index is missing.
 6. It adds the shared memory import to a harness-written `CLAUDE.md`. For a `CLAUDE.md` with no harness marker, it prints a `check:` line with the import to add by hand.

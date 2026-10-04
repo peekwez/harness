@@ -10,6 +10,7 @@ import argparse
 import importlib.util
 import inspect
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -136,16 +137,42 @@ def _flatten(d: dict, prefix: str = ""):
             yield f"{prefix}{key}", value
 
 
+# A key line of the template, live or commented out once ("# key:"). A
+# comment inside a commented block ("#   # text") is prose, not a key.
+_TEMPLATE_KEY = re.compile(r"^(\s*)(?:#(\s*))?([a-z_][a-z0-9_]*):(?:\s|$)")
+
+
+def template_keys(template_text: str) -> list:
+    """The dotted keys of the annotated template, commented ones included."""
+    keys, stack = [], []
+    for line in template_text.splitlines():
+        match = _TEMPLATE_KEY.match(line)
+        if not match:
+            continue
+        # "# key" sits at the column of "#"; one space follows the marker
+        indent = len(match.group(1)) + max(len(match.group(2) or "") - 1, 0)
+        while stack and stack[-1][0] >= indent:
+            stack.pop()
+        stack.append((indent, match.group(3)))
+        keys.append(".".join(name for _, name in stack))
+    parents = {k.rsplit(".", 1)[0] for k in keys if "." in k}
+    return [k for k in keys if k not in parents]
+
+
 def render_config(default_config: dict, template_text: str) -> str:
     rows = [[f"`{key}`", f"`{json.dumps(value)}`"]
             for key, value in _flatten(default_config)]
+    defaults = {key for key, _ in _flatten(default_config)}
+    # `languages:` holds a placeholder, so the template shows no child key
+    only = [k for k in template_keys(template_text) if k not in defaults
+            and not any(d.startswith(k + ".") for d in defaults)]
     return _page(
         "Config keys",
         "`.harness/config.yaml` holds the config of one repo. The engine "
         "merges it over the defaults below.\n",
-        "The keys `acceptance.*`, `landing.*`, `gates.extra` and "
-        "`gates.degraded_mode` have no entry in the defaults. They appear "
-        "only in the annotated template below.\n",
+        "These keys have no entry in the defaults. They appear only in "
+        "the annotated template below: "
+        + ", ".join(f"`{k}`" for k in only) + ".\n",
         "## Defaults\n", _table(["Key", "Default"], rows),
         "## Annotated template\n",
         "`harness init` writes this file. `{{languages}}` becomes the "

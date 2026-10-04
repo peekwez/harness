@@ -4,7 +4,7 @@ Explore tests ideas fast and gives each big decision evidence. The agent builds 
 
 ## When explore is required
 
-Explore is required for a new design (D-0.10-12). `harness architect` refuses to start unless one of these is true:
+Explore is required for a new design. The [0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#d-010-12-is-explore-required) gives the reasons. `harness architect` refuses to start unless one of these is true:
 
 - `explore/DECISIONS.md` is frozen.
 - You pass `--from-spec <path>` for an existing spec.
@@ -77,6 +77,6 @@ G9 resolves imports this way:
 - **Go:** an import path that starts with `<module>/explore`, where `<module>` comes from the nearest `go.mod`.
 - **Rust:** a `use` path whose first module segment is `explore`.
 
-`explore/` is in the default `gates.exempt_paths`. An edit there gives no G3 or G5 finding and no red-record advisory.
+`explore/` is in the default `gates.exempt_paths`. An edit there gives no G3 undeclared-file finding, no G5 finding and no red-record advisory. G3 still checks the non-goals.
 
 [Trade-offs and limits](../trade-offs.md#imports-from-the-toy) lists the imports that G9 cannot see.

@@ -44,8 +44,8 @@ harness explore --freeze         # you sign the cards and the statements
 /harness:architect               # cards become decision rows and ADRs; you sign
 /harness:backlog                 # slices with red acceptance tests
 /harness:build slice-001         # worktree, sandbox and red record; the slice runs to close
-/harness:review slice-001        # a forked reviewer reads the substrate and the diff
-/harness:close-slice slice-001   # proof checks, commit, git note, then merge or pull request
+/harness:review slice-001        # manual: build runs review; use this to review again
+/harness:close-slice slice-001   # resume: build runs close; use this when a close stopped
 ```
 
 You have a spec already? Start with `harness architect --from-spec docs/spec.md`.
@@ -60,7 +60,7 @@ harness upgrade --plugin --host claude
 harness upgrade
 ```
 
-- The `--dry-run` run prints the plan and changes nothing.
+- The `--plugin --dry-run` run prints only the host commands. `harness upgrade --dry-run` prints the step plan. Neither changes anything.
 - `--plugin` updates the plugin, then runs the new engine on the project. Use `--host codex` for Codex.
 - The plugin run has no terminal, so it skips each step that asks first. Run `harness upgrade` again in a terminal, or add `--yes`.
 - Upgrade does not commit. Run `harness doctor --substrate` and `harness verify`, read `git diff`, then commit.

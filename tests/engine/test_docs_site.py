@@ -321,18 +321,131 @@ def test_task5_pages_state_the_code_facts():
             "EXTRA_GATE_LOAD_ERROR", "EXTRA_GATE_RUN_ERROR", "rule_ref",
             "harness compile", "advisory only", "G9"],
         "extending/hosts.md": [
-            "346 lines", "afterFileEdit", "followup_message", "--root",
+            "afterFileEdit", "followup_message", "--root",
             "July 2026", "Exit 2"],
         "internals.md": [
             "500 lines or fewer", "40 lines or fewer", "check(ctx)",
             "build_parser()", "allow_with_findings", "started_at_commit"],
         "upgrading.md": [
             "--dry-run", "--yes", "check:", "legacy-memory",
-            "git rm --cached", "harness init --migrate", "W8",
+            "git rm --cached", "harness init --migrate",
+            "Later releases can add steps",
             "legacy_verification: true", "/harness:harness"],
     }
     missing = [f"{page}: {n}" for page, ns in needles.items()
                for n in ns if n not in (DOCS / page).read_text()]
+    assert not missing, missing
+
+
+def test_final_review_facts():
+    """The W7 final review: each page states what the code does today."""
+    needles = {
+        "workflow/build.md": ["5. It writes the red record.\n"
+                              "6. It takes the G6 baseline"],
+        "concepts/lifecycle.md": ["the red record, the G6 baseline |"],
+        "hooks/file-formats.md": [
+            "A later bind rewrites only a green or `runner_error` record."],
+        "concepts/substrate.md": ["`.harness/edges.jsonl` is one edge",
+                                  "`.harness/parked.jsonl` is one parked"],
+        "verification.md": ["null when the suite did not start or timed out"],
+        "memory.md": ["On Cursor CLI (degraded mode)", "1. It asks first."],
+        "workflow/close.md": ["On Claude Code, the host asks"],
+        "workflow/explore.md": ["G3 still checks the non-goals"],
+        "decision-cards.md": ["### D-0.10-03", "**Rejected:**"],
+        "trade-offs.md": ["R-dup"],
+        "extending/contracts.md": ["only the files that a closed slice"],
+        "extending/extra-gates.md": ["25 words or fewer"],
+        "upgrading.md": ["prints only the host commands",
+                         "`harness upgrade --dry-run` prints the step plan",
+                         "A non-goal blocks only when a gate cites it"],
+        "index.md": ["# resume: build runs close", "# manual: build runs"],
+    }
+    missing = [f"{page}: {n}" for page, ns in needles.items()
+               for n in ns if n not in (DOCS / page).read_text()]
+    readme = (PLUGIN_ROOT / "README.md").read_text()
+    missing += [f"README.md: {n}" for n in (
+        "# resume: build runs close", "# manual: build runs",
+        "prints only the host commands") if n not in readme]
+    assert not missing, missing
+
+
+def test_upgrading_has_no_workstream_jargon():
+    """Final review: a reader does not know what W8 is."""
+    text = (DOCS / "upgrading.md").read_text()
+    assert not re.search(r"\bW[0-9]\b", text)
+
+
+def test_public_docs_cite_no_bare_internal_ids():
+    """Final review: a D-0.10-xx id or a spec section links to the spec."""
+    bad = []
+    for p in public_docs():
+        for n, line in enumerate(p.read_text().splitlines(), 1):
+            if line.startswith(("#", "- **")):   # the copied example card
+                continue
+            for m in re.finditer(r"\bD-0\.10-\d\d\b|\bspec \d+\.\d+\b", line):
+                if "specs/2026-10-02-harness-0.10-design.md" not in line:
+                    bad.append(f"{p.relative_to(PLUGIN_ROOT)}:{n}: {m.group(0)}")
+    assert not bad, "\n".join(bad)
+
+
+def _about_lines(path):
+    n = len(path.read_text().splitlines())
+    return f"about {round(n / 50) * 50} lines"
+
+
+def test_adapter_size_matches_the_file():
+    """Final review: the stated size follows hooks/adapter.py."""
+    want = _about_lines(PLUGIN_ROOT / "hooks" / "adapter.py")
+    assert want in (DOCS / "extending" / "hosts.md").read_text(), want
+    assert want in " ".join((PLUGIN_ROOT / "ADAPTERS.md").read_text().split())
+
+
+def test_skill_count_matches_the_skills_folder():
+    n = len(list((PLUGIN_ROOT / "skills").glob("*/SKILL.md")))
+    assert f"| Skills | {n} workflow skills" in (DOCS / "index.md").read_text()
+    assert f"the {n} workflow skills" in (PLUGIN_ROOT / "README.md").read_text()
+
+
+def test_substrate_page_states_the_schema_version():
+    from engine import SCHEMA_VERSION
+    text = (DOCS / "concepts" / "substrate.md").read_text()
+    assert f"the value is `{SCHEMA_VERSION}`" in text
+
+
+def test_pages_name_the_packages_doctor_requires():
+    """Final review: doctor checks three packages; every page agrees."""
+    from engine.cli.common import _dep_status
+    packages = list(_dep_status())
+    pages = [PLUGIN_ROOT / "README.md", DOCS / "index.md",
+             DOCS / "internals.md", DOCS / "concepts" / "substrate.md"]
+    for page in pages:
+        text = page.read_text()
+        missing = [pkg for pkg in packages if f"{pkg}" not in text]
+        assert not missing, (page.name, missing)
+    assert "only required package" not in (DOCS / "internals.md").read_text()
+
+
+def test_internals_file_map_names_every_engine_module():
+    """Final review: each engine module has a row in the file map."""
+    text = (DOCS / "internals.md").read_text()
+    rows = re.findall(r"^\| `(engine/[^`]+)`(?: to `(engine/[^`]+)`)? \|",
+                      text, re.MULTILINE)
+    covered = set()
+    for first, last in rows:
+        covered.add(first)
+        if last:   # a range such as upgrade_w1.py to upgrade_w6.py
+            lo, hi = (int(re.search(r"(\d+)\.py$", x).group(1))
+                      for x in (first, last))
+            stem = re.sub(r"\d+\.py$", "", first)
+            covered.update(f"{stem}{i}.py" for i in range(lo, hi + 1))
+    missing = []
+    for path in sorted((PLUGIN_ROOT / "engine").rglob("*.py")):
+        rel = path.relative_to(PLUGIN_ROOT).as_posix()
+        if rel in covered:
+            continue
+        if any(rel.startswith(c) for c in covered if c.endswith("/")):
+            continue
+        missing.append(rel)
     assert not missing, missing
 
 
@@ -533,7 +646,12 @@ def test_docs_workflow_lints_builds_and_deploys():
     wf = _docs_workflow()
     jobs = wf["jobs"]
     assert wf["permissions"] == {"contents": "read"}
-    assert wf["concurrency"]["cancel-in-progress"] is False
+    assert "concurrency" not in wf   # a PR build must not queue a deploy
+    assert jobs["deploy"]["concurrency"] == {"group": "pages",
+                                             "cancel-in-progress": False}
+    assert jobs["build"]["concurrency"] == {
+        "group": "docs-${{ github.ref }}",
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}"}
     runs = "\n".join(s.get("run", "") for s in jobs["build"]["steps"])
     assert "pip install -r docs/requirements.txt" in runs
     assert "mkdocs build --strict" in runs

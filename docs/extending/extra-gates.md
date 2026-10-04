@@ -62,7 +62,7 @@ These rules apply:
 - The id must not be a builtin id or a retired id. G2, G4, G7 and G8 were removed in 0.10, and their ids stay reserved so that old overrides keep their meaning.
 - Each event name must be one of the five engine events.
 - `make_finding(code, rule_ref, message, severity, key=, fix=)` builds a finding. A blocking finding must have a `rule_ref`, such as an ADR of your repo.
-- Write the message and the fix in STE-80. Put the command or action that resolves the finding in `fix`.
+- Write the message and the fix in STE-80. The message says what is wrong and names the file, in 25 words or fewer. The engine does not count the words. Put the command or action that resolves the finding in `fix`.
 
 ## The gate context
 
@@ -84,7 +84,7 @@ These rules apply:
 
 ## Cite a non-goal
 
-A non-goal comes from a `[non-goal]` block in an ADR. G3 blocks an edit to a non-goal path only when a repo-local gate cites that non-goal (spec 4.1).
+A non-goal comes from a `[non-goal]` block in an ADR. G3 blocks an edit to a non-goal path only when a repo-local gate cites that non-goal. See [gates after 0.10](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#41-gates-after-010) in the design spec.
 
 To cite one, list its boundary id or its rule ref in `GATE["cites"]`:
 

@@ -49,7 +49,7 @@ A closed slice can also carry `landed_via`. The schema allows `local`, `pr` and 
 | Transition | Command | What harness checks | What it writes |
 |---|---|---|---|
 | Add a slice | `harness backlog add` | the id is new; each `--declares` id is in the registry; `--acceptance` is given; each `--verifies` id is in `.harness/verify.jsonl`; `--linear` looks like `GOO-73` | one row in `.harness/backlog.jsonl` with `status: planned` and `context_cost_estimate` |
-| Bind | `harness start --slice <id>` or `harness slice --slice <id>` | the slice is not closed; each `depends_on` slice is closed, or `--force` with `--justification`; the `acceptance` config is valid | `start` only: worktree `.worktrees/<id>` on branch `slice/<id>` and a sandbox profile. Both: the binding, `in_progress`, `started_at_commit`, the G6 baseline, the red record |
+| Bind | `harness start --slice <id>` or `harness slice --slice <id>` | the slice is not closed; each `depends_on` slice is closed, or `--force` with `--justification`; the `acceptance` config is valid | `start` only: worktree `.worktrees/<id>` on branch `slice/<id>` and a sandbox profile. Both: the binding, `in_progress`, `started_at_commit`, the red record, the G6 baseline |
 | Edit | host hooks | G1, G3 and G10 before the edit; G5 and G9 after it; one red-record advisory | findings; a block before the edit stops it, and a block after the edit reports it |
 | End of turn | Stop hook | G5, G6, G9 and repo-local gates at `unit_complete` | findings; a block stops the turn once |
 | Close | `harness close-slice --slice <id> --commit HEAD` | the checks on the [Close](../workflow/close.md) page | a substrate commit, a git note under `refs/notes/harness`, one `slice-metrics.jsonl` row, `status: closed` |

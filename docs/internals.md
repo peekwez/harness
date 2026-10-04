@@ -1,6 +1,6 @@
 # Internals
 
-This page is for contributors who change harness itself. The engine is plain Python 3.10 or later. Its only required package is `pyyaml`. `tree-sitter` and `tree-sitter-language-pack` build the shadows.
+This page is for contributors who change harness itself. The engine is plain Python 3.10 or later. It needs three packages: `pyyaml`, `tree-sitter` and `tree-sitter-language-pack`. The tree-sitter packages build the shadows. `harness doctor` reports the engine as not healthy when one of the three is missing.
 
 ## Engine layout
 

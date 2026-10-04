@@ -23,7 +23,7 @@ def test_rollback_leaves_no_event_row(): ...
 
 ## `.harness/verification/<slice>.json`
 
-This file is the red record. Every bind writes it: `harness slice --slice <slice>` or `harness start --slice <slice>` runs the acceptance suite of the slice. Close commits it with the rest of `.harness/`.
+This file is the red record. A bind (`harness slice --slice <slice>` or `harness start --slice <slice>`) runs the acceptance suite of the slice. The first bind writes it. A later bind rewrites only a green or `runner_error` record. Close commits it with the rest of `.harness/`.
 
 - `slice`, `commit`, `ran_at`: which slice, at which commit, at what time.
 - `exit_code`: the exit code of the acceptance suite.

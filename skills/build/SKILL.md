@@ -71,11 +71,14 @@ Loop discipline — in order:
 2. **Root cause before retry.** On ANY red test or gate block, run
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
-3. **Amend declarations before touching undeclared files.** If you need a
-   file outside `predicted_files`, add it to `predicted_files` on the
-   slice row in `.harness/backlog.jsonl` first. G3 reports an undeclared file as an advisory finding and
-   close lists it under `scope_advisory`. Declared work is auto-approved;
-   an undeclared edit still prompts.
+3. **Record a reason before touching undeclared files.** No command
+   changes a slice row, and you never edit `.harness/backlog.jsonl`. If you
+   need a file outside `predicted_files`, first run
+   `harness gates override --slice $1 --target file:<path> --justification "<why>"`.
+   G3 reports an undeclared file as an advisory finding. Close lists it
+   under `scope_advisory` unless an override names it. When the file
+   changes the slice scope, stop and tell the human. Declared work is
+   auto-approved; an undeclared edit still prompts.
 4. **Record abandoned approaches.** Record abandoned approaches in your personal
    memory. Never write `.claude/memory/shared/`; a human promotes facts there.
 5. **Session cycling, not compaction.** When context nears its limit:

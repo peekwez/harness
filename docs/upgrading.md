@@ -2,12 +2,12 @@
 
 harness 0.10 breaks 0.9. One command moves a repo to 0.10. This page says what that command changes, what it asks first, and what you check after it.
 
-This page describes the upgrade as the engine runs it today. W8 adds more: a final `harness doctor` and `harness verify` run, a proposed commit command, an `AGENTS.md` refresh and an "already on 0.10" report. W8 updates this page when it lands them.
+This page describes the upgrade as the engine runs it today. Later releases can add steps. This page lists each step that the engine has.
 
 ## Before you start
 
 1. Commit or stash your work. A clean tree shows exactly what the upgrade changed.
-2. Read the plan first: `harness upgrade --plugin --host claude --dry-run`. Use `--host codex` for Codex.
+2. Read the plan first. `harness upgrade --plugin --host claude --dry-run` prints only the host commands that it would run. `harness upgrade --dry-run` prints the step plan for the project. Use `--host codex` for Codex.
 3. Update the plugin and the project: `harness upgrade --plugin --host claude`.
 4. Start a new session, so that the host loads the 0.10 skills and hooks.
 
@@ -77,7 +77,7 @@ These steps can print `check:` lines:
 
 ## Renamed and removed
 
-Skills, from spec 10.1:
+Skills, from [the 0.10 design spec](https://github.com/peekwez/harness/blob/main/docs/internal/superpowers/specs/2026-10-02-harness-0.10-design.md#101-skills-18-to-11):
 
 | Old skill | Its content is now in |
 |---|---|
@@ -96,7 +96,7 @@ Each line below names something that was removed or added in the engine:
 - `harness memory write`, `flush` and `compact` were removed.
 - Gates G2, G4, G7 and G8 were removed. Their ids stay reserved, and old override edges stay as history.
 - The config keys `resolver.budget_tokens`, `resolver.ranking`, `resolver.degrade`, `telemetry.compaction_is_defect` and the top-level `ensemble` were removed.
-- `gates.g5_override` was removed, and `gates.g3_mode: block` was removed. G3 is advisory.
+- `gates.g5_override` was removed, and `gates.g3_mode: block` was removed. G3 scope findings are advisory. A non-goal blocks only when a gate cites it.
 - The upgrade added `review.ensemble: false` and `gates.exempt_paths`. When `contracts/` exists, upgrade adds it to `gates.exempt_paths`.
 
 Run `ls skills/` in the plugin to confirm the skill list.

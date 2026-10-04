@@ -58,3 +58,25 @@ def test_close_lists_undeclared_files_without_blocking(toy):
     out = json.loads(proc.stdout)
     assert out["closed"] is True
     assert out["scope_advisory"] == ["rogue.py"]
+
+
+def test_undeclared_file_fix_is_a_cli_command_not_a_hand_edit(tmp_path):
+    """Final review: the fix runs a supported command; the override it names
+    silences the advisory. Nothing tells the agent to edit backlog.jsonl."""
+    import shlex
+    from engine.findings import CATALOG
+    toy = build_toy_repo(tmp_path / "toy")
+    event = make_event("pre_change", session="g3fix", files=["rogue.py"])
+    hit = next(f for f in handle_event(event, toy)["findings"]
+               if f["code"] == "UNDECLARED_FILE")
+    assert len(hit["message"].split()) <= 25
+    assert "backlog.jsonl" not in hit["fix"]
+    assert "backlog.jsonl" not in CATALOG["UNDECLARED_FILE"]
+    argv = shlex.split(hit["fix"].replace('"<why>"', '"rogue is a fixture"')
+                       .rstrip("."))
+    assert argv[:3] == ["harness", "gates", "override"], argv
+    proc = run_cli(*argv[1:], root=toy)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    again = handle_event(make_event("pre_change", session="g3fix",
+                                    files=["rogue.py"]), toy)
+    assert "UNDECLARED_FILE" not in [f["code"] for f in again["findings"]]
