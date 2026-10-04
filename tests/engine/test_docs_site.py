@@ -338,3 +338,31 @@ def test_no_text_claims_cursor_reverts_edits():
     bad = [str(p.relative_to(PLUGIN_ROOT)) for p in paths
            if re.search(r"revert[- ]and[- ]retry", p.read_text(), re.I)]
     assert not bad, bad
+
+
+# Task 6: harness's own glossary.
+REQUIRED_HEADINGS["glossary.md"] = ["# Glossary"]
+
+GLOSSARY_TERMS = (
+    "slice", "substrate", "shadow", "gate", "finding", "decision row",
+    "decision card", "statement", "red record", "explore", "toy", "non-goal",
+    "override", "drift acknowledgement", "kills text", "shared memory",
+    "verdict", "event", "rule reference", "binding", "park", "adjudication",
+    "injection", "close", "landing", "ADR", "author gate", "acceptance suite",
+    "regression suite", "permit", "STE-80")
+
+
+def test_glossary_defines_each_core_term():
+    text = (DOCS / "glossary.md").read_text()
+    missing = [t for t in GLOSSARY_TERMS
+               if not re.search(rf"^- {re.escape(t)} — ", text, re.MULTILINE)]
+    assert not missing, missing
+
+
+def test_glossary_synonyms_are_enforced(tmp_path):
+    """Proves lint_text parses this file: a `not:` word in a page is flagged."""
+    from engine.lint_text import lint_paths
+    page = tmp_path / "page.md"
+    page.write_text("Each ticket is small.\n")
+    findings = lint_paths([page], DOCS / "glossary.md")
+    assert any("ticket" in f["text"].lower() for f in findings), findings
