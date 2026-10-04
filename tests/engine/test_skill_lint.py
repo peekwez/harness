@@ -57,8 +57,8 @@ def test_agent_guidance_names_no_removed_gate_or_committed_shadow():
 
 
 SKILLS_0_10 = {"adr-authoring", "architect", "backlog", "build",
-               "close-slice", "design-review", "harness", "init", "review",
-               "verification"}   # W6 adds "explore" -> the spec's 11
+               "close-slice", "design-review", "explore", "harness", "init",
+               "review", "verification"}
 
 REMOVED_SKILLS = ("adjudicate", "contract-first", "decision-tables",
                   "premortem", "review-rubrics", "shadow-context",

@@ -1,5 +1,11 @@
 # Stage 1 — Brainstorm protocol
 
+Stage 1 runs after `harness architect --skip-explore "<reason>"`. With a
+frozen `explore/`, the explore skill already did calibration and framing,
+and the document starts at stage 3. Use
+[../explore/calibrate.md](../explore/calibrate.md): calibrate before the
+first card when explore did not run.
+
 **With superpowers installed, run `superpowers:brainstorming` for this stage.** Bind it to harness artifacts:
 
 1. Its spec file is `docs/architecture.md`, never `docs/superpowers/specs/…`.
@@ -9,8 +15,10 @@
 The coverage map below still governs the questions and the exit criteria. Without superpowers, follow this protocol as written.
 
 Socratic elicitation. One question at a time; multiple-choice preferred (2–4
-options plus "other"). No solutioning until the problem space is mapped —
-if you catch yourself proposing architecture, stop and ask instead.
+options plus "other"). Map the problem space before you choose. When a big
+decision comes up, write a decision card with [../explore/card.md](../explore/card.md)
+and recommend one option. Do not pick a design without the human. The human
+answers with a letter, "explain more about X", or "not sure, park it".
 
 Order of operations:
 

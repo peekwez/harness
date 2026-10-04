@@ -37,12 +37,16 @@ stop: do not invoke this workflow, delegate, edit artifacts or call another peer
    checks can detect wrong paths, partial writes, stale state and failed recovery;
    identify missing scenarios and observability before implementation. Require
    [response.schema.json](response.schema.json), no edits or delegation.
+   When the design has decision cards, attack the "Would change it" line
+   and the `Evidence` of each card. Name the card id in each finding.
 4. **Reconcile.** Verify each finding against the packet. Record accepted,
    rebutted or deferred, with rationale and an owner for deferrals. Apply
    accepted changes to authored design/ADRs; real risks become a decision or
    explicit `[accepted-risk]` block. Unresolved choices follow the existing
    human/delegation contract. Peer agreement does not sign the author-gate or
    create a blocking rule; disagreements are evidence to resolve, not votes.
+   A finding that changes a choice updates the card. A new choice gets a
+   new card in the format of [../explore/card.md](../explore/card.md).
 5. **Persist.** Write the coverage record and validated peer response under
    `docs/design-reviews/`. Execution status and design assessment are separate:
    a completed response with `insufficient-context` leaves coverage incomplete.

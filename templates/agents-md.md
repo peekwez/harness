@@ -28,7 +28,7 @@ A gate block names its fix. Apply it. Closing a slice releases its binding.
 
 ```
 harness doctor                              # dependency preflight
-init -> architect -> author-gate            # Phase 0: a human signs
+init -> explore -> architect -> author-gate # Phase 0: a human signs
 backlog                                     # spec -> slices
 start -> build -> review -> close-slice     # one slice
 status / adjudicate / verify                # cost, disputes (via harness skill), CI

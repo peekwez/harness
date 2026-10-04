@@ -13,7 +13,8 @@ with an explicit project `--root`; the `!` substitutions and
 # /harness:architect
 
 You drive Phase 0 in five stages. The working document is
-`docs/architecture.md` (create it if missing). Every stage writes typed
+`docs/architecture.md` (a source command creates it (`--from-explore`, `--from-spec`
+or `--skip-explore`)). Every stage writes typed
 blocks to that document as it goes: long architecting is multiple short
 sessions over a durable artifact — never rely on transcript survival.
 
@@ -26,22 +27,34 @@ happy-path and relevant edge/failure/recovery scenarios, independent expected
 results, real runtime checks and planned code-coverage/trace attribution. Keep
 the matrix in the working design and include it in the peer's input packet.
 
-**If the repo already has a spec** (a design doc, an RFC, a platform spec),
-do not re-derive it Socratically. Seed the working document from it first —
-the model's own first action, once the human names the path:
+**The working document needs a source.** When `docs/architecture.md`
+exists, resume at its stage marker. Otherwise run one of these commands as
+your first action:
 
-```
-"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-spec <path to the spec>
-```
+- `explore/DECISIONS.md` is frozen: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-explore`. It writes one ADR and one decision row for each chosen card. It seeds the document at stage 3.
+- The repo has a spec (a design doc, an RFC, a platform spec): `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --from-spec <path>`. Do not derive the spec again question by question.
+- The human chose to skip explore: `"${CLAUDE_PLUGIN_ROOT}/bin/harness" architect --skip-explore "<reason>"`. Write the human's reason in their words. It records the reason in the working document. A new document starts at stage 1.
 
-That writes `docs/architecture.md` at `<!-- stage: 3 -->` (converge): every
-`##`/`###` heading becomes a `[constraint]` block with its first paragraph,
-every `TODO`/`TBD`/`Open:` line becomes an `[open-question]`, and the doc
-ends with an empty ```` ```harness-decisions ```` table. It refuses to
-overwrite an existing working document without `--force`. Then read the
-seeded blocks WITH the human — a seeded constraint is a claim to confirm,
-not a ratified decision — and continue at stage 3 below. Imported specs still
-need design review; imported approval claims do not count as this repo's review.
+With none of these, `harness architect` refuses to start. Run
+`/harness:explore` first.
+
+After `--from-explore`, do not ask again a question that a card answers.
+The decision row cites the ADR that holds the full card.
+
+`--from-spec` writes `docs/architecture.md` at `<!-- stage: 3 -->`
+(converge). Each `##` or `###` heading becomes a `[constraint]` block with
+its first paragraph. Each `TODO`, `TBD` or `Open:` line becomes an
+`[open-question]`. The document ends with an empty
+```` ```harness-decisions ```` table. It refuses to overwrite an existing
+working document without `--force`. Read the seeded blocks with the human.
+A seeded constraint is a claim to confirm, not a ratified decision. Then
+continue at stage 3 below. Imported specs still need design review.
+Imported approval claims do not count as the review of this repo.
+
+Each new big decision uses the decision card in
+[../explore/card.md](../explore/card.md). Use
+[../explore/calibrate.md](../explore/calibrate.md): calibrate before the
+first card when explore did not run.
 
 Determine the current stage by reading the working document's `<!-- stage: N -->`
 marker (default 1 if absent), then follow the matching protocol file:
