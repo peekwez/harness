@@ -96,4 +96,4 @@ def test_advise_names_each_worktree_with_a_backlog(tmp_path):
     lines = advise(toy)
     assert lines == ["check: run harness upgrade in .worktrees/slice-042 to "
                      "mark its in-flight slice legacy."]
-    assert _step().describe(toy) != [] or True
+    assert not any(c.startswith("check:") for c in _step().describe(toy))
