@@ -222,9 +222,9 @@ def _error_inventory():
     return long, unevaluated
 
 
-def test_error_string_inventory_is_report_only(capsys):
-    """W4-11: HarnessError (and subclass) messages over 25 words. W8
-    rewrites them. This test reports the inventory and never fails."""
+def test_error_string_inventory_is_clean(capsys):
+    """W4-11: HarnessError (and subclass) messages stay at 25 words or
+    fewer, and every message is statically evaluable (W8-P10)."""
     long, unevaluated = _error_inventory()
     with capsys.disabled():
         print(f"\n[inventory] {len(long)} long error messages in engine/")
@@ -233,9 +233,7 @@ def test_error_string_inventory_is_report_only(capsys):
         print(f"[inventory] {len(unevaluated)} unevaluated error messages")
         for line in unevaluated:
             print("  unevaluated " + line)
-    if long or unevaluated:
-        pytest.xfail(f"{len(long)} long, {len(unevaluated)} unevaluated "
-                     "error messages (report-only)")
+    assert not long and not unevaluated
 
 
 def test_make_finding_is_only_called_by_name():

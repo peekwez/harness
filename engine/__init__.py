@@ -88,12 +88,24 @@ def check_schema_version(root) -> None:
         )
 
 
+def jsonl_lines(text: str) -> list:
+    """Split JSONL text on "\\n" only, dropping a trailing "\\r".
+
+    str.splitlines() also splits on U+2028, U+2029 and U+0085, which JSON
+    allows raw inside strings, and would cut a valid row in two.
+    """
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    return [line[:-1] if line.endswith("\r") else line for line in lines]
+
+
 def read_jsonl(path) -> list:
     path = Path(path)
     if not path.exists():
         return []
     rows = []
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for lineno, line in enumerate(jsonl_lines(path.read_text(encoding="utf-8")), 1):
         line = line.strip()
         if not line:
             continue

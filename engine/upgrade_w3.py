@@ -18,7 +18,7 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import HarnessError
+from . import HarnessError, jsonl_lines
 from .shared_memory import (CLAUDE_IMPORT, INDEX_REL, _write_atomic,
                             add_claude_import, claude_md_state, ensure_index)
 from .upgrade_010 import SKIPPED, Ask, Step, register
@@ -41,7 +41,7 @@ def _git(root, *args):
 
 
 def _lines(path: Path) -> list:
-    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    return jsonl_lines(path.read_text(encoding="utf-8")) if path.exists() else []
 
 
 # ------------------------------------------------- retire .harness/memory/

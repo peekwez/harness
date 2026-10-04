@@ -216,10 +216,8 @@ def _vendor_engine(root) -> dict:
                 "action": "unchanged", "from": previous}
     if self_target:
         raise HarnessError(
-            "the vendored engine is running from the copy it would replace, "
-            "and that copy is stale or damaged; run `harness upgrade` from "
-            "the installed Harness plugin (or use `harness upgrade --plugin "
-            "--host claude|codex`) to refresh it safely")
+            "the vendored engine is stale or damaged and would replace itself. "
+            "Run `harness upgrade --plugin --host claude|codex` from the installed plugin.")
 
     # Build and validate the complete replacement beside the target.  The
     # live engine remains untouched if any copy fails; only two same-filesystem

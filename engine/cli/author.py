@@ -75,9 +75,8 @@ def validate_linear(value: str) -> str:
     linear = (value or "").strip()
     if not LINEAR_ID.match(linear):
         raise HarnessError(
-            f"--linear {value!r} is not a tracker id like 'GOO-73' "
-            f"(uppercase project key, dash, digits) — it is interpolated "
-            f"into the PR title and the issue URL")
+            f"--linear {value!r} is not a tracker id like 'GOO-73'. "
+            f"Pass an uppercase project key, a dash and digits.")
     return linear
 
 

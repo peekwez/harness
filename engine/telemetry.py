@@ -17,7 +17,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import append_jsonl, harness_dir, now_iso, read_jsonl, write_jsonl
+from . import append_jsonl, harness_dir, jsonl_lines, now_iso, read_jsonl, write_jsonl
 
 EVENTS_PATH = ".harness/cache/events.jsonl"
 METRICS_FILE = "slice-metrics.jsonl"
@@ -48,7 +48,7 @@ def load_events(root) -> list:
         _warn("load", exc)
         return []
     rows = []
-    for line in text.splitlines():
+    for line in jsonl_lines(text):
         line = line.strip()
         if not line:
             continue

@@ -198,10 +198,8 @@ def _require_branch(root, branch: str) -> None:
     current = _git(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     if current != branch:
         raise HarnessError(
-            f"landing.mode: pr pushes the slice's own branch, but HEAD in "
-            f"{root} is {current!r}, not {branch!r} — run the close (or "
-            f"`harness land`) from the slice's worktree so the branch that "
-            f"reaches the PR is the work that just closed")
+            f"landing.mode: pr needs HEAD on {branch!r}, but {root} is on "
+            f"{current!r}. Run the close from the slice's worktree.")
 
 
 def _commit_landing(root, sl: dict) -> str | None:

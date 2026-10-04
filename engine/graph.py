@@ -10,7 +10,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from . import (HarnessError, append_jsonl, harness_dir, now_iso,
+from . import (HarnessError, append_jsonl, jsonl_lines, harness_dir, now_iso,
                read_jsonl, sha256_text)
 
 EDGE_TYPES = {"implements", "declares_dep", "uses", "shadows", "supersedes",
@@ -223,7 +223,7 @@ def repair_legacy_provenance(root):
         commit = note["commit"]
         try:
             registry = [json.loads(line) for line in
-                        _git(root, "show", f"{commit}:.harness/registry.jsonl").splitlines() if line]
+                        jsonl_lines(_git(root, "show", f"{commit}:.harness/registry.jsonl")) if line]
         except (GraphError, ValueError):
             registry = []
         for payload in note["payloads"]:
