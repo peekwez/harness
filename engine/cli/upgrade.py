@@ -336,6 +336,20 @@ def _command_json(command):
             f"command returned invalid JSON ({' '.join(command)}): {exc}") from exc
 
 
+def _delegate_json(command):
+    """The delegated upgrade exits 1 when it is incomplete. Its JSON report
+    is still the answer, so keep it."""
+    try:
+        proc = _run_command(command)
+    except OSError as exc:
+        raise HarnessError(f"cannot run {' '.join(command)}: {exc}") from exc
+    try:
+        return json.loads(proc.stdout or "")
+    except json.JSONDecodeError:
+        detail = (proc.stderr or proc.stdout or "no diagnostic").strip()
+        raise HarnessError(f"command failed ({' '.join(command)}): {detail}")
+
+
 def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
                              scope=None, dry_run: bool = False,
                              yes: bool = False) -> dict:
@@ -390,7 +404,7 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
     delegate = [sys.executable, str(binary), "--root", str(root), "upgrade"]
     if yes:
         delegate.append("--yes")
-    project = _command_json(delegate)
+    project = _delegate_json(delegate)
     plugin_version = after.get("version")
     engine_version = project.get("engine_version")
     versions_match = (
@@ -425,23 +439,29 @@ def upgrade_installed_plugin(root, host: str, *, plugin_id=None,
     }
 
 
+DONE = ("upgraded", "already on 0.10")
+
+
 def cmd_upgrade(args):
     root = (Path(args.root).resolve() if getattr(args, "root", None)
             else Path.cwd().resolve())
     plugin = getattr(args, "plugin", False)
     host = getattr(args, "host", None)
+    yes = getattr(args, "yes", False)
+    dry_run = getattr(args, "dry_run", False)
     if plugin:
         if not host:
             raise HarnessError("--plugin requires --host claude|codex")
         report = upgrade_installed_plugin(
             root, host, plugin_id=getattr(args, "plugin_id", None),
-            scope=getattr(args, "scope", None),
-            dry_run=getattr(args, "dry_run", False),
-            yes=getattr(args, "yes", False))
+            scope=getattr(args, "scope", None), dry_run=dry_run, yes=yes)
+        status = (report.get("project") or {}).get("status")
     else:
         if host or getattr(args, "plugin_id", None) or getattr(args, "scope", None):
             raise HarnessError("--host, --plugin-id and --scope require --plugin")
-        report = upgrade_project(root, dry_run=getattr(args, "dry_run", False),
-                                 ask=make_ask(getattr(args, "yes", False)))
+        report = upgrade_project(root, dry_run=dry_run, ask=make_ask(yes))
+        status = report.get("status")
     _print(report)
-    return 0
+    if dry_run:
+        return 0
+    return 0 if status in DONE else 1

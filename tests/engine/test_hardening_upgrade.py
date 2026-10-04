@@ -42,9 +42,11 @@ def test_local_upgrade_preserves_authored_state_and_does_not_ratify_dirty_source
     (root / "telemetry.py").write_text(
         (root / "telemetry.py").read_text() + "\ndef dirty_change():\n    pass\n")
 
-    proc = run_cli("upgrade", root=root)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+    proc = run_cli("upgrade", "--yes", root=root)
+    # the dirty source is a real verify failure (HASH_MISMATCH), so exit 1
+    assert proc.returncode == 1, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
+    assert out["status"] == "checks failed"
     assert custom.read_text() == "user owned\n"
     assert {path: path.read_bytes() for path in authored} == before
     telemetry_after = next(r for r in read_jsonl(
@@ -381,7 +383,7 @@ def test_local_upgrade_repoints_only_harness_codex_hooks_to_vendored_adapter(
         },
     }))
 
-    proc = run_cli("upgrade", root=root)
+    proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     updated = json.loads(hooks.read_text())
@@ -408,19 +410,19 @@ def test_local_upgrade_preserves_unrecognized_codex_hooks(tmp_path):
     ]}]}}
     hooks.write_text(json.dumps(original))
 
-    proc = run_cli("upgrade", root=root)
+    proc = run_cli("upgrade", "--yes", root=root)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(hooks.read_text()) == original
     assert json.loads(proc.stdout)["codex_adapter"]["action"] == "unchanged"
 def test_upgrade_never_replaces_newer_vendored_engine(tmp_path):
     project = build_toy_repo(tmp_path / "project")
-    assert run_cli("upgrade", root=project).returncode == 0
+    assert run_cli("upgrade", "--yes", root=project).returncode == 0
     version = project / ".harness/engine/VERSION"
     version.write_text("999.0.0\n")
     binary = project / ".harness/engine/bin/harness"
     before = binary.read_bytes()
-    proc = run_cli("upgrade", root=project)
-    # the refusal is a failed stage in the report; Task 5 maps "failed" to exit 1
+    proc = run_cli("upgrade", "--yes", root=project)
+    assert proc.returncode != 0
     out = json.loads(proc.stdout)
     assert out["status"] == "failed", proc.stderr
     [failure] = [f for f in out["failures"] if f["code"] == "STAGE_FAILED"]

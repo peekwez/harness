@@ -108,7 +108,7 @@ def test_upgrade_appends_auditable_aliases_once_and_preserves_authored_rows(toy)
     assert json.loads(preview.stdout)["legacy_overrides"]["would_add"] == 1
     assert edges_path.read_bytes() == before
 
-    proc = run_cli("upgrade", root=toy)
+    proc = run_cli("upgrade", "--yes", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(proc.stdout)["legacy_overrides"]["edges_added"] == 1
     assert edges_path.read_bytes().startswith(before)
@@ -123,7 +123,7 @@ def test_upgrade_appends_auditable_aliases_once_and_preserves_authored_rows(toy)
         json.dumps(original, sort_keys=True))
     assert alias["meta"]["legacy_override"]["ts"] == original["ts"]
     after = edges_path.read_bytes()
-    again = run_cli("upgrade", root=toy)
+    again = run_cli("upgrade", "--yes", root=toy)
     assert again.returncode == 0, again.stdout + again.stderr
     assert json.loads(again.stdout)["legacy_overrides"]["edges_added"] == 0
     assert edges_path.read_bytes() == after

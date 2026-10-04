@@ -91,14 +91,14 @@ def test_upgrade_yes_moves_a_legacy_repo_onto_w1(tmp_path):
 def test_upgrade_without_yes_skips_only_the_destructive_step(tmp_path):
     root = legacy_094_repo(tmp_path)
     proc = run_cli("upgrade", root=root, stdin="")   # stdin is a pipe, not a TTY
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.returncode == 1, proc.stdout + proc.stderr
     out = json.loads(proc.stdout)
     reports = {row["id"]: row.get("report") for row in out["steps"]}
     assert reports["w1.untrack-shadows"] == ["skipped: needs confirmation"]
     assert (root / ".harness" / "shadows").exists()
     assert any("w1.untrack-shadows" in w for w in out["warnings"])
     assert any(h.startswith("w1.untrack-shadows:") for h in out["human_checks"])
-    assert out["status"] == "incomplete"     # Task 5 turns this into exit 1
+    assert out["status"] == "incomplete" 
     assert _w1(upgrade_010.plan(root)) == ["w1.untrack-shadows"]
 
 

@@ -139,6 +139,8 @@ Read the upgrade report. It is JSON with these parts:
 | `checks failed` | Doctor, verify or validation found a problem. Do the fix in `failures`. |
 | `failed` | A step or another part of the upgrade stopped with an error. Fix the cause, then run `harness upgrade --yes`. |
 
+The command exits 0 for `upgraded`, `already on 0.10` and `--dry-run`. It exits 1 for `incomplete`, `checks failed` and `failed`, so CI stops. The JSON report prints in every case. Without a terminal, upgrade never prompts: it skips each step that needs confirmation and reports `incomplete`. Pass `--yes` to accept every prompt.
+
 The upgrade already ran doctor and verify. Read `git status` before you commit:
 
 ```bash

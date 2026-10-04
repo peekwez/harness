@@ -4,8 +4,10 @@ from __future__ import annotations
 import io
 import json
 import shutil
+import subprocess
+import sys
 
-from conftest import build_astralabs_094_repo, git, run_cli, tree_bytes
+from conftest import HARNESS_BIN, build_astralabs_094_repo, build_toy_repo, git, run_cli, tree_bytes
 from engine import append_jsonl, read_jsonl
 
 
@@ -313,3 +315,84 @@ def test_a_raising_describe_leaves_the_upgrade_incomplete_not_crashed(tmp_path, 
     out = upgrade_project(root, ask=make_ask(True))
     assert out["status"] == "incomplete"
     assert any("w8.odd" in h for h in out["human_checks"])
+
+
+def test_upgrade_help_offers_yes():
+    assert "--yes" in run_cli("upgrade", "--help").stdout
+
+
+def test_non_tty_without_yes_skips_destructive_steps_and_never_waits(tmp_path):
+    from engine import upgrade_010
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    pending = {s.id for s in upgrade_010.STEPS if s.destructive and s.describe(root)}
+    assert pending
+    proc = subprocess.run([sys.executable, str(HARNESS_BIN), "--root", str(root), "upgrade"],
+                          input="", capture_output=True, text=True, timeout=300)
+    out = json.loads(proc.stdout)
+    assert proc.returncode == 1
+    assert out["status"] == "incomplete"
+    lines = {r["id"]: "\n".join(r.get("report", r.get("changes", []))) for r in out["steps"]}
+    for step_id in pending:
+        assert "needs confirmation" in lines[step_id], (step_id, lines.get(step_id))
+    assert any("harness upgrade --yes" in line for line in out["human_checks"])
+    assert (root / ".harness/shadows").is_dir()
+    assert (root / ".harness/telemetry.jsonl").exists()
+    assert (root / ".harness/memory/durable.jsonl").exists()
+    assert out["commit"] is None
+
+
+def test_yes_finishes_and_exits_zero(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    proc, out = _up(root, "--yes")
+    assert proc.returncode == 0, json.dumps(out.get("failures"), indent=1)
+    assert out["status"] == "upgraded"
+
+
+def test_every_status_maps_to_its_exit_code():
+    from types import SimpleNamespace
+    from engine.cli import upgrade
+    expect = {"upgraded": 0, "already on 0.10": 0, "incomplete": 1,
+              "checks failed": 1, "failed": 1}
+    for status, code in expect.items():
+        orig = upgrade.upgrade_project
+        upgrade.upgrade_project = lambda *a, _s=status, **k: {"status": _s}
+        try:
+            args = SimpleNamespace(root=".", plugin=False, host=None, plugin_id=None,
+                                   scope=None, yes=True, dry_run=False)
+            assert upgrade.cmd_upgrade(args) == code, status
+        finally:
+            upgrade.upgrade_project = orig
+
+
+def test_plugin_upgrade_forwards_yes_and_keeps_an_incomplete_report(tmp_path, monkeypatch):
+    from engine.cli import upgrade
+    from test_hardening_upgrade import _completed, _plugin_tree
+    project = build_toy_repo(tmp_path / "project")
+    new_path = _plugin_tree(tmp_path, "new")
+    listing = [{"id": "harness@team", "version": "0.10.0", "scope": "user",
+                "installPath": str(new_path)}]
+    calls = []
+
+    def run(command):
+        calls.append(command)
+        if command == ["claude", "plugin", "list", "--json"]:
+            return _completed(json.dumps(listing))
+        if command[:3] == ["claude", "plugin", "update"]:
+            return _completed()
+        return _completed(json.dumps({"engine_version": "0.10.0", "status": "incomplete"}),
+                          returncode=1)
+    monkeypatch.setattr(upgrade, "_run_command", run)
+    monkeypatch.setattr(upgrade, "_run_host_command", run)
+    report = upgrade.upgrade_installed_plugin(project, "claude", yes=True)
+    assert calls[-1][-2:] == ["upgrade", "--yes"]
+    assert report["project"]["status"] == "incomplete"
+
+
+def test_long_step_error_line_stays_within_25_words_with_the_fix_last():
+    from engine import upgrade_report as rep
+    long = "disk full " + " ".join(f"w{i}" for i in range(60))
+    rows = [{"id": "w2.b", "error": f"OSError: {long}"}]
+    [f] = rep.attribute(rep.reported_step_errors(rows), rows)
+    assert len(f["line"].split()) <= 25, f["line"]
+    assert "disk full" in f["line"]
+    assert f["line"].endswith("Fix: " + rep.STEP_FIX)

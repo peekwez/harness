@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from engine.findings import clip_words
 from engine import (ENGINE_VERSION, IGNORED_DIRS, SCHEMA_VERSION, HarnessError,
                     sha256_file)
 
@@ -159,6 +160,7 @@ def commit_proposal(root, files) -> dict | None:
 
 HARNESS_BIN = Path(__file__).resolve().parents[1] / "bin" / "harness"
 STEP_FIX = "fix the cause, then run: harness upgrade --yes"
+STEP_ERROR_WORDS = 11   # keeps the whole STEP_FAILED line within 25 words
 DOCTOR_LISTS = ("schema_problems", "stale_bindings", "stale_worktrees", "missing_notes")
 DOCTOR_COUNTS = ("parked_findings",)
 _PATH_TOKEN = re.compile(r"[\w.\-]+(?:/[\w.\-]*)+|[\w\-]+\.(?:jsonl|yaml|yml|md|json|toml)")
@@ -308,7 +310,8 @@ def run_stage(failures: list, stage: str, func, default=None):
 
 
 def reported_step_errors(rows) -> list:
-    return [{"check": "upgrade", "code": "STEP_FAILED", "text": str(row["error"]),
+    return [{"check": "upgrade", "code": "STEP_FAILED",
+             "text": clip_words(str(row["error"]), STEP_ERROR_WORDS),
              "step": row["id"], "fix": STEP_FIX}
             for row in rows if row.get("error")]
 
