@@ -21,7 +21,7 @@ from pathlib import Path
 from . import HarnessError, jsonl_lines
 from .shared_memory import (CLAUDE_IMPORT, INDEX_REL, _write_atomic,
                             add_claude_import, claude_md_state, ensure_index)
-from .upgrade_010 import SKIPPED, Ask, Step, register
+from .upgrade_010 import SKIPPED, Ask, Step, register, write_lines
 
 MEMORY_DIR = ".harness/memory"
 CACHE_DIR = ".harness/cache"
@@ -303,8 +303,7 @@ def apply_git_lines(root, ask: Ask) -> list:
         match = hits[0][0]
         path = root / name
         kept = [line for line in _lines(path) if not match(line)]
-        path.write_text("\n".join(kept) + "\n" if kept else "",
-                        encoding="utf-8")
+        write_lines(path, kept)
         report += [f"removed '{line.strip()}' from {name}" for _m, line in hits]
     return report
 

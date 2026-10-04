@@ -120,6 +120,7 @@ def _write_merge_attributes(root):
     the file lands in the slice's own diff and trips G3)."""
     ga = root / ".gitattributes"
     lines = ga.read_text().splitlines() if ga.exists() else []
+    before = list(lines)
     for f in SUBSTRATE_UNION_MERGE:
         entry = f"{f} merge=union"
         if entry not in lines:
@@ -128,7 +129,9 @@ def _write_merge_attributes(root):
         entry = f"{f} merge=harness-substrate"
         if entry not in lines:
             lines.append(entry)
-    ga.write_text("\n".join(lines) + "\n")
+    if lines != before or not ga.exists():
+        from engine import write_lines
+        write_lines(ga, lines)
 
 
 def _config_merge_drivers(root):

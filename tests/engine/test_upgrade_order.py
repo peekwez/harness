@@ -43,8 +43,10 @@ def test_no_step_undoes_another(tmp_path, build):
     assert again["steps"] == []
 
 
-def test_every_file_has_one_writer_or_an_ordered_dependency():
-    """Two steps may write one file only when the later one reads the first's result."""
+def test_the_known_writers_of_shared_files_run_in_order():
+    """Pins the steps known to write AGENTS.md, .gitattributes and .gitignore
+    in the order each reads the one before. This list is kept by hand: a new
+    step that writes one of these files must be added here."""
     from engine import upgrade_010
     shared = {
         "AGENTS.md": ["w2.skill-names", "w4.agents-md-ste80",

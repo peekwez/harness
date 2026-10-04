@@ -138,7 +138,8 @@ def cmd_merge_slice(args):
     closed = False
     show = _git("show", f"{branch}:.harness/backlog.jsonl")
     if show.returncode == 0:
-        for line in show.stdout.splitlines():
+        from engine import jsonl_lines
+        for line in jsonl_lines(show.stdout):
             try:
                 r = json.loads(line)
             except json.JSONDecodeError:

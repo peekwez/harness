@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from . import HarnessError, harness_dir, read_jsonl, write_jsonl
-from .upgrade_010 import SKIPPED, Ask, Step, register
+from .upgrade_010 import SKIPPED, Ask, Step, register, write_lines
 
 SHADOWS_DIR = ".harness/shadows"
 SHADOWS_ATTRIBUTE = ".harness/shadows/** merge=ours"
@@ -38,7 +38,7 @@ def _describe_cache_ignore(root: Path) -> list:
 def _apply_cache_ignore(root: Path, ask: Ask) -> list:
     lines = _lines(root / ".gitignore")
     lines.append(CACHE_IGNORE)
-    (root / ".gitignore").write_text("\n".join(lines) + "\n")
+    write_lines(root / ".gitignore", lines)
     return [f"added {CACHE_IGNORE} to .gitignore"]
 
 
@@ -81,8 +81,7 @@ def _apply_shadows(root: Path, ask: Ask) -> list:
     lines = _lines(root / ".gitattributes")
     if SHADOWS_ATTRIBUTE in lines:
         kept = [line for line in lines if line != SHADOWS_ATTRIBUTE]
-        (root / ".gitattributes").write_text(
-            "\n".join(kept) + "\n" if kept else "")
+        write_lines(root / ".gitattributes", kept)
         report.append(f"removed '{SHADOWS_ATTRIBUTE}' from .gitattributes")
     return report
 

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from . import (DEFAULT_EXEMPT_PATHS, HarnessError, SubstrateMissing,
                append_jsonl, harness_dir, load_backlog, now_iso)
-from .upgrade_010 import SKIPPED, Ask, Step, register
+from .upgrade_010 import SKIPPED, Ask, Step, register, write_lines
 from .upgrade_w1 import strip_child_keys
 
 LEGACY_TELEMETRY = ("telemetry.archive.jsonl", "telemetry.jsonl",
@@ -79,7 +79,7 @@ def _metrics_apply(root: Path, ask: Ask) -> list:
              if not _same_rule(line, OLD_UNION_LINE)]
     if not any(_same_rule(line, METRICS_LINE) for line in lines):
         lines.append(METRICS_LINE)
-    (Path(root) / ".gitattributes").write_text("\n".join(lines) + "\n")
+    write_lines(Path(root) / ".gitattributes", lines)
     return changes
 
 

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from . import HarnessError
+from . import HarnessError, write_lines  # noqa: F401  (steps import it here)
 
 Ask = Callable[[str], bool]          # returns True when the human accepts
 
@@ -51,6 +51,9 @@ def register(step: Step) -> Step:
     """Add one step. A second step with the same id is a bug."""
     if any(existing.id == step.id for existing in STEPS):
         raise HarnessError(f"upgrade step {step.id!r} is registered twice")
+    if _workstream(step) is None:
+        raise HarnessError(f"upgrade step {step.id!r} has no workstream. "
+                           "Name it wN.<name>, for example w8.agents-md")
     # Workstream order, not import order: importing upgrade_w3 before this
     # module must not move the W3 steps after W8. Within a workstream the
     # module's own registration order holds.
@@ -61,9 +64,29 @@ def register(step: Step) -> Step:
     return step
 
 
-def _workstream(step: Step) -> int:
-    head = step.id.split(".", 1)[0]
-    return int(head[1:]) if head[:1] == "w" and head[1:].isdigit() else 0
+def _workstream(step: Step) -> int | None:
+    """N for a `wN.<name>` id, else None."""
+    head, dot, name = step.id.partition(".")
+    ok = dot and name and head[:1] == "w" and head[1:].isdigit()
+    return int(head[1:]) if ok else None
+
+
+def keep_backup(root: Path, name: str, data: bytes) -> str:
+    """Save `data` as `.harness/cache/<name>.pre-0.10` and return that path.
+
+    An existing backup is never overwritten. A backup that already holds
+    `data` is reused; otherwise the next free `.2`, `.3` name is used."""
+    base = f".harness/cache/{name}.pre-0.10"
+    rel, n = base, 1
+    while (Path(root) / rel).exists():
+        if (Path(root) / rel).read_bytes() == data:
+            return rel
+        n += 1
+        rel = f"{base}.{n}"
+    path = Path(root) / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return rel
 
 
 def plan(root: Path) -> list[dict]:
@@ -139,9 +162,11 @@ def always_yes(question: str) -> bool:
 
 
 def tty_ask(question: str) -> bool:
-    """Ask on stderr and read stdin. With no terminal the answer is no."""
-    stdin = sys.stdin
-    if stdin is None or not stdin.isatty():
+    """Ask on stderr and read stdin. The answer is no unless both are a
+    terminal: a 0.9 `upgrade --plugin` parent captures stderr, so the human
+    would never see the question and the child would wait forever."""
+    stdin, stderr = sys.stdin, sys.stderr
+    if stdin is None or stderr is None or not (stdin.isatty() and stderr.isatty()):
         return False
     print(f"{question} [y/N] ", end="", file=sys.stderr, flush=True)
     return stdin.readline().strip().lower() in ("y", "yes")

@@ -110,8 +110,9 @@ def recover_closure(root, slice_id):
     pending = json.loads(path.read_text())
     result = pending["result"]
     if (Path(root) / ".git").exists():
+        from engine import jsonl_lines
         rows = [json.loads(line) for line in
-                _git(root, "show", "HEAD:.harness/backlog.jsonl").splitlines() if line]
+                jsonl_lines(_git(root, "show", "HEAD:.harness/backlog.jsonl")) if line]
         durable = next((r for r in rows if r["id"] == slice_id), {})
     else:
         durable = get_slice(root, slice_id)

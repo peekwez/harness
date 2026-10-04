@@ -100,6 +100,15 @@ def jsonl_lines(text: str) -> list:
     return [line[:-1] if line.endswith("\r") else line for line in lines]
 
 
+def write_lines(path: Path, lines: list) -> None:
+    """Rewrite a text file from its lines. A file with CRLF line endings keeps
+    them; any other file gets "\n"."""
+    path = Path(path)
+    eol = "\r\n" if path.exists() and b"\r\n" in path.read_bytes() else "\n"
+    path.write_text(eol.join(lines) + eol if lines else "", encoding="utf-8",
+                    newline="")
+
+
 def read_jsonl(path) -> list:
     path = Path(path)
     if not path.exists():

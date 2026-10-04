@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .upgrade_010 import SKIPPED, Step, register
+from .upgrade_010 import SKIPPED, Step, keep_backup, register, write_lines
 
 # merge path -> the file or folder whose absence makes the rule stale
 LEGACY_MERGE_PATHS = {
@@ -58,12 +58,11 @@ def agents_md_apply(root, ask) -> list:
     if not ask(f"Replace AGENTS.md with the 0.10 template? The old file is kept at {BACKUP_REL}."):
         return [SKIPPED]
     path = root / "AGENTS.md"
-    backup = root / BACKUP_REL
-    backup.parent.mkdir(parents=True, exist_ok=True)
     # w2.skill-names ran first, so the backup already has renamed skills.
-    backup.write_text(path.read_text())
+    # An earlier run's backup is never overwritten.
+    backup = keep_backup(root, "AGENTS.md", path.read_bytes())
     path.write_text(_agents_template())
-    return [f"replaced AGENTS.md. Backup at {BACKUP_REL}, after the skill renames."]
+    return [f"replaced AGENTS.md. Backup at {backup}, after the skill renames."]
 
 
 def agents_md_advise(root) -> list:
@@ -71,10 +70,17 @@ def agents_md_advise(root) -> list:
     if agents_md_state(root) == "custom":
         return ["check: AGENTS.md is not harness-written. Compare it with the "
                 "harness template and add the 0.10 rules by hand."]
-    if (root / BACKUP_REL).exists():
-        return [f"check: compare {BACKUP_REL} (after the skill renames) with AGENTS.md "
-                "and carry over local edits. Then delete the backup."]
-    return []
+    return [f"check: compare the gitignored backup {rel} (after the skill renames) "
+            "with AGENTS.md and carry over local edits. Then delete the backup."
+            for rel in _agents_backups(root)]
+
+
+def _agents_backups(root: Path) -> list:
+    """BACKUP_REL, then the numbered backups of later runs."""
+    cache = root / ".harness" / "cache"
+    found = [p.relative_to(root).as_posix() for p in cache.glob("AGENTS.md.pre-0.10*")
+             if p.name == "AGENTS.md.pre-0.10" or p.suffix[1:].isdigit()]
+    return sorted(found, key=lambda rel: (len(rel), rel))
 
 
 AGENTS_STEP = register(Step(
@@ -116,8 +122,7 @@ def _stale_ignore_lines(root: Path) -> list:
 
 
 def _drop(path: Path, stale: set) -> None:
-    lines = [line for line in path.read_text().splitlines() if line not in stale]
-    path.write_text("\n".join(lines) + "\n" if lines else "")
+    write_lines(path, [line for line in path.read_text().splitlines() if line not in stale])
 
 
 def describe(root) -> list:

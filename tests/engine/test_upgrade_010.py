@@ -186,8 +186,9 @@ class _FakeTty(io.StringIO):
 
 @pytest.mark.parametrize("answer,expected", [("y\n", True), ("YES\n", True),
                                              ("n\n", False), ("\n", False)])
-def test_tty_ask_reads_the_answer_from_a_terminal(monkeypatch, capsys,
-                                                  answer, expected):
+def test_tty_ask_reads_the_answer_from_a_terminal(monkeypatch, answer, expected):
+    err = _FakeTty()
     monkeypatch.setattr("sys.stdin", _FakeTty(answer))
+    monkeypatch.setattr("sys.stderr", err)
     assert upgrade_010.tty_ask("Delete it?") is expected
-    assert "Delete it? [y/N]" in capsys.readouterr().err
+    assert "Delete it? [y/N]" in err.getvalue()
