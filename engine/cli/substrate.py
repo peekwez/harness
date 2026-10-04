@@ -234,6 +234,9 @@ def cmd_memory(args):
     from datetime import datetime, timezone
     from engine import shared_memory
     root = _root(args)
+    if args.memory_cmd == "accept":
+        _print(shared_memory.accept(root, args.path))
+        return 0
     if args.memory_cmd == "promote":
         if bool(args.file) == bool(args.text):
             print("error: memory promote: pass one fact. "

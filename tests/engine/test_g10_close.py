@@ -186,3 +186,149 @@ def test_two_branches_promote_and_the_ledger_merges(toy):
     paths = [r["path"] for r in read_jsonl(toy / LEDGER)]
     assert ".claude/memory/shared/deploys.md" in paths
     assert ".claude/memory/shared/pytest.md" in paths
+
+
+# ------------------------------------- fix round: target content and accept
+IDX = ".claude/memory/shared/MEMORY.md"
+
+
+def _promote(toy, text, name):
+    proc = run_cli("memory", "promote", "--text", text, "--name", name,
+                   root=toy)
+    assert proc.returncode == 0, proc.stderr
+    return proc
+
+
+def _on_main(toy):
+    """Name the toy's branch `main`, the default `landing.base`."""
+    git(toy, "branch", "-M", "main")
+
+
+def _merge_main_into_slice(toy, change):
+    """Commit slice work on `sl`, run `change` on main, merge main into sl."""
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "slice wip")
+    git(toy, "checkout", "-q", "main")
+    change()
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "main work")
+    git(toy, "checkout", "-q", "sl")
+    return git(toy, "merge", "-q", "--no-edit", "main")
+
+
+def test_p3_index_curated_on_the_target_closes(toy):
+    """A human hand-edits MEMORY.md on main; the slice merges main. The
+    slice did not write those bytes: they equal the target's."""
+    _on_main(toy)
+    _promote(toy, "Deploys happen on Tuesdays.", "deploys")
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "promote")
+    git(toy, "checkout", "-qb", "sl")
+    session = _start(toy)
+
+    def curate():
+        idx = toy / IDX
+        idx.write_text(idx.read_text().replace("Team facts.",
+                                               "Team facts (curated)."))
+    assert _merge_main_into_slice(toy, curate).returncode == 0
+    proc, out = _close(toy, session)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert not _g10(out)
+
+
+def test_deletion_that_the_target_also_has_closes(toy):
+    _on_main(toy)
+    _promote(toy, "Deploys happen on Tuesdays.", "deploys")
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "promote")
+    git(toy, "checkout", "-qb", "sl")
+    session = _start(toy)
+    assert _merge_main_into_slice(
+        toy, lambda: (toy / FACT).unlink()).returncode == 0
+    proc, out = _close(toy, session)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_p2_hand_resolved_index_blocks_until_a_human_accepts(toy):
+    from engine.cli.common import _install_merge_drivers
+    _on_main(toy)
+    _install_merge_drivers(toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "merge rules")
+    git(toy, "checkout", "-qb", "sl")
+    session = _start(toy)
+    _promote(toy, "Tests run with pytest.", "pytest")
+    merged = _merge_main_into_slice(
+        toy, lambda: _promote(toy, "Deploys happen on Tuesdays.", "deploys"))
+    assert merged.returncode != 0          # MEMORY.md conflicts
+    idx = toy / IDX
+    idx.write_text("".join(
+        line for line in idx.read_text().splitlines(keepends=True)
+        if not line.startswith(("<<<<<<<", "=======", ">>>>>>>"))))
+    proc, out = _close(toy, session)       # commits the resolution
+    assert proc.returncode == 1, proc.stdout
+    [finding] = _g10(out)
+    assert IDX in finding["message"]
+    assert f"harness memory accept {IDX}" in finding["fix"]
+    accepted = run_cli("memory", "accept", IDX, root=toy)
+    assert accepted.returncode == 0, accepted.stderr
+    assert "accept" in accepted.stdout.lower()
+    proc, out = _close(toy, session)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_accept_records_a_deletion(toy):
+    _promote(toy, "Deploys happen on Tuesdays.", "deploys")
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "promote before the slice")
+    session = _start(toy)
+    (toy / FACT).unlink()
+    accepted = run_cli("memory", "accept", FACT, root=toy)
+    assert accepted.returncode == 0, accepted.stderr
+    proc, out = _close(toy, session)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_accept_refuses_a_path_outside_shared_memory(toy):
+    proc = run_cli("memory", "accept", "orders.py", root=toy)
+    assert proc.returncode != 0
+    assert "Fix:" in proc.stderr
+
+
+def test_accept_is_never_auto_approved():
+    from engine.permits import command_decision, needs_human
+    command = f"harness memory accept {IDX}"
+    assert needs_human(command)
+    assert command_decision(command, slice_id="slice-042")[:2] == ("ask", False)
+
+
+def test_crlf_checkout_of_a_promoted_fact_still_matches(toy):
+    from engine.shared_memory import sanctioned
+    _promote(toy, "Deploys happen on Tuesdays.", "deploys")
+    path = toy / FACT
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    assert b"\r\n" in path.read_bytes()
+    assert sanctioned(toy, FACT)
+
+
+def test_case_variant_path_matches_its_ledger_row(toy):
+    from engine import append_jsonl
+    from engine.shared_memory import _sha256, sanctioned
+    (toy / FACT).parent.mkdir(parents=True)
+    (toy / FACT).write_text("a fact\n")
+    append_jsonl(toy / LEDGER, {"path": ".Claude/Memory/Shared/Deploys.md",
+                                "sha256": _sha256(toy / FACT), "at": "x"})
+    assert sanctioned(toy, FACT)
+    assert sanctioned(toy, "./" + FACT)
+
+
+def test_a_slice_on_the_target_branch_gets_no_target_pass(toy):
+    """--no-worktree on main: the target is the slice's own branch, so its
+    content proves nothing."""
+    _on_main(toy)
+    session = _start(toy)
+    (toy / FACT).parent.mkdir(parents=True)
+    (toy / FACT).write_text("Deploys happen on Tuesdays.\n")
+    proc, out = _close(toy, session)
+    assert proc.returncode == 1, proc.stdout
+    assert _g10(out)

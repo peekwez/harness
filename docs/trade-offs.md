@@ -44,7 +44,7 @@ To clear a false block, move or rename the module.
 
 ### Shared memory writes
 
-G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder, unless `harness memory promote` wrote those bytes. Promote records a hash of each file that it writes in `.harness/promotions.jsonl`. For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
+G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder. A change passes when `harness memory promote` or `harness memory accept` recorded it in `.harness/promotions.jsonl`. A change also passes when the file is the same as on the merge target (`landing.base`). For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
 
 Text-level checks are best effort. These spellings do not ask:
 
@@ -59,6 +59,9 @@ The close check has limits:
 - It sees only the slice diff. A shell write outside a slice, or one that is undone before close, is not flagged at close.
 - It sees the write at close, not when the shell command runs.
 - It trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
+- It trusts the merge target. A change that reaches the target first, for example by a push to it, passes the check.
+- A merge conflict in `MEMORY.md` needs a human twice. Two slices that each promote a fact both append to the index, so their merge conflicts. After the human resolves the conflict, close blocks on `MEMORY.md`. The remedy is `harness memory accept .claude/memory/shared/MEMORY.md`.
+- A human edit or deletion inside a slice blocks close too. The remedy is `harness memory accept <path>`.
 
 For these gaps, the backstop is a human who reads the committed diff.
 

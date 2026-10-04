@@ -52,7 +52,7 @@ Each gate finding names its fix. Apply the fix, then retry.
 - G5 registry-conform: this advisory flags a use outside the slice's declared dependencies, or a reimplemented abstraction. Close reconciles uses against declares and still blocks on a mismatch. Declare the dependency, reuse the entry, or run `harness gates override` with a justification.
 - G6 interface-drift: a changed public interface needs an acknowledgement before close. Run `harness gates ack-drift --slice <id> --module <module>`.
 - G9 explore-isolation: production code cannot import from `explore/` once `explore/DECISIONS.md` exists. Copy the code out of explore/ and import the copy.
-- G10 shared-memory: agents cannot write `.claude/memory/shared/`. At close, it also blocks a shell write in the slice diff. Ask a human to run `harness memory promote <file>`.
+- G10 shared-memory: agents cannot write `.claude/memory/shared/`. At close, it also blocks a shell write in the slice diff. Ask a human to run `harness memory promote <file>`, or `harness memory accept <path>` for a human edit.
 - Unshadowed files: `harness doctor --substrate` lists source files that no extractor enforces under `unshadowed_files`. It is advisory.
 - Repo-local gates: modules listed under `gates.extra` in `.harness/config.yaml` run beside the builtin gates. A load or run error blocks and names the entry. Fix that module.
 

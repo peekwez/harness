@@ -57,10 +57,18 @@ def in_shared_dir(rel: str) -> bool:
 
 # ----------------------------------------------------------------- ledger
 def _sha256(path: Path):
+    """Hash of the file with CRLF read as LF, so an autocrlf checkout on
+    another OS still matches. None when the file cannot be read."""
     try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+        data = path.read_bytes()
     except OSError:
         return None
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+
+
+def _norm(rel: str) -> str:
+    """Ledger key: `/` separators, traversal-normalized, casefolded."""
+    return posixpath.normpath(str(rel).replace("\\", "/")).casefold()
 
 
 def _record_write(root, rel: str) -> None:
@@ -71,19 +79,89 @@ def _record_write(root, rel: str) -> None:
 
 
 def sanctioned(root, rel: str) -> bool:
-    """True when the file at `rel` holds bytes that harness itself wrote.
+    """True when a human sanctioned the current state of `rel`.
 
-    A missing file (a deletion) is never sanctioned: promote never deletes.
+    A present file passes when its bytes match a ledger row for its path.
+    A missing file passes when the last row for its path records a deletion
+    (`harness memory accept` on a deleted file). Promote never deletes.
     """
     ledger = harness_dir(root) / LEDGER_NAME
     if not ledger.exists():
         return False
+    key = _norm(rel)
+    rows = [r for r in read_jsonl(ledger) if _norm(r.get("path", "")) == key]
     digest = _sha256(Path(root) / rel)
     if digest is None:
+        return bool(rows) and rows[-1].get("deleted") is True
+    return any(r.get("sha256") == digest for r in rows)
+
+
+def _git_blob(root, spec: str):
+    proc = subprocess.run(["git", "-C", str(root), "rev-parse", "-q",
+                           "--verify", spec], capture_output=True, text=True)
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def matches_target(root, rel: str, target: str) -> bool:
+    """True when `rel` in the checkout equals `rel` on the merge target.
+
+    Content that is already on the target is not the slice's write: a
+    human edited it there and the slice merged it in. A deletion matches
+    when the target lacks the path too. A target that does not resolve, or
+    that already contains HEAD (the slice works on the target itself),
+    never matches.
+    """
+    if not target or _git_blob(root, f"{target}^{{commit}}") is None:
         return False
-    rel = posixpath.normpath(str(rel).replace("\\", "/"))
-    return any(row.get("path") == rel and row.get("sha256") == digest
-               for row in read_jsonl(ledger))
+    # The target already holds this checkout's commit (same branch, or the
+    # slice landed there): its content may be the slice's own write.
+    if subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor",
+                       "HEAD", target], capture_output=True).returncode == 0:
+        return False
+    path = Path(root) / rel
+    theirs = _git_blob(root, f"{target}:{rel}")
+    if not path.exists():
+        return theirs is None
+    if theirs is None:
+        return False
+    proc = subprocess.run(["git", "-C", str(root), "hash-object", "--", rel],
+                          capture_output=True, text=True)
+    return proc.returncode == 0 and proc.stdout.strip() == theirs
+
+
+def accept(root, path) -> dict:
+    """Record the current state of one shared-memory file as human-made.
+
+    For a human edit, retirement or merge resolution that `promote` cannot
+    express. A present file records its bytes; a missing one, a deletion.
+    A relative path is read from the repo root.
+
+    Raises:
+        HarnessError: the path is outside the shared folder.
+    """
+    root = Path(root).resolve()
+    path = Path(path).expanduser()
+    if not path.is_absolute():
+        path = root / path               # a repo path, as G10's fix prints it
+    path = Path(os.path.realpath(path))
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        rel = None
+    if rel is None or not in_shared_dir(rel) or path.is_dir():
+        raise HarnessError(
+            f"memory accept: {path} is not a file in {SHARED_DIR}/. "
+            f"Fix: pass a file path inside {SHARED_DIR}/.")
+    row = {"path": rel, "sha256": _sha256(path), "at": now_iso(),
+           "accepted_by": git_identity(root)}
+    if row["sha256"] is None:
+        row["deleted"] = True
+    append_jsonl(harness_dir(root) / LEDGER_NAME, row)
+    state = "deletion" if row.get("deleted") else "content"
+    return {"accepted": True, "path": rel, "state": state,
+            "accepted_by": row["accepted_by"],
+            "report": f"Harness accepted the {state} of {rel}. "
+                      f"Close now passes this file."}
 
 
 # ------------------------------------------------------------------ index

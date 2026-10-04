@@ -348,6 +348,9 @@ def build_parser() -> argparse.ArgumentParser:
     pm.add_argument("file", nargs="?", help="a memory file to promote")
     pm.add_argument("--text", help="the fact itself")
     pm.add_argument("--name", help="fact file name (default: from the fact)")
+    ac = ms.add_parser("accept", help="record a human edit or deletion of "
+                                      "one shared memory file")
+    ac.add_argument("path", help="a file in .claude/memory/shared/")
     ch = ms.add_parser("changed", help="personal memory files changed since "
                                        "a slice started")
     ch.add_argument("--slice")

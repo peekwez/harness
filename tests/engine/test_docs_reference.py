@@ -58,7 +58,7 @@ def test_cli_page_lists_every_subcommand(pages):
 
 @pytest.mark.parametrize("nested", [
     "gates override", "gates ack-drift", "gates explain", "backlog add",
-    "registry refresh", "memory promote", "graph note"])
+    "registry refresh", "memory promote", "memory accept", "graph note"])
 def test_cli_page_lists_nested_subcommands(pages, nested):
     assert f"`harness {nested}`" in pages["reference/cli.md"]
 

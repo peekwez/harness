@@ -159,9 +159,10 @@ CATALOG: dict[str, str] = {
         "The finding never repeats the secret. Remove it, or record a "
         "false-positive override."),
     "SHARED_MEMORY_WRITE": (
-        "G10 blocks an agent write to shared memory. Only a human may "
-        "promote personal notes into shared memory. Ask a human to run "
-        "harness memory promote with the file."),
+        "G10 blocks an agent write to shared memory. It checks each edit, "
+        "and at close it checks the slice diff for shell writes. If a human "
+        "made the change, run harness memory accept with the path. "
+        "Otherwise revert it and ask a human to run harness memory promote."),
     "UNDECLARED_FILE": (
         "G3 found a change to a file outside the predicted files of the "
         "slice. This finding is advisory. Record the reason with "

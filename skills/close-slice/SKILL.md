@@ -74,7 +74,8 @@ The engine enforces these checks:
 - The unit_complete gates pass: G5, G6, G9, G10 and every `gates.extra` gate
   that runs at unit_complete. G6 blocks until each drift is acknowledged.
   G9 blocks an import from `explore/`. G10 blocks a change to
-  `.claude/memory/shared/` that `harness memory promote` did not write. G5 advises. A touched file inside a non-goal that a `gates.extra`
+  `.claude/memory/shared/` that a human did not promote or accept. For a human change,
+  ask the human to run `harness memory accept <path>`. G5 advises. A touched file inside a non-goal that a `gates.extra`
   gate cites blocks (G3). Other G3 scope findings advise; close lists
   undeclared files under `scope_advisory`.
 - Close itself blocks with rule_ref `gate:G1` on a parked slice or a
