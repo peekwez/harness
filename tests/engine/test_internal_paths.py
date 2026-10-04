@@ -15,6 +15,8 @@ OWN_ONLY = ("docs/design-reviews/", "docs/superpowers/")
 OWN_SCOPE = ("tests/", "engine/", "bin/", "hooks/", "adr/", ".harness/")
 OWN_FILES = ("README.md", "CHANGELOG.md", "Makefile")
 SELF = "tests/engine/test_internal_paths.py"
+# Frozen copies of old releases name paths as they were then.
+FROZEN = "tests/fixtures/legacy/"
 
 
 def _tracked():
@@ -48,7 +50,7 @@ def test_no_tracked_file_points_at_a_moved_path():
         for needle in GONE:
             if needle in text:
                 stale.append(f"{rel}: {needle}")
-        if rel.startswith(OWN_SCOPE) or rel in OWN_FILES:
+        if (rel.startswith(OWN_SCOPE) or rel in OWN_FILES) and not rel.startswith(FROZEN):
             for needle in OWN_ONLY:
                 if needle in text:
                     stale.append(f"{rel}: {needle}")
