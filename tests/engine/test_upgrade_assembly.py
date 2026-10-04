@@ -396,3 +396,20 @@ def test_long_step_error_line_stays_within_25_words_with_the_fix_last():
     assert len(f["line"].split()) <= 25, f["line"]
     assert "disk full" in f["line"]
     assert f["line"].endswith("Fix: " + rep.STEP_FIX)
+
+
+def test_a_rerun_after_a_declined_step_proposes_the_whole_upgrade(tmp_path):
+    from engine.cli.upgrade import make_ask, upgrade_project
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    first = upgrade_project(root, ask=make_ask(False, stdin=io.StringIO(),
+                                               stderr=io.StringIO()))
+    assert first["status"] == "incomplete"
+    out = upgrade_project(root, yes=True)
+    assert out["status"] == "upgraded"
+    assert {".harness/schema_version", "CLAUDE.md", "docs/glossary.md"} <= set(
+        out["commit"]["paths"])
+    assert not any("uncommitted edits" in h for h in out["human_checks"])
+    done = subprocess.run(["bash", "-c", out["commit"]["command"]],
+                          cwd=out["commit"]["cwd"], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert git(root, "status", "--porcelain").stdout == ""

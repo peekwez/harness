@@ -276,3 +276,39 @@ def test_a_stage_failure_fails_the_upgrade():
     assert rep.upgrade_status(schema_from=1, current=2, files={"added": ["a"], "modified": [],
                               "removed": []}, steps=[], pending=[],
                               failures=[{"code": "STAGE_FAILED"}]) == "failed"
+
+
+def test_carry_records_a_run_without_a_commit_and_forgets_it_after_one(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _write(root, ".gitignore", (root / ".gitignore").read_text() + ".harness/cache/\n")
+    git(root, "commit", "-qam", "ignore the cache")
+    _write(root, ".harness/schema_version", "2\n")
+    files = {"added": [], "modified": [".harness/schema_version"], "removed": []}
+    rep.save_carry(root, "incomplete", files)
+    assert rep.carried_paths(root) == [".harness/schema_version"]
+    assert git(root, "status", "--porcelain").stdout.strip() == "M .harness/schema_version"
+    rep.save_carry(root, "upgraded", files)
+    assert rep.carried_paths(root) == []
+    assert not (root / rep.CARRY_REL).exists()
+
+
+def test_carry_files_adds_earlier_changes_that_are_still_uncommitted(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _write(root, ".harness/schema_version", "2\n")
+    _write(root, "docs/glossary.md", "# Glossary\n")
+    (root / ".harness/notes.jsonl").unlink()
+    carried = [".harness/schema_version", "docs/glossary.md", ".harness/notes.jsonl",
+               "docs/index.md"]                       # docs/index.md was committed since
+    files = {"added": [".claude/memory/shared/MEMORY.md"], "modified": [], "removed": []}
+    assert rep.carry_files(root, files, carried) == {
+        "added": [".claude/memory/shared/MEMORY.md", "docs/glossary.md"],
+        "modified": [".harness/schema_version"],
+        "removed": [".harness/notes.jsonl"]}
+    assert rep.carry_files(root, files, []) == files
+
+
+def test_a_corrupt_carry_file_reads_as_empty(tmp_path):
+    _write(tmp_path, rep.CARRY_REL, "{not json")
+    assert rep.carried_paths(tmp_path) == []
+    _write(tmp_path, rep.CARRY_REL, '["a"]')
+    assert rep.carried_paths(tmp_path) == []

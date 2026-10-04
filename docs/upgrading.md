@@ -2,7 +2,7 @@
 
 harness 0.10 breaks 0.9. One command moves a repo to 0.10. This page says what that command changes, what it asks first, and what you check after it.
 
-This page describes the upgrade as the engine runs it today. Later releases can add steps. This page lists each step that the engine has.
+This page describes the 0.10 upgrade as the engine runs it. It lists each step that the engine has.
 
 ## Before you start
 
@@ -26,6 +26,7 @@ harness upgrade --yes
 - A step that moves or deletes files asks first, with a `[y/N]` prompt.
 - `--yes` accepts each prompt. Use it in CI or in a script.
 - Without a terminal, a step that needs a confirmation is skipped. The report lists it with the fix `harness upgrade --yes`.
+- A run that stops short records the files that it changed in `.harness/cache/`. The next run adds them to its commit proposal, so one commit holds the whole upgrade.
 
 The upgrade runs in this order:
 

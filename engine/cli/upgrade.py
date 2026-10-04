@@ -211,7 +211,8 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     ask = ask or make_ask(yes)
     before = rep.snapshot(root)
     staged_before = rep.staged_paths(root)
-    dirty_before = rep.dirty_paths(root)
+    carried = rep.carried_paths(root)       # an earlier run's own changes
+    dirty_before = sorted(set(rep.dirty_paths(root)) - set(carried))
 
     # Migration is deliberately the first write.  New code must never read
     # old substrate rows as though they already had the current schema.
@@ -251,7 +252,8 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     checks = rep.final_checks(root)
     failures.extend(checks["doctor"]["failures"] + checks["verify"]["failures"])
     files = stage("list changed files",
-                  lambda: rep.changed_files(before, rep.snapshot(root)),
+                  lambda: rep.carry_files(root, rep.changed_files(
+                      before, rep.snapshot(root)), carried),
                   {"added": [], "modified": [], "removed": []})
     pending = rep.pending_ids(root, upgrade_010.STEPS)
     advice = stage("collect advice", lambda: upgrade_010.advice(root), [])
@@ -262,6 +264,8 @@ def upgrade_project(root, *, dry_run: bool = False, ask=None,
     status = rep.upgrade_status(schema_from=schema["from"], current=SCHEMA_VERSION,
                                 files=files, steps=steps, pending=pending,
                                 failures=failures)
+    stage("record the changes for the next run",
+          lambda: rep.save_carry(root, status, files))
     return {
         "status": status,
         "schema": schema,

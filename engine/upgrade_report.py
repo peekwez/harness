@@ -158,6 +158,68 @@ def commit_proposal(root, files) -> dict | None:
             "command": command}
 
 
+# The changes of a run that proposed no commit. The next run adds them to its
+# own, so its one commit covers the whole upgrade.
+CARRY_REL = ".harness/cache/upgrade-carry.json"
+COMMITTED = ("upgraded", "already on 0.10")
+
+
+def carried_paths(root) -> list[str]:
+    """The paths an earlier run changed but did not propose. A missing or
+    unreadable record is empty: the record is advisory cache state."""
+    try:
+        data = json.loads((Path(root) / CARRY_REL).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    paths = data.get("paths") if isinstance(data, dict) else None
+    return sorted({p for p in paths if isinstance(p, str)}) if isinstance(paths, list) else []
+
+
+def carry_files(root, files: dict, carried) -> dict:
+    """This run's files plus the carried paths that are still uncommitted."""
+    root = Path(root)
+    touched = set(files["added"]) | set(files["modified"]) | set(files["removed"])
+    extra = set(carried) - touched
+    if not extra:
+        return files
+    head = set()
+    if _is_repo(root):
+        extra &= set(dirty_paths(root))     # the human may have committed some
+        if _has_head(root):
+            head = set(_nul_list(_git(root, "ls-tree", "-r", "-z", "--name-only",
+                                      "HEAD").stdout))
+    out = {k: list(v) for k, v in files.items()}
+    for rel in extra:
+        key = ("removed" if not (root / rel).exists()
+               else "modified" if rel in head else "added")
+        out[key].append(rel)
+    return {k: sorted(v) for k, v in out.items()}
+
+
+def _has_head(root) -> bool:
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "-q", "--verify", "HEAD"],
+                          capture_output=True).returncode == 0
+
+
+def save_carry(root, status: str, files: dict) -> None:
+    """Forget the record once a run proposes the commit or finds nothing to
+    do. Otherwise keep this run's paths for the next run. The record lives in
+    the gitignored cache only."""
+    root = Path(root)
+    path = root / CARRY_REL
+    paths = sorted(set(files["added"]) | set(files["modified"]) | set(files["removed"]))
+    if status in COMMITTED or not paths:
+        if status in COMMITTED:
+            path.unlink(missing_ok=True)
+        return
+    if _is_repo(root) and subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "-q", CARRY_REL],
+            capture_output=True).returncode != 0:
+        return                  # never leave an untracked file in the tree
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"paths": paths}, indent=1) + "\n", encoding="utf-8")
+
+
 HARNESS_BIN = Path(__file__).resolve().parents[1] / "bin" / "harness"
 STEP_FIX = "fix the cause, then run: harness upgrade --yes"
 STEP_ERROR_WORDS = 11   # keeps the whole STEP_FAILED line within 25 words

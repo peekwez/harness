@@ -329,7 +329,7 @@ def test_task5_pages_state_the_code_facts():
         "upgrading.md": [
             "--dry-run", "--yes", "check:", "legacy-memory",
             "git rm --cached", "harness init --migrate",
-            "Later releases can add steps",
+            "It lists each step that the engine has",
             "legacy_verification: true", "/harness:harness"],
     }
     missing = [f"{page}: {n}" for page, ns in needles.items()
