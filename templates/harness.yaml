@@ -54,6 +54,7 @@ gates:
 #   # The default pytest command gets --junitxml. A custom cmd must name
 #   # {junit}, the XML path harness reads.
 #   junit: false
+#   red_timeout: 600                # seconds the bind-time suite run may take
 #   # cmd: "uv run pytest {paths} -q --junitxml={junit}"
 #   # The repo's own whole-tree gate. Runs ONCE per ceremony: at close (after
 #   # acceptance is green, before the substrate commit) and on the merged

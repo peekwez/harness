@@ -7,6 +7,7 @@ record, and the statement links from `engine.statements`.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -40,10 +41,11 @@ def load_red_record(root, slice_id: str):
     try:
         record = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise HarnessError(f"{record_rel(slice_id)} is not valid JSON: "
-                           f"{exc}") from exc
+        raise HarnessError(f"{record_rel(slice_id)} is not valid JSON. "
+                           f"Repair or delete it, then bind again.") from exc
     if not isinstance(record, dict):
-        raise HarnessError(f"{record_rel(slice_id)} must hold a JSON object")
+        raise HarnessError(f"{record_rel(slice_id)} is not a JSON object. "
+                           f"Repair or delete it, then bind again.")
     return record
 
 
@@ -73,7 +75,8 @@ def parse_junit(path) -> list[dict]:
     try:
         tree = ET.parse(path)
     except (ET.ParseError, OSError) as exc:
-        raise HarnessError(f"{path}: JUnit XML is not readable: {exc}") from exc
+        raise HarnessError(f"JUnit XML is not readable: {exc}. Check the "
+                           f"{{junit}} path in acceptance.cmd.") from exc
     out = []
     for case in tree.iter("testcase"):
         name, cls = case.get("name", ""), case.get("classname")
@@ -104,29 +107,47 @@ def record_red(root, sl, config) -> dict:
         junit = (harness_dir(root) / "cache" / "junit" / f"{sid}.xml").resolve()
         junit.parent.mkdir(parents=True, exist_ok=True)
         junit.unlink(missing_ok=True)
-    run = run_slice_suite(root, sl, config,
-                          junit=str(junit) if junit else None)
-    ran = run["runner_error"] is None
-    record = {"slice": sid, "commit": _head(root), "ran_at": now_iso(),
-              "exit_code": run["exit_code"], "output_tail": run["output_tail"],
-              "red": ran and run["exit_code"] != 0,
-              "green_at_start": ran and run["exit_code"] == 0}
-    if not ran:
-        record["runner_error"] = run["runner_error"]
-    if junit is not None:
-        if junit.is_file():
-            try:
-                record["per_test"] = parse_junit(junit)
-            except HarnessError as exc:
-                record["junit_error"] = str(exc)
-        else:
-            record["junit_error"] = (f"no JUnit XML at {junit}. Add {{junit}} "
-                                     f"to acceptance.cmd.")
+    try:
+        run = run_slice_suite(root, sl, config,
+                              junit=str(junit) if junit else None)
+        ran = run["runner_error"] is None
+        record = {"slice": sid, "commit": _head(root), "ran_at": now_iso(),
+                  "exit_code": run["exit_code"],
+                  "output_tail": run["output_tail"],
+                  "red": ran and run["exit_code"] != 0,
+                  "green_at_start": ran and run["exit_code"] == 0}
+        if not ran:
+            record["runner_error"] = run["runner_error"]
+        if junit is not None:
+            if junit.is_file():
+                try:
+                    record["per_test"] = parse_junit(junit)
+                except HarnessError as exc:
+                    record["junit_error"] = str(exc)
+            else:
+                record["junit_error"] = (
+                    f"no JUnit XML at {_rel(root, junit)}. "
+                    f"Add {{junit}} to acceptance.cmd.")
+    finally:
+        if junit is not None:
+            junit.unlink(missing_ok=True)
     path = red_record_path(root, sid)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
-                    encoding="utf-8")
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
+                       encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
     return record
+
+
+def _rel(root, path) -> str:
+    try:
+        return str(Path(path).relative_to(Path(root).resolve()))
+    except ValueError:
+        return str(path)
 
 
 def _summary(record: dict, reused: bool) -> dict:
@@ -144,16 +165,17 @@ def ensure_red_record(root, sl, config) -> dict:
     """The bind-time red record (spec 6.3).
 
     A red record is never overwritten: re-binding after code exists must
-    not replace evidence that the tests failed first. A green record, a
-    runner error, or an unreadable file runs the suite again.
+    not replace evidence that the tests failed first. A green record or a
+    runner error runs the suite again. A corrupt record fails loud: it may
+    hold real red evidence, so it is never replaced silently.
 
     Returns:
         A summary for the bind output, or `{"skipped": reason}`.
+
+    Raises:
+        HarnessError: The existing record is not valid JSON.
     """
-    try:
-        existing = load_red_record(root, sl["id"])
-    except HarnessError:
-        existing = None
+    existing = load_red_record(root, sl["id"])
     if existing and existing.get("red"):
         return _summary(existing, reused=True)
     record = record_red(root, sl, config)

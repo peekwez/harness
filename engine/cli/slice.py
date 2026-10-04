@@ -89,6 +89,12 @@ def _bind_slice(root, slice_id: str, session: str, *, force=False,
     if refusal:
         return refusal
     justification = (justification or "").strip()
+    if not sl.get("legacy_verification"):
+        # config errors surface before any state changes (no half-bound slice)
+        from engine.cli.acceptance import junit_enabled, red_timeout
+        _cfg = load_config(root)
+        junit_enabled(_cfg)
+        red_timeout(_cfg)
 
     existing_edges = load_edges(root)
     existing = {(e["type"], e["from"], e["to"]) for e in existing_edges}

@@ -187,3 +187,70 @@ def test_start_records_red_in_the_worktree(tmp_path):
     wt = toy / ".worktrees" / "slice-042"
     assert json.loads((wt / ".harness" / "verification" /
                        "slice-042.json").read_text())["red"] is True
+
+
+# ------------------------------------------------------------- fix round 1
+def test_a_corrupt_record_fails_loud_and_is_untouched(tmp_path):
+    toy = _toy(tmp_path)
+    rec = toy / ".harness" / "verification" / "slice-042.json"
+    rec.parent.mkdir(parents=True)
+    rec.write_bytes(b"{not json")
+    proc = run_cli("slice", "--slice", "slice-042", "--session", "c", root=toy)
+    assert proc.returncode != 0
+    assert ".harness/verification/slice-042.json" in proc.stdout + proc.stderr
+    assert "Repair or delete" in proc.stdout + proc.stderr
+    assert rec.read_bytes() == b"{not json"
+
+
+def test_a_slow_suite_times_out_as_a_runner_error(tmp_path):
+    toy = _toy(tmp_path)
+    (toy / "tests" / "slices" / "042_orders.py").write_text(
+        "import time\n\n\ndef test_slow():\n    time.sleep(30)\n")
+    _commit(toy, "slow test")
+    _set_config(toy, "acceptance", red_timeout=1)
+    out = _bind(toy)["red_record"]
+    assert out["red"] is False and out["green_at_start"] is False
+    assert "timed out after 1s" in out["runner_error"]
+
+
+def test_red_timeout_must_be_a_positive_integer_before_any_state_change(
+        tmp_path):
+    toy = _toy(tmp_path)
+    _set_config(toy, "acceptance", red_timeout=0)
+    proc = run_cli("slice", "--slice", "slice-042", "--session", "t", root=toy)
+    assert proc.returncode != 0
+    assert "red_timeout" in proc.stdout + proc.stderr
+    from engine import get_slice
+    assert get_slice(toy, "slice-042")["status"] == "planned"
+
+
+def test_bad_junit_value_leaves_the_slice_unbound(tmp_path):
+    toy = _toy(tmp_path)
+    _set_config(toy, "acceptance", junit="yes")
+    proc = run_cli("slice", "--slice", "slice-042", "--session", "t", root=toy)
+    assert proc.returncode != 0
+    from engine import get_slice
+    assert get_slice(toy, "slice-042")["status"] == "planned"
+
+
+def test_custom_pytest_command_exit_5_is_a_runner_error(tmp_path):
+    toy = _toy(tmp_path)
+    (toy / "tests" / "slices" / "042_orders.py").write_text("X = 1\n")
+    _commit(toy, "no tests")
+    _set_config(toy, "acceptance",
+                cmd=f"{sys.executable} -m pytest {{paths}} -q")
+    rec = _bind(toy)["red_record"]
+    assert rec["red"] is False and "pytest exit 5" in rec["runner_error"]
+
+
+def test_malformed_junit_xml_is_a_junit_error(tmp_path):
+    toy = _toy(tmp_path)
+    junit = toy / "fake.py"
+    junit.write_text("import sys\nopen(sys.argv[1], 'w').write('<oops')\n"
+                     "sys.exit(1)\n")
+    _set_config(toy, "acceptance", junit=True,
+                cmd=f"{sys.executable} {junit} {{junit}}")
+    rec = _bind(toy)["red_record"]
+    assert rec["red"] is True
+    assert "JUnit XML is not readable" in rec["junit_error"]
+    assert not (toy / ".harness" / "cache" / "junit" / "slice-042.xml").exists()

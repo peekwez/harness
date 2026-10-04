@@ -30,6 +30,7 @@ SPAWN_FAILED_RC = 127          # the shell's "command not found"
 GATE_CODE = "ACCEPTANCE_GATE_FAILED"
 JUNIT_PLACEHOLDER = "{junit}"
 PYTEST_RUNNER_ERRORS = (4, 5)  # usage error; no tests collected
+DEFAULT_RED_TIMEOUT = 600
 
 
 def _acceptance_block(config) -> dict:
@@ -60,8 +61,7 @@ def _acceptance_cmd(config, paths, interpreter, junit=None) -> list[str]:
     `{paths}` is substituted with the shell-quoted paths and the result
     split with `shlex`; a custom command that never names `{paths}` gets
     them appended, so a bare `uv run pytest -q` still receives its targets.
-    `{junit}` is substituted with the shell-quoted JUnit XML path, or with
-    `os.devnull` when no path is given (close and regression runs).
+    `{junit}` becomes the quoted JUnit XML path, or `os.devnull` if none.
 
     Args:
         config: The merged engine config.
@@ -89,23 +89,35 @@ def _acceptance_cmd(config, paths, interpreter, junit=None) -> list[str]:
 
 
 def junit_enabled(config) -> bool:
-    """`acceptance.junit`: record each test's result in the red record.
-
-    Raises:
-        HarnessError: The value is not a boolean.
-    """
+    """`acceptance.junit`: record each test's result. HarnessError if not bool."""
     value = _acceptance_block(config).get("junit", False)
     if not isinstance(value, bool):
-        raise HarnessError(f"config `acceptance.junit` must be true or false, "
-                           f"got {value!r}")
+        raise HarnessError(f"config `acceptance.junit` is {value!r}. "
+                           f"Set it to true or false.")
     return value
+
+
+def red_timeout(config) -> int:
+    """`acceptance.red_timeout`: seconds the bind-time run may take (int > 0)."""
+    value = _acceptance_block(config).get("red_timeout", DEFAULT_RED_TIMEOUT)
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise HarnessError(f"config `acceptance.red_timeout` is {value!r}. "
+                           f"Set it to whole seconds above zero.")
+    return value
+
+
+def _is_pytest(argv) -> bool:
+    """True when the argv runs pytest, directly or as `-m pytest`."""
+    if {Path(str(a)).name for a in argv} & {"pytest", "py.test"}:
+        return True
+    return any(a == "-m" and b == "pytest" for a, b in zip(argv, argv[1:]))
 
 
 def run_slice_suite(root, sl, config, junit=None) -> dict:
     """One run of the slice's own acceptance command. No regression suite.
 
-    The red record (spec 6.3) calls this at bind. A command that cannot
-    run is a runner error, never a red result.
+    The red record (spec 6.3) calls this at bind, with stdin closed and a
+    timeout. A command that cannot run is a runner error, never red.
 
     Args:
         root: Repo root.
@@ -114,9 +126,8 @@ def run_slice_suite(root, sl, config, junit=None) -> dict:
         junit: Absolute JUnit XML path, or None.
 
     Returns:
-        `{"exit_code", "output_tail", "runner_error"}`. `exit_code` is None
-        when the command never ran. `runner_error` is None for a real
-        pass or fail.
+        `{"exit_code", "output_tail", "runner_error"}`; `runner_error` is
+        None for a real pass or fail.
     """
     declared = sl.get("acceptance", []) or []
     if not declared:
@@ -128,16 +139,21 @@ def run_slice_suite(root, sl, config, junit=None) -> dict:
     interpreter = _acceptance_python(root, config)
     custom = bool(_acceptance_block(config).get("cmd"))
     if not custom and not Path(interpreter).exists():
+        return {"exit_code": None, "output_tail": "", "runner_error":
+                f"acceptance interpreter {interpreter!r} does not exist"}
+    argv = _acceptance_cmd(config, paths, interpreter, junit=junit)
+    limit = red_timeout(config)
+    try:
+        proc = _run(argv, root, config, stdin=subprocess.DEVNULL,
+                    timeout=limit)
+    except subprocess.TimeoutExpired:
         return {"exit_code": None, "output_tail": "",
-                "runner_error": f"acceptance interpreter {interpreter!r} "
-                                f"does not exist"}
-    proc = _run(_acceptance_cmd(config, paths, interpreter, junit=junit),
-                root, config)
+                "runner_error": f"acceptance suite timed out after {limit}s"}
     tail = "\n".join((proc.stdout or "").strip().splitlines()[-20:])
     runner_error = None
     if proc.returncode == SPAWN_FAILED_RC:
         runner_error = "acceptance command could not run (exit 127)"
-    elif not custom and proc.returncode in PYTEST_RUNNER_ERRORS:
+    elif proc.returncode in PYTEST_RUNNER_ERRORS and _is_pytest(argv):
         runner_error = (f"pytest exit {proc.returncode}: usage error or no "
                         f"tests collected")
     return {"exit_code": proc.returncode, "output_tail": tail,
@@ -208,7 +224,7 @@ def _acceptance_env(root, config, base=None) -> dict:
     return base
 
 
-def _run(argv, root, config, env=None):
+def _run(argv, root, config, env=None, stdin=None, timeout=None):
     """Run `argv` under the acceptance cwd/env; returns a CompletedProcess.
 
     stderr is folded into stdout so evidence tails read in the order the
@@ -223,7 +239,8 @@ def _run(argv, root, config, env=None):
         cwd = _acceptance_cwd(root, config)
         return subprocess.run(argv, cwd=cwd,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, env=_acceptance_env(root, config, env))
+                              text=True, env=_acceptance_env(root, config, env),
+                              stdin=stdin, timeout=timeout)
     except OSError as exc:
         return subprocess.CompletedProcess(
             argv, SPAWN_FAILED_RC,
