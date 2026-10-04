@@ -23,6 +23,12 @@ VERIFY_MD = "explore/VERIFY.md"
 #: free-form string would produce a dead link nobody notices.
 LINEAR_ID = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
 
+#: D-0.10-12: architect starts from evidence, a spec, or a recorded reason
+ARCHITECT_REFUSAL = (
+    "architect: no frozen explore/, no --from-spec, and no --skip-explore "
+    "reason. Run: harness explore. Or pass --from-spec <path> or "
+    "--skip-explore \"<reason>\".")
+
 
 # ------------------------------------------------------------------ architect
 def _under_root(root, path) -> Path:
@@ -117,6 +123,19 @@ def _architect_from_spec(root, args, doc) -> int:
     return 0
 
 
+def _architect_skip_explore(root, args, doc) -> int:
+    """Records the `--skip-explore` reason in the working document."""
+    from engine.explore import _one_line, record_skip
+    existing = doc.read_text(encoding="utf-8") if doc.exists() else None
+    body = record_skip(existing, args.skip_explore)
+    doc.parent.mkdir(parents=True, exist_ok=True)
+    doc.write_text(body, encoding="utf-8")
+    stage = re.search(r"<!-- stage: (\d+) -->", body)
+    _print({"doc": str(doc), "stage": int(stage.group(1)) if stage else 1,
+            "explore_skipped": _one_line(args.skip_explore)})
+    return 0
+
+
 def cmd_architect(args):
     """Seeds the Phase-0 working document from one source (spec 5.5).
 
@@ -134,6 +153,14 @@ def cmd_architect(args):
     doc = _under_root(root, args.doc)
     if args.from_spec:
         return _architect_from_spec(root, args, doc)
+    if args.skip_explore is not None:
+        return _architect_skip_explore(root, args, doc)
+    from engine.explore import explore_active, freeze_state
+    if not args.from_explore and freeze_state(root) is None:
+        if explore_active(root):
+            raise HarnessError("architect: explore/DECISIONS.md is not "
+                               "frozen. Run: harness explore --freeze")
+        raise HarnessError(ARCHITECT_REFUSAL)
     from engine.explore_adr import seed_from_explore
     _print(seed_from_explore(root, doc, force=args.force))
     return 0

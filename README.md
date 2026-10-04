@@ -256,7 +256,10 @@ decision row per chosen card in the frozen `explore/DECISIONS.md`, parked
 cards as deferred `[open-question]`s; refuses when the file is not frozen
 or changed after freeze. `--from-spec <path>`: headings become
 `[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s. Both refuse
-to overwrite the document without `--force`),
+to overwrite the document without `--force`. `--skip-explore "<reason>"`:
+records the reason in the document and, at close, in slice metrics as
+`explore_skipped`. With no source and no frozen `explore/`, `architect`
+refuses and names the three ways forward),
 `compile`, `author-gate`, `resolve`, `extract`,
 `gates`, `verify` (the CI entry),
 `acceptance` (`--closed [--list] [--exclude <slice>]`: the cumulative

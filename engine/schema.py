@@ -55,7 +55,8 @@ SCHEMAS = {
                    ("compactions", int, False), ("parks", int, False),
                    ("source", str, False),
                    ("red_before_green", bool, False),
-                   ("green_at_start", bool, False)],
+                   ("green_at_start", bool, False),
+                   ("explore_skipped", str, False)],
         "enums": {"source": ("close", "upgrade")},
     },
     "verify.jsonl": {

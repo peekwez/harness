@@ -546,3 +546,78 @@ def freeze(root) -> dict:
             "cards": len(cards),
             "chosen": len(cards) - len(parked), "parked": len(parked),
             "statements": len(statements)}
+
+
+# ------------------------------------------------------------------ skip-explore
+def _one_line(reason: str) -> str:
+    return " ".join((reason or "").split()).replace("-->", "->")
+
+
+def record_skip(doc_text: str | None, reason: str) -> str:
+    """Writes the `--skip-explore` reason into a working document.
+
+    Args:
+        doc_text: The current document, or None for a new one.
+        reason: The human's reason. Whitespace collapses to one line.
+
+    Returns:
+        The new document text. A new document starts at stage 1. An
+        existing document keeps its content and gets one marker line.
+
+    Raises:
+        HarnessError: The reason is empty.
+    """
+    from engine.docsections import DECISIONS_TABLE_HEADER
+    reason = _one_line(reason)
+    if not reason:
+        raise HarnessError("architect: --skip-explore needs a reason. Run: "
+                           "harness architect --skip-explore \"<why no toy>\"")
+    marker = f"<!-- explore-skipped: {reason} -->"
+    if doc_text is None:
+        return "\n".join([
+            "# Architecture", "", "<!-- stage: 1 -->", marker, "",
+            f"[assumption] Explore was skipped: {reason}", "",
+            "```harness-decisions", *DECISIONS_TABLE_HEADER, "```", ""])
+    if SKIP_MARKER.search(doc_text):
+        return SKIP_MARKER.sub(lambda _m: marker, doc_text, count=1)
+    lines = doc_text.splitlines()
+    at = 1 if lines and lines[0].startswith("#") else 0
+    lines[at:at] = [marker] if at == 0 else ["", marker]
+    return "\n".join(lines) + ("\n" if doc_text.endswith("\n") else "")
+
+
+def skip_reason(root) -> str | None:
+    """The recorded `--skip-explore` reason, read from the working document.
+
+    `docs/architecture.md` is read first. Other `docs/**/*.md` files are
+    read in path order, because `architect --doc` can name another file.
+    Markers inside fenced code blocks do not count.
+    """
+    docs = Path(root) / "docs"
+    if not docs.is_dir():
+        return None
+    default = docs / "architecture.md"
+    candidates = [default] + sorted(p for p in docs.rglob("*.md")
+                                    if p != default)
+    for path in candidates:
+        if not path.is_file():
+            continue
+        text, _ = _clean_fences(path.read_text(encoding="utf-8",
+                                               errors="replace"))
+        m = SKIP_MARKER.search(text)
+        if m:
+            return m.group(1)
+    return None
+
+
+def explore_summary_extra(root) -> dict:
+    """Slice-metrics fields for `record_slice_summary(..., extra=)`.
+
+    Returns:
+        `{"explore_skipped": "<reason>"}` when the design skipped explore
+        and `explore/` is not frozen; otherwise `{}`.
+    """
+    if freeze_state(root) is not None:
+        return {}
+    reason = skip_reason(root)
+    return {"explore_skipped": reason} if reason else {}

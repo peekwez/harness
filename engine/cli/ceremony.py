@@ -363,8 +363,11 @@ def _close_ceremony(args):
                               f"re-close — provenance is not optional."})
 
     # D-0.10-11: one committed summary row per slice. Event rows stay local.
+    from engine.explore import explore_summary_extra
     slice_metrics = telemetry.record_slice_summary(
-        root, args.slice, extra=verification_metrics(verification))
+        root, args.slice,
+        extra={**verification_metrics(verification),
+               **explore_summary_extra(root)})
 
     result = {"closed": True, "slice": args.slice, "registry_flipped": flipped,
               "acceptance_gate": acceptance_gate, "substrate_commit": None,
