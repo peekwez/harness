@@ -249,7 +249,7 @@ def cmd_memory(args):
               "Fix: pass --slice <id> or --since <ISO time>.", file=sys.stderr)
         return 2
     directory = shared_memory.personal_memory_dir(root)
-    _print({"dir": str(directory),
+    _print({"dir": str(directory), "dir_exists": directory.is_dir(),
             "since": datetime.fromtimestamp(since, timezone.utc).isoformat(),
             "files": shared_memory.changed_since(directory, since)})
     return 0

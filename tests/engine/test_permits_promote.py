@@ -253,3 +253,54 @@ def test_unreadable_program_word_asks(command):
 ])
 def test_readable_program_word_still_defers(command):
     assert command_decision(command, slice_id="s1")[0] == "defer"
+
+
+# Final fix M2: in a plain command only the word after the harness program
+# word (and its --root option) is the subcommand.
+@pytest.mark.parametrize("command", [
+    'git commit -m "Fix memory leak in harness"',
+    "harness resolve --module memory",
+    "harness gates run --files src/memory/x.py",
+    "pytest /Users/me/harness/tests/memory/test_x.py",
+    "/plug/bin/harness --root /repo resolve --module memory",
+    "git commit -m 'harness: memory changed handling'",
+])
+def test_memory_word_elsewhere_does_not_ask(command):
+    assert needs_human(command) is None
+    assert command_decision(command, slice_id="s1")[0] == "allow"
+
+
+@pytest.mark.parametrize("command", [
+    "harness --root /repo memory compact",
+    "harness --root=/repo memory",
+    "/plug/bin/HARNESS memory promote a",
+    "timeout 5 /plug/bin/harness memory promote a",
+    "bash -c 'harness memory compact'",
+    "git status && harness memory list",
+])
+def test_plain_memory_subcommands_still_ask(command):
+    assert needs_human(command)
+    assert command_decision(command, slice_id="s1")[:2] == ("ask", False)
+
+
+# Final fix M3: naming a parent of the shared folder asks.
+@pytest.mark.parametrize("command", [
+    "cp -r x/shared .claude/memory/",
+    "git checkout other -- .claude",
+    "git restore --source=X -- .claude/memory",
+    "git restore --source=X -- .claude/memory/",
+    "cp -r x .CLAUDE/Memory",
+    "rsync -a x/ ./.claude/",
+    "cp -r x '.claude/memory'",
+    "cp -r x /repo/.claude/memory",
+    "git checkout other -- .claude/./memory",
+])
+def test_naming_a_parent_of_shared_memory_asks(command):
+    assert command_decision(command, slice_id="s1")[:2] == ("ask", False)
+
+
+@pytest.mark.parametrize("command", [
+    "cat .claude/settings.json", "ls .claude-notes", "git log -- src/claude",
+])
+def test_other_claude_paths_do_not_ask(command):
+    assert command_decision(command, slice_id="s1")[0] != "ask"

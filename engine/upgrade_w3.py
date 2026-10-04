@@ -69,7 +69,9 @@ def _read_rows(root: Path, path: Path) -> list:
             f"{RETIRE_ID}: {rel} is not valid UTF-8. Fix the file, then run: "
             f"harness upgrade") from exc
     rows = []
-    for lineno, line in enumerate(text.splitlines(), 1):
+    # only \n ends a row: append_jsonl keeps U+2028, U+2029 and U+0085 raw,
+    # and splitlines() would cut a row at each of them
+    for lineno, line in enumerate(text.split("\n"), 1):
         if not line.strip():
             continue
         try:
@@ -261,16 +263,20 @@ def _is_legacy_ignore(line: str) -> bool:
 
 
 def _pending_git_lines(root: Path) -> list:
-    """[(file name, matcher, line)] for each legacy line still present."""
-    pending = [(".gitattributes", _is_legacy_attr, line)
-               for line in _lines(root / ".gitattributes")
-               if _is_legacy_attr(line)]
-    # keep the ignore line while session files may still exist
-    if not (root / MEMORY_DIR).exists():
-        pending += [(".gitignore", _is_legacy_ignore, line)
-                    for line in _lines(root / ".gitignore")
-                    if _is_legacy_ignore(line)]
-    return pending
+    """[(file name, matcher, line)] for each legacy line still present.
+
+    Both lines stay while the legacy folder exists (a declined retire): the
+    union driver still merges a tracked durable.jsonl, and the ignore line
+    still hides session files.
+    """
+    if (root / MEMORY_DIR).exists():
+        return []
+    return ([(".gitattributes", _is_legacy_attr, line)
+             for line in _lines(root / ".gitattributes")
+             if _is_legacy_attr(line)]
+            + [(".gitignore", _is_legacy_ignore, line)
+               for line in _lines(root / ".gitignore")
+               if _is_legacy_ignore(line)])
 
 
 def describe_git_lines(root) -> list:

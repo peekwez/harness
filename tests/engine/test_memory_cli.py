@@ -71,6 +71,7 @@ def test_memory_changed_lists_files_since_slice_start(toy, tmp_path):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["dir"] == str(mem)
+    assert out["dir_exists"] is True
     assert out["files"] == [str(mem / "new.md")]
 
     proc = run_cli("memory", "changed", "--since", "1970-01-01T00:00:00Z",
@@ -95,3 +96,12 @@ def test_memory_changed_rejects_a_bad_since(toy, tmp_path):
     assert proc.returncode == 2
     assert "Traceback" not in proc.stderr
     assert "Fix:" in proc.stderr
+
+
+def test_memory_changed_reports_a_missing_folder(toy, tmp_path):
+    env = {"HOME": str(tmp_path / "home"), "CLAUDE_CONFIG_DIR": ""}
+    proc = run_cli("memory", "changed", "--since", "1970-01-01T00:00:00Z",
+                   root=toy, env=env)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["dir_exists"] is False and out["files"] == []

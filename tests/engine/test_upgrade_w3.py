@@ -193,9 +193,7 @@ def test_retire_without_offered_rows_writes_no_export(toy):
 # ------------------------------------------------------ w3.memory-git-lines
 def test_git_lines_removed_after_memory_is_gone(toy):
     _legacy_memory(toy)
-    lines = upgrade_w3.describe_git_lines(toy)
-    assert any(".gitattributes" in line for line in lines)
-    assert not any(".gitignore" in line for line in lines)
+    assert upgrade_w3.describe_git_lines(toy) == []   # memory still there
     upgrade_w3.apply_retire(toy, lambda question: True)
     upgrade_w3.apply_git_lines(toy, lambda question: True)
     assert ".harness/memory" not in (toy / ".gitattributes").read_text()
@@ -299,9 +297,11 @@ def test_plan_lists_w3_changes_then_nothing_after_apply(toy):
     _legacy_memory(toy)
     (toy / "CLAUDE.md").write_text("This repo is harness-enforced.\n")
     pending = {p["id"] for p in upgrade_010.plan(toy)}
-    assert set(W3_IDS) <= pending
-    for step in [s for s in upgrade_010.STEPS if s.id.startswith("w3.")]:
-        step.apply(toy, lambda question: True)
+    # the git lines wait for the retire: run() describes each step in turn
+    assert set(W3_IDS) - pending == {"w3.memory-git-lines"}
+    results = upgrade_010.run(toy, lambda question: True, dry_run=False)
+    assert "w3.memory-git-lines" in {r["id"] for r in results}
+    assert ".harness/memory" not in (toy / ".gitattributes").read_text()
     assert not {p["id"] for p in upgrade_010.plan(toy)} & set(W3_IDS)
 
 
@@ -425,3 +425,24 @@ def test_gate_exiting_at_import_gets_no_advice_and_others_still_do(toy):
     cfg.write_text(yaml.safe_dump(doc, sort_keys=False))
     advice = upgrade_w3.advise_index(toy)
     assert len(advice) == 1 and ".harness/gates/mine.py" in advice[0]
+
+
+def test_declined_retire_keeps_the_union_merge_line(toy):
+    """durable.jsonl stays tracked, so its merge driver stays (final fix M5)."""
+    _legacy_memory(toy)
+    upgrade_w3.apply_retire(toy, lambda question: False)
+    assert upgrade_w3.describe_git_lines(toy) == []
+    assert upgrade_w3.apply_git_lines(toy, lambda question: True) == []
+    assert ".harness/memory/durable.jsonl merge=union" in \
+        (toy / ".gitattributes").read_text()
+
+
+@pytest.mark.parametrize("sep", ["\u2028", "\u2029", "\x85"])
+def test_retire_reads_rows_holding_unicode_line_separators(toy, sep):
+    """append_jsonl keeps non-ASCII raw; only \\n ends a row (final fix F2)."""
+    mem = toy / ".harness" / "memory"
+    mem.mkdir(parents=True)
+    append_jsonl(mem / "durable.jsonl",
+                 _row("mem-u1", "attempt", f"line one{sep}line two"))
+    rows = upgrade_w3._read_rows(toy, mem / "durable.jsonl")
+    assert [r["content"] for r in rows] == [f"line one{sep}line two"]

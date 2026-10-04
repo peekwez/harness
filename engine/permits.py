@@ -93,6 +93,12 @@ def needs_human(command: str):
     `$'promote'`): the sub-word is read de-quoted and must equal `changed`.
     Case is ignored: macOS paths are case-insensitive.
 
+    A plain command is read by word: only the word after a `harness` program
+    word and its `--root` option is the subcommand, so `harness resolve
+    --module memory` and a commit message naming memory do not ask. A word
+    holding blanks (a `bash -c` script) is read as a command of its own.
+    Other commands fall back to a match on the raw text.
+
     Args:
         command: The command line the host is asking about.
 
@@ -104,11 +110,42 @@ def needs_human(command: str):
     for text in (raw, dequoted):
         if "harness" in text.casefold() and PROMOTE.search(text):
             return _PROMOTE_REASON
+    segments = plain_segments(raw)
+    if segments is not None:
+        if any(_words_need_human(words) for words in segments):
+            return _PROMOTE_REASON
+        return None
     if "harness" in dequoted.casefold():
         for m in _MEMORY_SUB.finditer(dequoted):
             if m.group(1) != "changed":
                 return _PROMOTE_REASON
     return None
+
+
+def _harness_sub(words: list, i: int):
+    """The words after the `harness` program word at `i`, past `--root`."""
+    j = i + 1
+    while j < len(words) and words[j].startswith("-") and words[j] != "--":
+        flag = words[j].split("=", 1)[0]
+        takes_value = ("=" not in words[j] and len(flag) >= 3
+                       and "--root".startswith(flag))
+        j += 2 if takes_value else 1
+    return words[j:]
+
+
+def _words_need_human(words: list) -> bool:
+    """True when a plain segment runs `harness memory <sub>` with a sub
+    other than `changed`, or holds a word that is such a command itself."""
+    for i, word in enumerate(words):
+        if any(c in word for c in " \t\n") and needs_human(word):
+            return True
+        if word.rsplit("/", 1)[-1].casefold() != "harness":
+            continue
+        rest = _harness_sub(words, i)
+        if rest and rest[0].casefold() == "memory" \
+                and (rest[1:2] or [""])[0] != "changed":
+            return True
+    return False
 
 
 _PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
@@ -231,6 +268,30 @@ def _under_claude_dir(token: str) -> bool:
     for i, c in enumerate(comps):
         if c == ".claude" and (i == len(comps) - 1
                                or comps[i + 1] == "memory"):
+            return True
+    return False
+
+
+def names_shared_parent(command: str) -> bool:
+    """True when a de-quoted token names `.claude` or `.claude/memory`.
+
+    `cp -r x/shared .claude/memory/` and `git checkout other -- .claude`
+    write the shared folder without naming it. The token may carry a
+    redirect lead, a `--flag=` prefix, `./` parts or a trailing slash.
+    Case is ignored: macOS paths are case-insensitive.
+    """
+    raw = command or ""
+    try:
+        tokens = shlex.split(raw)
+    except ValueError:
+        tokens = re.sub(r"[\\'\"]", "", raw).split()
+    for tok in tokens:
+        tok = _REDIRECT_LEAD.sub("", tok).split("=", 1)[-1]
+        if not tok:
+            continue
+        comps = [c for c in posixpath.normpath(tok).casefold().split("/")
+                 if c and c != "."]
+        if comps[-1:] == [".claude"] or comps[-2:] == [".claude", "memory"]:
             return True
     return False
 
@@ -660,7 +721,7 @@ def ask_reason(command: str, harness_bin: str | None = None):
     why = needs_human(command)
     if why:
         return why
-    if touches_shared_memory(command):
+    if touches_shared_memory(command) or names_shared_parent(command):
         return _SHARED_REASON
     if plain_segments(command, harness_bin) is None:
         if _may_spell_harness(command):
@@ -670,8 +731,9 @@ def ask_reason(command: str, harness_bin: str | None = None):
     return None
 
 
-_SHARED_REASON = ("A command that names .claude/memory/shared needs a human. "
-                  "Shared memory holds only facts a human chose.")
+_SHARED_REASON = ("A command that names .claude/memory/shared or a parent "
+                  "folder needs a human. Shared memory holds only facts a "
+                  "human chose.")
 _PROGRAM_REASON = ("A program name uses expansion, globs, escapes or joined "
                    "quotes, so the permit cannot read it. A human approves it.")
 _UNRESOLVED_REASON = ("This harness command uses expansion, globs or escapes, "

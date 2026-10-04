@@ -91,7 +91,10 @@ def assemble(root, diff_text: str, slice_id: str, config: dict) -> dict:
                    "work_unit_id": slice_id,
                    "payload": {"files": [{"path": f, "proposed_content_hash": None}
                                          for f in files],
-                               "context_loaded": [], "diff": diff_text, "prompt": None}}
+                               "context_loaded": [], "diff": diff_text, "prompt": None,
+                               # a dry run over a diff, not a tool edit: G10
+                               # reads it (host events cannot carry this key)
+                               "source": "review"}}
             gate_findings.extend(run_gates(root, evt, config, sidecar))
     finally:
         sidecar.close()

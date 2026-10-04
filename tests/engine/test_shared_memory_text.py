@@ -24,3 +24,13 @@ def test_reviewer_agent_no_longer_bars_a_removed_path():
 def test_review_skill_describes_edge_only_adjudication():
     text = _read("skills/review/adjudicate.md")
     assert "suggest" in text and "harness memory promote" in text
+
+
+def test_close_slice_offers_promotion_before_the_close_commit():
+    """Promoted facts must ride the slice commit (final fix I1)."""
+    text = _read("skills/close-slice/SKILL.md")
+    offer = text.index("Promote any to shared?")
+    commit = text.index("git add -A -- . ':(exclude).harness' && git commit")
+    close = text.index("close-slice --slice $1 --commit HEAD")
+    assert offer < commit < close
+    assert "dir_exists" in text

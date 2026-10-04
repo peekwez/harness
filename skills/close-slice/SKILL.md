@@ -1,6 +1,6 @@
 ---
 name: close-slice
-description: The close ceremony — acceptance green, uses/declares reconciled, drift acknowledged, commit + git note, registry flips, shared memory promotion offer, worktree merge.
+description: The close ceremony — acceptance green, shared memory promotion offer, uses/declares reconciled, drift acknowledged, commit + git note, registry flips, worktree merge.
 allowed-tools: Bash(*/bin/harness *) Bash(git *)
 argument-hint: "<slice-id>"
 ---
@@ -32,10 +32,33 @@ from the wrong tree closes against the wrong substrate.
    linked to the same app action and result, including the design's required
    edge/failure/recovery cases. Missing instrumentation remains NOT VERIFIED.
 1. Acceptance tests green (run the slice's `acceptance` paths).
-2. Commit the work (slice = commit boundary), keeping harness state OUT of
+2. Offer personal memory for promotion, after review and before the commit.
+   Run:
+   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory changed --slice $1`
+   The output lists the personal memory files that changed since the slice
+   started (`files`), the folder it read (`dir`) and whether that folder
+   exists (`dir_exists`). Harness finds the folder in this order:
+   1. `autoMemoryDirectory` in `.claude/settings.local.json`, then in
+      `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`).
+   2. Else `~/.claude/projects/<slug>/memory/`. The slug is the main repo
+      path with each character that is not a letter or digit changed to `-`.
+      All worktrees of the repo share this folder.
+   If `dir_exists` is false, tell the human that harness found no personal
+   memory folder at `dir`, then go to the next step.
+   If `files` is empty, go to the next step.
+   Otherwise show the list and ask the human: "Promote any to shared?"
+   For each file the human picks, run:
+   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory promote <file>`
+   The host asks the human to approve each run. Never write
+   `.claude/memory/shared/` yourself. Gate G10 blocks it.
+   Promote writes `.claude/memory/shared/<fact>.md` and updates
+   `.claude/memory/shared/MEMORY.md` in this tree. The next step commits
+   them with the slice, so they ride the slice commit, the PR or the merge.
+3. Commit the work (slice = commit boundary), keeping harness state OUT of
    the feature commit — the ceremony commits its own substrate mutations:
    `git add -A -- . ':(exclude).harness' && git commit`
-3. Run the ceremony (from the slice's tree):
+   This commit includes any promoted shared memory files.
+4. Run the ceremony (from the slice's tree):
    `"${CLAUDE_PLUGIN_ROOT}/bin/harness" close-slice --slice $1 --commit HEAD`
    (`--commit HEAD` on purpose — the engine resolves it to the sha; a
    `$(git rev-parse HEAD)` substitution can never be
@@ -71,22 +94,6 @@ marked the slice closed, and committed
 those substrate mutations itself (`substrate_commit` in the output — no
 manual follow-up commit needed). You finish the mechanical tail:
 
-4. Offer personal memory for promotion. Run:
-   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory changed --slice $1`
-   The output lists the personal memory files that changed since the slice
-   started (`files`) and the folder it read (`dir`). Harness finds the folder
-   in this order:
-   1. `autoMemoryDirectory` in `.claude/settings.local.json`, then in
-      `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`).
-   2. Else `~/.claude/projects/<slug>/memory/`. The slug is the main repo
-      path with each character that is not a letter or digit changed to `-`.
-      All worktrees of the repo share this folder.
-   If `files` is empty, go to the next step.
-   Otherwise show the list and ask the human: "Promote any to shared?"
-   For each file the human picks, run:
-   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory promote <file>`
-   The host asks the human to approve each run. Never write
-   `.claude/memory/shared/` yourself. Gate G10 blocks it.
 5. Land it. Which command depends on `landing.mode` in
    `.harness/config.yaml` (ADR-002 / D-009) — check it before you reach for
    `merge-slice`.
