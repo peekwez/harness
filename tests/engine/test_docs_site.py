@@ -95,6 +95,29 @@ REQUIRED_HEADINGS.update({
         "## Promote a fact", "## Guards", "## Upgrading from 0.9"],
 })
 
+# Task 5: Extending, Internals and Upgrading.
+REQUIRED_HEADINGS.update({
+    "extending/extra-gates.md": [
+        "# Repo-local gates", "## Declare a gate", "## The gate context",
+        "## Cite a non-goal", "## Failure modes", "## Gates in CI",
+        "## Exempt paths"],
+    "extending/hosts.md": [
+        "# Other hosts", "## The five-event contract", "## Write an adapter",
+        "## Conformance tests", "## Degraded mode", "## Host matrix",
+        "## Codex"],
+    "extending/contracts.md": [
+        "# Contracts recipe", "## Why contracts left core",
+        "## A contract gate", "## A CI linter instead"],
+    "internals.md": [
+        "# Internals", "## Engine layout", "## Event flow",
+        "## Verdicts and findings", "## Sidecar state", "## Fail closed",
+        "## Tests", "## Change the engine", "## Build the docs"],
+    "upgrading.md": [
+        "# Upgrading 0.9 to 0.10", "## Before you start", "## Run the upgrade",
+        "## What upgrade changes", "## Renamed and removed",
+        "## Slices in flight", "## Check the result"],
+})
+
 
 @pytest.mark.parametrize("page", sorted(REQUIRED_HEADINGS))
 def test_page_has_required_headings(page):
@@ -219,3 +242,99 @@ def test_task4_pages_state_the_code_facts():
     missing = [f"{page}: {n}" for page, ns in needles.items()
                for n in ns if n not in (DOCS / page).read_text()]
     assert not missing, missing
+
+
+def _python_blocks(text):
+    return re.findall(r"```python\n(.*?)```", text, re.DOTALL)
+
+
+def test_contract_recipe_gate_is_valid_python(tmp_path):
+    """The recipe must run: a reader copies it into .harness/gates/."""
+    blocks = _python_blocks((DOCS / "extending" / "contracts.md").read_text())
+    assert blocks, "contracts recipe has no python block"
+    namespace = {}
+    exec(compile(blocks[0], "contracts-recipe", "exec"), namespace)
+    gate = namespace["GATE"]
+    assert gate["id"] == "API1" and "unit_complete" in gate["preferred"]
+
+    class Ctx:
+        root = tmp_path
+
+        def touched_files(self):
+            return ["contracts/api.yaml"]
+
+        def rel(self, p):
+            return p
+
+    (tmp_path / "contracts").mkdir()
+    (tmp_path / "contracts" / "api.yaml").write_text(
+        "openapi: 3.1.0\npaths:\n  /orders:\n    get: {}\n")
+    findings = namespace["run"](Ctx())
+    assert [f["code"] for f in findings] == ["CONTRACT_NO_OPERATION_ID"]
+
+
+def test_extra_gate_example_loads_through_the_engine(tmp_path):
+    """W7-P20: the Declare a gate example passes the real loader."""
+    from engine.gates import reserved_gate_ids
+    from engine.gates.extra import load_extra_gates, run_gate
+    blocks = _python_blocks(
+        (DOCS / "extending" / "extra-gates.md").read_text())
+    assert blocks, "extra-gates page has no python block"
+    (tmp_path / ".harness" / "gates").mkdir(parents=True)
+    (tmp_path / ".harness" / "gates" / "example.py").write_text(blocks[0])
+    config = {"gates": {"extra": [".harness/gates/example.py"]}}
+    gates, errors = load_extra_gates(tmp_path, config,
+                                     reserved_ids=reserved_gate_ids())
+    assert errors == [] and len(gates) == 1
+
+    class Ctx:
+        root = tmp_path
+
+        def touched_files(self):
+            return []
+
+        def rel(self, p):
+            return p
+
+    assert run_gate(gates[0], Ctx()) == []
+
+
+def test_upgrading_lists_every_registered_step():
+    """W7-P11: the page names each step id and title from the code."""
+    from engine.upgrade_010 import STEPS
+    text = (DOCS / "upgrading.md").read_text()
+    missing = [s.id for s in STEPS
+               if f"`{s.id}`" not in text or s.title not in text]
+    assert not missing, f"docs/upgrading.md lacks steps {missing}"
+
+
+def test_task5_pages_state_the_code_facts():
+    """W7-P11, W7-P20 and the Task 3 carry: the facts the code has now."""
+    needles = {
+        "extending/extra-gates.md": [
+            "run(ctx)", "check(ctx)", "G2, G4, G7 and G8", ":ATTR",
+            "EXTRA_GATE_LOAD_ERROR", "EXTRA_GATE_RUN_ERROR", "rule_ref",
+            "harness compile", "advisory only", "G9"],
+        "extending/hosts.md": [
+            "346 lines", "afterFileEdit", "followup_message", "--root",
+            "July 2026", "Exit 2"],
+        "internals.md": [
+            "500 lines or fewer", "40 lines or fewer", "check(ctx)",
+            "build_parser()", "allow_with_findings", "started_at_commit"],
+        "upgrading.md": [
+            "--dry-run", "--yes", "check:", "legacy-memory",
+            "git rm --cached", "harness init --migrate", "W8",
+            "legacy_verification: true", "/harness:harness"],
+    }
+    missing = [f"{page}: {n}" for page, ns in needles.items()
+               for n in ns if n not in (DOCS / page).read_text()]
+    assert not missing, missing
+
+
+def test_no_text_claims_cursor_reverts_edits():
+    """Task 3 carry: Cursor only observes afterFileEdit; nothing reverts."""
+    paths = [*public_docs(), PLUGIN_ROOT / "ADAPTERS.md",
+             PLUGIN_ROOT / "engine" / "gates" / "__init__.py"]
+    bad = [str(p.relative_to(PLUGIN_ROOT)) for p in paths
+           if re.search(r"revert[- ]and[- ]retry", p.read_text(), re.I)]
+    assert not bad, bad

@@ -183,7 +183,7 @@ def test_hooks_json_binds_all_required_events():
 
 def test_gates_declare_preferred_and_fallback_events():
     """T1 portability: pre_change gates declare post_change fallbacks so
-    post-only frameworks can run degraded revert-and-retry mode."""
+    post-only frameworks can run them in degraded mode, after the edit."""
     from engine.gates import all_gates, gates_for_event
     for g in all_gates():
         assert "preferred" in g.GATE and "fallback" in g.GATE

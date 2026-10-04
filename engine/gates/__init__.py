@@ -1,8 +1,8 @@
 """C6 — Gates: deterministic checks bound to engine events.
 
-Each gate declares preferred/fallback events (T1 portability: post-only
-frameworks run pre_change gates at post_change in degraded revert-and-retry
-mode). Every blocking finding cites a rule_ref — enforced by the engine.
+Each gate declares preferred/fallback events (T1 portability: with
+`gates.degraded_mode`, post-only frameworks run pre_change gates at
+post_change; the edit has landed, so they report and do not revert it). Every blocking finding cites a rule_ref — enforced by the engine.
 
 The pack is G1, G3, G5, G6, G9 and G10 plus whatever the repo lists under
 `gates.extra` (ADR-002 / D-007) — see `engine/gates/extra.py`. G2, G4, G7
