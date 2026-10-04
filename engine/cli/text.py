@@ -13,7 +13,9 @@ def cmd_lint_text(args):
 
     Exit 0: no findings. Exit 1: findings. Exit 2: a path or the explicit
     glossary does not exist. The default glossary is docs/glossary.md under
-    --root (or the current directory) when that file exists.
+    --root (or the current directory) when that file exists. --root only
+    locates that glossary; path arguments are relative to the current
+    directory.
     """
     base = Path(args.root) if args.root else Path.cwd()
     if args.glossary:
@@ -28,7 +30,12 @@ def cmd_lint_text(args):
     try:
         rows = lint_paths([Path(p) for p in args.paths], glossary)
     except FileNotFoundError as exc:
-        print(f"error: path {exc} does not exist", file=sys.stderr)
+        print(f"error: path {exc.args[0] if exc.args else ''} does not exist",
+              file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f"error: cannot read {exc.filename}; check the path",
+              file=sys.stderr)
         return 2
     if args.json:
         print(json.dumps(rows, indent=2))

@@ -62,3 +62,44 @@ def test_cli_json_output(tmp_path):
     rows = json.loads(proc.stdout)
     assert rows == [{"path": str(f), "line": 1, "rule": "banned-word",
                      "text": "'leverage': write a plain word"}]
+
+
+def test_cli_skips_a_directory_named_like_markdown(tmp_path):
+    (tmp_path / "dir.md").mkdir()
+    (tmp_path / "ok.md").write_text("It is robust.\n")
+    proc = run_cli("lint-text", tmp_path)
+    assert proc.returncode == 1, proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert "ok.md:1: banned-word" in proc.stdout
+
+
+def test_cli_reports_an_unreadable_file_and_continues(tmp_path):
+    import os
+    import pytest
+    if os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0):
+        pytest.skip("permissions are not enforced here")
+    bad = tmp_path / "bad.md"
+    bad.write_text("Plain.\n")
+    bad.chmod(0)
+    (tmp_path / "ok.md").write_text("It is robust.\n")
+    try:
+        proc = run_cli("lint-text", tmp_path)
+    finally:
+        bad.chmod(0o644)
+    assert proc.returncode == 1, proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert "bad.md:1: unreadable:" in proc.stdout
+    assert "ok.md:1: banned-word" in proc.stdout
+
+
+def test_cli_skips_a_dangling_symlink_in_a_walked_directory(tmp_path):
+    import os
+    import pytest
+    if os.name == "nt":
+        pytest.skip("symlinks need privileges here")
+    (tmp_path / "gone.md").symlink_to(tmp_path / "missing-target.md")
+    (tmp_path / "ok.md").write_text("It is robust.\n")
+    proc = run_cli("lint-text", tmp_path)
+    assert proc.returncode == 1, proc.stderr
+    assert "does not exist" not in proc.stderr
+    assert "ok.md:1: banned-word" in proc.stdout

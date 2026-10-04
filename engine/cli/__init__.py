@@ -141,8 +141,9 @@ def main(argv=None):
     sp.add_argument("paths", nargs="+",
                     help="files, or directories to search for *.md")
     sp.add_argument("--glossary",
-                    help="glossary file (default: docs/glossary.md when it "
-                         "exists)")
+                    help="glossary file (default: docs/glossary.md under "
+                         "--root or the cwd, when it exists); --root does "
+                         "not change how paths resolve")
     sp.add_argument("--json", action="store_true",
                     help="print the findings as JSON")
 

@@ -201,7 +201,7 @@ def _files(paths: list[Path]) -> list[Path]:
     out = []
     for p in map(Path, paths):
         if p.is_dir():
-            out.extend(sorted(p.rglob("*.md")))
+            out.extend(f for f in sorted(p.rglob("*.md")) if f.is_file())
         else:
             out.append(p)
     return out
@@ -221,6 +221,10 @@ def lint_paths(paths: list[Path], glossary: Path | None) -> list[dict]:
             raise FileNotFoundError(str(f))
         try:
             text = f.read_bytes().decode("utf-8-sig")
+        except OSError:
+            out.append({"path": str(f), "line": 1, "rule": "unreadable",
+                        "text": "file cannot be read; check its permissions"})
+            continue
         except UnicodeDecodeError:
             out.append({"path": str(f), "line": 1, "rule": "encoding",
                         "text": "file is not UTF-8; it was not checked"})
