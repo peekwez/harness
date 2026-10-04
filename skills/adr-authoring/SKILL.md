@@ -56,7 +56,7 @@ Rules:
   prose. Superseded ADRs (status: superseded, or listed in another ADR's
   `supersedes`) compile to nothing — their decisions, refs, and boundaries
   drop on the next compile.
-- Abstraction `kind` is one of `logging|telemetry|config|errors|util|component|other`. Compile changes any other kind to `other` and warns. Decision rows still match by the abstraction's id as a domain.
+- Set abstraction `kind` to one of `logging|telemetry|config|errors|util|component|other`. Compile changes any other kind to `other` and warns. Decision rows still match by the abstraction's id as a domain.
 - To prune scaffolded planned entries that an abstraction merges away, add `replaces: [logging, telemetry]` to it.
 - After accepting and placing an ADR in `adr/`, run
   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" compile` so gates see it this session.

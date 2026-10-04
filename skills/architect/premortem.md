@@ -23,7 +23,7 @@ instead of erroring*. For every artifact the design reads, ask:
 
 - scale cliffs: what breaks at 10x and at 100x;
 - concurrency: two writers, one file;
-- partial failure: step 3 of 5 dies, and some state remains;
+- partial failure: step 3 of 5 dies. What state remains?;
 - permission and secret expiry;
 - clock and timezone assumptions;
 - retry storms;

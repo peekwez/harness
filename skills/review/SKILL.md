@@ -87,9 +87,9 @@ Layers 1–3 — rubric-bound checks over those facts:
   Codex is an MCP tool named `codex`, or the `codex` CLI on PATH.
   1. Run `make review-codex` if the Makefile of the repo defines that target. Otherwise run `codex review`, or `codex exec` with the diff.
   2. Two independent reviewers that disagree are a signal. Verify every Codex finding against the substrate yourself.
-  3. Record the real ones with `harness review --record-finding …`. Blocking still requires a `rule_ref`, so the rest are Layer-3 advisories.
-  4. Write each finding by `skills/harness/ste80.md`. Pass `--message` (25 words or fewer), `--failure-scenario` (a concrete input and the wrong result) and `--fix` (one action).
-  5. The CLI rejects a `--message` over 25 words and exits 2. It does not clip the message. It also exits 2 for a `--severity block` finding without `--fix`.
+  3. Record the real ones with `harness review --record-finding …`. Write each finding by `skills/harness/ste80.md`. Pass `--message` (25 words or fewer), `--failure-scenario` (a concrete input and the wrong result) and `--fix` (one action).
+  4. The CLI rejects a `--message` over 25 words and exits 2. It does not clip the message. It also exits 2 for a `--severity block` finding without `--fix`.
+  5. Blocking still requires a `rule_ref`. The rest are Layer-3 advisories.
   6. Codex never auto-fixes inside the slice. The slice owner applies fixes, so the gates see the edits.
   7. If Codex is absent, skip this silently.
 - When Codex owns the slice, use Claude Code as the independent second

@@ -12,8 +12,8 @@ fix every blocking finding → re-review until clean → close-slice. The gates
 are the guardrails; drive through them, don't wait at them. A gate block
 names its own mechanical fix — apply it and continue. Stop ONLY for one of
 these: a parked review finding, an author-gate gap, or a gate that still blocks
-after `superpowers:systematic-debugging` named a root cause outside the
-declared scope of the slice. In the last case, note it in personal memory,
+after `superpowers:systematic-debugging` named a root cause you cannot fix
+inside the declared scope of the slice. In the last case, note it in personal memory,
 then report the finding verbatim.
 
 Also stop with NOT VERIFIED when a required runtime/check remains unavailable

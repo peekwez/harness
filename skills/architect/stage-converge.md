@@ -24,7 +24,7 @@ For each `[open-question]` in the working document:
    adr-authoring skill. Move an ADR to `adr/` only after acceptance under the
    human's existing choice or delegation, and disclose the review limitation.
 
-Some rows need no ADR prose: a convention, a naming rule, or the rows that a `--from-spec` seed waits for. Write these rows into the fenced tables of the working document. They compile the same way (ADR-002 D-013):
+Some rows need no ADR prose: a convention, a naming rule, or the rows that a `--from-spec` seed waits for. You can write these rows into the fenced tables of the working document instead of an ADR. They compile the same way (ADR-002 D-013):
 
 ````
 ```harness-decisions

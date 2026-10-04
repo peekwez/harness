@@ -20,7 +20,7 @@ extrapolation; the compiled form is what gates read:
   - ```` ```harness-decisions ```` with columns `| id | domain | question | answer | adr_ref | security |`;
   - ```` ```harness-abstractions ```` with columns `| id | kind | guidance_ref | source | module_id |`. The older three-column header is still accepted.
 
-  Module-level abstractions need `source` (or `module_id`). Otherwise the id must equal the dotted module id. Without one of these, G5 and the resolver cannot see them. An id claimed by both an ADR and the doc is a hard error. The error names both sources. A malformed row names the document and the line. Fix the source and re-run
+  Module-level abstractions need `source` (or `module_id`). Otherwise the id must equal the dotted module id. Without one of these, G5 and the resolver cannot see them. An id claimed by both an ADR and the doc is a hard error. The error names both sources. A malformed row names the document and the line. Fix the source and re-run.
 - `[non-goal]` blocks -> `.harness/boundaries.jsonl` (G3 boundaries; advisory unless a `gates.extra` gate cites them).
   boundaries.jsonl is REGENERATED on every run from ADRs + this doc — fix
   the source, recompile, stale boundaries disappear

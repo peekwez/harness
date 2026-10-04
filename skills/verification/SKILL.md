@@ -34,9 +34,9 @@ planned checks are not executed evidence.
    persisted data and cache behavior. Capture screenshots and relevant
    extracts. A component absent from the project is explicitly not applicable,
    with evidence. A component you cannot start or connect to is an outstanding verification gap.
-    For state-changing behavior, follow [integrity.md](integrity.md).
-    Declare sample inputs and expected results before execution. Seed through
-    the app. Then run independent read-only Python probes of database/cache/blob effects.
+   For state-changing behavior, follow [integrity.md](integrity.md).
+   Declare sample inputs and expected results before execution. Seed through
+   the app. Then run independent read-only Python probes of database/cache/blob effects.
    The app must leave correlated write fingerprints tied to actual contents.
    Direct storage inserts/uploads, forged fingerprints or a probe that repairs
    state invalidate the evidence; they never prove the app performed a write.

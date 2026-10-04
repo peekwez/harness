@@ -54,10 +54,10 @@ Loop discipline — in order:
    `verification/integrity.md`. Direct storage seeding cannot prove app behavior.
    Follow the feature's verification design (`verification/design.md`), including
    concrete happy and relevant edge/failure/recovery cases. Fill missing methods
-    before implementing. Collect live app and worker block and branch coverage
-    for each scenario. Join it to trace IDs and to independently checked
-    outcomes. Aggregate test or probe coverage cannot prove which app path
-    produced a result.
+   before implementing. Collect live app and worker block and branch coverage
+   for each scenario. Join it to trace IDs and to independently checked
+   outcomes. Aggregate test or probe coverage cannot prove which app path
+   produced a result.
 2. **Root cause before retry.** On ANY red test or gate block, run
    `superpowers:systematic-debugging` and name the cause before you change
    anything. Never re-run a fix you cannot explain.
@@ -114,7 +114,7 @@ resolves: `close-slice --commit HEAD`, never `$(git rev-parse HEAD)`.
    1. A parked review finding. Adjudication is theirs by design.
    2. An author-gate gap. Substrate authoring is theirs.
    3. A required verification check that is still unavailable after diagnosis and authorized in-scope repair. Report NOT VERIFIED with the exact missing prerequisite and next action.
-   4. A gate that still blocks after `superpowers:systematic-debugging` named a root cause outside the declared scope of the slice. Note it in personal memory first. Then report the finding verbatim.
+   4. A gate that still blocks after `superpowers:systematic-debugging` named a root cause you cannot fix inside the declared scope of the slice. Note it in personal memory first. Then report the finding verbatim.
 9. Close releases the binding. `landing.mode` in `.harness/config.yaml` decides how the slice LANDS:
    1. `local` (the default): `/harness:close-slice` finishes with `harness merge-slice --slice $1` from the main tree.
    2. `pr`: the close itself pushed `slice/$1` and opened the PR. That PR is the landing, and `merge-slice` refuses.
