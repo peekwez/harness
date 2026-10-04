@@ -136,7 +136,7 @@ def test_close_slice_names_every_blocking_unit_complete_source():
         if "unit_complete" in gate.GATE["preferred"]:
             assert re.search(rf"\b{gid}\b", para), gid
     gates_line = para.split(".")[0]
-    assert "G1" not in gates_line, gates_line
+    assert not re.search(r"\bG1\b", gates_line), gates_line
 
 
 def test_agent_guidance_never_says_hand_edit_the_backlog():

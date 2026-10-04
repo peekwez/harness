@@ -30,7 +30,7 @@ Close also checks these things:
 - The review stack runs over the slice diff and finds no blocking finding.
 - No parked finding of the slice is open.
 - No touched file falls inside a non-goal that a repo-local gate cites.
-- The `unit_complete` gates pass: G6, G9 and the repo-local gates. G5 runs there too, and its findings are advisory.
+- The `unit_complete` gates pass: G6, G9, G10 and the repo-local gates. G10 blocks a change to `.claude/memory/shared/` that `harness memory promote` did not write. G5 runs there too, and its findings are advisory.
 - Each module that the slice uses is in its declared modules.
 - Each added line in a dependency manifest has an override with a reason.
 

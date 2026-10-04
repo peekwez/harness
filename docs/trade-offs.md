@@ -20,7 +20,7 @@ The forked reviewer reads each test. It can still miss a weak test.
 
 The pre-change gates see edits that go through the host's edit tools. A file that a shell command writes does not pass through those gates.
 
-Close finds each changed file from git and runs its close checks on the full set. So the close checks see a shell edit, but later than the edit. G10 does not run at close, so close does not flag a shell write to shared memory.
+Close finds each changed file from git and runs its close checks on the full set. So the close checks see a shell edit, but later than the edit. G10 runs at close too, so close blocks a shell write to shared memory.
 
 ### Scope and non-goals
 
@@ -44,7 +44,7 @@ To clear a false block, move or rename the module.
 
 ### Shared memory writes
 
-G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 sees only edit-tool writes. It does not run at close or in the review. For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
+G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder, unless `harness memory promote` wrote those bytes. Promote records a hash of each file that it writes in `.harness/promotions.jsonl`. For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
 
 Text-level checks are best effort. These spellings do not ask:
 
@@ -54,7 +54,13 @@ Text-level checks are best effort. These spellings do not ask:
 - A wrapper such as `env`, `nohup`, `xargs` or `eval` in front of a program word that the permit layer cannot read.
 - An allowed tool that can run any code, such as `pytest` on tests that an agent wrote, `git apply` or a `git config core.fsmonitor` value.
 
-Nothing in harness flags a file that a shell command wrote under `.claude/memory/shared/`. The backstop is a human who reads the committed diff.
+The close check has limits:
+
+- It sees only the slice diff. A shell write outside a slice, or one that is undone before close, is not flagged at close.
+- It sees the write at close, not when the shell command runs.
+- It trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
+
+For these gaps, the backstop is a human who reads the committed diff.
 
 We recommend a sandbox write-deny rule. Add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. The shipped profile sets `failIfUnavailable: false`, so the rule holds only where the sandbox runs. A permission deny rule for the Edit and Write tools on that folder adds a second layer. harness does not write these rules for you.
 

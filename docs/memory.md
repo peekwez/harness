@@ -42,20 +42,22 @@ Promote writes into the current tree. At close, the promoted files go into the s
 
 ## Guards
 
-Two layers stop an agent from writing shared memory:
+Three layers stop an agent from writing shared memory:
 
 - **G10** blocks each write to `.claude/memory/shared/` through the host's edit tools. It runs in the engine at `pre_change`. On Claude Code it stops the write. On Cursor CLI (degraded mode) it runs only after the edit lands, so it reports the write and does not undo it. No override and no exempt path applies. Its fix names `harness memory promote`.
+- **G10 at close** checks the slice diff. Close blocks when the slice adds, changes or deletes a file in `.claude/memory/shared/`, unless `harness memory promote` wrote those bytes. Promote records a hash of each file that it writes in `.harness/promotions.jsonl`. So close blocks a shell write such as `echo x > .claude/memory/shared/a.md`.
 - **The permit layer** asks a human for each `harness memory promote`, and for each other `harness memory` subcommand except `changed`. It also asks for a shell command that names the shared folder. It never approves these on its own.
 
 The shipped Claude Code profile also has `ask` rules for `harness memory promote`. A human approves each promotion.
 
 These guards have limits:
 
-- G10 sees only edit-tool writes. It does not run at close or in the review.
+- G10 at close sees only the slice diff. It does not see a shell write outside a slice, or one that is undone before close.
+- G10 at close trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
 - Only the Claude Code hook runs the permit layer on shell commands. Other hosts' profiles approve shell commands.
 - The permit layer reads the command text. Some spellings, such as a renamed binary, do not ask.
 
-The backstop for a shell write is a human who reads the committed diff. We recommend a sandbox rule: add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. [Trade-offs and limits](trade-offs.md#shared-memory-writes) lists each gap.
+For these gaps, the backstop is a human who reads the committed diff. We recommend a sandbox rule: add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. [Trade-offs and limits](trade-offs.md#shared-memory-writes) lists each gap.
 
 `harness doctor --substrate` warns when `MEMORY.md` has more than 40 entries. A small index stays useful, because a human chose each line.
 

@@ -156,7 +156,8 @@ def test_trade_offs_names_the_limits_a_reader_must_know():
 def test_trade_offs_states_the_shared_memory_gaps():
     """Fix round 1: G10 scope, the host permit gap, the glob residual."""
     text = (DOCS / "trade-offs.md").read_text()
-    for needle in ("G10 sees only edit-tool writes",
+    for needle in ("G10 also checks the slice diff at close",
+                   "A shell write outside a slice",
                    "a human who reads the committed diff",
                    "Only the Claude Code hook runs the permit layer on shell",
                    "`.claude/memory/sh*/a.md`",

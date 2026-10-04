@@ -6,6 +6,7 @@ list the files that changed during a slice, so a human can promote them.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import posixpath
@@ -13,11 +14,15 @@ import re
 import subprocess
 from pathlib import Path
 
-from . import HarnessError, get_slice, now_iso
+from . import (HarnessError, append_jsonl, get_slice, harness_dir, now_iso,
+               read_jsonl)
 
 SHARED_DIR = ".claude/memory/shared"
 INDEX_NAME = "MEMORY.md"
 INDEX_REL = f"{SHARED_DIR}/{INDEX_NAME}"
+# One row per write that harness made to the shared folder: `{path, sha256,
+# at}`. G10 at close reads it to tell a promoted file from a shell write.
+LEDGER_NAME = "promotions.jsonl"
 CLAUDE_IMPORT = "@.claude/memory/shared/MEMORY.md"
 CLAUDE_MARKER = "harness-enforced"
 MAX_INDEX_LINE = 120
@@ -50,6 +55,37 @@ def in_shared_dir(rel: str) -> bool:
     return _SHARED_SEGMENT in norm
 
 
+# ----------------------------------------------------------------- ledger
+def _sha256(path: Path):
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _record_write(root, rel: str) -> None:
+    """Append the bytes harness just wrote to `rel` to the ledger."""
+    append_jsonl(harness_dir(root) / LEDGER_NAME,
+                 {"path": rel, "sha256": _sha256(Path(root) / rel),
+                  "at": now_iso()})
+
+
+def sanctioned(root, rel: str) -> bool:
+    """True when the file at `rel` holds bytes that harness itself wrote.
+
+    A missing file (a deletion) is never sanctioned: promote never deletes.
+    """
+    ledger = harness_dir(root) / LEDGER_NAME
+    if not ledger.exists():
+        return False
+    digest = _sha256(Path(root) / rel)
+    if digest is None:
+        return False
+    rel = posixpath.normpath(str(rel).replace("\\", "/"))
+    return any(row.get("path") == rel and row.get("sha256") == digest
+               for row in read_jsonl(ledger))
+
+
 # ------------------------------------------------------------------ index
 def ensure_index(root) -> bool:
     """Create `shared/MEMORY.md` with its header. True when it was created."""
@@ -58,6 +94,7 @@ def ensure_index(root) -> bool:
         return False
     index.parent.mkdir(parents=True, exist_ok=True)
     _write_atomic(index, INDEX_HEADER)
+    _record_write(root, INDEX_REL)
     return True
 
 
@@ -130,6 +167,7 @@ def _add_index_line(root, line: str, slug: str) -> bool:
     if text and not text.endswith("\n"):
         text += "\n"
     _write_atomic(index, text + line + "\n")
+    _record_write(root, INDEX_REL)
     return True
 
 
@@ -264,6 +302,7 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
     target.parent.mkdir(parents=True, exist_ok=True)
     ensure_index(root)
     _write_atomic(target, _render_fact(front, body))
+    _record_write(root, rel)
     _add_index_line(root, line, slug)
     return {"promoted": True, "path": rel, "promoted_by": identity,
             "promoted_at": front["promoted_at"], "index_line": line,

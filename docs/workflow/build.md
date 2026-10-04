@@ -81,7 +81,7 @@ The host hooks run the gates on each edit through the host's edit tools:
 |---|---|---|
 | before an edit | `pre_change` | G1, G3, G10, and the red-record advisory |
 | after an edit | `post_change` | G5, G9 |
-| at the end of a turn, at close and at merge | `unit_complete` | G5, G6, G9 |
+| at the end of a turn, at close and at merge | `unit_complete` | G5, G6, G9, G10 |
 
 Repo-local gates from `gates.extra` run at the events that they declare.
 
@@ -91,7 +91,7 @@ Repo-local gates from `gates.extra` run at the events that they declare.
 
 G6 compares the public symbols of each touched module against the baseline from the bind. A changed public interface needs an acknowledgement before close. G3 scope findings and G5 findings are advisory.
 
-A file that a shell command writes does not pass through these gates. Close finds it from git. [Gates](../reference/gates.md) lists each gate in full.
+A file that a shell command writes does not pass through these gates. Close finds it from git. At close, G10 blocks a shell write to `.claude/memory/shared/`. [Gates](../reference/gates.md) lists each gate in full.
 
 ## The permission layer
 

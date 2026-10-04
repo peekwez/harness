@@ -74,7 +74,7 @@ Each gate declares `preferred` events and `fallback` events. Some hosts cannot s
 | G5 | `post_change`, `unit_complete` | none |
 | G6 | `unit_complete` | none |
 | G9 | `post_change`, `unit_complete` | none |
-| G10 | `pre_change` | `post_change` |
+| G10 | `pre_change`, `unit_complete` | `post_change` |
 
 [Gates](../reference/gates.md) lists each gate in full. [Hook events](../reference/hooks.md) maps each host hook to an engine event.
 
