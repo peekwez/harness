@@ -23,6 +23,7 @@ from engine.cli.slice import cmd_permit, cmd_start
 from engine.cli.substrate import (cmd_extract, cmd_gates, cmd_graph,
                                   cmd_memory, cmd_merge_substrate, cmd_precompact,
                                   cmd_registry, cmd_resolve, cmd_status)
+from engine.cli.text import cmd_lint_text
 from engine.cli.verify import cmd_doctor, cmd_event, cmd_verify
 from engine.cli.upgrade import cmd_upgrade
 
@@ -34,6 +35,7 @@ COMMANDS = {
     "event": cmd_event, "doctor": cmd_doctor, "init": cmd_init,
     "upgrade": cmd_upgrade, "extract": cmd_extract,
     "resolve": cmd_resolve, "gates": cmd_gates, "verify": cmd_verify,
+    "lint-text": cmd_lint_text,
     "acceptance": cmd_acceptance,
     "architect": cmd_architect,
     "compile": cmd_compile, "author-gate": cmd_author_gate,
@@ -132,6 +134,17 @@ def main(argv=None):
 
     sp = sub.add_parser("verify", help="full CI check (no plugin required)")
     sp.add_argument("--built-artifact", help="validate manifests against this tree")
+
+    sp = sub.add_parser("lint-text",
+                        help="STE-80 check: sentence length, banned words, "
+                             "glossary synonyms")
+    sp.add_argument("paths", nargs="+",
+                    help="files, or directories to search for *.md")
+    sp.add_argument("--glossary",
+                    help="glossary file (default: docs/glossary.md when it "
+                         "exists)")
+    sp.add_argument("--json", action="store_true",
+                    help="print the findings as JSON")
 
     sp = sub.add_parser("acceptance",
                         help="the cumulative closed-slice acceptance suite: "
