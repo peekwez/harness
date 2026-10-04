@@ -490,7 +490,7 @@ def build_legacy_08_repo(root: Path, *, with_worktree: bool = False) -> Path:
         ("tests/slices/040_telemetry.py", ["test_emit_span"]))}
     seed = [json.loads(line) for line in
             (LEGACY_DIR / "registry-seed-0.8.0.jsonl").read_text().splitlines() if line.strip()]
-    write_jsonl(hd / "registry.jsonl", [r for r in seed if r["id"] != "config"] + [
+    write_jsonl(hd / "registry.jsonl", [r for r in seed if r["id"] not in ("config", "telemetry")] + [
         _legacy_entry("config", "config", "built", "config.py", CONFIG_PY, shadows["config.py"]),
         _legacy_entry("telemetry", "telemetry", "built", "telemetry.py", TELEMETRY_PY,
                       shadows["telemetry.py"]),

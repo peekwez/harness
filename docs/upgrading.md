@@ -47,7 +47,7 @@ A file without a harness marker is never edited. For such a file, upgrade prints
 
 ## What upgrade changes
 
-The upgrade has 17 steps. Each step runs only when it has pending changes, and a second run of a step changes nothing.
+The upgrade has 19 steps. Each step runs only when it has pending changes, and a second run of a step changes nothing.
 
 1. `w1.gitignore-cache` — Add .harness/cache/ to .gitignore.
 2. `w1.untrack-shadows` — Untrack and delete .harness/shadows/. Shadows now live in the gitignored cache. This step asks first.
@@ -66,6 +66,8 @@ The upgrade has 17 steps. Each step runs only when it has pending changes, and a
 15. `w4.agents-md-ste80` — Add the STE-80 rule to a harness-marked AGENTS.md.
 16. `w5.legacy-verification` — Mark each slice that is not closed legacy_verification: true.
 17. `w6.agents-md-explore` — Add explore to the AGENTS.md workflow line.
+18. `w8.agents-md` — Replace a harness-written AGENTS.md with the 0.10 template. This step asks first. The old file is kept at `.harness/cache/AGENTS.md.pre-0.10`, with the skill renames from `w2.skill-names` already applied.
+19. `w8.stale-merge-rules` — Remove merge and ignore rules for files that 0.10 removed. A rule stays while its file still exists.
 
 Upgrade moves the old memory to `.harness/cache/legacy-memory/`. It does not delete it. [Memory](memory.md#upgrading-from-09) explains the export and how to promote a fact.
 
@@ -77,6 +79,7 @@ These steps can print `check:` lines:
 - `w3.retire-durable-memory`: read the export and promote the facts that the team needs.
 - `w3.shared-memory-index`: a `gates.extra` gate uses the id G10, which is now a builtin gate.
 - `w3.claude-md-import`, `w4.agents-md-ste80` and `w6.agents-md-explore`: the file has no harness marker, the file is missing, or upgrade cannot find the place for the new line.
+- `w8.agents-md`: the file has no harness marker, so upgrade leaves it alone. After a replacement, compare the backup with the new file and carry over local edits. Upgrade never creates a missing AGENTS.md.
 - `w4.glossary`: `docs` is a file, so upgrade cannot create the glossary.
 - `w5.legacy-verification`: a worktree holds its own backlog.
 

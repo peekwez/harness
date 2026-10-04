@@ -1,6 +1,6 @@
 """0.10 removed working and durable memory (D-0.10-02). Nothing that ships
-may write or read it. `engine/upgrade_w3.py` migrates old repos, so it is
-the one allowed reference."""
+may write or read it. `engine/upgrade_w3.py` and `engine/upgrade_w8.py` migrate old repos, so
+they are the allowed references."""
 import re
 
 from conftest import PLUGIN_ROOT
@@ -15,7 +15,7 @@ SCANNED = ("bin", "engine", "hooks", "adapters", "skills", "agents",
            "templates")
 SUFFIXES = {".py", ".js", ".ts", ".json", ".toml", ".md", ".yml", ".yaml",
             ".sh", ""}
-ALLOWED = {"engine/upgrade_w3.py"}
+ALLOWED = {"engine/upgrade_w3.py", "engine/upgrade_w8.py"}
 
 
 def _shipped_files():

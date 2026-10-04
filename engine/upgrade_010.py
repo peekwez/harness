@@ -143,3 +143,4 @@ from . import upgrade_w3  # noqa: E402,F401
 from . import upgrade_w4  # noqa: E402,F401  (W4 steps)
 from . import upgrade_w5  # noqa: E402,F401  (W5 steps)
 from . import upgrade_w6  # noqa: E402,F401  (W6 steps)
+from . import upgrade_w8  # noqa: E402,F401  (W8 steps)
