@@ -82,7 +82,7 @@ def _rel(root, path) -> str:
         return str(path)
 
 
-def cmd_architect(args):
+def _architect_from_spec(root, args, doc) -> int:
     """Seeds the Phase-0 working document from an existing spec (D-013).
 
     A repo that already owns a spec must not have it re-derived Socratically:
@@ -90,23 +90,15 @@ def cmd_architect(args):
     `[open-question]`s, and the document opens at stage 3 (converge) with an
     empty `harness-decisions` table to fill in.
 
-    Args:
-        args: Parsed CLI args (`from_spec`, `doc`, `force`, `root`).
-
-    Returns:
-        Process exit code (0).
-
     Raises:
         HarnessError: The spec is missing, or the working document exists
             and `--force` was not given.
     """
     from engine.compiler import seed_doc_from_spec
-    root = _root(args)
     spec = _under_root(root, args.from_spec)
     if not spec.is_file():
         raise HarnessError(f"--from-spec {args.from_spec!r} is not a readable "
                            f"file — nothing to seed the working document from")
-    doc = _under_root(root, args.doc)
     if doc.exists() and not args.force:
         raise HarnessError(
             f"working document {_rel(root, doc)} already exists — edit it in "
@@ -122,6 +114,28 @@ def cmd_architect(args):
                                if ln.startswith("[constraint] ")),
             "open_questions": sum(1 for ln in lines
                                   if ln.startswith("[open-question] "))})
+    return 0
+
+
+def cmd_architect(args):
+    """Seeds the Phase-0 working document from one source (spec 5.5).
+
+    Sources: `--from-spec <path>`, `--from-explore` (or a frozen
+    `explore/` with no flag), or `--skip-explore "<reason>"`.
+
+    Args:
+        args: Parsed CLI args (`from_spec`, `from_explore`, `skip_explore`,
+            `doc`, `force`, `root`).
+
+    Returns:
+        Process exit code (0).
+    """
+    root = _root(args)
+    doc = _under_root(root, args.doc)
+    if args.from_spec:
+        return _architect_from_spec(root, args, doc)
+    from engine.explore_adr import seed_from_explore
+    _print(seed_from_explore(root, doc, force=args.force))
     return 0
 
 

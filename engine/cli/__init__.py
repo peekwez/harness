@@ -171,12 +171,23 @@ def main(argv=None):
                          "explore/DECISIONS.md")
 
     sp = sub.add_parser("architect",
-                        help="seed the Phase-0 working document from an "
-                             "existing spec (--from-spec)")
-    sp.add_argument("--from-spec", dest="from_spec", required=True,
-                    help="existing spec/design markdown (root-relative); its "
-                         "headings become [constraint] blocks and its "
-                         "TODO/TBD/Open lines [open-question]s")
+                        help="seed the Phase-0 working document from one "
+                             "source: --from-explore (frozen explore/), "
+                             "--from-spec <path>, or --skip-explore "
+                             "\"<reason>\"")
+    source = sp.add_mutually_exclusive_group()
+    source.add_argument("--from-spec", dest="from_spec", default=None,
+                        help="existing spec/design markdown (root-relative); "
+                             "its headings become [constraint] blocks and "
+                             "its TODO/TBD/Open lines [open-question]s")
+    source.add_argument("--from-explore", dest="from_explore",
+                        action="store_true",
+                        help="one ADR and one decision row per chosen card "
+                             "in the frozen explore/DECISIONS.md")
+    source.add_argument("--skip-explore", dest="skip_explore",
+                        metavar="REASON", default=None,
+                        help="start without a toy; the reason goes into the "
+                             "working document and slice metrics")
     sp.add_argument("--doc", default=DEFAULT_WORKING_DOC,
                     help="working document to write (default: %(default)s)")
     sp.add_argument("--force", action="store_true",

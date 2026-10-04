@@ -250,10 +250,13 @@ and the `harness-verify` workflow; idempotent — `init --migrate` is its
 alias),
 `explore` (creates `explore/` with `DECISIONS.md`, `VERIFY.md` and
 `OPEN.md`; `--freeze` checks the cards and signs `DECISIONS.md`),
-`architect` (`--from-spec <path>`: seeds the working document
-`docs/architecture.md` from an existing spec — headings become
-`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s, at
-`<!-- stage: 3 -->`; refuses to overwrite without `--force`),
+`architect` (seeds the working document `docs/architecture.md` at
+`<!-- stage: 3 -->` from one source. `--from-explore`: one ADR and one
+decision row per chosen card in the frozen `explore/DECISIONS.md`, parked
+cards as deferred `[open-question]`s; refuses when the file is not frozen
+or changed after freeze. `--from-spec <path>`: headings become
+`[constraint]` blocks, TODO/TBD/Open lines `[open-question]`s. Both refuse
+to overwrite the document without `--force`),
 `compile`, `author-gate`, `resolve`, `extract`,
 `gates`, `verify` (the CI entry),
 `acceptance` (`--closed [--list] [--exclude <slice>]`: the cumulative
