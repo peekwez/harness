@@ -286,3 +286,8 @@ def loaded_context(root, session="s1", slice_id="slice-042"):
     from engine.events import handle_event
     return handle_event(make_event("session_start", session=session,
                                    slice_id=slice_id), root)
+
+
+def finding_text(f: dict) -> str:
+    """Message, fix and injected detail of one finding, as one string."""
+    return "\n".join([f["message"], f.get("fix") or "", *f.get("inject", [])])
