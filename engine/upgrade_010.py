@@ -118,3 +118,4 @@ def tty_ask(question: str) -> bool:
 from . import upgrade_w1  # noqa: E402,F401
 from . import upgrade_w2  # noqa: E402,F401
 from . import upgrade_w3  # noqa: E402,F401
+from . import upgrade_w4  # noqa: E402,F401  (W4 steps)

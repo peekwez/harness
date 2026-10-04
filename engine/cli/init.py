@@ -101,6 +101,8 @@ def cmd_init(args):
 
     (root / "adr").mkdir(exist_ok=True)
     shutil.copy(templates / "adr.md", root / "adr" / "000-template.md")
+    from engine.lint_text import scaffold_glossary
+    scaffold_glossary(root)  # docs/glossary.md: one name per concept (STE-80)
     _write_workflow(root)
     _vendor_engine(root)
 
