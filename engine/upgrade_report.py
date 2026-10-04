@@ -9,7 +9,7 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from engine import IGNORED_DIRS, sha256_file
+from engine import IGNORED_DIRS, HarnessError, sha256_file
 
 COMMIT_MESSAGE = "harness: upgrade to 0.10"
 CHECK = "check: "
@@ -19,8 +19,18 @@ MACHINE_STATE = (".harness/cache/", ".harness/sidecar.db")
 
 
 def _git(root, *args) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(root), *args],
+    done = subprocess.run(["git", "-C", str(root), *args],
                           capture_output=True, text=True)
+    if done.returncode != 0:
+        raise HarnessError(f"git {args[0]} failed in {root}. "
+                           "Repair the repository, then run: harness upgrade")
+    return done
+
+
+def _few(paths, limit=3) -> str:
+    shown = ", ".join(list(paths)[:limit])
+    extra = len(paths) - limit
+    return f"{shown} and {extra} more" if extra > 0 else shown
 
 
 def _is_repo(root) -> bool:
@@ -72,7 +82,7 @@ def changed_files(before: dict, after: dict) -> dict:
 def staged_paths(root) -> list[str]:
     if not _is_repo(root):
         return []
-    return sorted(_nul_list(_git(root, "diff", "--cached", "--name-only", "-z").stdout))
+    return sorted(_nul_list(_git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").stdout))
 
 
 def dirty_paths(root) -> list[str]:
@@ -105,16 +115,16 @@ def human_checks(steps, *, pending, staged_before, dirty_before, files,
             if line.startswith(CHECK) or NEEDS_CONFIRMATION in line:
                 out.append(f"{row['id']}: {line}")
     if pending:
-        out.append(f"{CHECK}steps {', '.join(pending)} still have changes. "
+        out.append(f"{CHECK}steps {_few(pending)} still have changes. "
                    "Run: harness upgrade --yes")
     touched = set(files["added"]) | set(files["modified"]) | set(files["removed"])
     mixed = sorted(set(dirty_before) & touched)
     if mixed:
-        out.append(f"{CHECK}you had uncommitted edits in {', '.join(mixed)}. "
+        out.append(f"{CHECK}you had uncommitted edits in {_few(mixed)}. "
                    "Review them before you commit.")
     if staged_before:
         out.append(f"{CHECK}the index held staged changes before the upgrade: "
-                   f"{', '.join(staged_before)}. Commit or unstage them first.")
+                   f"{_few(staged_before)}. Commit or unstage them first.")
     deps = ((checks or {}).get("doctor") or {}).get("deps_missing") or []
     if deps:
         out.append(f"{CHECK}engine dependencies are missing: {' '.join(deps)}. "
@@ -137,7 +147,7 @@ def commit_proposal(root, files) -> dict | None:
     index = set(_nul_list(_git(root, "ls-files", "-z", "--cached").stdout))
     paths = [p for p in changed if (root / p).exists() or p in index]
     commit = f'git commit -m "{COMMIT_MESSAGE}"'
-    command = (f"git add -A -- {' '.join(shlex.quote(p) for p in paths)} && {commit}"
+    command = (f"git --literal-pathspecs add -A -- {' '.join(shlex.quote(p) for p in paths)} && {commit}"
                if paths else commit)
     return {"message": COMMIT_MESSAGE, "paths": paths, "cwd": str(root),
             "command": command}

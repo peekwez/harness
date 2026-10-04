@@ -104,3 +104,50 @@ def test_human_checks_include_step_advice_rows():
 def test_step_lines_fall_back_to_changes():
     assert rep.step_lines({"id": "w1.x", "changes": ["a"]}) == ["a"]
     assert rep.step_lines({"id": "w1.x", "report": ["b"], "changes": ["a"]}) == ["b"]
+
+
+def test_literal_pathspecs_keep_the_humans_dirty_neighbour_out(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    _write(root, "a1.txt", "one\n")
+    _write(root, "a[1].txt", "old\n")
+    git(root, "add", "a1.txt", "a[1].txt")
+    git(root, "commit", "-qm", "base")
+    before = rep.snapshot(root)
+    _write(root, "a[1].txt", "upgraded\n")
+    files = rep.changed_files(before, rep.snapshot(root))
+    _write(root, "a1.txt", "human edit\n")
+    proposal = rep.commit_proposal(root, files)
+    done = subprocess.run(["bash", "-c", proposal["command"]], cwd=proposal["cwd"],
+                          capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert git(root, "status", "--porcelain").stdout.strip() == "M a1.txt"
+
+
+def test_staged_before_raises_the_commit_or_unstage_check():
+    out = rep.human_checks(
+        [], pending=[], staged_before=["notes.txt"], dirty_before=[],
+        files={"added": [], "modified": [], "removed": []}, checks={}, is_repo=True)
+    assert len(out) == 1 and "Commit or unstage them first" in out[0]
+
+
+def test_long_file_lists_are_capped_and_the_fix_stays_last():
+    names = [f"f{i}.txt" for i in range(40)]
+    out = rep.human_checks(
+        [], pending=[], staged_before=names, dirty_before=[],
+        files={"added": [], "modified": [], "removed": []}, checks={}, is_repo=True)
+    assert "and 37 more" in out[0] and "f5.txt" not in out[0]
+    assert len(out[0].split()) <= 25 and out[0].endswith("unstage them first.")
+
+
+def test_staged_rename_shows_the_old_path(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    git(root, "mv", "docs/index.md", "docs/home.md")
+    assert rep.staged_paths(root) == ["docs/home.md", "docs/index.md"]
+
+
+def test_a_failing_git_call_raises_instead_of_reading_empty(tmp_path):
+    import pytest
+    from engine import HarnessError
+    (tmp_path / ".git").mkdir()
+    with pytest.raises(HarnessError, match="git diff failed"):
+        rep.staged_paths(tmp_path)
