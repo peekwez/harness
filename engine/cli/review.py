@@ -34,12 +34,26 @@ def cmd_review(args):
                   "without a rule reference cannot block or adjudicate)",
                   file=sys.stderr)
             return 2
+        from engine.findings import MAX_MESSAGE_WORDS, clip_words
+        words = len(args.message.split())
+        if words > MAX_MESSAGE_WORDS:
+            print(f"error: --message has {words} words; the limit is "
+                  f"{MAX_MESSAGE_WORDS}. Put detail in --failure-scenario.",
+                  file=sys.stderr)
+            return 2
         severity = args.severity or ("gate" if args.park else "advisory")
+        if severity == "block" and not args.fix:
+            print("error: a blocking finding needs --fix (STE-80). Pass one "
+                  "action that resolves it.", file=sys.stderr)
+            return 2
         finding = make_finding(
             args.code or ("REVIEW_UNCERTAIN" if args.park else "REVIEW_FINDING"),
-            args.rule_ref, args.message, severity=severity,
+            args.rule_ref, clip_words(args.message), severity=severity,
             layer=int(args.layer or (2 if args.park else 1)),
-            key=f"{args.slice}|{args.code}|{args.message[:80]}")
+            key=f"{args.slice}|{args.code}|{args.message[:80]}",
+            inject=([f"Failure scenario: {args.failure_scenario}"]
+                    if args.failure_scenario else []),
+            fix=args.fix)
         append_edge(root, "reviewed_by", f"slice:{args.slice}",
                     f"finding:{finding['finding_id']}",
                     meta={"kind": "park" if args.park else "finding",
@@ -117,6 +131,12 @@ def cmd_review(args):
 
 
 # ------------------------------------------------------------------ adjudicate
+def _finding_text(finding: dict) -> str:
+    """The message plus its inject lines (the failure scenario), so the
+    adjudication row keeps the evidence the short message dropped."""
+    return " ".join([finding["message"], *finding.get("inject", [])])[:400]
+
+
 def cmd_adjudicate(args):
     from engine import append_jsonl, now_iso, read_jsonl
     from engine.graph import append_edge
@@ -160,7 +180,7 @@ def cmd_adjudicate(args):
                   file=sys.stderr)
             return 2
         rows.append({"id": args.decision_id, "domain": args.domain,
-                     "question": target["finding"]["message"][:200],
+                     "question": _finding_text(target["finding"]),
                      "answer": args.resolution,
                      "adr_ref": None, "origin": "adjudication",
                      "created": now_iso()})
@@ -169,7 +189,7 @@ def cmd_adjudicate(args):
     else:
         import shlex
         back_ref = f"adjudication:{args.finding_id}"
-        fact = (f"{target['finding']['message'][:200]} "
+        fact = (f"{_finding_text(target['finding'])} "
                 f"Ruling: {args.resolution}")
         suggest = f"harness memory promote --text {shlex.quote(fact)}"
     append_edge(root, "decided_by", f"finding:{args.finding_id}", back_ref,

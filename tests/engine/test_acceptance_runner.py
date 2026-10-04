@@ -254,7 +254,7 @@ def test_the_persisted_reason_never_carries_raw_gate_output(toy):
     assert out["reason"] == "acceptance gate command failed"
     assert "GATE-TAIL-MARKER" not in out["reason"]
     assert "GATE-TAIL-MARKER" in out["evidence"]
-    assert "GATE-TAIL-MARKER" in out["findings"][0]["message"]
+    assert "GATE-TAIL-MARKER" in "\n".join(out["findings"][0]["inject"])
 
 
 # ------------------------------------------------------ config containment

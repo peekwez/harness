@@ -99,8 +99,8 @@ def test_over_cap_decision_rows_survive_and_pointers_replace_lower_blocks(toy):
 def test_over_cap_finding_is_advisory_and_names_the_fix():
     f = over_cap_finding("slice-042", ["modules", "slice"], 12000)
     assert f["code"] == "CONTEXT_OVER_CAP" and f["severity"] == "advisory"
-    assert f["message"].endswith("Split the slice or shorten its rows.")
-    assert len(f["message"].split()) <= 30
+    assert f["fix"] == "Split slice slice-042, or shorten its cited decision rows."
+    assert len(f["message"].split()) <= 25
 
 
 def test_cli_resolve_slice_has_no_cap(toy):
@@ -177,3 +177,16 @@ def test_open_findings_block_shows_the_fix(toy):
     text = _block(resolve(toy, "slice-042", load_config(toy)), "findings")["text"]
     assert ("[UNDECLARED_FILE gate:G3] rogue.py is undeclared.\n"
             "  Fix: Add rogue.py to predicted_files.") in text
+
+
+def test_open_findings_block_renders_inject_lines_after_the_fix(toy):
+    append_jsonl(toy / ".harness" / "parked.jsonl", {
+        "slice": "slice-042", "finding": {
+            "finding_id": "F-3", "code": "REVIEW_FINDING",
+            "rule_ref": "decision:D-041", "message": "orders.py breaks D-041.",
+            "fix": "Rename the span.",
+            "inject": ["Failure scenario: a filter misses every span."],
+            "severity": "gate", "layer": 2}})
+    text = _block(resolve(toy, "slice-042", load_config(toy)), "findings")["text"]
+    assert ("  Fix: Rename the span.\n"
+            "Failure scenario: a filter misses every span.") in text

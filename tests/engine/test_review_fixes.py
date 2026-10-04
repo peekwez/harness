@@ -16,7 +16,7 @@ def test_reviewer_records_findings_and_parks_into_the_queue(toy):
     proc = run_cli("review", "--slice", "slice-042", "--record-finding",
                    "--code", "R-decisions", "--rule-ref", "decision:D-041",
                    "--message", "span name is free-form, violates D-041",
-                   "--severity", "block", root=toy)
+                   "--severity", "block", "--fix", "Name the span.", root=toy)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     from engine.graph import load_edges
     assert any(e["type"] == "reviewed_by" and e["from"] == "slice:slice-042"

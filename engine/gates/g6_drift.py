@@ -7,7 +7,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..events import make_finding
-from ..findings import clip_words
 from ..registry import public_symbols
 
 GATE = {"id": "G6", "rule_ref": "gate:G6",
@@ -32,10 +31,11 @@ def check(ctx) -> list:
     except HarnessError as exc:
         return [make_finding(
             "MISSING_DRIFT_BASELINE", GATE["rule_ref"],
-            f"slice {ctx.work_unit_id} has no interface baseline: "
-            f"{clip_words(str(exc), 14)}",
-            severity="block", key=ctx.work_unit_id,
-            fix=f"Bind the slice before you change code: harness slice "
+            f"slice {ctx.work_unit_id} has no interface baseline, so G6 "
+            f"cannot check drift.",
+            severity="block", key=ctx.work_unit_id, inject=[str(exc)],
+            fix=f"Restore the slice's starting revision if git cannot read "
+                f"it, or bind the slice: harness slice "
                 f"--slice {ctx.work_unit_id}")]
     baseline = ctx.sidecar.snapshot_get(ctx.work_unit_id)
     if not baseline:

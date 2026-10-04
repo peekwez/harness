@@ -402,11 +402,15 @@ def gate_finding(root, config):
     if ok:
         return None, ""
     from engine.events import make_finding
-    cmd = _acceptance_block(config)["gate_cmd"]
+    from engine.findings import clip_words
+    block = _acceptance_block(config)
+    cmd = block["gate_cmd"]
     finding = make_finding(
         GATE_CODE, GATE_RULE_REF,
-        f"{GATE_REASON}: {cmd!r} (run from "
-        f"{_acceptance_block(config).get('cwd', '.')!r}) — fix the tree, not "
-        f"the gate.\n{tail}",
-        severity="block", layer=0, key=f"{cmd}")
+        f"{GATE_REASON} in {block.get('cwd', '.')!r}: "
+        f"{clip_words(repr(cmd), 12)}",
+        severity="block", layer=0, key=f"{cmd}",
+        inject=[tail] if tail else [],
+        fix="Fix the code or the environment until the gate command "
+            "passes. Do not edit the gate command.")
     return finding, tail

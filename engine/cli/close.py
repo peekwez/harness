@@ -109,15 +109,15 @@ def cmd_merge_slice(args):
         # gets bypassed. The PR is the landing; say where it is.
         from engine.events import make_finding
         row = get_slice(root, args.slice)
-        where = (row.get("pr_url")
-                 or f"push slice/{args.slice} to {redact(landing['remote'])} "
-                    f"and open a PR with `harness close-slice` (or `harness "
-                    f"land --slice {args.slice}` if it already closed)")
+        fix = (f"Merge the pull request: {row['pr_url']}" if row.get("pr_url")
+               else f"Push slice/{args.slice} to {redact(landing['remote'])} "
+                    f"with: harness close-slice --slice {args.slice}. If the "
+                    f"slice is closed, run: harness land --slice {args.slice}")
         _print({"merged": False, "slice": args.slice, "findings": [make_finding(
             "LANDING_MODE_PR", "adr:002",
-            f"landing.mode is 'pr': slice {args.slice} lands by pull request "
-            f"against {landing['base']}, not by a local merge — {where}",
-            severity="block", key=args.slice)]})
+            f"slice {args.slice} lands by pull request against "
+            f"{landing['base']}, because landing.mode is pr.",
+            severity="block", key=args.slice, fix=fix)]})
         return 1
 
     def _git(*a):

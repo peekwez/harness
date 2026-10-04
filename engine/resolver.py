@@ -234,6 +234,7 @@ def build_blocks(root, sl: dict, config: dict) -> list:
     add("findings", "open findings",
         [f"[{f.get('code')} {f.get('rule_ref')}] {f.get('message')}"
          + (f"\n  Fix: {f['fix']}" if f.get("fix") else "")
+         + "".join(f"\n{line}" for line in f.get("inject") or [])
          for f in _open_findings(root, sl["id"])])
     add("decisions", "decisions in scope",
         [f"{d['id']} [{d.get('domain')}] {d.get('question')} -> {d.get('answer')}"
@@ -302,10 +303,10 @@ def over_cap_finding(slice_id: str, cut: list, demand_chars: int) -> dict:
     from .events import make_finding
     return make_finding(
         "CONTEXT_OVER_CAP", "resolver:cap",
-        f"Context cap: slice {slice_id} context is {demand_chars} characters; "
-        f"the cap is {MAX_INJECTION_CHARS}. Cut: {', '.join(cut)}. "
-        f"Split the slice or shorten its rows.",
-        severity="advisory", key=f"{slice_id}|{','.join(cut)}")
+        f"Slice {slice_id} context is {demand_chars} characters, over the "
+        f"{MAX_INJECTION_CHARS} cap; cut: {', '.join(cut)}.",
+        severity="advisory", key=f"{slice_id}|{','.join(cut)}",
+        fix=f"Split slice {slice_id}, or shorten its cited decision rows.")
 
 
 def render_module(root, module_id: str, config: dict) -> dict:

@@ -288,6 +288,10 @@ def main(argv=None):
     sp.add_argument("--rule-ref", dest="rule_ref",
                     help="gate:GN | decision:D-NNN | adr:NNN")
     sp.add_argument("--message")
+    sp.add_argument("--fix", help="one action that resolves the finding")
+    sp.add_argument("--failure-scenario", dest="failure_scenario",
+                    help="one or two sentences: a concrete input and the "
+                         "wrong result")
     sp.add_argument("--severity", choices=["block", "gate", "advisory"])
     sp.add_argument("--layer")
     sp.add_argument("--confidence", type=float)

@@ -13,9 +13,6 @@ DYNAMIC_CODE_FILES = {"engine/review/rubrics.py"}  # codes are rubric ids
 
 # Files whose messages are not rewritten yet. Tasks 7-10 empty this set.
 PENDING = {
-    "engine/cli/acceptance.py",
-    "engine/cli/close.py",
-    "engine/cli/review.py",
     "engine/review/layer0.py",
     "engine/review/rubrics.py",
 }
