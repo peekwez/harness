@@ -173,3 +173,146 @@ def test_load_and_unowned_statements(tmp_path):
         for i in ("V-orders-1", "V-orders-2", "V-orders-10")])
     rows = [{"id": "s1", "verifies": ["V-orders-2"]}, {"id": "s2"}]
     assert unowned_statements(toy, rows) == ["V-orders-1", "V-orders-10"]
+
+
+# ---- fix round 1 ----------------------------------------------------------
+from engine.statements import compile_statements, skipped_statement_lines
+
+
+@pytest.mark.parametrize("pattern", ["/etc/hosts", "/etc/*", "../*",
+                                     "../outside.py"])
+def test_expand_suite_ignores_paths_outside_the_root(tmp_path, pattern):
+    root = tmp_path / "repo"
+    _write(root, {"tests/a.py": ""})
+    (tmp_path / "outside.py").write_text("")
+    # `../*` reaches the repo directory itself; its files are still in root.
+    assert set(expand_suite(root, [pattern])) <= {"tests/a.py"}
+    assert expand_suite(root, [pattern, "tests/a.py"]) == ["tests/a.py"]
+
+
+def test_expand_suite_skips_a_symlink_that_leaves_the_root(tmp_path):
+    root = tmp_path / "repo"
+    _write(root, {"tests/a.py": ""})
+    (tmp_path / "secret.py").write_text("")
+    (root / "tests" / "link.py").symlink_to(tmp_path / "secret.py")
+    assert expand_suite(root, ["tests"]) == ["tests/a.py"]
+
+
+@pytest.mark.parametrize("body", [
+    'x = "a # verifies: V-pay-3 kills: y"\n',
+    "const x = 'a // verifies: V-pay-3 kills: y';\n",
+    'const x = "say \\" # verifies: V-pay-3 kills: y";\n',
+])
+def test_a_marker_inside_a_quoted_string_is_not_a_link(tmp_path, body):
+    _write(tmp_path, {"tests/test_q.py": body})
+    assert scan_test_links(tmp_path, ["tests/test_q.py"]) == {}
+
+
+def test_a_trailing_comment_after_a_string_is_a_link(tmp_path):
+    _write(tmp_path, {"tests/test_q.py":
+                      'x = "a"  # verifies: V-pay-3 kills: y\n'})
+    assert scan_test_links(tmp_path, ["tests/test_q.py"])["V-pay-3"][0][
+        "kills"] == "y"
+
+
+def test_scan_skips_outside_root_and_dedupes_symlinks(tmp_path):
+    root = tmp_path / "repo"
+    _write(root, {"tests/test_a.py": "# verifies: V-a-1 kills: x\n"})
+    (root / "tests" / "test_b.py").symlink_to(root / "tests" / "test_a.py")
+    (tmp_path / "out_test.py").write_text("# verifies: V-a-2 kills: x\n")
+    links = scan_test_links(root, ["tests/test_a.py", "tests/test_b.py",
+                                   "../out_test.py"])
+    assert list(links) == ["V-a-1"] and len(links["V-a-1"]) == 1
+
+
+def test_skipped_statement_forms_are_reported_not_fatal():
+    text = "\n".join(["- [ ] V-a-1: checkbox", "> V-a-2: quote",
+                      "| V-a-3 | table |", "see V-a-4: mid line",
+                      "V-a-5: fine", FENCE, "V-a-6: fenced", FENCE])
+    warns = skipped_statement_lines(text, "d.md")
+    assert [w.split(":")[1] for w in warns] == ["1", "2", "3", "4"]
+    assert all(len(w.split(": ", 2)[2].split()) <= 25 for w in warns)
+    assert [r["id"] for r in parse_statements(text, "d.md")] == ["V-a-5"]
+
+
+def _verify_bytes(root):
+    return (root / ".harness" / "verify.jsonl").read_bytes()
+
+
+def test_compile_writes_sorted_statements_and_is_idempotent(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"explore/VERIFY.md":
+                 "V-orders-10: b\nV-orders-2: a\n"})
+    out = compile_statements(toy)
+    assert out["source"] == "explore/VERIFY.md"
+    assert out["statements"] == ["V-orders-2", "V-orders-10"]
+    assert [r["id"] for r in load_statements(toy)] == ["V-orders-2",
+                                                       "V-orders-10"]
+    first = _verify_bytes(toy)
+    compile_statements(toy)
+    assert _verify_bytes(toy) == first
+
+
+def test_compile_with_no_source_and_no_file_creates_nothing(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    out = compile_statements(toy)
+    assert out == {"source": None, "statements": [], "unknown_links": [],
+                   "warnings": []}
+    assert not (toy / ".harness" / "verify.jsonl").exists()
+
+
+def test_compile_with_no_source_keeps_an_existing_file(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    write_jsonl(toy / ".harness" / "verify.jsonl", [
+        {"id": "V-a-1", "feature": "a", "statement": "s", "source": "x"}])
+    before = _verify_bytes(toy)
+    assert compile_statements(toy)["statements"] == ["V-a-1"]
+    assert _verify_bytes(toy) == before
+
+
+def test_compile_falls_back_to_the_working_document(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    doc = toy / "docs" / "plan.md"
+    _write(toy, {"docs/plan.md": "# Plan\nV-a-1: first\n"})
+    out = compile_statements(toy, doc)
+    assert out["source"] == "docs/plan.md"
+    assert load_statements(toy)[0]["source"] == "docs/plan.md"
+
+
+def test_compile_ignores_a_working_document_without_statements(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"docs/plan.md": "# Plan\nno statements\n"})
+    out = compile_statements(toy, toy / "docs" / "plan.md")
+    assert out["source"] is None
+    assert not (toy / ".harness" / "verify.jsonl").exists()
+
+
+def test_compile_warns_about_unknown_test_links(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"explore/VERIFY.md": "V-a-1: first\n",
+                 "tests/test_l.py": ("# verifies: V-a-1 kills: x\n"
+                                     "# verifies: V-a-9 kills: y\n")})
+    out = compile_statements(toy)
+    assert [u["id"] for u in out["unknown_links"]] == ["V-a-9"]
+    assert out["unknown_links"][0]["line"] == 2
+    assert len(out["warnings"]) == 1
+    assert out["warnings"][0].startswith("UNKNOWN_TEST_LINK: tests/test_l.py:2")
+
+
+def test_compile_empty_source_does_not_wipe_existing_statements(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"explore/VERIFY.md": "V-a-1: first\n"})
+    compile_statements(toy)
+    before = _verify_bytes(toy)
+    _write(toy, {"explore/VERIFY.md": "# nothing here yet\n"})
+    out = compile_statements(toy)
+    assert _verify_bytes(toy) == before
+    assert out["source"] is None and out["statements"] == ["V-a-1"]
+    assert any("no statements found" in w for w in out["warnings"])
+
+
+def test_compile_surfaces_skipped_statement_lines(tmp_path):
+    toy = build_toy_repo(tmp_path / "toy")
+    _write(toy, {"explore/VERIFY.md": "V-a-1: ok\n- [ ] V-a-2: lost\n"})
+    out = compile_statements(toy)
+    assert any("explore/VERIFY.md:2" in w for w in out["warnings"])

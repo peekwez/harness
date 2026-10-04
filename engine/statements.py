@@ -31,7 +31,7 @@ _LOOKS_LIKE_ID = re.compile(r"V-[A-Za-z0-9_.-]+-[0-9]+")
 _MARKER = r"(?:#+|//+|--|;+|%+|/\*+|\*|<!--|\(\*|\{-)"
 _CLOSER = r"(?:\*+/|-->|\*\)|-\})"
 _LINK = re.compile(
-    rf"(?:^|\s){_MARKER}\s*verifies:\s*(?P<ids>.*?)"
+    rf"(?:^|\s)(?P<marker>{_MARKER})\s*verifies:\s*(?P<ids>.*?)"
     rf"(?:\s+kills:\s*(?P<kills>.*?))?\s*{_CLOSER}?\s*$")
 _KILLS_LINE = re.compile(
     rf"^\s*{_MARKER}\s*kills:\s*(?P<kills>.*?)\s*{_CLOSER}?\s*$")
@@ -43,6 +43,50 @@ TEST_NAMES = ("test_*", "*_test.*", "*.test.*", "*.spec.*", "*_spec.*",
 SKIP_DIRS = {".git", ".harness", ".worktrees", "node_modules", ".venv",
              "venv", "__pycache__"}
 MAX_SCAN_BYTES = 1_000_000
+
+
+_SKIPPED = re.compile(r"V-[a-z0-9-]+-[0-9]+`?\*{0,2}\s*[:|]")
+
+
+def _inside_string(prefix: str) -> bool:
+    """True when a quote opened in `prefix` is still open at its end."""
+    quote, escaped = None, False
+    for ch in prefix:
+        if escaped:
+            escaped = False
+        elif ch == "\\" and quote:
+            escaped = True
+        elif quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+    return quote is not None
+
+
+def skipped_statement_lines(text: str, source: str) -> list[str]:
+    """Warnings for lines that look like statements but are not read.
+
+    A statement in a checkbox, blockquote or table row, or in mid-line
+    prose, is skipped by `parse_statements`. This reports each one.
+    """
+    out, fence = [], None
+    for lineno, line in enumerate(text.splitlines(), 1):
+        opener = _FENCE.match(line)
+        if opener:
+            marker = opener.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            continue
+        if fence is not None or _STATEMENT_LINE.match(line):
+            continue
+        if _SKIPPED.search(line):
+            out.append(f"{source}:{lineno}: statement line skipped. Start the "
+                       f"line with V-<feature>-<n>: in a plain list or "
+                       f"heading.")
+    return out
 
 
 def statement_key(sid: str) -> tuple:
@@ -149,17 +193,29 @@ def expand_suite(root, patterns) -> list[str]:
     reports missing paths, not this helper.
     """
     root = Path(root)
+    base = root.resolve()
     out = set()
+
+    def keep(path: Path) -> None:
+        try:
+            rel = path.resolve().relative_to(base)
+        except (OSError, ValueError, RuntimeError):
+            return
+        if path.is_file() and "__pycache__" not in rel.parts:
+            out.add(rel.as_posix())
+
     for pat in patterns or []:
-        hits = (list(root.glob(pat)) if any(c in pat for c in "*?[")
-                else [root / pat])
+        try:
+            hits = (list(root.glob(pat)) if any(c in pat for c in "*?[")
+                    else [root / pat])
+        except (ValueError, NotImplementedError, OSError):
+            continue
         for hit in hits:
             if hit.is_dir():
-                out.update(f.relative_to(root).as_posix()
-                           for f in hit.rglob("*")
-                           if f.is_file() and "__pycache__" not in f.parts)
-            elif hit.is_file():
-                out.add(hit.relative_to(root).as_posix())
+                for f in hit.rglob("*"):
+                    keep(f)
+            else:
+                keep(hit)
     return sorted(out)
 
 
@@ -216,13 +272,25 @@ def scan_test_links(root, paths) -> dict[str, list[dict]]:
         every token after `verifies:`, so a mistyped ID is a key too.
     """
     root = Path(root)
+    base = root.resolve()
     links: dict = {}
+    seen: set = set()
     for rel in sorted({Path(str(p)).as_posix() for p in paths}):
+        try:
+            real = (root / rel).resolve()
+            real.relative_to(base)
+        except (OSError, ValueError, RuntimeError):
+            continue
+        if real in seen:
+            continue
+        seen.add(real)
         lines = _read_lines(root / rel)
         if lines is None:
             continue
         for index, line in enumerate(lines):
-            match = _LINK.search(line)
+            match = next((m for m in _LINK.finditer(line)
+                          if not _inside_string(line[:m.start("marker")])),
+                         None)
             if not match:
                 continue
             ids = [t for t in re.split(r"[,\s]+", match.group("ids")) if t]
@@ -258,15 +326,20 @@ def compile_statements(root, working_doc=None) -> dict:
     verify_md = root / VERIFY_MD
     if verify_md.is_file():
         source = VERIFY_MD
-        rows = parse_statements(verify_md.read_text(encoding="utf-8"), source)
+        text = verify_md.read_text(encoding="utf-8")
+        rows = parse_statements(text, source)
+        out["warnings"] += skipped_statement_lines(text, source)
         if not rows:
             out["warnings"].append(f"{VERIFY_MD}: no statements found. Write "
-                                   f"lines like V-orders-1: <statement>.")
+                                   f"V-orders-1: <statement> lines. Kept "
+                                   f"{VERIFY_JSONL} as it was.")
+            rows = None
     elif working_doc is not None:
         from .docsections import doc_ref_for
         doc_source = doc_ref_for(root, working_doc)
-        doc_rows = parse_statements(
-            Path(working_doc).read_text(encoding="utf-8"), doc_source)
+        doc_text = Path(working_doc).read_text(encoding="utf-8")
+        doc_rows = parse_statements(doc_text, doc_source)
+        out["warnings"] += skipped_statement_lines(doc_text, doc_source)
         if doc_rows:
             source, rows = doc_source, doc_rows
     if rows is not None:
