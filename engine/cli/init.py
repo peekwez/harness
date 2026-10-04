@@ -124,17 +124,15 @@ def cmd_init(args):
     else:
         print("note: AGENTS.md already exists — not touched; consider adding "
               "the harness workflow section from templates/agents-md.md")
+    from engine.shared_memory import CLAUDE_IMPORT, ensure_index
+    ensure_index(root)  # .claude/memory/shared/MEMORY.md (D-0.10-02)
     claude_md = root / "CLAUDE.md"
     if not claude_md.exists():
-        claude_md.write_text(
-            "# CLAUDE.md\n\n"
-            "This repo is harness-enforced. The agent working agreement lives "
-            "in AGENTS.md (imported below) — slices, gates, provenance, and "
-            "the substrate-first workflow.\n\n"
-            "@AGENTS.md\n")
+        shutil.copy(templates / "claude-md.md", claude_md)
     else:
-        print("note: CLAUDE.md already exists — not touched; consider adding "
-              "'@AGENTS.md' so agents load the harness working agreement")
+        print("note: CLAUDE.md already exists — not touched. Add these "
+              f"lines so agents load harness context: @AGENTS.md and "
+              f"{CLAUDE_IMPORT}")
 
     # bare `pytest` must SEE acceptance tests: the NNN_*.py convention is
     # invisible to pytest's default python_files under directory collection

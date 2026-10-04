@@ -95,3 +95,43 @@ def test_init_creates_no_harness_memory(tmp_path):
     assert ".harness/memory" not in gitignore
     assert ".harness/cache/" in gitignore.splitlines()
     assert "memory" not in (target / ".gitattributes").read_text()
+
+
+def test_claude_md_template_imports_shared_memory():
+    from conftest import PLUGIN_ROOT
+    from engine.shared_memory import CLAUDE_IMPORT, CLAUDE_MARKER
+    text = (PLUGIN_ROOT / "templates" / "claude-md.md").read_text()
+    assert CLAUDE_IMPORT in text.splitlines()
+    assert "@AGENTS.md" in text.splitlines()
+    assert CLAUDE_MARKER in text.casefold()
+
+
+def test_claude_md_template_is_current_for_the_upgrade_check(tmp_path):
+    from conftest import PLUGIN_ROOT
+    from engine.shared_memory import claude_md_state
+    (tmp_path / "CLAUDE.md").write_text(
+        (PLUGIN_ROOT / "templates" / "claude-md.md").read_text())
+    assert claude_md_state(tmp_path) == "current"
+
+
+def test_init_scaffolds_shared_memory_and_claude_import(tmp_path):
+    target = tmp_path / "fresh"
+    target.mkdir()
+    (target / "app.py").write_text("x = 1\n")
+    assert run_cli("init", root=target).returncode == 0
+    index = target / ".claude" / "memory" / "shared" / "MEMORY.md"
+    assert index.read_text().startswith("# Shared memory")
+    claude = (target / "CLAUDE.md").read_text().splitlines()
+    assert "@AGENTS.md" in claude
+    assert "@.claude/memory/shared/MEMORY.md" in claude
+
+
+def test_init_keeps_an_existing_claude_md_and_names_the_import(tmp_path):
+    target = tmp_path / "fresh"
+    target.mkdir()
+    (target / "app.py").write_text("x = 1\n")
+    (target / "CLAUDE.md").write_text("# mine\n")
+    proc = run_cli("init", root=target)
+    assert proc.returncode == 0
+    assert (target / "CLAUDE.md").read_text() == "# mine\n"
+    assert "@.claude/memory/shared/MEMORY.md" in proc.stdout
