@@ -512,3 +512,54 @@ def test_readme_is_short_and_points_at_the_site():
         assert heading in lines, heading
     assert "## Changelog" not in lines
     assert "CHANGELOG.md" in text
+
+
+def _docs_workflow():
+    return yaml.safe_load(
+        (PLUGIN_ROOT / ".github" / "workflows" / "docs.yml").read_text())
+
+
+def _lint_step(wf):
+    return next(s for s in wf["jobs"]["build"]["steps"]
+                if "lint-text" in s.get("run", ""))
+
+
+def test_docs_workflow_runs_only_on_peekwez():
+    for name, job in _docs_workflow()["jobs"].items():
+        assert "github.repository == 'peekwez/harness'" in job["if"], name
+
+
+def test_docs_workflow_lints_builds_and_deploys():
+    wf = _docs_workflow()
+    jobs = wf["jobs"]
+    assert wf["permissions"] == {"contents": "read"}
+    assert wf["concurrency"]["cancel-in-progress"] is False
+    runs = "\n".join(s.get("run", "") for s in jobs["build"]["steps"])
+    assert "pip install -r docs/requirements.txt" in runs
+    assert "mkdocs build --strict" in runs
+    assert "docs/internal" in _lint_step(wf)["run"]
+    uses = [s.get("uses", "") for job in jobs.values() for s in job["steps"]]
+    assert any(u.startswith("actions/upload-pages-artifact@") for u in uses)
+    assert any(u.startswith("actions/deploy-pages@") for u in uses)
+    assert jobs["deploy"]["needs"] == "build"
+    assert jobs["deploy"]["permissions"] == {"pages": "write",
+                                             "id-token": "write"}
+    assert "refs/heads/main" in jobs["deploy"]["if"]
+    assert "pull_request" in jobs["deploy"]["if"]
+    assert jobs["deploy"]["environment"]["name"] == "github-pages"
+
+
+def test_docs_workflow_lints_the_pages_the_site_publishes():
+    """CI lints README.md plus every docs page the site publishes."""
+    run = _lint_step(_docs_workflow())["run"]
+    for skipped in ("internal", "hooks", *NOT_PUBLIC):
+        assert f"docs/{skipped}/" in run, skipped
+    assert "README.md" in run
+
+
+def test_docs_workflow_lint_step_passes_on_this_tree():
+    """Runs the exact CI command, so a wrong lint-text assumption fails here."""
+    step = _lint_step(_docs_workflow())
+    proc = subprocess.run(["bash", "-c", step["run"]], cwd=PLUGIN_ROOT,
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-3000:]
