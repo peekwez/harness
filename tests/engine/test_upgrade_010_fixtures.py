@@ -67,3 +67,53 @@ def test_legacy_acceptance_suites_are_green(tmp_path, build, tests):
     proc = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *tests],
                           cwd=root, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_the_08_fixture_telemetry_has_no_ids(tmp_path):
+    root = build_legacy_08_repo(tmp_path / "old")
+    rows = read_jsonl(root / ".harness/telemetry.jsonl")
+    assert rows and all("id" not in r for r in rows)
+    astra = build_astralabs_094_repo(tmp_path / "astra")
+    assert all(r["id"].startswith("evt:")
+               for r in read_jsonl(astra / ".harness/telemetry.jsonl"))
+
+
+def test_broad_site_ignore_variant_leaves_the_site_shadow_untracked(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra", ignore_site_broad=True)
+    shadow = ".harness/shadows/site/assets/javascripts/bundle.js.json"
+    tracked = set(git(root, "ls-files").stdout.split())
+    assert (root / shadow).exists()
+    assert shadow not in tracked
+    assert git(root, "check-ignore", shadow).returncode == 0
+    assert ".harness/shadows/libs/core/src/astra_core/config.py.json" in tracked
+    assert git(root, "status", "--porcelain").stdout == ""
+
+
+@pytest.mark.parametrize("build,slice_id", [(build_legacy_08_repo, "slice-042"),
+                                            (build_astralabs_094_repo, "slice-043")])
+def test_with_worktree_adds_an_in_flight_checkout(tmp_path, build, slice_id):
+    root = build(tmp_path / "repo", with_worktree=True)
+    wt = root / ".worktrees" / slice_id
+    assert (wt / ".harness/backlog.jsonl").exists()
+    assert git(wt, "branch", "--show-current").stdout.strip() == f"slice/{slice_id}"
+    row = next(r for r in read_jsonl(root / ".harness/backlog.jsonl") if r["id"] == slice_id)
+    assert row["status"] == "in_progress" and row["worktree"] is None
+    assert git(root, "status", "--porcelain").stdout == ""
+    assert not (build(tmp_path / "plain") / ".worktrees").exists()
+
+
+def test_the_two_fixtures_are_distinct_versions(tmp_path):
+    old = build_legacy_08_repo(tmp_path / "old")
+    new = build_astralabs_094_repo(tmp_path / "astra")
+    old_cfg = (old / ".harness/config.yaml").read_text()
+    new_cfg = (new / ".harness/config.yaml").read_text()
+    assert "compaction_is_defect: true" in old_cfg
+    assert "compaction_is_defect: false" in new_cfg
+    for cfg in (old_cfg, new_cfg):
+        for key in ("resolver:", "budget_tokens:", "g5_override:", "ensemble:"):
+            assert key in cfg
+    assert "src_roots" in new_cfg.replace("#", "").split("extractor:")[-1]
+    ci = ".github/workflows/harness-verify.yml"
+    assert (old / ci).read_text() != (new / ci).read_text()
+    assert (old / ci).read_text().startswith("# harness verify")
+    assert (old / "AGENTS.md").read_text() != (new / "AGENTS.md").read_text()

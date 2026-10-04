@@ -415,20 +415,33 @@ def _legacy_entry(entry_id, kind, status, source=None, text=None, shadow=None):
             "manifest": [source] if source else [], "signature_digest": None}
 
 
-def legacy_events(slice_id, day, count):
-    """0.9 telemetry `event` rows for one slice on one day of September."""
-    return [{"id": f"evt:{slice_id}-{day}-{i}",
+def legacy_events(slice_id, day, count, ids=True):
+    """Telemetry `event` rows for one slice on one day of September. 0.8.0
+    wrote `{ts, kind, meta}`; the `evt:` ids came in 0.9 (`ids=True`)."""
+    rows = [{"id": f"evt:{slice_id}-{day}-{i}",
              "ts": f"2026-09-{day:02d}T10:{i:02d}:00+00:00", "kind": "event",
              "meta": {"codes": ["OUT_OF_SCOPE"] if i % 2 else [],
                       "event": "pre_change", "gates": ["G2", "G3"],
                       "session": f"s-{day}", "slice": slice_id,
                       "verdict": "allow_with_findings" if i % 2 else "allow"}}
             for i in range(count)]
+    return rows if ids else [{k: v for k, v in r.items() if k != "id"} for r in rows]
 
 
-def _closed_event(slice_id, day):
-    return {"id": f"evt:{slice_id}-closed", "ts": f"2026-09-{day:02d}T11:00:00+00:00",
-            "kind": "slice_closed", "meta": {"slice": slice_id}}
+def _closed_event(slice_id, day, ids=True):
+    row = {"id": f"evt:{slice_id}-closed", "ts": f"2026-09-{day:02d}T11:00:00+00:00",
+           "kind": "slice_closed", "meta": {"slice": slice_id}}
+    if not ids:
+        del row["id"]
+    return row
+
+
+def _add_worktree(root, slice_id):
+    """An in-flight `.worktrees/<slice>` checkout on `slice/<slice>`. Neither
+    0.8.0 nor 0.9.4 records the path in the backlog row (`worktree` stays
+    null); the checkout itself carries the committed backlog."""
+    git(root, "worktree", "add", "-q", str(Path(root) / ".worktrees" / slice_id),
+        "-b", f"slice/{slice_id}")
 
 
 def _legacy_edge(etype, frm, to, meta=None):
@@ -454,7 +467,7 @@ def _legacy_commit_and_note(root, message, slice_id, files, used):
         json.dumps(payload, sort_keys=True), "HEAD")
 
 
-def build_legacy_08_repo(root: Path) -> Path:
+def build_legacy_08_repo(root: Path, *, with_worktree: bool = False) -> Path:
     """A 0.8.0 substrate after real use: EDIT-ME seed rows, no vendored
     engine, a pre-0.9.1 `deps:` G5 override, committed shadows, telemetry,
     durable memory, a contract stub, one closed and one in-flight slice."""
@@ -512,8 +525,9 @@ def build_legacy_08_repo(root: Path) -> Path:
         {"id": "B-legacy", "source_adr": "007", "rule_ref": "adr:007",
          "text": "legacy exporter out of scope", "patterns": ["legacy/**"]}])
     _write(root, ".harness/notes.jsonl", "")
-    write_jsonl(hd / "telemetry.jsonl", legacy_events("slice-040", 3, 4)
-                + [_closed_event("slice-040", 3)] + legacy_events("slice-042", 5, 3))
+    write_jsonl(hd / "telemetry.jsonl", legacy_events("slice-040", 3, 4, ids=False)
+                + [_closed_event("slice-040", 3, ids=False)]
+                + legacy_events("slice-042", 5, 3, ids=False))
     write_jsonl(hd / "memory" / "durable.jsonl", [
         _durable("mem-0a1b2c3d4e5f", "slice-040", "observation",
                  "Span names use snake_case verb_noun.")])
@@ -533,16 +547,23 @@ def build_legacy_08_repo(root: Path) -> Path:
     _write(root, ".gitattributes", LEGACY_GITATTRIBUTES)
     _legacy_commit_and_note(root, "harness 0.8.0 substrate", "slice-040",
                             ["telemetry.py"], ["telemetry"])
+    if with_worktree:
+        _add_worktree(root, "slice-042")
     return root
 
 
-def build_astralabs_094_repo(root: Path, *, marked: bool = True) -> Path:
+def build_astralabs_094_repo(root: Path, *, marked: bool = True,
+                             ignore_site_broad: bool = False,
+                             with_worktree: bool = False) -> Path:
     """A 0.9.4 substrate with the astralabs layout: `libs/**/src` packages,
     tests, an ignored mkdocs `site/` with a `.js.map`, a tracked mp4,
     committed shadows (with `site/` and test shadows), telemetry and its
     archive, durable memory, a contract stub, path-only non-goals, G2/G3/G7
     overrides, a stale vendored engine, one closed and one in-flight slice.
-    `marked=False` writes hand-authored AGENTS.md and CLAUDE.md."""
+    `marked=False` writes hand-authored AGENTS.md and CLAUDE.md.
+    `ignore_site_broad=True` writes the unanchored `site/` ignore rule, so the
+    site shadow is on disk but ignored and untracked. `with_worktree=True`
+    adds an in-flight `.worktrees/slice-043` checkout."""
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     hd = root / ".harness"
@@ -656,10 +677,12 @@ def build_astralabs_094_repo(root: Path, *, marked: bool = True) -> Path:
     else:
         _write(root, "AGENTS.md", UNMARKED_AGENTS_MD)
         _write(root, "CLAUDE.md", UNMARKED_CLAUDE_MD)
-    _write(root, ".gitignore", LEGACY_GITIGNORE + "/site/\n")
+    _write(root, ".gitignore", LEGACY_GITIGNORE + ("site/\n" if ignore_site_broad else "/site/\n"))
     _write(root, ".gitattributes", LEGACY_GITATTRIBUTES)
     _legacy_commit_and_note(root, "astralabs at harness 0.9.4", "slice-041",
                             ["libs/billing/src/astra_billing/invoice.py"], ["billing"])
+    if with_worktree:
+        _add_worktree(root, "slice-043")
     return root
 
 
