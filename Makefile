@@ -1,7 +1,7 @@
 # Thin wrappers over bin/harness (§10)
 HARNESS := ./bin/harness
 
-.PHONY: init compile author-gate shadows resolve gates verify review replay status test
+.PHONY: init compile author-gate shadows resolve gates verify review status test
 
 init:
 	$(HARNESS) init
@@ -26,9 +26,6 @@ verify:
 
 review:
 	$(HARNESS) review
-
-replay:
-	$(HARNESS) review --replay
 
 status:
 	$(HARNESS) status --json
