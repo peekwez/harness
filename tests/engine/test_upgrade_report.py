@@ -151,3 +151,118 @@ def test_a_failing_git_call_raises_instead_of_reading_empty(tmp_path):
     (tmp_path / ".git").mkdir()
     with pytest.raises(HarnessError, match="git diff failed"):
         rep.staged_paths(tmp_path)
+
+
+def test_verify_blocks_become_failures_with_their_fix():
+    report = {"passed": False, "findings": [
+        {"code": "SCHEMA_INVALID", "severity": "block",
+         "message": "registry.jsonl: row 'x' is missing required field 'kind'",
+         "fix": "add the field"},
+        {"code": "LEGACY_GRAPH_PROVENANCE", "severity": "advisory", "message": "old"}]}
+    assert rep.verify_failures(report) == [{
+        "check": "verify", "code": "SCHEMA_INVALID",
+        "text": "registry.jsonl: row 'x' is missing required field 'kind'",
+        "fix": "add the field"}]
+
+
+def test_verify_failure_without_fix_points_at_gates_explain():
+    out = rep.verify_failures({"passed": False, "findings": [
+        {"code": "EXPLORE_IMPORT", "severity": "block", "message": "m"}]})
+    assert out[0]["fix"] == "harness gates explain EXPLORE_IMPORT"
+
+
+def test_doctor_failures_name_each_problem_and_its_fix():
+    report = {"substrate_healthy": False,
+              "schema_problems": ["backlog.jsonl:2: bad status"],
+              "stale_worktrees": [{"path": "/r/.worktrees/ghost", "slice": "ghost",
+                                   "reason": "no such slice",
+                                   "remove_with": "git worktree remove --force /r/.worktrees/ghost"}],
+              "parked_findings": 2, "stale_bindings": [],
+              "vendored_engine": {"status": "current"}, "next": "harness adjudicate --list"}
+    out = rep.doctor_failures(report)
+    assert [f["code"] for f in out] == ["schema_problems", "stale_worktrees", "parked_findings"]
+    assert out[1]["fix"] == "git worktree remove --force /r/.worktrees/ghost"
+    assert out[2]["fix"] == "harness adjudicate --list"
+
+
+def test_unhealthy_doctor_with_an_unknown_reason_still_fails():
+    out = rep.doctor_failures({"substrate_healthy": False, "next": "harness doctor --substrate --fix"})
+    assert out == [{"check": "doctor", "code": "unhealthy",
+                    "text": "doctor reports the substrate unhealthy",
+                    "fix": "harness doctor --substrate --fix"}]
+
+
+def test_healthy_doctor_has_no_failures():
+    assert rep.doctor_failures({"substrate_healthy": True,
+                                "stale_worktrees": [{"x": 1}]}) == []
+
+
+def test_a_crashed_check_is_a_failure():
+    assert rep.verify_failures({"error": "Traceback"})[0]["code"] == "VERIFY_CRASHED"
+    assert rep.doctor_failures({"error": "Traceback"})[0]["code"] == "DOCTOR_CRASHED"
+
+
+def test_attribute_names_the_last_step_that_reported_the_file():
+    steps = [{"id": "w1.drop-registry-shadow", "report": ["rewrote .harness/registry.jsonl (3 rows)"]},
+             {"id": "w2.telemetry", "report": ["wrote .harness/slice-metrics.jsonl"]}]
+    failures = [
+        {"check": "verify", "code": "SCHEMA_INVALID", "text": "registry.jsonl: row 'x' bad", "fix": "f"},
+        {"check": "doctor", "code": "stale_worktrees", "text": '{"slice": "ghost"}', "fix": "g"},
+        {"check": "upgrade", "code": "STEP_FAILED", "text": "boom", "fix": "h", "step": "w3.z"}]
+    out = rep.attribute(failures, steps)
+    assert [f["step"] for f in out] == ["w1.drop-registry-shadow", "none", "w3.z"]
+    assert out[0]["line"] == ("verify SCHEMA_INVALID: registry.jsonl: row 'x' bad. "
+                              "Step: w1.drop-registry-shadow. Fix: f")
+
+
+def test_attribute_names_who_fixes_each_failure():
+    failures = [
+        {"check": "upgrade", "code": "STEP_FAILED", "text": "t", "fix": rep.STEP_FIX, "step": "a"},
+        {"check": "doctor", "code": "stale_worktrees", "text": "t",
+         "fix": "git worktree remove --force /r/x"},
+        {"check": "verify", "code": "X", "text": "t", "fix": "harness gates explain X"}]
+    assert [f["owner"] for f in rep.attribute(failures, [])] == [
+        "the upgrade", "the human", "a later command"]
+
+
+def test_reported_step_errors():
+    rows = [{"id": "w2.a", "report": []}, {"id": "w2.b", "error": "disk full"}]
+    assert rep.reported_step_errors(rows) == [{
+        "check": "upgrade", "code": "STEP_FAILED", "text": "disk full", "step": "w2.b",
+        "fix": "fix the cause, then run: harness upgrade --yes"}]
+
+
+def test_status_rules():
+    none = {"added": [], "modified": [], "removed": []}
+    some = {"added": ["a"], "modified": [], "removed": []}
+    skip = [{"id": "w1.x", "report": ["skipped: needs confirmation"]}]
+    kw = dict(current=2, steps=[], pending=[], failures=[])
+    assert rep.upgrade_status(schema_from=2, files=none, **kw) == "already on 0.10"
+    assert rep.upgrade_status(schema_from=1, files=some, **kw) == "upgraded"
+    assert rep.upgrade_status(schema_from=1, files=none, **kw) == "upgraded"
+    assert rep.upgrade_status(schema_from=1, current=2, files=some, steps=skip,
+                              pending=["w1.x"], failures=[]) == "incomplete"
+    assert rep.upgrade_status(schema_from=1, current=2, files=some, steps=skip,
+                              pending=[], failures=[]) == "incomplete"
+    assert rep.upgrade_status(schema_from=1, current=2, files=some, steps=[], pending=[],
+                              failures=[{"code": "SCHEMA_INVALID"}]) == "checks failed"
+    assert rep.upgrade_status(schema_from=1, current=2, files=some, steps=[], pending=[],
+                              failures=[{"code": "STEP_FAILED"}]) == "failed"
+
+
+def test_final_checks_run_doctor_and_verify_in_fresh_processes(tmp_path):
+    root = build_astralabs_094_repo(tmp_path / "astra")
+    out = rep.final_checks(root)
+    assert set(out) == {"doctor", "verify"}
+    assert isinstance(out["doctor"]["failures"], list) and isinstance(out["verify"]["passed"], bool)
+    assert rep.HARNESS_BIN.name == "harness"
+
+
+def test_step_failure_names_the_first_step_with_pending_changes(tmp_path):
+    class S:
+        def __init__(self, id, pending):
+            self.id, self._p = id, pending
+        def describe(self, root):
+            return self._p
+    out = rep.step_failure(tmp_path, OSError("disk full"), [S("a", []), S("b", ["x"]), S("c", ["y"])])
+    assert out["step"] == "b" and out["code"] == "STEP_FAILED" and "disk full" in out["text"]
