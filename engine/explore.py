@@ -578,12 +578,21 @@ def record_skip(doc_text: str | None, reason: str) -> str:
             "# Architecture", "", "<!-- stage: 1 -->", marker, "",
             f"[assumption] Explore was skipped: {reason}", "",
             "```harness-decisions", *DECISIONS_TABLE_HEADER, "```", ""])
-    if SKIP_MARKER.search(doc_text):
-        return SKIP_MARKER.sub(lambda _m: marker, doc_text, count=1)
-    lines = doc_text.splitlines()
-    at = 1 if lines and lines[0].startswith("#") else 0
-    lines[at:at] = [marker] if at == 0 else ["", marker]
-    return "\n".join(lines) + ("\n" if doc_text.endswith("\n") else "")
+    lines = doc_text.split("\n")
+    cleaned, _ = _clean_fences(doc_text)
+    for n, line in enumerate(cleaned.split("\n")):
+        if SKIP_MARKER.match(line):
+            lines[n] = marker
+            return "\n".join(lines)
+    fm = _FRONT.match(doc_text)
+    at = doc_text[:fm.end()].count("\n") if fm else 0
+    if fm:
+        lines[at:at] = [marker, ""]
+    elif lines and lines[0].startswith("#"):
+        lines[1:1] = ["", marker]
+    else:
+        lines[0:0] = [marker]
+    return "\n".join(lines)
 
 
 def skip_reason(root) -> str | None:

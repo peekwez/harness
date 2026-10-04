@@ -120,3 +120,35 @@ def test_slice_summary_row_records_explore_skipped(toy):
 def test_close_ceremony_passes_the_explore_extra():
     body = (PLUGIN_ROOT / "engine" / "cli" / "ceremony.py").read_text()
     assert "explore_summary_extra(root)" in body
+
+
+def test_record_skip_adds_a_marker_when_the_only_one_is_a_fenced_example():
+    doc = "# Arch\n\n```\n<!-- explore-skipped: example -->\n```\n"
+    text = record_skip(doc, "real")
+    assert "<!-- explore-skipped: example -->" in text
+    assert "<!-- explore-skipped: real -->" in text
+    assert text.count("explore-skipped") == 2
+
+
+def test_record_skip_replaces_the_real_marker_not_the_fenced_one():
+    doc = ("# Arch\n\n```\n<!-- explore-skipped: example -->\n```\n"
+           "<!-- explore-skipped: old -->\n")
+    text = record_skip(doc, "new")
+    assert "<!-- explore-skipped: example -->" in text
+    assert "<!-- explore-skipped: new -->" in text
+    assert "old" not in text
+
+
+def test_record_skip_goes_after_front_matter():
+    text = record_skip("---\nname: x\n---\n# Arch\nbody\n", "spike")
+    assert text.startswith("---\nname: x\n---\n")
+    assert text == ("---\nname: x\n---\n<!-- explore-skipped: spike -->\n\n"
+                    "# Arch\nbody\n")
+
+
+def test_skip_explore_and_from_spec_are_mutually_exclusive(toy):
+    (toy / "spec.md").write_text("# Spec\n")
+    proc = run_cli("architect", "--from-spec", "spec.md",
+                   "--skip-explore", "spike", root=toy)
+    assert proc.returncode != 0
+    assert not (toy / DOC).exists()
