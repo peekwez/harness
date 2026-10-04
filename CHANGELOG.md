@@ -2,7 +2,131 @@
 
 Newest release first. Each heading is one release.
 
-## 0.10.0 (unreleased)
+## 0.10.0 (2026-10-04)
+
+0.10 breaks 0.9. Read this entry before you upgrade. [Upgrading 0.9 to 0.10](https://peekwez.github.io/harness/upgrading/) gives the full steps.
+
+### Highlights
+
+- Explore first. A design starts with a toy in `explore/`, decision cards and statements. A human freezes it.
+- Verify first. Each statement has a linked test. A red record proves that the suite failed at slice start.
+- Leaner context. The injection is capped at 9,000 characters. Later prompts get only the blocks that changed.
+- Shared memory. Only a human-approved `harness memory promote` writes to `.claude/memory/shared/`.
+- One upgrade command moves a 0.8 or 0.9 repo to 0.10 and proposes one commit.
+- Fewer parts. Four gates, `harness run` and the contract checks are gone. The 18 skills became 11.
+
+### What changes in your repo on upgrade
+
+How to upgrade from 0.9.x:
+
+1. Update the plugin with your host, for example `claude plugin update harness@harness-marketplace --scope user`.
+2. Start a new session, so that the host loads the 0.10 engine.
+3. Preview the plan: `harness upgrade --dry-run`.
+4. Run the new engine: `harness upgrade --yes`.
+
+Do not use `harness upgrade --plugin` from 0.9. The 0.9 CLI has no `--yes`, so the 0.10 run skips each step that asks first. From 0.10 on, `harness upgrade --plugin --host claude --yes` does both steps.
+
+The upgrade migrates `.harness/schema_version` from 1 to 2 and repairs old overrides. Then it runs these 19 steps:
+
+- `w1.gitignore-cache`: adds `.harness/cache/` to `.gitignore`.
+- `w1.untrack-shadows`: untracks and deletes `.harness/shadows/`. Shadows now live in the gitignored cache. This step asks first.
+- `w1.drop-registry-shadow`: removes the `shadow` field from registry rows.
+- `w1.drop-resolver-config`: removes `resolver.budget_tokens`, `ranking` and `degrade` from `config.yaml`.
+- `w2.slice-metrics`: adds `.harness/slice-metrics.jsonl` and its merge rule.
+- `w2.telemetry`: converts old telemetry into slice-metrics rows. This step asks first.
+- `w2.config`: removes retired config keys. It adds `review.ensemble` and `gates.exempt_paths`.
+- `w2.skill-names`: renames removed skills in a harness-marked `AGENTS.md`, `CLAUDE.md` and CI workflow.
+- `w2.contracts`: reports that harness no longer checks `contracts/`.
+- `w3.retire-durable-memory`: exports the kept memory rows for review. This step asks first.
+- `w3.memory-git-lines`: removes the `.harness/memory/` lines from `.gitattributes` and `.gitignore`.
+- `w3.shared-memory-index`: creates the index `.claude/memory/shared/MEMORY.md`.
+- `w3.claude-md-import`: adds the shared memory import to a harness-marked `CLAUDE.md`.
+- `w4.glossary`: creates `docs/glossary.md` when it does not exist.
+- `w4.agents-md-ste80`: adds the STE-80 rule to a harness-marked `AGENTS.md`.
+- `w5.legacy-verification`: marks each slice that is not closed `legacy_verification: true`.
+- `w6.agents-md-explore`: adds explore to the `AGENTS.md` workflow line.
+- `w8.agents-md`: replaces a harness-written `AGENTS.md` with the 0.10 template. It keeps the old file in `.harness/cache/`. This step asks first.
+- `w8.stale-merge-rules`: removes merge and ignore rules for files that 0.10 removed.
+
+Upgrade moves old files. It does not delete them:
+
+- `.harness/memory/` moves to `.harness/cache/legacy-memory/<stamp>/`. The kept rows go to `.harness/cache/durable-memory-export.md`. Promote the facts that the team needs.
+- An untracked telemetry file moves to `.harness/cache/legacy-telemetry/`. Git history keeps a tracked `.harness/telemetry.jsonl`.
+
+After the steps, upgrade refreshes the vendored engine, the CI workflow and the host settings. Then it runs `harness doctor --substrate` and `harness verify`.
+
+Upgrade never commits. The report proposes one commit with the message `harness: upgrade to 0.10`. Read `git status` and `human_checks`, then run that command.
+
+Exit codes:
+
+- 0: `upgraded`, `already on 0.10` or `--dry-run`.
+- 1: `incomplete`, `checks failed` or `failed`. The JSON report prints in each case.
+
+Without a terminal, upgrade skips each step that asks first and reports `incomplete`. Run `harness upgrade --yes` to finish.
+
+A slice that is open during the upgrade gets `legacy_verification: true`. Close skips its red-record and statement checks. Acceptance and regression still run.
+
+### New
+
+- Shadows are a gitignored cache in `.harness/cache/shadows/`. CI rebuilds them when G5 or G6 needs them.
+- The resolver injects context in blocks, once per binding. Later prompts get only the changed blocks. The cap is 9,000 characters.
+- Telemetry stays local in `.harness/cache/events.jsonl`. Close commits one row per slice to `.harness/slice-metrics.jsonl`.
+- Shared memory lives in `.claude/memory/shared/`. Use `harness memory promote`, `harness memory accept` and `harness memory changed`.
+- G10 blocks each edit-tool write to shared memory. At close, G10 also checks the slice diff for that folder.
+- STE-80 text rules: `harness lint-text`, the glossary in `docs/glossary.md` and a finding catalog.
+- `harness gates explain <CODE>` prints the catalog entry of a finding code.
+- Verification first: statements in `.harness/verify.jsonl`, `verifies:` and `kills:` links in tests, a red record at bind, and close checks.
+- The explore stage: `harness explore`, then `harness explore --freeze`. Each big decision is a decision card.
+- `harness architect` starts from one source: `--from-explore`, `--from-spec <path>` or `--skip-explore "<reason>"`.
+- G9 blocks production code that imports from `explore/`.
+- The docs site: <https://peekwez.github.io/harness/>.
+
+### Removed
+
+- `harness run`.
+- The contract checks. harness no longer checks `contracts/`. Use a repo-local gate or a CI linter.
+- Gates G2, G4, G7 and G8. Their ids stay reserved.
+- `harness memory write`, `flush` and `compact`, and the `.harness/memory/` store.
+- The committed `.harness/telemetry.jsonl`.
+- Skills went from 18 to 11. Eight skills were removed, and `explore` is new. Each removed skill moved into a kept skill:
+
+| Old skill | Its content is now in |
+|---|---|
+| `premortem` | `architect` |
+| `contract-first` | `architect`, as a decision card |
+| `decision-tables` | `adr-authoring` |
+| `slice-decomposition` | `backlog` |
+| `shadow-context` | `build` |
+| `review-rubrics` | `review` |
+| `adjudicate` | `harness` |
+| `status` | `harness` |
+
+- Kept skills: `adr-authoring`, `architect`, `backlog`, `build`, `close-slice`, `design-review`, `explore`, `harness`, `init`, `review`, `verification`.
+
+### Known limits
+
+[Trade-offs and limits](https://peekwez.github.io/harness/trade-offs/) has the full list.
+
+- The permit layer reads shell command text. Some spellings pass without a prompt. Add `.claude/memory/shared` to `sandbox.filesystem.denyWrite`.
+- Only the Claude Code hook runs the permit layer on shell commands. The other hosts' profiles approve shell commands.
+- G9 reads static imports only. It can block a module that is named `explore` by mistake.
+- A shell command can append a row to `.harness/promotions.jsonl`. The G10 close check trusts that ledger.
+- Two slices that each promote a fact conflict in `MEMORY.md`. Resolve the conflict, then run `harness memory accept .claude/memory/shared/MEMORY.md`.
+- A stub test such as `assert False` records red. A JUnit check for each test is not built.
+- On the `--skip-explore` and `--from-spec` paths, only the skill text asks for decision cards.
+- `harness gates explain` has no entry for a code from a `gates.extra` gate.
+- Upgrade merges `.claude/settings.local.json` and keeps old entries. Compare the backup and remove stale entries.
+- An acceptance timeout stops only the direct child process.
+- A harness root in a subfolder of a larger git repo is not supported.
+- `.harness/cache/events.jsonl` grows without a limit.
+
+### Testing
+
+- Chained end-to-end upgrades of 0.8 and 0.9.4 fixtures, in five variants, reach 0.10. A second run changes no file.
+- This repo upgraded itself with `harness upgrade`.
+- We skipped the field test on a real consumer repo for this release.
+
+Closes peekwez/harness#2, #3, #4, #5, #6, #7, #8 and #9.
 
 ## 0.9.4 — verification design and live execution coverage
 
