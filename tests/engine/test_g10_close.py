@@ -126,3 +126,63 @@ def test_promote_records_the_bytes_it_wrote(toy):
     (toy / FACT).write_text("forged\n")
     assert not sanctioned(toy, FACT)
     assert not sanctioned(toy, ".claude/memory/shared/other.md")
+
+
+# ---------------------------------------------- ledger merge rule (6c ruling)
+LEDGER = ".harness/promotions.jsonl"
+UNION_LINE = f"{LEDGER} merge=union"
+
+
+def test_ledger_is_a_union_merge_path():
+    from engine.cli.common import SUBSTRATE_UNION_MERGE
+    assert LEDGER in SUBSTRATE_UNION_MERGE
+
+
+def test_init_writes_the_ledger_merge_rule(tmp_path):
+    root = tmp_path / "fresh"
+    root.mkdir()
+    git(root, "init", "-q")
+    proc = run_cli("init", root=root)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert UNION_LINE in (root / ".gitattributes").read_text().splitlines()
+
+
+def test_upgrade_adds_the_ledger_merge_rule(tmp_path):
+    from conftest import build_legacy_08_repo
+    root = build_legacy_08_repo(tmp_path / "legacy08")
+    assert UNION_LINE not in (root / ".gitattributes").read_text()
+    run_cli("upgrade", "--yes", root=root)
+    assert UNION_LINE in (root / ".gitattributes").read_text().splitlines()
+
+
+def test_stale_merge_rules_keep_the_ledger_rule(tmp_path):
+    from engine.upgrade_w8 import STEP
+    root = tmp_path / "r"
+    root.mkdir()
+    (root / ".gitattributes").write_text(UNION_LINE + "\n")
+    assert STEP.describe(root) == []
+
+
+def test_two_branches_promote_and_the_ledger_merges(toy):
+    from engine.cli.common import _install_merge_drivers
+    from engine import read_jsonl
+    _install_merge_drivers(toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "merge rules")
+    git(toy, "checkout", "-qb", "a")
+    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+            "--name", "deploys", root=toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "promote a")
+    git(toy, "checkout", "-q", "-")
+    git(toy, "checkout", "-qb", "b")
+    run_cli("memory", "promote", "--text", "Tests run with pytest.",
+            "--name", "pytest", root=toy)
+    git(toy, "add", "-A")
+    git(toy, "commit", "-qm", "promote b")
+    git(toy, "merge", "-q", "--no-edit", "a")
+    conflicted = git(toy, "diff", "--name-only", "--diff-filter=U").stdout.split()
+    assert LEDGER not in conflicted, conflicted
+    paths = [r["path"] for r in read_jsonl(toy / LEDGER)]
+    assert ".claude/memory/shared/deploys.md" in paths
+    assert ".claude/memory/shared/pytest.md" in paths
