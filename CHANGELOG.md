@@ -2,6 +2,14 @@
 
 Newest release first. Each heading is one release.
 
+## 0.10.1 (2026-10-11)
+
+A fix to the permit layer. Upgrade from 0.10.0 needs no other steps.
+
+- Reads of the substrate folder no longer ask. Before, a command with a glob or a `$VAR` that named `.harness/` got an `ask` decision, for example `ls .harness/*.jsonl` or `wc -l $W/.harness/edges.jsonl`. An `ask` from the hook outranks your allow rules, so you could not silence these prompts. Now such a command goes through your normal permission flow.
+- The plugin cache folder `harness-marketplace` gets the same fix.
+- Promote stays human-only. `harness memory promote`, and every `harness memory` subcommand but `changed`, still asks. A spelling through expansion still asks too, for example `har${x}ness`, `harnes?` or `$E/bin/harness`. The shared-memory rules have not changed.
+
 ## 0.10.0 (2026-10-04)
 
 0.10 breaks 0.9. Read this entry before you upgrade. [Upgrading 0.9 to 0.10](https://peekwez.github.io/harness/upgrading/) gives the full steps.

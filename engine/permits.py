@@ -821,14 +821,24 @@ def _program_word_unreadable(command: str) -> bool:
     return False
 
 
+# A whole path component: bounded by start, whitespace, a slash, a quote or
+# a shell separator on both sides, so `bin/harness` and `my.harness` stay.
+_SUBSTRATE_PART = re.compile(
+    r"(?<![^\s/'\"=:;|&()<>])(?:\.harness|harness-marketplace)"
+    r"(?=[\s/'\";|&()<>]|$)")
+
+
 def _may_spell_harness(command: str) -> bool:
     """True when the text could name `harness` once the shell expands it.
 
     Reads the raw text, the de-quoted text, and the text with `${...}`,
     `$name`, quotes, escapes and glob characters removed (`har${x}ness`,
     `harnes[s]`), case-insensitive. A glob tail (`harnes?`) counts too.
+    The substrate folder `.harness` and the `harness-marketplace` cache
+    segment do not count when they stand as whole path components, so a
+    read of `$W/.harness/edges.jsonl` is not a harness spelling.
     """
-    raw = (command or "").casefold()
+    raw = _SUBSTRATE_PART.sub("/", (command or "").casefold())
     stripped = re.sub(r"\$\{[^}]*\}|\$[a-z_][a-z0-9_]*", "", raw)
     stripped = re.sub(r"[\\'\"$?*\[\]{}]", "", stripped)
     return any("harnes" in t for t in

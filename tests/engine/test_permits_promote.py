@@ -4,8 +4,9 @@ import json
 import pytest
 
 from conftest import PLUGIN_ROOT, run_cli
-from engine.permits import (command_allowed, command_decision, needs_human,
-                            paths_in_scope)
+from engine.permits import (_PROGRAM_REASON, _PROMOTE_REASON, _SHARED_REASON,
+                            _UNRESOLVED_REASON, ask_reason, command_allowed,
+                            command_decision, needs_human, paths_in_scope)
 
 PROMOTE_FORMS = [
     "harness memory promote --text 'x'",
@@ -304,3 +305,45 @@ def test_naming_a_parent_of_shared_memory_asks(command):
 ])
 def test_other_claude_paths_do_not_ask(command):
     assert command_decision(command, slice_id="s1")[0] != "ask"
+
+
+# 0.10.1: a path that only names the substrate folder is not a harness
+# spelling. Only text that could still run the program asks.
+@pytest.mark.parametrize("command", [
+    "ls .harness/*.jsonl",
+    'grep -c x "$S/.harness/backlog.jsonl"',
+    "wc -l $W/.harness/edges.jsonl",
+    "cat .harness/config.yaml | head -3",
+    "git -C $W diff -- .harness/config.yaml",
+    "ls $X/.harness",
+    "cat '.harness'/x*",
+    "ls ~/.claude/plugins/cache/harness-marketplace/*/",
+])
+def test_substrate_path_mentions_do_not_ask(command):
+    assert ask_reason(command) is None
+    assert command_decision(command, slice_id="s1")[:2] == ("defer", False)
+
+
+@pytest.mark.parametrize("command, reason", [
+    ("$E memory promote x", _PROGRAM_REASON),
+    ("har${x}ness memory promote", _UNRESOLVED_REASON),
+    ("python3 $E/bin/harness memory promote", _PROMOTE_REASON),
+    ("${H}/bin/harness memory list", _PROMOTE_REASON),
+    ("harnes? memory promote", _UNRESOLVED_REASON),
+    ("harness memory promote x", _PROMOTE_REASON),
+    ("cat .claude/memory/shared/MEMORY.md", _SHARED_REASON),
+    ("ls $D/.harness/../bin/harness*", _UNRESOLVED_REASON),
+    ("ls .harness/*harness*", _UNRESOLVED_REASON),
+    ("$P/.harness/x memory promote", _PROMOTE_REASON),
+    ("ls $X/.harness/harnes?", _UNRESOLVED_REASON),
+    ("cat $X/my.harness/x", _UNRESOLVED_REASON),
+])
+def test_harness_spellings_still_ask_with_the_same_reason(command, reason):
+    assert ask_reason(command) == reason
+    assert command_decision(command, slice_id="s1") == ("ask", False, reason)
+
+
+def test_unreadable_commands_outside_the_change_keep_their_decision():
+    decision, allow, _ = command_decision('bash -c "$CMD"', slice_id="s1")
+    assert (decision, allow) == ("defer", False)
+    assert ask_reason('bash -c "$CMD"') is None

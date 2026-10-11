@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from conftest import HARNESS_BIN, build_astralabs_094_repo, build_toy_repo, git, run_cli, tree_bytes
+import engine
 from engine import append_jsonl, read_jsonl
 
 
@@ -373,8 +374,8 @@ def test_plugin_upgrade_forwards_yes_and_keeps_an_incomplete_report(tmp_path, mo
     from test_hardening_upgrade import _completed, _plugin_tree
     project = build_toy_repo(tmp_path / "project")
     new_path = _plugin_tree(tmp_path, "new")
-    listing = [{"id": "harness@team", "version": "0.10.0", "scope": "user",
-                "installPath": str(new_path)}]
+    listing = [{"id": "harness@team", "version": engine.ENGINE_VERSION,
+                "scope": "user", "installPath": str(new_path)}]
     calls = []
 
     def run(command):
