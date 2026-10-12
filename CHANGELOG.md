@@ -2,6 +2,17 @@
 
 Newest release first. Each heading is one release.
 
+## 0.10.4 (2026-10-11)
+
+Promote and accept now need a human at a terminal. Read this entry if an agent runs promote for you today.
+
+- `harness memory promote` and `harness memory accept` show what they will write and a 4-character code on your terminal. They write only when you type the code.
+- The code goes to the terminal, never to the command's output. An agent's shell has no terminal, so there the command refuses and writes nothing.
+- What changes for you: at close, the agent gives you the promote command, and you run it in your own terminal. The `/harness:close-slice` skill now does this.
+- The permit layer still asks before an agent runs either command. Its message now says to run them in your own terminal.
+- Limit: a caller that runs promote under a terminal it controls can read the code. That covers `script`, `expect` and a host that runs agent commands in its own terminal. Claude Code does not.
+- Limit: G10 at close still trusts the rows in `.harness/promotions.jsonl`.
+
 ## 0.10.3 (2026-10-11)
 
 A fix to the permit layer. Upgrade from 0.10.2 needs no other steps.

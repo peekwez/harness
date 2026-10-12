@@ -46,9 +46,10 @@ To clear a false block, move or rename the module.
 
 G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder. A change passes when `harness memory promote` or `harness memory accept` recorded it in `.harness/promotions.jsonl`. A change also passes when the file is the same as on the merge target (`landing.base`). For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
 
-Text-level checks are best effort. These spellings do not ask:
+`harness memory promote` and `harness memory accept` also need a code typed at a terminal. An agent's shell has no terminal, so these refuse there whatever the spelling.
 
-- `python3 -m engine.cli memory promote`, or a copy of the `harness` binary under another name.
+Text-level checks for other writes are best effort. These do not ask:
+
 - A `cd` into the folder in one call, then a write with a relative path in a later call.
 - A redirect target with a glob, such as `.claude/memory/sh*/a.md`.
 - A wrapper such as `env`, `nohup`, `xargs` or `eval` in front of a program word that the permit layer cannot read.

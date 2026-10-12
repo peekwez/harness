@@ -3,12 +3,12 @@ import json
 import os
 import re
 
-from conftest import git, run_cli
+from conftest import git, run_cli, run_cli_as_human
 from engine import get_slice, save_slice
 
 
 def test_memory_promote_text_via_cli(toy):
-    proc = run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    proc = run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
                    root=toy)
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
@@ -20,23 +20,23 @@ def test_memory_promote_text_via_cli(toy):
 def test_memory_promote_file_via_cli_with_name(toy, tmp_path):
     fact = tmp_path / "x.md"
     fact.write_text("Use uv for every Python command.\n")
-    proc = run_cli("memory", "promote", str(fact), "--name", "Python tooling",
+    proc = run_cli_as_human("memory", "promote", str(fact), "--name", "Python tooling",
                    root=toy)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["path"].endswith("/python-tooling.md")
 
 
 def test_memory_promote_needs_exactly_one_fact(toy, tmp_path):
-    assert run_cli("memory", "promote", root=toy).returncode == 2
+    assert run_cli_as_human("memory", "promote", root=toy).returncode == 2
     fact = tmp_path / "a.md"
     fact.write_text("x")
-    proc = run_cli("memory", "promote", str(fact), "--text", "y", root=toy)
+    proc = run_cli_as_human("memory", "promote", str(fact), "--text", "y", root=toy)
     assert proc.returncode == 2
     assert "one fact" in proc.stderr
 
 
 def test_memory_promote_engine_error_exits_one(toy, tmp_path):
-    proc = run_cli("memory", "promote", str(tmp_path / "nope.md"), root=toy)
+    proc = run_cli_as_human("memory", "promote", str(tmp_path / "nope.md"), root=toy)
     assert proc.returncode == 1
     assert "not found" in json.loads(proc.stderr)["error"]
 

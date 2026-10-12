@@ -9,6 +9,8 @@ import pytest
 from engine import HarnessError
 from engine import shared_memory as sm
 
+pytestmark = pytest.mark.usefixtures("human_approves")
+
 SHARED = ".claude/memory/shared"
 
 

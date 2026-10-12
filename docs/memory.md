@@ -36,6 +36,8 @@ harness memory promote --text "Retry a failed payment at most 3 times."
 2. It adds `promoted_by`, your git identity, and `promoted_at` to the front matter. It refuses to run without a git identity.
 3. It adds one line to `MEMORY.md`, 120 characters or fewer.
 
+Before it writes, promote shows the fact and a 4-character code on your terminal. It writes only when you type the code. With no terminal, as in an agent's shell or CI, it refuses. So run promote in your own terminal.
+
 The same fact a second time gives "already shared" and writes no new file. It adds the index line only when the line is missing. A different fact under a name that exists is refused: pass `--name`. Promote refuses the index file and a symbolic link.
 
 Promote writes into the current tree. At close, the promoted files go into the slice commit.
@@ -48,11 +50,13 @@ Some changes to shared memory are not a promotion. A human edits a fact, deletes
 harness memory accept .claude/memory/shared/MEMORY.md
 ```
 
-`harness memory accept` records the current bytes of the file in `.harness/promotions.jsonl`. For a deleted file, it records the deletion. A relative path starts at the repo root. The command refuses a path outside `.claude/memory/shared/`. The permit layer asks a human before it runs.
+`harness memory accept` records the current bytes of the file in `.harness/promotions.jsonl`. For a deleted file, it records the deletion. A relative path starts at the repo root. The command refuses a path outside `.claude/memory/shared/`. Like promote, it asks for a code at your terminal.
 
 ## Guards
 
-Three layers stop an agent from writing shared memory:
+Four layers stop an agent from writing shared memory:
+
+- **The terminal code.** `harness memory promote` and `harness memory accept` write only after a human types the code they show on the terminal. The code never goes to the command's output. An agent's shell has no terminal, so the command refuses there.
 
 - **G10** blocks each write to `.claude/memory/shared/` through the host's edit tools. It runs in the engine at `pre_change`. On Claude Code it stops the write. On Cursor CLI (degraded mode) it runs only after the edit lands, so it reports the write and does not undo it. No override and no exempt path applies. Its fix names `harness memory promote`.
 - **G10 at close** checks the slice diff. Close blocks when the slice adds, changes or deletes a file in `.claude/memory/shared/`. So close blocks a shell write such as `echo x > .claude/memory/shared/a.md`. A change passes in these cases:
@@ -68,6 +72,7 @@ These guards have limits:
 
 - G10 at close sees only the slice diff. It does not see a shell write outside a slice, or one that is undone before close.
 - G10 at close trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
+- The terminal code guards the two commands, not the files. A caller that runs promote under a terminal it controls can read the code. That covers `script`, `expect` and a host that runs agent commands in its own terminal. Claude Code runs them with no terminal.
 - G10 at close trusts the merge target. A change that reaches the target first, for example by a push to it, passes the check.
 - Two slices that each promote a fact both append to `MEMORY.md`, so a merge of the two conflicts. The ledger merges cleanly. After a human resolves the conflict, close blocks on `MEMORY.md` until the human runs `harness memory accept .claude/memory/shared/MEMORY.md`.
 - Only the Claude Code hook runs the permit layer on shell commands. Other hosts' profiles approve shell commands.

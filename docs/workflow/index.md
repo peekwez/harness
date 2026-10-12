@@ -33,7 +33,7 @@ A human does these things. The skills tell the agent never to do them for the hu
 3. Gives the reason when a design skips explore.
 4. Signs the author gate at the end of architect.
 5. Resolves each parked finding with `harness adjudicate`.
-6. Approves each `harness memory promote`. On Claude Code, the permit layer asks the human each time.
+6. Runs each `harness memory promote` in their own terminal and types the code that it shows.
 
 Overrides and forced starts need a written reason. The engine stores the reason and does not judge it. Read each override in review.
 

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from . import (HarnessError, append_jsonl, get_slice, harness_dir, now_iso,
                read_jsonl)
+from . import human
 
 SHARED_DIR = ".claude/memory/shared"
 INDEX_NAME = "MEMORY.md"
@@ -137,7 +138,8 @@ def accept(root, path) -> dict:
     A relative path is read from the repo root.
 
     Raises:
-        HarnessError: the path is outside the shared folder.
+        HarnessError: the path is outside the shared folder, or no code was
+            typed at a terminal (`human.confirm`).
     """
     root = Path(root).resolve()
     path = Path(path).expanduser()
@@ -156,6 +158,10 @@ def accept(root, path) -> dict:
            "accepted_by": git_identity(root)}
     if row["sha256"] is None:
         row["deleted"] = True
+    state = "deletion" if row.get("deleted") else "current content"
+    human.confirm("memory accept",
+                  f"harness memory accept will record the {state} of {rel} "
+                  f"as made by a human ({row['accepted_by']}).")
     append_jsonl(harness_dir(root) / LEDGER_NAME, row)
     state = "deletion" if row.get("deleted") else "content"
     return {"accepted": True, "path": rel, "state": state,
@@ -292,6 +298,16 @@ def git_identity(root) -> str:
     return f"{name} <{email}>" if email else name
 
 
+def _promote_summary(rel: str, body: str, limit: int = 12) -> str:
+    """The fact as the human sees it before typing the code."""
+    lines = body.splitlines()
+    shown = [f"  {ln}" for ln in lines[:limit]]
+    if len(lines) > limit:
+        shown.append(f"  ... ({len(lines) - limit} more lines)")
+    return (f"harness memory promote will write {rel}:\n\n"
+            + "\n".join(shown))
+
+
 def promote(root, *, source=None, text=None, name=None) -> dict:
     """Copy one fact into the shared folder and index it.
 
@@ -310,8 +326,8 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
 
     Raises:
         HarnessError: no fact, two facts, an empty fact, an index file, a
-            missing file, no git identity, or a different fact already
-            under the same name.
+            missing file, no git identity, a different fact already under
+            the same name, or no code typed at a terminal (`human.confirm`).
     """
     root = Path(root)
     if (source is None) == (text is None):
@@ -363,6 +379,7 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
             f"memory promote: {rel} is a link or leaves the shared folder. "
             f"Fix: remove the link or pass --name <new-name>.")
     line = index_line(title, slug, summary)
+    human.confirm("memory promote", _promote_summary(rel, body))
 
     if target.exists():
         _old, old_body = split_front_matter(target.read_text(encoding="utf-8"))

@@ -3,7 +3,8 @@ diff, so close checks the slice change set. `harness memory promote` is
 the only sanctioned writer; its ledger rows name the bytes it wrote."""
 import json
 
-from conftest import build_toy_repo, git, loaded_context, make_event, run_cli
+from conftest import (build_toy_repo, git, loaded_context, make_event, run_cli,
+                      run_cli_as_human)
 from engine.events import handle_event
 
 FACT = ".claude/memory/shared/deploys.md"
@@ -52,7 +53,7 @@ def test_shell_write_to_shared_memory_blocks_close(toy):
 
 def test_promoted_fact_on_the_slice_closes(toy):
     session = _start(toy)
-    promoted = run_cli("memory", "promote", "--text",
+    promoted = run_cli_as_human("memory", "promote", "--text",
                        "Deploys happen on Tuesdays.", "--name", "deploys",
                        root=toy)
     assert promoted.returncode == 0, promoted.stderr
@@ -63,7 +64,7 @@ def test_promoted_fact_on_the_slice_closes(toy):
 
 def test_shell_edit_after_promote_blocks_close(toy):
     session = _start(toy)
-    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
             "--name", "deploys", root=toy)
     with open(toy / FACT, "a") as fh:
         fh.write("Also Thursdays.\n")
@@ -73,7 +74,7 @@ def test_shell_edit_after_promote_blocks_close(toy):
 
 
 def test_deleted_shared_memory_file_blocks_close(toy):
-    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
             "--name", "deploys", root=toy)
     git(toy, "add", "-A")
     git(toy, "commit", "-qm", "promote before the slice")
@@ -86,7 +87,7 @@ def test_deleted_shared_memory_file_blocks_close(toy):
 
 
 def test_unrelated_slice_has_no_g10_finding(toy):
-    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
             "--name", "deploys", root=toy)
     git(toy, "add", "-A")
     git(toy, "commit", "-qm", "promote before the slice")
@@ -119,7 +120,7 @@ def test_unit_complete_without_files_is_quiet(toy):
 
 def test_promote_records_the_bytes_it_wrote(toy):
     from engine.shared_memory import sanctioned
-    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
             "--name", "deploys", root=toy)
     assert sanctioned(toy, FACT)
     assert sanctioned(toy, ".claude/memory/shared/MEMORY.md")
@@ -170,13 +171,13 @@ def test_two_branches_promote_and_the_ledger_merges(toy):
     git(toy, "add", "-A")
     git(toy, "commit", "-qm", "merge rules")
     git(toy, "checkout", "-qb", "a")
-    run_cli("memory", "promote", "--text", "Deploys happen on Tuesdays.",
+    run_cli_as_human("memory", "promote", "--text", "Deploys happen on Tuesdays.",
             "--name", "deploys", root=toy)
     git(toy, "add", "-A")
     git(toy, "commit", "-qm", "promote a")
     git(toy, "checkout", "-q", "-")
     git(toy, "checkout", "-qb", "b")
-    run_cli("memory", "promote", "--text", "Tests run with pytest.",
+    run_cli_as_human("memory", "promote", "--text", "Tests run with pytest.",
             "--name", "pytest", root=toy)
     git(toy, "add", "-A")
     git(toy, "commit", "-qm", "promote b")
@@ -193,7 +194,7 @@ IDX = ".claude/memory/shared/MEMORY.md"
 
 
 def _promote(toy, text, name):
-    proc = run_cli("memory", "promote", "--text", text, "--name", name,
+    proc = run_cli_as_human("memory", "promote", "--text", text, "--name", name,
                    root=toy)
     assert proc.returncode == 0, proc.stderr
     return proc
@@ -270,7 +271,7 @@ def test_p2_hand_resolved_index_blocks_until_a_human_accepts(toy):
     [finding] = _g10(out)
     assert IDX in finding["message"]
     assert f"harness memory accept {IDX}" in finding["fix"]
-    accepted = run_cli("memory", "accept", IDX, root=toy)
+    accepted = run_cli_as_human("memory", "accept", IDX, root=toy)
     assert accepted.returncode == 0, accepted.stderr
     assert "accept" in accepted.stdout.lower()
     proc, out = _close(toy, session)
@@ -283,14 +284,14 @@ def test_accept_records_a_deletion(toy):
     git(toy, "commit", "-qm", "promote before the slice")
     session = _start(toy)
     (toy / FACT).unlink()
-    accepted = run_cli("memory", "accept", FACT, root=toy)
+    accepted = run_cli_as_human("memory", "accept", FACT, root=toy)
     assert accepted.returncode == 0, accepted.stderr
     proc, out = _close(toy, session)
     assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
 def test_accept_refuses_a_path_outside_shared_memory(toy):
-    proc = run_cli("memory", "accept", "orders.py", root=toy)
+    proc = run_cli_as_human("memory", "accept", "orders.py", root=toy)
     assert proc.returncode != 0
     assert "Fix:" in proc.stderr
 

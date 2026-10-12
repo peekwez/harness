@@ -147,7 +147,7 @@ def test_trade_offs_names_the_limits_a_reader_must_know():
                    "Cursor CLI",
                    # W7-P10: residuals carried from W3-W6
                    "G10", "memory/shared", "ask", "write-deny",
-                   "python3 -m engine.cli memory promote", "importlib",
+                   "need a code typed at a terminal", "importlib",
                    "JUnit", "--skip-explore", "--from-spec",
                    "gates explain", "gates.extra"):
         assert needle in text, needle
@@ -350,7 +350,7 @@ def test_final_review_facts():
                                   "`.harness/parked.jsonl` is one parked"],
         "verification.md": ["null when the suite did not start or timed out"],
         "memory.md": ["On Cursor CLI (degraded mode)", "1. It asks first."],
-        "workflow/close.md": ["On Claude Code, the host asks"],
+        "workflow/close.md": ["The human runs it in their own terminal"],
         "workflow/explore.md": ["G3 still checks the non-goals"],
         "decision-cards.md": ["### D-0.10-03", "**Rejected:**"],
         "trade-offs.md": ["R-dup"],

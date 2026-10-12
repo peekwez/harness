@@ -62,10 +62,11 @@ def test_changelog_has_the_0_10_heading_first():
     lines = text.splitlines()
     assert lines[0] == "# Changelog"
     headings = [ln for ln in lines if ln.startswith("## ")]
-    assert headings[0] == "## 0.10.3 (2026-10-11)"
-    assert headings[1] == "## 0.10.2 (2026-10-11)"
-    assert headings[2] == "## 0.10.1 (2026-10-11)"
-    assert headings[3] == "## 0.10.0 (2026-10-04)"
-    assert headings[4].startswith("## 0.9.4")
+    assert headings[0] == "## 0.10.4 (2026-10-11)"
+    assert headings[1] == "## 0.10.3 (2026-10-11)"
+    assert headings[2] == "## 0.10.2 (2026-10-11)"
+    assert headings[3] == "## 0.10.1 (2026-10-11)"
+    assert headings[4] == "## 0.10.0 (2026-10-04)"
+    assert headings[5].startswith("## 0.9.4")
     assert headings[-1] == "## 0.8.0"
     assert not any(ln.startswith("### 0.") for ln in lines)

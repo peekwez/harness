@@ -47,9 +47,12 @@ from the wrong tree closes against the wrong substrate.
    memory folder at `dir`, then go to the next step.
    If `files` is empty, go to the next step.
    Otherwise show the list and ask the human: "Promote any to shared?"
-   For each file the human picks, run:
-   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" memory promote <file>`
-   The host asks the human to approve each run. Never write
+   For each file the human picks, give the human a command to run in their
+   own terminal. Write out the full engine path and this tree's path.
+   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" --root <this tree> memory promote <file>`
+   Promote shows the fact and a code on that terminal. It writes only when
+   the human types the code. Do not run it yourself: with no terminal it
+   refuses. Wait until the human says it is done. Never write
    `.claude/memory/shared/` yourself. Gate G10 blocks it.
    Promote writes `.claude/memory/shared/<fact>.md` and updates
    `.claude/memory/shared/MEMORY.md` in this tree. The next step commits

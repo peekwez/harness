@@ -150,7 +150,9 @@ def _words_need_human(words: list) -> bool:
 
 _PROMOTE_REASON = ("Permit rule: a human approves each harness memory promote "
                    "and any harness memory command but `changed`. Shared "
-                   "memory holds only facts a human chose.")
+                   "memory holds only facts a human chose. Promote and "
+                   "accept also ask for a code, so run them in your own "
+                   "terminal.")
 
 # A command is auto-approved only when it is plain: judged by a small
 # shell-quoting state machine, not a pattern list. Outside quotes only

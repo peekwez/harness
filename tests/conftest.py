@@ -31,6 +31,93 @@ def run_cli(*args, root=None, stdin=None, env=None):
                           capture_output=True, text=True, env=e)
 
 
+def run_cli_as_human(*args, root=None, env=None, answer=None, timeout=30):
+    """Run the CLI with a pseudo-terminal as its controlling terminal.
+
+    The fake human reads the code that `human.confirm` shows there and
+    types it back, or types `answer` instead. stdout and stderr are pipes,
+    as in `run_cli`. The result carries `.terminal`, the text the terminal
+    showed. Built on `pty.fork` because on macOS a `Popen` child's reads
+    from `/dev/tty` never return.
+    """
+    import os
+    import pty
+    import re
+    import select
+    import time
+    e = dict(os.environ)
+    if env:
+        e.update(env)
+    cmd = [sys.executable, str(HARNESS_BIN)]
+    if root:
+        cmd += ["--root", str(root)]
+    cmd += [str(a) for a in args]
+    out_r, out_w = os.pipe()
+    err_r, err_w = os.pipe()
+    pid, leader = pty.fork()
+    if pid == 0:                      # child: the terminal stays on stdin
+        try:
+            os.dup2(out_w, 1)
+            os.dup2(err_w, 2)
+            for fd in (out_r, out_w, err_r, err_w):
+                os.close(fd)
+            os.execve(cmd[0], cmd, e)
+        finally:
+            os._exit(127)
+    os.close(out_w)
+    os.close(err_w)
+    bufs = {leader: b"", out_r: b"", err_r: b""}
+    open_fds, typed = set(bufs), False
+    deadline = time.time() + timeout
+    status = None
+    try:
+        while time.time() < deadline:
+            if not typed:
+                shown = bufs[leader].decode("utf-8", "replace")
+                code = re.search(r"type ([A-Z0-9]+) and press Enter", shown)
+                if code and shown.endswith("Anything else cancels: "):
+                    os.write(leader, ((answer if answer is not None
+                                       else code.group(1)) + "\n").encode())
+                    typed = True
+            ready, _, _ = select.select(list(open_fds), [], [], 0.05)
+            for fd in ready:
+                try:
+                    chunk = os.read(fd, 4096)
+                except OSError:          # the terminal closes with the child
+                    chunk = b""
+                if chunk:
+                    bufs[fd] += chunk
+                else:
+                    open_fds.discard(fd)
+            if status is None:
+                done, status_word = os.waitpid(pid, os.WNOHANG)
+                if done:
+                    status = os.waitstatus_to_exitcode(status_word)
+            if status is not None and not (open_fds - {leader}):
+                break
+        else:
+            os.kill(pid, 9)
+            os.waitpid(pid, 0)
+            raise subprocess.TimeoutExpired(cmd, timeout)
+    finally:
+        for fd in (leader, out_r, err_r):
+            os.close(fd)
+    done = subprocess.CompletedProcess(cmd, status, bufs[out_r].decode(),
+                                       bufs[err_r].decode())
+    done.terminal = bufs[leader].decode("utf-8", "replace")
+    return done
+
+
+@pytest.fixture
+def human_approves(monkeypatch):
+    """In-process calls: each `human.confirm` passes. Yields the summaries."""
+    from engine import human
+    shown = []
+    monkeypatch.setattr(human, "confirm",
+                        lambda action, summary, **_: shown.append(summary))
+    return shown
+
+
 def git(root, *args):
     return subprocess.run(["git", "-C", str(root), *args],
                           capture_output=True, text=True)

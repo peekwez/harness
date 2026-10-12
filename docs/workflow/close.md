@@ -76,6 +76,6 @@ In pull request mode, close then pushes the branch and opens the pull request. S
 
 After review and before the commit, the close-slice skill offers personal memory for promotion. It runs `harness memory changed --slice <id>`. The output lists the personal memory files that changed since the slice started.
 
-When the list is not empty, the agent asks the human: "Promote any to shared?" For each file that the human picks, the agent runs `harness memory promote <file>`. On Claude Code, the host asks the human to approve it.
+When the list is not empty, the agent asks the human: "Promote any to shared?" For each file that the human picks, the agent gives the human a `harness memory promote <file>` command. The human runs it in their own terminal and types the code that it shows.
 
 The promoted facts go into the slice commit. See [Memory](../memory.md).

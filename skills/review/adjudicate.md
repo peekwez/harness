@@ -18,8 +18,8 @@ write a decision row or an edge; a resolution that only lives in conversation wi
 - One-off judgment -> adjudication edge only:
   `"${CLAUDE_PLUGIN_ROOT}/bin/harness" adjudicate --finding-id <id> --resolution "<judgment>"`
   The output has `suggest`: a `harness memory promote --text` command.
-  Show it to the human. The human decides whether to run it. Adjudication
-  never writes memory.
+  Show it to the human. The human decides whether to run it, in their own
+  terminal: promote asks for a code there. Adjudication never writes memory.
 - If the resolution reverses a builder override, add `--reverses` (the
   slice metrics count overrides per rule).
 
