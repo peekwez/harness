@@ -2,6 +2,16 @@
 
 Newest release first. Each heading is one release.
 
+## 0.10.3 (2026-10-11)
+
+A fix to the permit layer. Upgrade from 0.10.2 needs no other steps.
+
+- A promotion that never spells `harness` now asks. Before, `bash -c '$E memory promote x'` ran without a prompt. So did a Python script that built the same call.
+- The permit reads the whole text when a program runs code. That is a shell, an interpreter such as `python3`, or a wrapper such as `timeout` or `find -exec`. It asks when that text may run `memory promote` or `memory accept`, or calls `shared_memory.promote` or `accept`.
+- The binary under another name asks too, for example `./x memory promote a.md`.
+- Other memory words do not ask. `memory changed`, `grep -rn memory`, a commit message and `print("memory used")` keep their decision.
+- Limits: the permit reads text, so a script that builds the word `memory` at run time can still get past it.
+
 ## 0.10.2 (2026-10-11)
 
 A fix to the permit layer. Upgrade from 0.10.1 needs no other steps.

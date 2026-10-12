@@ -715,8 +715,10 @@ def ask_reason(command: str, harness_bin: str | None = None):
 
     Returns:
         A reason string for a promotion or other non-`changed` memory
-        subcommand, a command that names the shared memory folder, or a
-        command that is not plain and may spell `harness`; else None.
+        subcommand, a command that names the shared memory folder, a
+        command that is not plain and may spell `harness`, or one that may
+        promote without spelling it (`bash -c '$E memory promote'`,
+        `./x memory promote`); else None.
     """
     why = needs_human(command)
     if why:
@@ -728,6 +730,8 @@ def ask_reason(command: str, harness_bin: str | None = None):
             return _UNRESOLVED_REASON
         if _program_word_unreadable(command):
             return _PROGRAM_REASON
+    if _runs_memory_write(command):
+        return _PROMOTE_REASON
     return None
 
 
@@ -847,6 +851,79 @@ def _raw_segments(text: str):
     return segments
 
 
+# a program word that runs the code or command it is given
+_RUNS_CODE = re.compile(
+    r"(?:ba|da|k|mk|z|a|fi)?sh|source|\.|eval|exec|command|builtin|env|sudo"
+    r"|doas|su|timeout|nice|nohup|ionice|stdbuf|time|xargs|find|watch"
+    r"|parallel|chroot|python[0-9.]*|pypy[0-9.]*|node|nodejs|deno|bun|perl"
+    r"|ruby|php|lua|osascript|uvx?|pipx|poetry|npx|pnpm|yarn|make|just", re.I)
+# `memory` then the sub-word, across quotes and commas (`'memory', 'x'`)
+_MEMORY_CALL = re.compile(
+    r"\bmemory\b[\s'\",]*([A-Za-z$`\\{][^\s'\",;&|()\[\]]*)", re.I)
+_ENGINE_WRITE = re.compile(r"\bshared_memory\b.*?\b(?:promote|accept)\b",
+                           re.I | re.S)
+
+
+def _program_index(words: list) -> int:
+    """Index of the program word, past `NAME=value` and redirections."""
+    k = 0
+    while k < len(words):
+        w = words[k]
+        if _ASSIGN_WORD.match(w):
+            k += 1
+        elif _REDIRECT_OP_ONLY.match(w):
+            k += 2
+        elif _REDIRECT_WORD.match(w):
+            k += 1
+        else:
+            break
+    return k
+
+
+def _may_be_write_sub(word: str) -> bool:
+    """True when a sub-word after `memory` may be `promote` or `accept`:
+    the word itself, one built by expansion (`$S`), or a fragment joined
+    to the rest later (`"pro" + "mote"`). Other subs exit with an error."""
+    word = re.sub(r"[\\'\"]", "", word).casefold()
+    if any(c in word for c in "$`{"):
+        return True
+    return bool(word) and any(sub.startswith(word)
+                              for sub in ("promote", "accept"))
+
+
+def _runs_memory_write(command: str) -> bool:
+    """True when a command may run a memory sub other than `changed`
+    without spelling `harness`.
+
+    When a program word runs code (`bash -c`, `python3 -`, `timeout`,
+    `find -exec`), the whole text is read: `memory` before a sub-word that
+    may be `promote` or `accept`, or a `shared_memory` promote or accept,
+    counts. In any segment, a first argument of `memory` before such a sub
+    counts too, so the binary under another name (`./x memory promote`)
+    asks.
+    """
+    segments = _raw_segments(command or "")
+    if segments is None:
+        return False
+    runs_code = False
+    for words in segments:
+        k = _program_index(words)
+        if k >= len(words):
+            continue
+        prog = re.sub(r"[\\'\"]", "", words[k]).rsplit("/", 1)[-1]
+        runs_code = runs_code or bool(_RUNS_CODE.fullmatch(prog))
+        rest = [re.sub(r"[\\'\"]", "", w) for w in _harness_sub(words, k)]
+        if rest[:1] == ["memory"] and len(rest) > 1 \
+                and _may_be_write_sub(rest[1]):
+            return True
+    if not runs_code:
+        return False
+    if any(_may_be_write_sub(m.group(1))
+           for m in _MEMORY_CALL.finditer(command)):
+        return True
+    return bool(_ENGINE_WRITE.search(command))
+
+
 def _program_word_unreadable(command: str) -> bool:
     """True when a segment's program word is not plain text.
 
@@ -859,17 +936,7 @@ def _program_word_unreadable(command: str) -> bool:
     if segments is None:
         return True
     for words in segments:
-        k = 0
-        while k < len(words):
-            w = words[k]
-            if _ASSIGN_WORD.match(w):
-                k += 1
-            elif _REDIRECT_OP_ONLY.match(w):
-                k += 2
-            elif _REDIRECT_WORD.match(w):
-                k += 1
-            else:
-                break
+        k = _program_index(words)
         if k >= len(words):
             continue
         prog = words[k]

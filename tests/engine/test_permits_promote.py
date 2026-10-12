@@ -385,3 +385,59 @@ def test_multi_line_scripts_and_heredoc_data_do_not_ask(command):
 def test_heredocs_that_can_run_harness_still_ask(command, reason):
     assert ask_reason(command) == reason
     assert command_decision(command, slice_id="s1") == ("ask", False, reason)
+
+
+# 0.10.3: a promotion that never spells `harness` still reaches a human:
+# a script run by a shell or an interpreter, a wrapper, a direct call into
+# the engine, or the binary under another name.
+@pytest.mark.parametrize("command", [
+    "bash -c '$E memory promote x'",
+    'bash -c "$E memory accept a.md"',
+    "sh -c '$E memory $SUB a'",
+    "nohup ./x memory promote a &",
+    "sudo -E bash -c 'exec \"$E\" memory promote a'",
+    "node -e 'require(\"child_process\").execSync(process.env.E + \" memory promote x\")'",
+    "python3 -c 'import engine.shared_memory as m; m.promote(\".\", text=\"x\")'",
+    "python3 -c \"import os; os.system(os.environ['E'] + ' memory promote x')\"",
+    "python3 - <<'EOF'\nimport subprocess\n"
+    "subprocess.run([e, 'memory', 'promote', '--text', 'x'])\nEOF",
+    "python3 - <<'EOF'\nimport subprocess\n"
+    "subprocess.run([e, \"memory\", \"pro\" + \"mote\"])\nEOF",
+    "cat <<'EOF' | python3\nimport subprocess\nsubprocess.run([e, 'memory', 'promote'])\nEOF",
+    "python3 -c \"from engine import shared_memory; shared_memory.promote('.', text='x')\"",
+    "python3 - <<'EOF'\nfrom engine.shared_memory import accept\naccept('.', 'a.md')\nEOF",
+    "timeout 5 $E memory promote x",
+    "env $E memory promote x",
+    "find . -name a.md -exec $E memory accept {} ;",
+    "./x memory promote a.md",
+    "/tmp/h --root /r memory accept a.md",
+    "X=1 ./x memory $S",
+])
+def test_promotions_that_never_spell_harness_ask(command):
+    assert ask_reason(command) == _PROMOTE_REASON
+    assert command_decision(command, slice_id="s1") == ("ask", False,
+                                                        _PROMOTE_REASON)
+
+
+@pytest.mark.parametrize("command, decision", [
+    ('grep -rn "memory promote" engine/', "defer"),
+    ('git commit -m "docs: memory promote flow"', "allow"),
+    ('git commit -m "fix: python memory leak"', "allow"),
+    ("python3 -c \"import torch; torch.cuda.memory.empty_cache()\"", "defer"),
+    ("python3 -c 'import psutil; print(psutil.virtual_memory())'", "defer"),
+    ("./x memory changed", "defer"),
+    ("bash -c '$E memory changed --slice s'", "defer"),
+    ("pytest tests/engine/test_memory_cli.py -k promote", "allow"),
+    ("cat memory", "defer"),
+    ("cat memory notes.md", "defer"),
+    ("sh -c '$E memory list'", "defer"),
+    ("bash -c 'grep -rn memory engine/'", "defer"),
+    ("python3 -c 'print(\"memory used:\", 3)'", "defer"),
+    ("python3 -c 'print(\"memory pressure\")'", "defer"),
+    ("find . -name '*.py' | xargs grep -n memory", "defer"),
+    ("timeout 60 python3 -m pytest tests/engine/test_shared_memory.py -q", "defer"),
+    ("make test", "allow"),
+])
+def test_memory_words_that_run_nothing_keep_their_decision(command, decision):
+    assert ask_reason(command) is None
+    assert command_decision(command, slice_id="s1")[0] == decision
