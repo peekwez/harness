@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import (HarnessError, append_jsonl, get_slice, harness_dir, now_iso,
                read_jsonl)
-from . import human
+from . import approvals, human
 
 SHARED_DIR = ".claude/memory/shared"
 INDEX_NAME = "MEMORY.md"
@@ -72,11 +72,14 @@ def _norm(rel: str) -> str:
     return posixpath.normpath(str(rel).replace("\\", "/")).casefold()
 
 
-def _record_write(root, rel: str) -> None:
-    """Append the bytes harness just wrote to `rel` to the ledger."""
+def _record_write(root, rel: str, approved_by: str | None = None) -> None:
+    """Append the bytes harness just wrote to `rel` to the ledger, and to
+    this machine's approval store when a human approved the write."""
+    digest = _sha256(Path(root) / rel)
     append_jsonl(harness_dir(root) / LEDGER_NAME,
-                 {"path": rel, "sha256": _sha256(Path(root) / rel),
-                  "at": now_iso()})
+                 {"path": rel, "sha256": digest, "at": now_iso()})
+    if approved_by:
+        approvals.record(root, rel, digest, approved_by)
 
 
 def sanctioned(root, rel: str) -> bool:
@@ -101,6 +104,14 @@ def _git_blob(root, spec: str):
     proc = subprocess.run(["git", "-C", str(root), "rev-parse", "-q",
                            "--verify", spec], capture_output=True, text=True)
     return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def approved_here(root, rel: str) -> bool:
+    """True when a human on this machine approved the current state of
+    `rel`, through promote or accept (`approvals`). G10 at close reads
+    this, not the ledger: an agent can append a ledger row, and under the
+    sandbox it cannot write the store."""
+    return approvals.approved(root, rel, _sha256(Path(root) / rel), _norm)
 
 
 def matches_target(root, rel: str, target: str) -> bool:
@@ -162,7 +173,9 @@ def accept(root, path) -> dict:
     human.confirm("memory accept",
                   f"harness memory accept will record the {state} of {rel} "
                   f"as made by a human ({row['accepted_by']}).")
+    approvals.ensure_writable("memory accept")
     append_jsonl(harness_dir(root) / LEDGER_NAME, row)
+    approvals.record(root, rel, row["sha256"], row["accepted_by"])
     state = "deletion" if row.get("deleted") else "content"
     return {"accepted": True, "path": rel, "state": state,
             "accepted_by": row["accepted_by"],
@@ -171,14 +184,14 @@ def accept(root, path) -> dict:
 
 
 # ------------------------------------------------------------------ index
-def ensure_index(root) -> bool:
+def ensure_index(root, approved_by: str | None = None) -> bool:
     """Create `shared/MEMORY.md` with its header. True when it was created."""
     index = Path(root) / INDEX_REL
     if index.exists():
         return False
     index.parent.mkdir(parents=True, exist_ok=True)
     _write_atomic(index, INDEX_HEADER)
-    _record_write(root, INDEX_REL)
+    _record_write(root, INDEX_REL, approved_by)
     return True
 
 
@@ -242,8 +255,9 @@ def index_line(title: str, slug: str, summary: str) -> str:
     return line
 
 
-def _add_index_line(root, line: str, slug: str) -> bool:
-    ensure_index(root)
+def _add_index_line(root, line: str, slug: str,
+                    approved_by: str | None = None) -> bool:
+    ensure_index(root, approved_by)
     index = Path(root) / INDEX_REL
     text = index.read_text(encoding="utf-8")
     if f"]({slug}.md)" in text:
@@ -251,7 +265,7 @@ def _add_index_line(root, line: str, slug: str) -> bool:
     if text and not text.endswith("\n"):
         text += "\n"
     _write_atomic(index, text + line + "\n")
-    _record_write(root, INDEX_REL)
+    _record_write(root, INDEX_REL, approved_by)
     return True
 
 
@@ -380,6 +394,7 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
             f"Fix: remove the link or pass --name <new-name>.")
     line = index_line(title, slug, summary)
     human.confirm("memory promote", _promote_summary(rel, body))
+    approvals.ensure_writable("memory promote")
 
     if target.exists():
         _old, old_body = split_front_matter(target.read_text(encoding="utf-8"))
@@ -388,17 +403,18 @@ def promote(root, *, source=None, text=None, name=None) -> dict:
                 f"memory promote: {rel} exists with other text. "
                 f"Fix: pass --name <new-name>.")
         return {"promoted": False, "reason": "already shared", "path": rel,
-                "index_line_added": _add_index_line(root, line, slug)}
+                "index_line_added": _add_index_line(root, line, slug,
+                                                    identity)}
 
     front = {k: v for k, v in meta.items()
              if k not in ("name", "description", "promoted_by", "promoted_at")}
     front = {"name": title, "description": summary, **front,
              "promoted_by": identity, "promoted_at": now_iso()}
     target.parent.mkdir(parents=True, exist_ok=True)
-    ensure_index(root)
+    ensure_index(root, identity)
     _write_atomic(target, _render_fact(front, body))
-    _record_write(root, rel)
-    _add_index_line(root, line, slug)
+    _record_write(root, rel, identity)
+    _add_index_line(root, line, slug, identity)
     return {"promoted": True, "path": rel, "promoted_by": identity,
             "promoted_at": front["promoted_at"], "index_line": line,
             "entries": len(index_entries(root))}

@@ -44,6 +44,8 @@
       "Bash(python3 \"*/bin/harness\" memory promote:*)"
     ],
     "deny": [
+      "Edit(~/.config/harness/**)",
+      "Write(~/.config/harness/**)",
       "Bash(git push:*)",
       "Bash(git remote:*)",
       "Bash(git clone:*)",

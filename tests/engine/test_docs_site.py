@@ -160,7 +160,7 @@ def test_trade_offs_states_the_shared_memory_gaps():
                    "A shell write outside a slice",
                    "a human who reads the committed diff",
                    "Only the Claude Code hook runs the permit layer on shell",
-                   "`.claude/memory/sh*/a.md`",
+                   "A path built at run time",
                    "sandbox.filesystem.denyWrite"):
         assert needle in text, needle
 

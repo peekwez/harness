@@ -2,6 +2,21 @@
 
 Newest release first. Each heading is one release.
 
+## 0.10.5 (2026-10-11)
+
+G10 at close now trusts only what a human approved on this machine. Read this entry if you promote on one machine and close on another.
+
+- A forged ledger row no longer passes close. Before, a shell command could write a fact and append a matching row to `.harness/promotions.jsonl`.
+- After the terminal code, promote and accept also record the approval in `~/.config/harness/approvals.jsonl`. G10 at close reads this store, not the ledger.
+- The store is outside every worktree. The shipped sandbox confines an agent's writes to the worktree, so the agent cannot write it.
+- A promote run under a terminal the agent controls, such as `script`, now refuses under the sandbox. It cannot write the store.
+- G10 blocks a tool edit to the ledger. The permit layer asks for a command that names the ledger or the store. It also asks for a glob that may reach `.claude/memory/shared/`, such as `sh*`.
+- The shipped Claude Code profile denies the Edit and Write tools on `~/.config/harness/`.
+- The engine's test suite now runs on Linux in CI, in the new `tests` workflow.
+- What changes for you: a fact promoted on one machine and closed on another blocks at close. Run `harness memory accept <path>` in your own terminal on that machine.
+- An open slice that promoted with 0.10.4 has no store rows. Run `harness memory accept <path>` for each promoted file before you close it.
+- Limits: the store holds only under a sandbox. An agent that runs its own copy of the close checks can skip them. CI does not read the store.
+
 ## 0.10.4 (2026-10-11)
 
 Promote and accept now need a human at a terminal. Read this entry if an agent runs promote for you today.

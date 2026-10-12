@@ -1,0 +1,5 @@
+# Test suite dependencies. Pinned to the versions the suite passes with.
+pytest==8.3.3
+pyyaml==6.0.3
+tree-sitter==0.25.2
+tree-sitter-language-pack==1.12.5

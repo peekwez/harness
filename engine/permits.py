@@ -725,8 +725,11 @@ def ask_reason(command: str, harness_bin: str | None = None):
     why = needs_human(command)
     if why:
         return why
-    if touches_shared_memory(command) or names_shared_parent(command):
+    if touches_shared_memory(command) or names_shared_parent(command) \
+            or _glob_may_reach_shared(command):
         return _SHARED_REASON
+    if _names_approval_record(command):
+        return _LEDGER_REASON
     if plain_segments(command, harness_bin) is None:
         if _may_spell_harness(command):
             return _UNRESOLVED_REASON
@@ -740,6 +743,9 @@ def ask_reason(command: str, harness_bin: str | None = None):
 _SHARED_REASON = ("A command that names .claude/memory/shared or a parent "
                   "folder needs a human. Shared memory holds only facts a "
                   "human chose.")
+_LEDGER_REASON = ("A command that names .harness/promotions.jsonl or the "
+                  "approval store needs a human. Only harness memory promote "
+                  "and accept write them.")
 _PROGRAM_REASON = ("A program name uses expansion, globs, escapes or joined "
                    "quotes, so the permit cannot read it. A human approves it.")
 _UNRESOLVED_REASON = ("This harness command uses expansion, globs or escapes, "
@@ -858,12 +864,74 @@ _RUNS_CODE = re.compile(
     r"(?:ba|da|k|mk|z|a|fi)?sh|source|\.|eval|exec|command|builtin|env|sudo"
     r"|doas|su|timeout|nice|nohup|ionice|stdbuf|time|xargs|find|watch"
     r"|parallel|chroot|python[0-9.]*|pypy[0-9.]*|node|nodejs|deno|bun|perl"
-    r"|ruby|php|lua|osascript|uvx?|pipx|poetry|npx|pnpm|yarn|make|just", re.I)
+    r"|ruby|php|lua|osascript|uvx?|pipx|poetry|npx|pnpm|yarn|make|just"
+    r"|script|expect|unbuffer", re.I)
 # `memory` then the sub-word, across quotes and commas (`'memory', 'x'`)
 _MEMORY_CALL = re.compile(
     r"\bmemory\b[\s'\",]*([A-Za-z$`\\{][^\s'\",;&|()\[\]]*)", re.I)
 _ENGINE_WRITE = re.compile(r"\bshared_memory\b.*?\b(?:promote|accept)\b",
                            re.I | re.S)
+
+
+# the ledger and this machine's approval store (`engine/approvals.py`)
+_APPROVAL_RECORD = re.compile(r"promotions\.jsonl|\.config/harness(?:/|\b)",
+                              re.I)
+_GLOB_CHARS = frozenset("*?[")
+
+
+def _glob_part_matches(pattern: str, name: str) -> bool:
+    """`fnmatch` with bash's rule: only a literal leading dot matches one."""
+    if name.startswith(".") and not pattern.startswith("."):
+        return False
+    return fnmatch(name.casefold(), pattern.casefold())
+
+
+def _path_words(command: str):
+    """Each word of the command de-quoted, with a redirect operator or an
+    `--opt=` prefix dropped: the paths a command may read or write."""
+    for words in _raw_segments(command or "") or []:
+        for word in words:
+            word = re.sub(r"[\\'\"]", "", word)
+            word = re.sub(r"^[0-9]*(?:&>>?|>>?\|?|<)", "", word)
+            yield word.split("=", 1)[-1] if word.startswith("-") else word
+
+
+def _glob_may_reach_shared(command: str) -> bool:
+    """True when a glob word may expand to `.claude/memory/shared` or a
+    path inside it or above it (`.claude/memory/sh*/a.md`, `.c*/m*`)."""
+    want = SHARED_DIR.split("/")
+    for word in _path_words(command):
+        if not _GLOB_CHARS & set(word):
+            continue
+        parts = [p for p in word.split("/") if p not in ("", ".")]
+        for i in range(len(parts)):
+            tail = parts[i:i + len(want)]
+            if all(_glob_part_matches(p, w) for p, w in zip(tail, want)) \
+                    and _GLOB_CHARS & set("".join(tail)):
+                return True
+    return False
+
+
+def _names_approval_record(command: str) -> bool:
+    """True when the text names the ledger or the approval store, or a
+    redirect's glob may reach either (`>> .harness/prom*.jsonl`)."""
+    raw = command or ""
+    if any(_APPROVAL_RECORD.search(t) for t in (raw, re.sub(r"[\\'\"]", "", raw))):
+        return True
+    for words in _raw_segments(raw) or []:
+        for k, word in enumerate(words):
+            target = None
+            if _REDIRECT_OP_ONLY.match(word) and k + 1 < len(words):
+                target = words[k + 1]
+            elif _REDIRECT_WORD.match(word) and ">" in word:
+                target = re.sub(r"^[0-9]*(?:&>>?|>>?\|?)", "", word)
+            if not target or not _GLOB_CHARS & set(target):
+                continue
+            name = re.sub(r"[\\'\"]", "", target).rsplit("/", 1)[-1]
+            if any(_glob_part_matches(name, f)
+                   for f in ("promotions.jsonl", "approvals.jsonl")):
+                return True
+    return False
 
 
 def _program_index(words: list) -> int:

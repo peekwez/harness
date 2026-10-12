@@ -44,29 +44,35 @@ To clear a false block, move or rename the module.
 
 ### Shared memory writes
 
-G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder. A change passes when `harness memory promote` or `harness memory accept` recorded it in `.harness/promotions.jsonl`. A change also passes when the file is the same as on the merge target (`landing.base`). For shell commands, the permit layer reads the command text and asks a human when the command names that folder or runs `harness memory promote`.
+G10 blocks each write to `.claude/memory/shared/` through the host's edit tools. G10 also checks the slice diff at close. Close blocks when the slice adds, changes or deletes a file in that folder. A change passes when `harness memory promote` or `harness memory accept` recorded it in this machine's approval store, `~/.config/harness/approvals.jsonl`. A change also passes when the file is the same as on the merge target (`landing.base`). For shell commands, the permit layer reads the command text. It asks a human when the command names that folder, the ledger or the store, or runs `harness memory promote`.
 
 `harness memory promote` and `harness memory accept` also need a code typed at a terminal. An agent's shell has no terminal, so these refuse there whatever the spelling.
 
 Text-level checks for other writes are best effort. These do not ask:
 
-- A `cd` into the folder in one call, then a write with a relative path in a later call.
-- A redirect target with a glob, such as `.claude/memory/sh*/a.md`.
-- A wrapper such as `env`, `nohup`, `xargs` or `eval` in front of a program word that the permit layer cannot read.
+- A path built at run time, for example in a script or from a variable.
 - An allowed tool that can run any code, such as `pytest` on tests that an agent wrote, `git apply` or a `git config core.fsmonitor` value.
+
+Such a write still blocks at close, because the approval store has no row for it.
 
 The close check has limits:
 
 - It sees only the slice diff. A shell write outside a slice, or one that is undone before close, is not flagged at close.
 - It sees the write at close, not when the shell command runs.
-- It trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
+- It trusts the approval store. The store holds only where a sandbox confines the agent's writes to the worktree.
+- The agent runs close itself. An agent that runs its own copy of the close checks can skip them.
+- The store is per machine, and CI does not read it.
 - It trusts the merge target. A change that reaches the target first, for example by a push to it, passes the check.
 - A merge conflict in `MEMORY.md` needs a human twice. Two slices that each promote a fact both append to the index, so their merge conflicts. After the human resolves the conflict, close blocks on `MEMORY.md`. The remedy is `harness memory accept .claude/memory/shared/MEMORY.md`.
 - A human edit or deletion inside a slice blocks close too. The remedy is `harness memory accept <path>`.
 
 For these gaps, the backstop is a human who reads the committed diff.
 
-We recommend a sandbox write-deny rule. Add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. The shipped profile sets `failIfUnavailable: false`, so the rule holds only where the sandbox runs. A permission deny rule for the Edit and Write tools on that folder adds a second layer. harness does not write these rules for you.
+Keep the sandbox on. The shipped profile confines writes to the worktree, and it denies the Edit and Write tools on `~/.config/harness/`. The profile sets `failIfUnavailable: false`, so the store holds only where the sandbox runs. We also recommend a sandbox write-deny rule: add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`.
+
+Claude Code's sandbox lets a command write only the working directory, the per-user temp folder and added directories. A command that leaves the sandbox goes through the permission flow, so a human sees it.
+
+Other hosts: Codex CLI defaults to a `workspace-write` sandbox, and Cursor's sandbox limits command writes to the project. Under either sandbox, promote cannot write the store from the agent's shell. We checked these three hosts in their docs, not in a test.
 
 ### Text quality
 

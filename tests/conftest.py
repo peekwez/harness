@@ -14,8 +14,24 @@ sys.path.insert(0, str(PLUGIN_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # `from conftest import …`
 
 HARNESS_BIN = PLUGIN_ROOT / "bin" / "harness"
+# run_cli launches this: bin/harness with the approval store in a temp file
+HARNESS_ENTRY = Path(__file__).resolve().parent / "harness_entry.py"
 
 from engine import write_jsonl  # noqa: E402
+
+
+def _session_approval_store():
+    """A default store for fixtures that run before `approval_store`: no
+    test reads or writes the real `~/.config/harness/`."""
+    import os
+    import tempfile
+    from engine import approvals
+    store = Path(tempfile.mkdtemp(prefix="harness-approvals-")) / "approvals.jsonl"
+    approvals._STORE_OVERRIDE = store
+    os.environ["HARNESS_TEST_APPROVALS"] = str(store)
+
+
+_session_approval_store()
 
 
 def run_cli(*args, root=None, stdin=None, env=None):
@@ -23,7 +39,7 @@ def run_cli(*args, root=None, stdin=None, env=None):
     e = dict(os.environ)
     if env:
         e.update(env)
-    cmd = [sys.executable, str(HARNESS_BIN)]
+    cmd = [sys.executable, str(HARNESS_ENTRY)]
     if root:
         cmd += ["--root", str(root)]
     cmd += [str(a) for a in args]
@@ -48,7 +64,7 @@ def run_cli_as_human(*args, root=None, env=None, answer=None, timeout=30):
     e = dict(os.environ)
     if env:
         e.update(env)
-    cmd = [sys.executable, str(HARNESS_BIN)]
+    cmd = [sys.executable, str(HARNESS_ENTRY)]
     if root:
         cmd += ["--root", str(root)]
     cmd += [str(a) for a in args]
@@ -106,6 +122,16 @@ def run_cli_as_human(*args, root=None, env=None, answer=None, timeout=30):
                                        bufs[err_r].decode())
     done.terminal = bufs[leader].decode("utf-8", "replace")
     return done
+
+
+@pytest.fixture(autouse=True)
+def approval_store(tmp_path_factory, monkeypatch):
+    """Every test gets its own approval store, in process and in run_cli."""
+    from engine import approvals
+    store = tmp_path_factory.mktemp("approvals") / "approvals.jsonl"
+    monkeypatch.setattr(approvals, "_STORE_OVERRIDE", store)
+    monkeypatch.setenv("HARNESS_TEST_APPROVALS", str(store))
+    return store
 
 
 @pytest.fixture

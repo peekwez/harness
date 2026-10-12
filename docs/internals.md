@@ -34,6 +34,7 @@ This page is for contributors who change harness itself. The engine is plain Pyt
 | `engine/permits.py` | the permit layer that approves, asks or denies a tool call |
 | `engine/shared_memory.py` | shared memory: team facts that a human promoted |
 | `engine/human.py` | the code a human types at a terminal to approve a shared-memory write |
+| `engine/approvals.py` | this machine's store of the shared-memory writes a human approved |
 | `engine/schema.py` | the row schemas of each substrate file |
 | `engine/migrate.py` | schema migrations of the substrate |
 | `engine/upgrade_010.py` | the 0.10 upgrade step registry and its runner |

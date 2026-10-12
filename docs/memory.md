@@ -54,29 +54,34 @@ harness memory accept .claude/memory/shared/MEMORY.md
 
 ## Guards
 
-Four layers stop an agent from writing shared memory:
+Five layers stop an agent from writing shared memory:
 
 - **The terminal code.** `harness memory promote` and `harness memory accept` write only after a human types the code they show on the terminal. The code never goes to the command's output. An agent's shell has no terminal, so the command refuses there.
-
+- **The approval store.** After the code, promote and accept record each approved file's bytes in `~/.config/harness/approvals.jsonl` on this machine. Harness finds your home folder from the OS user record, not from `$HOME`. The store is outside every worktree, so the shipped sandbox refuses an agent's write to it. When promote cannot write the store, it refuses and writes nothing.
 - **G10** blocks each write to `.claude/memory/shared/` through the host's edit tools. It runs in the engine at `pre_change`. On Claude Code it stops the write. On Cursor CLI (degraded mode) it runs only after the edit lands, so it reports the write and does not undo it. No override and no exempt path applies. Its fix names `harness memory promote`.
 - **G10 at close** checks the slice diff. Close blocks when the slice adds, changes or deletes a file in `.claude/memory/shared/`. So close blocks a shell write such as `echo x > .claude/memory/shared/a.md`. A change passes in these cases:
-    - `harness memory promote` or `harness memory accept` recorded the bytes, or the deletion, in `.harness/promotions.jsonl`.
+    - `harness memory promote` or `harness memory accept` recorded the bytes, or the deletion, in this machine's approval store.
     - The file is the same as on the merge target, `landing.base` (default `main`). A human changed it there and the slice merged it in. A deletion passes when the target does not have the file.
 
-    The finding's fix says what to do. If a human made the change, run `harness memory accept <path>`. Otherwise revert the change and use `harness memory promote`.
-- **The permit layer** asks a human for each `harness memory promote`, and for each other `harness memory` subcommand except `changed`. It also asks for a shell command that names the shared folder. It never approves these on its own.
+    G10 at close does not trust `.harness/promotions.jsonl`, because an agent can add a row to it. The ledger is the team's history. G10 also blocks a tool edit to the ledger.
+
+    The finding's fix says what to do. If a human made the change, run `harness memory accept <path>` in your own terminal. Otherwise revert the change and use `harness memory promote`.
+- **The permit layer** asks a human for each `harness memory promote`, and for each other `harness memory` subcommand except `changed`. It also asks for a shell command that names the shared folder, the ledger or the approval store. So does a glob that may reach the shared folder. It never approves these on its own.
 
 The shipped Claude Code profile also has `ask` rules for `harness memory promote`. A human approves each promotion.
 
 These guards have limits:
 
 - G10 at close sees only the slice diff. It does not see a shell write outside a slice, or one that is undone before close.
-- G10 at close trusts the hash rows in `.harness/promotions.jsonl`. A shell command that adds a row there passes the check.
-- The terminal code guards the two commands, not the files. A caller that runs promote under a terminal it controls can read the code. That covers `script`, `expect` and a host that runs agent commands in its own terminal. Claude Code runs them with no terminal.
+- The approval store holds only where a sandbox confines the agent's writes to the worktree. Without a sandbox, an agent's shell can write the store.
+- A caller that runs promote under a terminal it controls can read the code. That covers `script`, `expect` and a host that runs agent commands in its own terminal. Under the sandbox, that promote still cannot write the store, so it refuses.
+- The agent runs close itself. An agent that runs its own copy of the close checks can skip them.
+- The store is per machine. A fact promoted on one machine and closed on another blocks there. Run `harness memory accept <path>` in your own terminal on that machine.
+- CI does not read the store. G10 at close runs on your machine.
 - G10 at close trusts the merge target. A change that reaches the target first, for example by a push to it, passes the check.
 - Two slices that each promote a fact both append to `MEMORY.md`, so a merge of the two conflicts. The ledger merges cleanly. After a human resolves the conflict, close blocks on `MEMORY.md` until the human runs `harness memory accept .claude/memory/shared/MEMORY.md`.
 - Only the Claude Code hook runs the permit layer on shell commands. Other hosts' profiles approve shell commands.
-- The permit layer reads the command text. Some spellings, such as a renamed binary, do not ask.
+- The permit layer reads the command text. A path built at run time does not ask.
 
 For these gaps, the backstop is a human who reads the committed diff. We recommend a sandbox rule: add `.claude/memory/shared` to `sandbox.filesystem.denyWrite` in `.claude/settings.json`. [Trade-offs and limits](trade-offs.md#shared-memory-writes) lists each gap.
 

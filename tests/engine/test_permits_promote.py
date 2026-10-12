@@ -4,9 +4,10 @@ import json
 import pytest
 
 from conftest import PLUGIN_ROOT, run_cli
-from engine.permits import (_PROGRAM_REASON, _PROMOTE_REASON, _SHARED_REASON,
-                            _UNRESOLVED_REASON, ask_reason, command_allowed,
-                            command_decision, needs_human, paths_in_scope)
+from engine.permits import (_LEDGER_REASON, _PROGRAM_REASON, _PROMOTE_REASON,
+                            _SHARED_REASON, _UNRESOLVED_REASON, ask_reason,
+                            command_allowed, command_decision, needs_human,
+                            paths_in_scope)
 
 PROMOTE_FORMS = [
     "harness memory promote --text 'x'",
@@ -412,6 +413,8 @@ def test_heredocs_that_can_run_harness_still_ask(command, reason):
     "./x memory promote a.md",
     "/tmp/h --root /r memory accept a.md",
     "X=1 ./x memory $S",
+    "script -q /dev/null ./x memory promote a.md",
+    "expect -c 'spawn ./x memory accept a.md'",
 ])
 def test_promotions_that_never_spell_harness_ask(command):
     assert ask_reason(command) == _PROMOTE_REASON
@@ -441,3 +444,32 @@ def test_promotions_that_never_spell_harness_ask(command):
 def test_memory_words_that_run_nothing_keep_their_decision(command, decision):
     assert ask_reason(command) is None
     assert command_decision(command, slice_id="s1")[0] == decision
+
+
+# 0.10.5: the ledger and the approval store, and globs that may reach the
+# shared folder, ask. The 0.10.1 substrate reads stay quiet.
+@pytest.mark.parametrize("command, reason", [
+    ("echo x > .claude/memory/sh*/a.md", _SHARED_REASON),
+    ("cp a .c*/memory/shared/", _SHARED_REASON),
+    ("cp a /repo/.claude/m?mory/shared/x", _SHARED_REASON),
+    ("rm .claude/memory/*/x", _SHARED_REASON),
+    ("rm -rf .*", _SHARED_REASON),
+    ("cat .claude/*/shared/MEMORY.md", _SHARED_REASON),
+    ("echo '{}' >> .harness/promotions.jsonl", _LEDGER_REASON),
+    ("cp a .harness/promotions.jsonl", _LEDGER_REASON),
+    ("python3 -c \"open('.harness/promotions.jsonl','a')\"", _LEDGER_REASON),
+    ("cat >> ~/.config/harness/approvals.jsonl", _LEDGER_REASON),
+    ("echo x >> .harness/prom*.jsonl", _LEDGER_REASON),
+    ("echo x >.harness/*.jsonl", _LEDGER_REASON),
+])
+def test_ledger_store_and_shared_globs_ask(command, reason):
+    assert ask_reason(command) == reason
+    assert command_decision(command, slice_id="s1") == ("ask", False, reason)
+
+
+@pytest.mark.parametrize("command", [
+    "ls *.py", "rm -f build/*", "ls .harness/*.jsonl", "cat src/*/memory/x",
+    "ls *", "ls ~/.config/git",
+])
+def test_globs_that_cannot_reach_shared_memory_stay_quiet(command):
+    assert ask_reason(command) is None
