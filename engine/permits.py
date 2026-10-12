@@ -746,16 +746,76 @@ _REDIRECT_WORD = re.compile(r"^[0-9]*(?:&>|[<>])")
 _REDIRECT_OP_ONLY = re.compile(r"^[0-9]*(?:&>>?|[<>]+&?|>\|)$")
 
 
+# `<<WORD`, `<<-WORD`, `<< 'WORD'`, `<<"WORD"`, `<<\WORD`; not `<<<`
+_HEREDOC = re.compile(r"<<(-?)[ \t]*(\"[^\"\n]*\"|'[^'\n]*'|\\?[^\s;&|<>()'\"]+)")
+# a word that makes a shell read stdin, so a heredoc body runs as commands
+_SHELL_WORD = re.compile(r"(?<![\w.-])(?:(?:ba|da|k|mk|z|a|fi)?sh|source"
+                         r"|/dev/stdin|/dev/fd/0)(?![\w.-])", re.I)
+
+
+def _heredoc_bodies_end(text: str, start: int, pending: list):
+    """Where the heredoc bodies that start at `start` end, or None.
+
+    `pending` holds `(strip_tabs, delimiter, quoted)` in the order the
+    heredocs opened. None when a closing line is missing.
+    """
+    i = start
+    for strip_tabs, delim, _ in pending:
+        while True:
+            if i >= len(text):
+                return None
+            j = text.find("\n", i)
+            j = len(text) if j < 0 else j
+            line = text[i:j]
+            i = j + 1
+            if (line.lstrip("\t") if strip_tabs else line) == delim:
+                break
+    return i
+
+
 def _raw_segments(text: str):
     """Split a command into segments of raw words, quotes kept, or None.
 
-    Quotes and backticks keep their contents in one word; separators
-    (`; & | ( )` and newlines) end a segment. An unterminated quote is None.
+    Quotes and backticks keep their contents in one word, across newlines;
+    separators (`; & | ( )` and newlines) end a segment. A heredoc body is
+    data that belongs to the command that opened it, and is skipped. It is
+    read as commands instead when a shell may read it (`bash <<EOF`,
+    `cat <<EOF | sh`), or when an unquoted body holds a command
+    substitution. An unterminated quote or heredoc is None.
     """
     segments, words, word = [], [], []
+    pending = []
+    shell_reads = bool(_SHELL_WORD.search(text))
     i, n = 0, len(text)
     while i < n:
         ch = text[i]
+        if ch == "<" and text.startswith("<<", i) and not text.startswith("<<<", i):
+            m = _HEREDOC.match(text, i)
+            if not m:
+                return None
+            token = m.group(2)
+            quoted = token[0] in "'\"\\"
+            pending.append((bool(m.group(1)),
+                            token.strip("'\"").lstrip("\\"), quoted))
+            word.append(m.group(0))
+            i = m.end()
+            continue
+        if ch == "\n" and pending:
+            if word:
+                words.append("".join(word))
+                word = []
+            if words:
+                segments.append(words)
+            words = []
+            end = _heredoc_bodies_end(text, i + 1, pending)
+            if end is None:
+                return None
+            body = text[i + 1:end]
+            expands = any(not quoted for _, _, quoted in pending)
+            runs = shell_reads or (expands and _SUBSTITUTION.search(body))
+            pending = []
+            i = i + 1 if runs else end
+            continue
         if ch in "'\"`":
             j = i + 1
             while j < n and text[j] != ch:

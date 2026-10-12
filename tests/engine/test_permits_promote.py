@@ -347,3 +347,41 @@ def test_unreadable_commands_outside_the_change_keep_their_decision():
     decision, allow, _ = command_decision('bash -c "$CMD"', slice_id="s1")
     assert (decision, allow) == ("defer", False)
     assert ask_reason('bash -c "$CMD"') is None
+
+
+# 0.10.2: a heredoc body that no shell reads is data for the command that
+# opened it, and a quoted argument stays whole across newlines.
+@pytest.mark.parametrize("command", [
+    'python3 -c "\nimport json\nd = {}\nfor k in d:\n    print(k)\n"',
+    "python3 -c 'import sys\nx = {\"a\": [1, 2]}\nprint(x)\n'",
+    "python3 - <<'EOF'\nimport json\nd = {'a': [1, 2]}\nif d:\n    print(d)\n}\nEOF",
+    "python3 - << \"PY\"\nprint(*[1, 2])\nPY",
+    "cat > f <<EOF\nhello $X\n}\n*glob*\nEOF",
+    "cat > f <<-EOF\n\t{ x }\n\tEOF",
+    "cat > a <<'A' && cat > b <<'B'\n}\nA\n{\nB",
+    "cat <<'A' <<'B'\n}\nA\n{\nB",
+])
+def test_multi_line_scripts_and_heredoc_data_do_not_ask(command):
+    assert ask_reason(command) is None
+    assert command_decision(command, slice_id="s1")[:2] == ("defer", False)
+
+
+@pytest.mark.parametrize("command, reason", [
+    ("python3 - <<'EOF'\nimport subprocess\n"
+     "subprocess.run(['harness', 'memory', 'promote', 'x'])\nEOF",
+     _PROMOTE_REASON),
+    ("bash <<EOF\nharness memory promote x\nEOF", _PROMOTE_REASON),
+    ("bash <<'EOF'\n$E memory promote x\nEOF", _PROGRAM_REASON),
+    ("/bin/sh <<'EOF'\n$E memory promote x\nEOF", _PROGRAM_REASON),
+    ("cat <<'EOF' | sh\n$E memory promote x\nEOF", _PROGRAM_REASON),
+    ("source /dev/stdin <<'EOF'\n$E memory promote x\nEOF", _PROGRAM_REASON),
+    ("cat <<EOF\n$($E memory promote x)\nEOF", _PROGRAM_REASON),
+    ("cat <<EOF\n`$E memory promote x`\nEOF", _PROGRAM_REASON),
+    ("cat <<EOF\nx\nEOF\n$E memory promote x", _PROGRAM_REASON),
+    ("cat <<-EOF\n\tx\n\tEOF\n$E memory list", _PROGRAM_REASON),
+    ("cat <<EOF\nx\n$E memory promote x", _PROGRAM_REASON),
+    ("cat <<'EOF'\nhar${x}ness memory list\nEOF", _UNRESOLVED_REASON),
+])
+def test_heredocs_that_can_run_harness_still_ask(command, reason):
+    assert ask_reason(command) == reason
+    assert command_decision(command, slice_id="s1") == ("ask", False, reason)

@@ -2,6 +2,15 @@
 
 Newest release first. Each heading is one release.
 
+## 0.10.2 (2026-10-11)
+
+A fix to the permit layer. Upgrade from 0.10.1 needs no other steps.
+
+- Heredocs no longer ask. Before, the permit read each line of a heredoc body as a new command. So `python3 - <<'EOF'` or `cat > f <<EOF` asked when a line held code such as `}`. Now the body is data for the command that opened it.
+- A multi-line quoted argument, such as a `python3 -c "…"` script, is still read as one word and does not ask.
+- The body is still read as commands when a shell may run it, for example `bash <<EOF`, `cat <<EOF | sh` or `source /dev/stdin`. It is also read as commands when the delimiter is unquoted and the body holds `$(…)` or a backtick, since the shell runs those.
+- Promote stays human-only. A heredoc that runs `harness memory promote` still asks.
+
 ## 0.10.1 (2026-10-11)
 
 A fix to the permit layer. Upgrade from 0.10.0 needs no other steps.
